@@ -1,0 +1,242 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Cavalier · Échecs</title>
+<link rel="stylesheet" href="style.css">
+  <!-- S01 Accueil -->
+  <section id="home" class="screen active" aria-label="Accueil">
+    <div class="hero">
+      <div class="hero-top">
+        <div class="brand">
+          <img src="icon.svg" alt="" class="logo">
+          <div class="brand-copy"><h1>Cavalier</h1><p class="tagline">Des échecs simples, sans pub, même hors ligne.</p></div>
+        </div>
+        <div class="player-profile" aria-live="polite">
+          <div><strong id="home-player-name">Joueur</strong><span id="home-player-elo">Elo estimé : 600</span><small id="home-player-progress">L’estimation s’affine avec les parties et les problèmes.</small></div>
+          <button id="btn-player-name" class="profile-edit" type="button">Modifier</button>
+        </div>
+      </div>
+      <section id="coach-program" class="coach-program" aria-labelledby="coach-program-title" hidden>
+        <div class="coach-program-head"><div><span class="coach-kicker">Programme personnalisé</span><h2 id="coach-program-title">Avec Maître Hiro</h2></div><span id="coach-program-badge" class="coach-program-badge"></span></div>
+        <p id="coach-program-text"></p>
+        <p id="coach-program-focus" class="coach-program-focus"></p>
+        <div class="coach-program-actions"><button id="btn-coach-program" class="btn primary">Continuer le programme</button><button id="btn-coach-game" class="btn ghost">Partie coachée</button></div>
+      </section>
+    </div>
+    <div id="home-menu" class="menu">
+      <div class="menu-group">
+        <button id="btn-progress-menu" class="btn primary" type="button" aria-expanded="false" aria-controls="progress-submenu">Progresser</button>
+        <div id="progress-submenu" class="menu-submenu" hidden>
+          <button id="btn-program" class="btn">Programme personnalisé</button>
+          <button id="btn-problems" class="btn">Problèmes</button>
+        </div>
+      </div>
+      <div class="menu-group">
+        <button id="btn-play-menu" class="btn primary" type="button" aria-expanded="false" aria-controls="play-submenu">Jouer</button>
+        <div id="play-submenu" class="menu-submenu" hidden>
+          <button id="btn-continue" class="btn">Reprendre la partie</button>
+          <button id="btn-new" class="btn">Nouvelle partie</button>
+        </div>
+      </div>
+      <button id="btn-stats" class="btn">Statistiques</button>
+      <button id="btn-rules" class="btn">Règles et conseils</button>
+      <button id="btn-settings" class="btn">Réglages</button>
+      <button id="btn-about" class="btn">À propos</button>
+    </div>
+  </section>
+
+  <button id="mobile-menu-backdrop" class="mobile-menu-backdrop" type="button" aria-label="Fermer le menu" hidden></button>
+  <button id="mobile-menu-toggle" class="mobile-menu-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="home-menu">☰</button>
+
+  <section id="program" class="screen" aria-label="Programme personnalisé">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Programme personnalisé</h2></header>
+    <div class="program-view">
+      <section class="coach-program" aria-labelledby="program-title">
+        <div class="coach-program-head"><div><span class="coach-kicker">Programme personnalisé</span><h2 id="program-title">Avec Maître Hiro</h2></div><span id="program-badge" class="coach-program-badge"></span></div>
+        <p id="program-text"></p>
+        <p id="program-focus" class="coach-program-focus"></p>
+        <div class="coach-program-actions"><button id="program-continue" class="btn primary">Continuer mon entraînement</button><button id="program-game" class="btn ghost">Partie coachée</button></div>
+      </section>
+    </div>
+  </section>
+
+  <!-- S02 Nouvelle partie -->
+  <section id="setup" class="screen" aria-label="Nouvelle partie">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Nouvelle partie</h2></header>
+    <div class="panel">
+      <label class="field-label">Adversaire</label>
+      <div class="segmented game-modes" data-name="mode">
+        <button data-value="ai" class="on">Ordinateur</button>
+        <button data-value="coach">Partie coachée</button>
+        <button data-value="local">Deux joueurs</button>
+      </div>
+      <button id="btn-start" class="btn primary wide">Commencer</button>
+      <div id="ai-options">
+        <p class="level-help">Ta couleur est tirée au sort au début de chaque partie.</p>
+        <label class="field-label">Niveau : <strong id="level-name"></strong></label>
+        <div id="level-grid" class="level-grid" role="radiogroup" aria-label="Niveau"></div>
+        <p class="level-help">Touche un niveau débloqué pour le rejouer. Gagne au plus haut niveau pour débloquer le suivant.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- S03 Partie -->
+  <section id="game" class="screen" aria-label="Partie">
+    <header class="bar">
+      <button class="icon-btn" id="btn-menu" aria-label="Menu">‹</button>
+      <h2 id="game-title">Partie</h2>
+      <span class="terrain-label" id="terrain-name"></span>
+      <button class="icon-btn" id="btn-game-settings" aria-label="Réglages">⚙</button>
+    </header>
+    <div class="game-layout">
+      <div class="board-col">
+        <div class="player top"><span class="name" id="name-top"></span><span class="captured" id="cap-top"></span></div>
+        <div class="board-wrap" id="board-wrap"><div id="board" role="grid" aria-label="Échiquier"></div><div id="minimap" class="minimap" aria-label="Aperçu 2D jouable ; tirer sur le bord gauche ou inférieur pour redimensionner"></div></div>
+        <div class="player bottom"><span class="name" id="name-bottom"></span><span class="captured" id="cap-bottom"></span></div>
+        <div id="status" class="status" aria-live="polite"></div>
+      </div>
+      <div class="side-col">
+        <ol id="moves" class="moves" aria-label="Coups joués"></ol>
+        <div class="actions">
+          <button class="act" id="btn-undo"><span>↶</span>Annuler</button>
+          <button class="act" id="btn-hint"><span>✦</span>Indice</button>
+          <button class="act" id="btn-flip"><span>⇅</span>Tourner</button>
+          <button class="act" id="btn-resign"><span>⚑</span>Abandon</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- S06 Réglages -->
+  <section id="settings" class="screen" aria-label="Réglages">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Réglages</h2></header>
+    <div class="panel">
+      <label class="field-label">Plateau</label>
+      <div id="themes" class="themes"></div>
+      <label class="switch"><input type="checkbox" id="opt-moves"><span>Montrer les coups possibles</span></label>
+      <label class="switch"><input type="checkbox" id="opt-coords"><span>Afficher les coordonnées</span></label>
+      <label class="switch"><input type="checkbox" id="opt-sound"><span>Sons</span></label>
+      <label class="switch"><input type="checkbox" id="opt-autoq"><span>Promotion automatique en dame</span></label>
+      <label class="switch"><input type="checkbox" id="opt-voice"><span>Voix de l'entraîneur</span></label>
+      <label class="switch"><input type="checkbox" id="opt-coach"><span>Afficher Maître Hiro sur tous les écrans</span></label>
+      <label class="field-label">Ma progression</label>
+      <p class="level-help">Sauvegarde ta progression (niveaux, statistiques, entraînement, parties) dans un fichier, pour la réimporter ici ou dans une autre application. Les parties sont aussi au format PGN, lisible par la plupart des applications d'échecs.</p>
+      <div class="data-actions">
+        <button class="btn" id="btn-export">Exporter ma progression</button>
+        <button class="btn" id="btn-export-pgn">Exporter mes parties (PGN)</button>
+        <button class="btn ghost" id="btn-import">Importer une progression ou charger des parties</button>
+        <input type="file" id="import-file" accept=".json,.pgn,.pgn.txt,application/json,application/x-chess-pgn,text/plain" hidden>
+      </div>
+    </div>
+  </section>
+
+  <!-- S09 Problèmes : thèmes à travailler -->
+  <section id="problems" class="screen" aria-label="Problèmes">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Problèmes</h2></header>
+    <div class="panel" id="problems-body"></div>
+  </section>
+
+  <!-- S10 Rubrique d'un thème -->
+  <section id="theme" class="screen" aria-label="Thème">
+    <header class="bar"><button class="icon-btn" id="btn-theme-back" aria-label="Retour">‹</button><h2 id="theme-title"></h2></header>
+    <div class="panel" id="theme-body"></div>
+  </section>
+
+  <!-- S11 Problème -->
+  <section id="puzzle" class="screen" aria-label="Problème">
+    <header class="bar"><button class="icon-btn" id="btn-puzzle-back" aria-label="Retour">‹</button><h2 id="puzzle-title"></h2><span class="pz-count" id="pz-count"></span></header>
+    <div class="game-layout">
+      <div class="board-col">
+        <div class="coach" id="coach"><img id="coach-img" alt=""><div class="bubble"><b>Maître Hiro</b><button class="voice-btn" id="pz-voice" aria-label="Couper la voix">🔊</button><p id="pz-prompt"></p></div></div>
+        <div id="puzzle-slot"></div>
+        <div id="pz-status" class="status" aria-live="polite"></div>
+      </div>
+      <div class="side-col">
+        <div class="actions three">
+          <button class="act" id="pz-hint"><span>✦</span>Indice</button>
+          <button class="act" id="pz-solution"><span>👁︎</span>Solution</button>
+          <button class="act" id="pz-next"><span>→</span>Suivant</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- S07 Statistiques -->
+  <section id="stats" class="screen" aria-label="Statistiques">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Statistiques</h2></header>
+    <div class="panel" id="stats-body"></div>
+  </section>
+
+  <!-- S08 Règles -->
+  <section id="rules" class="screen" aria-label="Règles et conseils">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Règles et conseils</h2></header>
+    <div class="panel prose">
+      <h3>Le but</h3>
+      <p>Mettez le roi adverse en échec et mat : il est attaqué et ne peut plus s'échapper. Si le joueur au trait n'a aucun coup légal sans être en échec, c'est le pat, et la partie est nulle.</p>
+      <h3>Les pièces</h3>
+      <ul>
+        <li><b>Roi</b> : une case dans toutes les directions.</li>
+        <li><b>Dame</b> : autant de cases qu'elle veut, en ligne droite ou en diagonale.</li>
+        <li><b>Tour</b> : en ligne droite, horizontalement ou verticalement.</li>
+        <li><b>Fou</b> : en diagonale, toujours sur la même couleur de case.</li>
+        <li><b>Cavalier</b> : en « L », et c'est la seule pièce qui saute par-dessus les autres.</li>
+        <li><b>Pion</b> : avance d'une case (deux au premier coup) et prend en diagonale.</li>
+      </ul>
+      <h3>Les coups spéciaux</h3>
+      <ul>
+        <li><b>Roque</b> : le roi glisse de deux cases vers une tour qui saute de l'autre côté. Ni l'un ni l'autre ne doivent avoir bougé, et le roi ne peut ni être en échec ni traverser une case attaquée.</li>
+        <li><b>Prise en passant</b> : quand un pion avance de deux cases et arrive à côté d'un pion adverse, celui-ci peut le prendre comme s'il n'avait avancé que d'une case, mais seulement au coup suivant.</li>
+        <li><b>Promotion</b> : un pion qui atteint la dernière rangée devient la pièce de votre choix (sauf un roi).</li>
+      </ul>
+      <h3>Les parties nulles</h3>
+      <p>Pat, même position trois fois, cinquante coups de chaque côté sans prise ni mouvement de pion, ou matériel trop faible pour mater.</p>
+      <h3>Quatre conseils pour progresser</h3>
+      <ol>
+        <li>Occupez le centre avec vos pions dès l'ouverture.</li>
+        <li>Sortez cavaliers et fous avant de jouer la dame.</li>
+        <li>Roquez tôt pour mettre votre roi à l'abri.</li>
+        <li>Avant chaque coup, demandez-vous ce que menace l'adversaire.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- À propos -->
+  <section id="about" class="screen" aria-label="À propos">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>À propos</h2></header>
+    <div class="panel prose">
+      <p>Cavalier rend les échecs accessibles à tous.</p>
+      <p>Jouez contre l’ordinateur ou à deux, et rejouez les niveaux débloqués.</p>
+      <p>Entraînez-vous avec des problèmes et les conseils de Maître Hiro.</p>
+      <p>Créateur : Ansufoudine BINA</p>
+      <p>Contact : <a href="mailto:ansuf.dev@gmail.com">ansuf.dev@gmail.com</a></p>
+    </div>
+  </section>
+
+  <aside id="coach-dock" class="coach-dock" hidden aria-label="Maître Hiro">
+    <section id="coach-dock-panel" class="coach-dock-panel" hidden>
+      <header class="coach-dock-head"><div><strong>Maître Hiro</strong><span id="coach-dock-status">Coach d’échecs</span></div><button id="coach-dock-close" class="icon-btn" type="button" aria-label="Réduire le coach">−</button></header>
+      <p id="coach-dock-message" aria-live="polite"></p>
+      <div class="coach-dock-actions"><button id="coach-dock-program" class="btn primary">Mon programme</button><button id="coach-dock-voice" class="icon-btn" type="button" aria-label="Couper la voix">🔊</button></div>
+    </section>
+    <button id="coach-dock-toggle" class="coach-dock-toggle" type="button" aria-expanded="false" aria-label="Ouvrir Maître Hiro"><img id="coach-dock-img" alt=""><span>Maître Hiro</span><span class="coach-dock-dot" aria-hidden="true"></span></button>
+  </aside>
+
+  <!-- S04 Promotion / S05 Fin de partie -->
+  <div id="modal" class="modal" hidden>
+    <div class="sheet" role="dialog" aria-modal="true">
+      <h3 id="modal-title"></h3>
+      <p id="modal-text"></p>
+      <div id="modal-body"></div>
+      <div id="modal-actions" class="modal-actions"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="vendor/three.min.js"></script>
+  <script src="engine.js"></script>
+  <script src="puzzles.js"></script>
+  <script src="lessons.js"></script>
+  <script src="characters.js"></script>
+  <script src="models3d.js"></script>
+  <script src="board3d.js"></script>
+  <script src="app.js"></script>
+
+</body></html>
