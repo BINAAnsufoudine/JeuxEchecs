@@ -890,9 +890,7 @@
       ['Capablanca', 'Convertis l’avantage par amélioration progressive; évite de relâcher l’initiative.'],
     ];
     const [champion, principle] = principles[Math.floor(game.history.length / 2) % principles.length];
-    const priority = coachPlan().theme;
-    const focus = priority ? ` Ton axe personnel reste ${PZ[priority].name.toLowerCase()}.` : '';
-    setCoachMessage(`Mon coup. Principe associé à ${champion}: ${principle}${focus} À toi de trouver la réponse; je ne donne pas le coup sans demande. ${reflection}`, '', volume);
+    setCoachMessage(`Mon coup. Principe associé à ${champion}: ${principle} À toi de trouver la réponse; je ne donne pas le coup sans demande. ${reflection}`, '', volume);
   }
 
   function finish() {
