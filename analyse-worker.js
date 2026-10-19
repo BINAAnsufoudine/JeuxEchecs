@@ -2,8 +2,13 @@
 importScripts('engine.js', 'search.js', 'coach-core.js');
 
 self.onmessage = (e) => {
-  const { id, moves, color, explain } = e.data;
+  const { id, moves, color, explain, review, fen } = e.data;
   try {
+    if (review) {
+      const r = self.Coach.reviewGame(moves, { fen, onProgress: (done, total) => self.postMessage({ id, progress: [done, total] }) });
+      self.postMessage({ id, ok: true, review: r });
+      return;
+    }
     // Détail de fautes déjà relevées (astuces)
     if (explain) { self.postMessage({ id, ok: true, explained: explain.map((m) => ({ id: m.id, ...(self.Coach.explainError(m.fen, m.played, m.best, m.theme) || {}) })) }); return; }
     const r = self.Coach.analyseGame(moves, color, { depth: 3, q: 6 });

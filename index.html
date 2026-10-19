@@ -115,7 +115,22 @@
             <button class="act" id="rp-end" aria-label="Fin"><span>⏭</span>Fin</button>
             <button class="act" id="rp-flip" aria-label="Tourner le plateau"><span>⇅</span>Tourner</button>
           </div>
+          <div class="rp-tools">
+            <button class="mini" id="rp-analyse" aria-label="Analyser la partie">📈 Analyser</button>
+            <button class="mini" id="rp-pgn" aria-label="Exporter en PGN">⬇ PGN</button>
+            <button class="mini" id="rp-share" aria-label="Copier un lien de partage">🔗 Lien</button>
+          </div>
+          <div id="rp-review" class="rp-review" hidden>
+            <div id="rp-acc" class="rp-acc"></div>
+            <svg id="rp-graph" class="rp-graph" viewBox="0 0 200 64" preserveAspectRatio="none" role="img" aria-label="Courbe d'avantage"></svg>
+            <div id="rp-comment" class="rp-comment" aria-live="polite"></div>
+            <div class="rp-tools">
+              <button class="mini" id="rp-prevbad">◀ Faute</button>
+              <button class="mini" id="rp-nextbad">Faute ▶</button>
+            </div>
+          </div>
         </div>
+        <div class="actions" id="game-actions">
         <div class="actions" id="game-actions">
           <button class="act" id="btn-undo"><span>↶</span>Annuler</button>
           <button class="act" id="btn-hint"><span>✦</span>Indice</button>
@@ -160,6 +175,7 @@
       <label class="switch"><input type="checkbox" id="opt-autoq"><span>Promotion automatique en dame</span></label>
       <label class="switch"><input type="checkbox" id="opt-voice"><span>Voix de l'entraîneur</span></label>
       <label class="switch"><input type="checkbox" id="opt-coach"><span>Afficher Maître Hiro sur tous les écrans</span></label>
+      <label class="switch"><input type="checkbox" id="opt-lite"><span>Mode léger (3D allégé : sans ombres, 30 images/s)</span></label>
       <label class="field-label">Ma progression</label>
       <p class="level-help">Sauvegarde ta progression (niveaux, statistiques, entraînement, parties) dans un fichier, pour la réimporter ici ou dans une autre application. Les parties sont aussi au format PGN, lisible par la plupart des applications d'échecs.</p>
       <div class="data-actions">

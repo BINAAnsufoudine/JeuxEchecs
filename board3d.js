@@ -1658,10 +1658,32 @@
       return { piece, parts, holder, shadow, yaw: holder.rotation.y };
     }
 
+    // Mode léger : pixel ratio 1, pas d'ombres portées, 30 images/s au plus
+    setLite(on) {
+      on = !!on;
+      if (this.liteApplied && on === this.lite) return;
+      this.lite = on; this.liteApplied = true;
+      this.renderer.setPixelRatio(on ? 1 : Math.min(window.devicePixelRatio || 1, 1.5));
+      this.sun.castShadow = !on;
+      this.resize();
+    }
+
     tick(nowMs) {
       // Le plateau est conservé entre les écrans, mais ne doit pas animer ni
       // redessiner ses pièces tant qu'il est masqué.
       if (!this.renderer.domElement.getClientRects().length) return;
+      if (this.lite && nowMs - (this.lastFrameMs || 0) < 31) return;
+      if (nowMs - (this.lastFrameMs || nowMs) > 1000) { this.perfStart = nowMs; this.perfFrames = 0; this.slowRuns = 0; }
+      this.lastFrameMs = nowMs;
+      // Cadence mesurée sur 3 s : deux fenêtres lentes de suite → l'appli propose le mode léger
+      this.perfFrames = (this.perfFrames || 0) + 1;
+      if (!this.perfStart) this.perfStart = nowMs;
+      if (nowMs - this.perfStart > 3000) {
+        const fps = (this.perfFrames * 1000) / (nowMs - this.perfStart);
+        this.slowRuns = fps < 20 ? (this.slowRuns || 0) + 1 : 0;
+        if (this.slowRuns >= 2 && !this.lite && this.onSlow) this.onSlow();
+        this.perfFrames = 0; this.perfStart = nowMs;
+      }
       const t = nowMs / 1000;
       const dt = Math.min(0.25, Math.max(0, t - (this.lastT || t)));
       this.lastT = t;

@@ -245,9 +245,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .replay-actions { grid-template-columns: repeat(3, 1fr); }
 .replay-bar { display: flex; flex-direction: column; gap: 8px; }
 @media (min-width: 900px) {
-  #game .replay-bar { grid-column: 2; grid-row: 1 / span 2; align-self: center; width: 150px; }
-  #game .replay-bar .actions { grid-column: auto; grid-row: auto; width: 100%; grid-template-columns: minmax(0, 1fr); }
-  #game .game-layout:has(.replay-bar:not([hidden])) { grid-template-columns: minmax(420px, 680px) 150px; }
+  #game .replay-bar { grid-column: 2; grid-row: 1 / span 2; align-self: center; width: 180px; }
+  #game .replay-bar .actions { grid-column: auto; grid-row: auto; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #game .game-layout:has(.replay-bar:not([hidden])) { grid-template-columns: minmax(420px, 680px) 180px; }
 }
 @media (max-width: 899px) {
   #game .replay-bar { order: 1; width: min(100%, 560px); gap: 5px; }
@@ -260,6 +260,21 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .replay-legend .lg { display: inline-block; width: 22px; height: 6px; border-radius: 3px; margin-left: 6px; }
 .replay-legend .lg.green { background: #2ecc40; } .replay-legend .lg.red { background: #e53935; }
 .moves span[data-ply] { cursor: pointer; }
+.rp-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.mini { border: 0; background: var(--surface); color: var(--muted); border-radius: 999px; padding: 6px 10px; font-size: 0.74rem; cursor: pointer; }
+.mini:disabled { opacity: 0.5; cursor: progress; }
+.rp-review { display: flex; flex-direction: column; gap: 6px; }
+.rp-review[hidden] { display: none; }
+.rp-graph { width: 100%; height: 64px; background: var(--surface); border-radius: 8px; cursor: pointer; display: block; }
+.rp-graph .g-area { fill: rgba(240, 240, 235, 0.88); }
+.rp-graph .g-mid { stroke: rgba(233, 185, 73, 0.55); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.rp-graph .g-cur { stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.rp-graph .g-bad { stroke: #e53935; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.rp-acc, .rp-comment { font-size: 0.76rem; color: var(--muted); line-height: 1.35; }
+.rp-comment b { color: var(--accent); }
+.moves span.q-inaccuracy { box-shadow: inset 0 -2px 0 #f5d142; }
+.moves span.q-mistake { box-shadow: inset 0 -2px 0 #ff9f1c; }
+.moves span.q-blunder { box-shadow: inset 0 -2px 0 #e53935; }
 .arrows-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
 #board { position: relative; }
 .replay-items { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }

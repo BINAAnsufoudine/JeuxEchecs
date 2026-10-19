@@ -195,6 +195,66 @@
     return { checked, errors, captures };
   }
 
+  // Ouvertures reconnues (coups UCI) ; la plus longue séquence commune gagne
+  const OPENINGS = [
+    ['Partie espagnole (Ruy Lopez)', 'e2e4 e7e5 g1f3 b8c6 f1b5'], ['Partie italienne', 'e2e4 e7e5 g1f3 b8c6 f1c4'],
+    ['Partie écossaise', 'e2e4 e7e5 g1f3 b8c6 d2d4'], ['Défense russe (Petrov)', 'e2e4 e7e5 g1f3 g8f6'],
+    ['Défense Philidor', 'e2e4 e7e5 g1f3 d7d6'], ['Partie des quatre cavaliers', 'e2e4 e7e5 g1f3 b8c6 b1c3 g8f6'],
+    ['Gambit du roi', 'e2e4 e7e5 f2f4'], ['Partie viennoise', 'e2e4 e7e5 b1c3'], ['Partie du pion roi (jeu ouvert)', 'e2e4 e7e5'],
+    ['Défense sicilienne', 'e2e4 c7c5'], ['Défense française', 'e2e4 e7e6'], ['Défense Caro-Kann', 'e2e4 c7c6'],
+    ['Défense scandinave', 'e2e4 d7d5'], ['Défense Pirc', 'e2e4 d7d6'], ['Défense Alekhine', 'e2e4 g8f6'],
+    ['Défense moderne', 'e2e4 g7g6'], ['Partie du pion roi', 'e2e4'],
+    ['Gambit dame refusé', 'd2d4 d7d5 c2c4 e7e6'], ['Gambit dame accepté', 'd2d4 d7d5 c2c4 d5c4'], ['Gambit dame', 'd2d4 d7d5 c2c4'],
+    ['Défense slave', 'd2d4 d7d5 c2c4 c7c6'], ['Défense est-indienne', 'd2d4 g8f6 c2c4 g7g6'], ['Défense nimzo-indienne', 'd2d4 g8f6 c2c4 e7e6 b1c3 f8b4'],
+    ['Défense indienne', 'd2d4 g8f6'], ['Défense hollandaise', 'd2d4 f7f5'], ['Partie de la dame', 'd2d4 d7d5'], ['Partie du pion dame', 'd2d4'],
+    ['Partie anglaise', 'c2c4'], ['Partie Réti', 'g1f3'], ['Attaque Bird', 'f2f4'], ['Ouverture Larsen', 'b2b3'],
+    ['Ouverture du fianchetto roi', 'g2g3'], ['Ouverture Dunst', 'b1c3'],
+  ].map(([name, line]) => ({ name, line: line.split(' ') })).sort((a, b) => b.line.length - a.line.length);
+  const openingName = (moves) => {
+    const hit = OPENINGS.find((o) => o.line.every((u, i) => moves[i] === u));
+    return hit ? hit.name : null;
+  };
+
+  const CLASSES = [[15, 'best'], [60, 'good'], [150, 'inaccuracy'], [320, 'mistake'], [Infinity, 'blunder']];
+  const clampEval = (x) => Math.max(-1500, Math.min(1500, x));
+
+  // Revue complète : évaluation (point de vue des Blancs) avant/après chaque coup et qualité de chaque coup des deux camps.
+  // ev[0] = position initiale, ev[i] = après le coup i. marks[i-1] = [classe, perte, meilleur coup UCI].
+  function reviewGame(moves, opts = {}) {
+    const depth = opts.depth || 3, q = opts.q || 5;
+    const states = [fromFen(opts.fen || root.Chess.START_FEN)];
+    const played = [];
+    for (const u of moves) {
+      const s = states[states.length - 1];
+      const m = legalMoves(s).find((x) => toUci(x) === u || toUci(x) === u + 'q');
+      if (!m) break;
+      played.push(m);
+      states.push(makeMove(s, m));
+    }
+    const ev = [], marks = [];
+    const sums = { w: [0, 0], b: [0, 0] };
+    for (let i = 0; i < played.length; i++) {
+      const s = states[i], pm = played[i];
+      const keys = states.slice(0, i).map(positionKey);
+      const r = rootSearch(s, depth, q, keys, 60);
+      const sign = s.turn === 'w' ? 1 : -1;
+      if (!r.length) break;
+      const best = r[0];
+      if (i === 0) ev.push(clampEval(best.score * sign));
+      const sameAsBest = toUci(best.m) === toUci(pm);
+      const ps = sameAsBest ? best.score : moveScore(s, pm, depth, q, keys);
+      let loss = (isMate(best.score) && best.score > 0 && !(isMate(ps) && ps > 0)) ? 1000 : Math.max(0, best.score - ps);
+      if (!isMate(best.score) && best.score > 600 && ps > 600) loss = 0;
+      const cls = (CLASSES.find(([limit]) => loss <= limit) || CLASSES[CLASSES.length - 1])[1];
+      ev.push(clampEval(ps * sign));
+      marks.push([sameAsBest ? 'best' : cls, Math.round(loss), toUci(best.m)]);
+      sums[s.turn][0] += 100 * Math.exp(-loss / 300); sums[s.turn][1]++;
+      if (opts.onProgress) opts.onProgress(i + 1, played.length);
+    }
+    const acc = (c) => (sums[c][1] ? Math.round(sums[c][0] / sums[c][1]) : null);
+    return { ev, marks, accuracy: { w: acc('w'), b: acc('b') }, opening: openingName(moves), count: marks.length };
+  }
+
   function classifyError(s, pm, best, playedScore, q, captureKind) {
     if (isMate(best.score) && best.score > 0) return 'mat';
     if (isMate(playedScore) && playedScore < 0) return 'defense';
@@ -262,5 +322,5 @@
     };
   }
 
-  root.Coach = { explainError, THEME_ORDER, analyseGame, buildLine, themeOfSolution, defenseProblem, levelOf, balance, isFork, isPin, isFreeCapture, isEndgame };
+  root.Coach = { explainError, THEME_ORDER, analyseGame, reviewGame, openingName, buildLine, themeOfSolution, defenseProblem, levelOf, balance, isFork, isPin, isFreeCapture, isEndgame };
 })(typeof self !== 'undefined' ? self : globalThis);

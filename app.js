@@ -36,7 +36,9 @@
   };
   const playerProfile = () => Object.assign({ name: '', nameAsked: false, rating: null, games: 0, puzzles: 0 }, store.get('player', {}));
 
-  const settings = Object.assign({ theme: 'foret', showMoves: true, coords: true, sound: true, autoQueen: false, voice: true, coachEnabled: true }, store.get('settings', {}));
+  // Appareil modeste (peu de mémoire ou de cœurs) : 3D allégée par défaut
+  const weakDevice = !!((navigator.deviceMemory && navigator.deviceMemory <= 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4));
+  const settings = Object.assign({ theme: 'foret', showMoves: true, coords: true, sound: true, autoQueen: false, voice: true, coachEnabled: true, lite: weakDevice }, store.get('settings', {}));
   const setup = Object.assign({ mode: 'ai', color: 'w', level: 1 }, store.get('setup', {}));
   // Ancien réglage sur 5 niveaux : on repart du niveau débloqué
   if (!store.get('unlocked', 0)) { store.del('stats'); store.set('unlocked', 1); setup.level = 1; }
@@ -294,9 +296,10 @@
     $('opt-autoq').checked = settings.autoQueen;
     $('opt-voice').checked = settings.voice;
     $('opt-coach').checked = settings.coachEnabled;
+    $('opt-lite').checked = settings.lite;
   }
-  function saveSettings() { store.set('settings', settings); applyTheme(); if (game) renderBoard(); voiceButton(); renderCoachProgram(); renderCoachDock(); if (!settings.voice) hush(); }
-  [['opt-moves', 'showMoves'], ['opt-coords', 'coords'], ['opt-sound', 'sound'], ['opt-autoq', 'autoQueen'], ['opt-voice', 'voice'], ['opt-coach', 'coachEnabled']].forEach(([id, key]) => {
+  function saveSettings() { store.set('settings', settings); applyTheme(); if (b3d) b3d.setLite(settings.lite); if (game) renderBoard(); voiceButton(); renderCoachProgram(); renderCoachDock(); if (!settings.voice) hush(); }
+  [['opt-moves', 'showMoves'], ['opt-coords', 'coords'], ['opt-sound', 'sound'], ['opt-autoq', 'autoQueen'], ['opt-voice', 'voice'], ['opt-coach', 'coachEnabled'], ['opt-lite', 'lite']].forEach(([id, key]) => {
     $(id).addEventListener('change', (e) => { settings[key] = e.target.checked; saveSettings(); });
   });
 
@@ -426,7 +429,7 @@
   const IMPORT_SHAPES = {
     player: 'object', settings: 'object', setup: 'object', unlocked: 'number', miniSize: 'number', stats: 'object', game: 'object',
     pzdone: 'object', archive: 'array', coach: 'object', mistakes: 'array', captureNotes: 'array',
-    tipsSeen: 'array', tipsDone: 'object', lessonsDone: 'object', localArchive: 'array', external: 'array',
+    tipsSeen: 'array', tipsDone: 'object', lessonsDone: 'object', localArchive: 'array', external: 'array', reviews: 'array',
   };
   const validImportData = (data) => {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
@@ -912,6 +915,9 @@
       }
     }
     (outcome === 'win' ? sounds.win : outcome === 'loss' ? sounds.lose : sounds.draw)();
+    const snap = { moves: game.uciList(), cfg: { ...cfg }, result: result.result };
+    // L'analyse démarre tout de suite : le bilan est souvent prêt quand on l'ouvre
+    if (cfg.mode !== 'local' && snap.moves.length >= 8) requestReview(window.Chess.START_FEN, snap.moves).catch(() => {});
     if (cfg.mode === 'local' && !replay) {
       const local = store.get('localArchive', []);
       local.push({ id: Date.now(), mode: 'local', moves: game.uciList(), result: result.result, reason: result.reason });
@@ -925,6 +931,7 @@
           ...(opened ? [{ label: `Jouer ${LEVEL_NAMES[opened]}`, primary: true, onClick: () => startGame({ ...cfg, level: opened, playerColor: randomColor() }) }] : []),
           { label: 'Rejouer', primary: !opened, primary: true, onClick: () => startGame({ ...cfg, playerColor: randomColor() }) },
           ...(cfg.mode !== 'local' ? [{ label: 'Choisir un niveau', onClick: () => { renderSetup(); returnTo = 'home'; show('setup'); } }] : []),
+          ...(snap.moves.length >= 8 ? [{ label: 'Bilan de Maître Hiro', onClick: () => showBilan(snap) }] : []),
           { label: 'Voir le plateau', ghost: true },
           { label: 'Accueil', ghost: true, onClick: () => show('home') },
         ],
@@ -2048,6 +2055,211 @@
     return out;
   }
 
+  /* ---------- Analyse de partie, export PGN, lien de partage, bilan ---------- */
+  const REVIEW_LABELS = { best: 'Meilleur coup', good: 'Bon coup', inaccuracy: 'Imprécision', mistake: 'Erreur', blunder: 'Gaffe' };
+  const REVIEW_SIGN = { best: '', good: '', inaccuracy: '?!', mistake: '?', blunder: '??' };
+  const isSevere = (mark) => !!mark && (mark[0] === 'mistake' || mark[0] === 'blunder');
+  const reviewKey = (fen, moves) => `${fen}|${moves.join(' ')}`;
+  const loadReview = (k) => { const hit = store.get('reviews', []).find((x) => x.k === k); return hit ? hit.r : null; };
+  const reviewJobs = new Map();
+  let reviewing = false;
+
+  // Une seule analyse par partie à la fois ; les demandes simultanées partagent le même calcul
+  function requestReview(fen, moves, onProgress) {
+    const k = reviewKey(fen, moves), cached = loadReview(k);
+    if (cached) return Promise.resolve(cached);
+    let job = reviewJobs.get(k);
+    if (!job) {
+      job = { listeners: new Set() };
+      job.promise = new Promise((resolve, reject) => {
+        let w;
+        try { w = new Worker('analyse-worker.js'); } catch (err) { reject(err); return; }
+        w.onmessage = (e) => {
+          const d = e.data;
+          if (d.progress) { job.listeners.forEach((f) => f(d.progress[0], d.progress[1])); return; }
+          w.terminate();
+          if (d.ok) {
+            const list = store.get('reviews', []).filter((x) => x.k !== k);
+            list.push({ k, r: d.review });
+            store.set('reviews', list.slice(-20));
+            resolve(d.review);
+          } else reject(new Error(d.error));
+        };
+        w.onerror = (err) => { w.terminate(); reject(err); };
+        w.postMessage({ id: 1, review: true, moves, fen: fen === window.Chess.START_FEN ? undefined : fen });
+      }).finally(() => reviewJobs.delete(k));
+      reviewJobs.set(k, job);
+    }
+    if (onProgress) job.listeners.add(onProgress);
+    return job.promise;
+  }
+
+  function sanOfBest(fen, moves, ply0, uci) {
+    const g = new Game(fen);
+    for (let i = 0; i < ply0; i++) g.playUci(moves[i]);
+    const r = g.playUci(uci);
+    return r ? r.san : uci;
+  }
+  const fmtEval = (e) => (Math.abs(e) >= 1500 ? (e > 0 ? 'mat pour les Blancs' : 'mat pour les Noirs') : `${e > 0 ? '+' : ''}${(e / 100).toFixed(1).replace('.', ',')}`);
+
+  function renderReview(rv, cur) {
+    $('rp-review').hidden = !rv;
+    if (!reviewing) {
+      const btn = $('rp-analyse');
+      btn.disabled = false;
+      btn.textContent = !replay.review ? '📈 Analyser' : replay.showReview ? '📈 Masquer' : '📈 Analyse';
+    }
+    if (!rv) return;
+    const n = rv.ev.length, X = (i) => (n > 1 ? (i / (n - 1)) * 200 : 0), Y = (e) => 32 - Math.tanh(e / 400) * 30;
+    const pts = rv.ev.map((e, i) => `${X(i).toFixed(1)},${Y(e).toFixed(1)}`).join(' L');
+    let svg = `<path class="g-area" d="M0,64 L${pts} L${X(n - 1).toFixed(1)},64 Z"/><line class="g-mid" x1="0" x2="200" y1="32" y2="32"/>`;
+    rv.marks.forEach((m, i) => { if (isSevere(m)) svg += `<line class="g-bad" x1="${X(i + 1).toFixed(1)}" x2="${X(i + 1).toFixed(1)}" y1="54" y2="64"/>`; });
+    svg += `<line class="g-cur" x1="${X(cur).toFixed(1)}" x2="${X(cur).toFixed(1)}" y1="0" y2="64"/>`;
+    $('rp-graph').innerHTML = svg;
+    const who = rv.accuracy;
+    $('rp-acc').innerHTML = `${rv.opening ? `<b>${escHtml(rv.opening)}</b><br>` : ''}Précision : Blancs ${who.w == null ? '–' : who.w + ' %'} · Noirs ${who.b == null ? '–' : who.b + ' %'}`;
+    const mark = rv.marks[cur - 1];
+    let text = `Position de départ · évaluation ${fmtEval(rv.ev[0] || 0)}`;
+    if (mark) {
+      text = `<b>${escHtml(replay.sans[cur - 1])}${REVIEW_SIGN[mark[0]]}</b> — ${REVIEW_LABELS[mark[0]]} · évaluation ${fmtEval(rv.ev[cur])}`;
+      if (['inaccuracy', 'mistake', 'blunder'].includes(mark[0])) {
+        text += `<br>Meilleur coup : <b>${escHtml(sanOfBest(replay.fen, replay.moves, cur - 1, mark[2]))}</b> (perte ≈ ${(mark[1] / 100).toFixed(1).replace('.', ',')})`;
+      }
+    }
+    $('rp-comment').innerHTML = text;
+  }
+  $('rp-analyse').onclick = () => {
+    if (!replay || reviewing) return;
+    if (replay.review) { replay.showReview = !replay.showReview; render(); return; }
+    if (!replay.moves.length) return toast('Aucun coup à analyser.');
+    const mine = replay, btn = $('rp-analyse');
+    reviewing = true; btn.disabled = true; btn.textContent = '📈 0 %';
+    requestReview(mine.fen, mine.moves, (done, total) => { btn.textContent = `📈 ${Math.round((done / total) * 100)} %`; })
+      .then((r) => { mine.review = r; mine.showReview = true; })
+      .catch(() => toast("L'analyse n'a pas pu être lancée sur cet appareil."))
+      .finally(() => { reviewing = false; if (replay) render(); });
+  };
+  const jumpToSevere = (dir) => {
+    if (!replay || !replay.review) return;
+    for (let p = replay.index + dir; p >= 1 && p <= replay.moves.length; p += dir) if (isSevere(replay.review.marks[p - 1])) return navigate(p);
+    toast(dir > 0 ? 'Plus de faute après ce coup.' : 'Plus de faute avant ce coup.');
+  };
+  $('rp-nextbad').onclick = () => jumpToSevere(1);
+  $('rp-prevbad').onclick = () => jumpToSevere(-1);
+  $('rp-graph').onclick = (e) => {
+    if (!replay || !replay.review) return;
+    const box = e.currentTarget.getBoundingClientRect();
+    navigate(Math.round(((e.clientX - box.left) / box.width) * (replay.review.ev.length - 1)));
+  };
+
+  const pad2 = (x) => String(x).padStart(2, '0');
+  const pgnDate = (id) => { const d = new Date(id); return `${d.getFullYear()}.${pad2(d.getMonth() + 1)}.${pad2(d.getDate())}`; };
+  const sideNames = (c) => {
+    if (c.mode === 'local') return { white: 'Joueur 1', black: 'Joueur 2' };
+    const ai = c.mode === 'coach' ? 'Maître Hiro' : `Ordinateur ${LEVEL_NAMES[c.level] || ''}`.trim();
+    return c.playerColor === 'w' ? { white: 'Joueur', black: ai } : { white: ai, black: 'Joueur' };
+  };
+  function pgnFor(entry) {
+    const fen = entry.fen || window.Chess.START_FEN, G = new Game(fen), san = [];
+    for (const u of entry.moves || []) { const r = G.playUci(u); if (!r) break; san.push(r.san); }
+    const st = G.status(), res = entry.result && entry.result !== '*' ? entry.result : st.over ? st.result : '*';
+    const tags = { Event: entry.event || 'Partie Cavalier', Site: 'Cavalier', Date: entry.date || pgnDate(Date.now()), White: entry.white || 'Blancs', Black: entry.black || 'Noirs', Result: res };
+    if (entry.opening) tags.Opening = entry.opening;
+    if (fen !== window.Chess.START_FEN) { tags.SetUp = '1'; tags.FEN = fen; }
+    const start = new Game(fen).state;
+    let turn = start.turn, n = start.full || 1, body = '';
+    san.forEach((m, i) => {
+      if (turn === 'w') body += `${n}. ${m} `;
+      else { body += `${i === 0 ? `${n}... ` : ''}${m} `; n++; }
+      turn = turn === 'w' ? 'b' : 'w';
+    });
+    return Object.entries(tags).map(([k, v]) => `[${k} "${String(v).replace(/"/g, "'")}"]`).join('\n') + '\n\n' + (body + res).replace(/(.{1,78})(\s|$)/g, '$1\n').trim() + '\n';
+  }
+  $('rp-pgn').onclick = () => {
+    if (!replay) return;
+    saveFile(`cavalier-partie-${stamp()}.pgn`, pgnFor({ ...replay, opening: replay.review && replay.review.opening }));
+  };
+
+  const toB64 = (obj) => {
+    let s = '';
+    new TextEncoder().encode(JSON.stringify(obj)).forEach((b) => { s += String.fromCharCode(b); });
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  };
+  const fromB64 = (text) => JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(text.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0))));
+  $('rp-share').onclick = async () => {
+    if (!replay) return;
+    const payload = { m: replay.moves.join(' '), t: replay.title, r: replay.result, w: replay.white, b: replay.black };
+    if (replay.fen !== window.Chess.START_FEN) payload.f = replay.fen;
+    const url = `${location.origin}${location.pathname}#r=${toB64(payload)}`;
+    try { await navigator.clipboard.writeText(url); toast('Lien de la partie copié'); }
+    catch { modal({ title: 'Lien de partage', text: url, actions: [{ label: 'Fermer', primary: true }] }); }
+  };
+  function openSharedLink() {
+    const match = /^#r=([\w-]+)$/.exec(location.hash);
+    if (!match) return;
+    history.replaceState(history.state, '', location.pathname + location.search);
+    try {
+      const p = fromB64(match[1]);
+      if (typeof p.m !== 'string' || p.m.length > 30000) throw new Error('lien');
+      const entry = { moves: p.m ? p.m.split(' ') : [], fen: typeof p.f === 'string' ? p.f : undefined, title: String(p.t || 'Partie partagée').slice(0, 80), white: p.w ? String(p.w).slice(0, 60) : undefined, black: p.b ? String(p.b).slice(0, 60) : undefined, result: ['1-0', '0-1', '1/2-1/2'].includes(p.r) ? p.r : '*' };
+      if (entry.fen && fenError(entry.fen)) throw new Error('fen');
+      startReplay(entry, () => show('home'));
+    } catch { replay = null; toast('Lien de partage invalide.'); }
+  }
+
+  // Bilan de Maître Hiro à la fin d'une partie
+  const PHASE_ADVICE = {
+    ouverture: "Ouverture : développe tes pièces, prends le centre et roque tôt avant de lancer des attaques.",
+    milieu: "Milieu de partie : avant chaque coup, cherche les menaces adverses (échecs, prises, pièces non défendues), puis tes propres tactiques.",
+    finale: "Finale : active ton roi, pousse tes pions libres et calcule les coups forcés jusqu'au bout.",
+  };
+  const phaseOf = (ply0) => (ply0 < 20 ? 'ouverture' : ply0 < 60 ? 'milieu' : 'finale');
+  let bilanId = 0;
+  function showBilan(snap) {
+    const my = ++bilanId;
+    modal({ title: 'Bilan de Maître Hiro', text: 'Analyse de la partie…', actions: [{ label: 'Fermer', ghost: true, onClick: () => { bilanId++; } }] });
+    requestReview(window.Chess.START_FEN, snap.moves, (done, total) => {
+      if (my === bilanId && !$('modal').hidden) $('modal-text').textContent = `Analyse de la partie… ${done} / ${total} coups`;
+    }).then((r) => { if (my === bilanId && !$('modal').hidden) renderBilan(snap, r); })
+      .catch(() => { if (my === bilanId) { closeModal(); toast("L'analyse n'a pas pu être lancée sur cet appareil."); } });
+  }
+  function renderBilan(snap, r) {
+    const local = snap.cfg.mode === 'local', me = snap.cfg.playerColor;
+    const mine = [];
+    r.marks.forEach((m, i) => { if (isSevere(m) && (local || (i % 2 ? 'b' : 'w') === me)) mine.push({ i, cls: m[0], loss: m[1], best: m[2] }); });
+    const top = mine.slice().sort((a, b) => b.loss - a.loss).slice(0, 3).sort((a, b) => a.i - b.i);
+    const sans = []; { const g = new Game(window.Chess.START_FEN); for (const u of snap.moves) { const x = g.playUci(u); if (!x) break; sans.push(x.san); } }
+    const num = (i) => `${Math.floor(i / 2) + 1}${i % 2 ? '…' : '.'}`;
+    const acc = (c) => (r.accuracy[c] == null ? '–' : `${r.accuracy[c]} %`);
+    let html = '';
+    if (r.opening) html += `<p><b>Ouverture :</b> ${escHtml(r.opening)}</p>`;
+    html += local ? `<p><b>Précision :</b> Blancs ${acc('w')} · Noirs ${acc('b')}</p>` : `<p><b>Précision :</b> toi ${acc(me)} · adversaire ${acc(me === 'w' ? 'b' : 'w')}</p>`;
+    if (top.length) {
+      html += `<p><b>Tes ${top.length > 1 ? `${top.length} principales erreurs` : 'principale erreur'} :</b></p><ul>` + top.map((t) => {
+        const best = sanOfBest(window.Chess.START_FEN, snap.moves, t.i, t.best);
+        return `<li>Coup ${num(t.i)} ${escHtml(sans[t.i])}${REVIEW_SIGN[t.cls]} — meilleur : ${escHtml(best)} (perte ≈ ${(t.loss / 100).toFixed(1).replace('.', ',')})</li>`;
+      }).join('') + '</ul>';
+      const counts = { ouverture: 0, milieu: 0, finale: 0 };
+      mine.forEach((m) => { counts[phaseOf(m.i)]++; });
+      const worst = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+      html += `<p><b>Conseil :</b> ${PHASE_ADVICE[worst]}</p>`;
+    } else {
+      html += '<p>Aucune erreur grave repérée : partie très propre, bravo ! Continue à calculer les coups forcés avant chaque décision.</p>';
+    }
+    const body = document.createElement('div');
+    body.className = 'bilan';
+    body.innerHTML = html;
+    const names = sideNames(snap.cfg);
+    modal({
+      title: 'Bilan de Maître Hiro', body,
+      actions: [
+        { label: "Revoir avec l'analyse", primary: true, onClick: () => startReplay({ moves: snap.moves, result: snap.result, title: 'Ma dernière partie', ...names, flipped: !local && me === 'b' }, () => show('home')) },
+        { label: 'Exporter en PGN', onClick: () => saveFile(`cavalier-partie-${stamp()}.pgn`, pgnFor({ moves: snap.moves, result: snap.result, opening: r.opening, ...names })) },
+        { label: 'Fermer', ghost: true },
+      ],
+    });
+  }
+
   function startReplay(entry, back) {
     cancelAi(); stopReplayPlay();
     pz = null; marks = null;
@@ -2055,7 +2267,9 @@
     const fen = entry.fen || window.Chess.START_FEN;
     const probe = new Game(fen), sans = [];
     for (const u of entry.moves || []) { const r = probe.playUci(u); if (!r) break; sans.push(r.san); }
-    replay = { moves: (entry.moves || []).slice(0, sans.length), sans, fen, index: 0, title: entry.title || 'Partie', result: entry.result || '*', back };
+    replay = { moves: (entry.moves || []).slice(0, sans.length), sans, fen, index: 0, title: entry.title || 'Partie', result: entry.result || '*', back, white: entry.white, black: entry.black, event: entry.event, date: entry.date };
+    replay.review = loadReview(reviewKey(fen, replay.moves));
+    replay.showReview = !!replay.review;
     cfg = { mode: 'local', playerColor: 'w', level: 1 };
     result = null; selected = -1; hint = null;
     flipped = !!entry.flipped;
@@ -2078,12 +2292,20 @@
     renderBoard(); renderPlayers();
     const ol = $('moves'); ol.innerHTML = '';
     const sans = replay.sans, cur = replay.index;
-    const cls = (ply) => (ply === cur ? ' class="cur"' : '');
+    const rv = replay.review && replay.showReview ? replay.review : null;
+    const BAD = ['inaccuracy', 'mistake', 'blunder'];
     for (let i = 0; i < sans.length; i += 2) {
+      const cell = (ply) => {
+        const mark = replay.review && replay.review.marks[ply - 1];
+        const bad = mark && BAD.includes(mark[0]);
+        const cls = [ply === cur ? 'cur' : '', bad ? `q-${mark[0]}` : ''].filter(Boolean).join(' ');
+        return `<span data-ply="${ply}"${cls ? ` class="${cls}"` : ''}>${escHtml(sans[ply - 1])}${bad ? REVIEW_SIGN[mark[0]] : ''}</span>`;
+      };
       const li = document.createElement('li');
-      li.innerHTML = `<span class="n">${i / 2 + 1}.</span><span data-ply="${i + 1}"${cls(i + 1)}>${escHtml(sans[i])}</span> ${sans[i + 1] ? `<span data-ply="${i + 2}"${cls(i + 2)}>${escHtml(sans[i + 1])}</span>` : ''}`;
+      li.innerHTML = `<span class="n">${i / 2 + 1}.</span>${cell(i + 1)} ${sans[i + 1] ? cell(i + 2) : ''}`;
       ol.appendChild(li);
     }
+    renderReview(rv, cur);
     const current = ol.querySelector('.cur');
     if (current) current.scrollIntoView({ block: 'nearest' });
     const side = game.turn === 'w' ? 'Blancs' : 'Noirs';
@@ -2154,7 +2376,7 @@
     body.onclick = (e) => {
       const b = e.target.closest('.replay-item'); if (!b) return;
       const g = source[Number(b.dataset.i)]; if (!g) return;
-      startReplay({ moves: g.moves, result: g.result, title: `${MODE_LABELS[mode]} · ${fmtDateTime(g.id)}`, flipped: mode !== 'local' && g.color === 'b' }, () => openReplayList(mode));
+      startReplay({ moves: g.moves, result: g.result, title: `${MODE_LABELS[mode]} · ${fmtDateTime(g.id)}`, flipped: mode !== 'local' && g.color === 'b', date: pgnDate(g.id), ...sideNames({ mode, playerColor: g.color, level: g.level }) }, () => openReplayList(mode));
     };
     returnTo = 'home';
     show('replay-list');
@@ -2186,7 +2408,7 @@
       const parsed = parsePgn(src);
       if (!parsed.games.length) return toast(`PGN invalide${parsed.error ? ` : ${parsed.error}` : '.'}`);
       for (const g of parsed.games) {
-        entries.push({ kind: 'pgn', title: `${g.tags.White || 'Blancs'} – ${g.tags.Black || 'Noirs'}`, event: g.tags.Event || '', date: g.tags.Date || '', moves: g.moves, result: g.result !== '*' ? g.result : g.status.over ? g.status.result : '*' });
+        entries.push({ kind: 'pgn', title: `${g.tags.White || 'Blancs'} – ${g.tags.Black || 'Noirs'}`, white: g.tags.White, black: g.tags.Black, event: g.tags.Event || '', date: g.tags.Date || '', moves: g.moves, result: g.result !== '*' ? g.result : g.status.over ? g.status.result : '*' });
       }
     }
     const list = store.get('external', []), now = Date.now();
@@ -2249,6 +2471,12 @@
   try {
     b3d = new window.Board3D($('board-wrap'), tapSquare);
     $('board-wrap').classList.add('is3d');
+    b3d.setLite(settings.lite);
+    b3d.onSlow = () => {
+      if (settings.lite) return;
+      settings.lite = true; store.set('settings', settings); b3d.setLite(true);
+      toast('Affichage lent détecté : mode léger activé (modifiable dans Réglages).');
+    };
   } catch (err) {
     b3d = null; // pas de WebGL : plateau 2D
   }
@@ -2267,6 +2495,7 @@
     show(initialScreen);
   }
   if (initialScreen === 'home' && !playerProfile().nameAsked) setTimeout(promptPlayerName, 250);
+  openSharedLink();
   setTimeout(analyseNext, 3000);
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {

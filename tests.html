@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cavalier · Tests automatiques</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; background: #13201b; color: #eee; margin: 0; padding: 16px; }
+  h1 { font-size: 1.2rem; margin: 0 0 8px; }
+  #summary { font-weight: 700; margin: 8px 0 12px; }
+  #summary.ok { color: #6fdc8c; } #summary.ko { color: #ff7b72; }
+  li { margin: 2px 0; } li.ok::marker { color: #6fdc8c; } li.ko { color: #ff7b72; }
+  #stage { width: 480px; height: 480px; position: absolute; left: -9999px; top: 0; }
+</style>
+</head>
+<body>
+  <h1>Cavalier · Tests automatiques</h1>
+  <p>Moteur d'échecs, analyse et stress de l'affichage 3D. Ouvrir cette page (ou <code>tests.html</code> avec Playwright) : le résultat est dans <code>window.__tests</code>.</p>
+  <div id="summary">Tests en cours…</div>
+  <ul id="list"></ul>
+  <div id="stage"></div>
+  <script src="vendor/three.min.js"></script>
+  <script src="engine.js"></script>
+  <script src="search.js"></script>
+  <script src="coach-core.js"></script>
+  <script src="characters.js"></script>
+  <script src="models3d.js"></script>
+  <script src="board3d.js"></script>
+  <script src="selftest.js"></script>
+</body>
+</html>
