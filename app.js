@@ -871,9 +871,10 @@
     const st = game.status();
     if (st.over) {
       result = { result: st.result, reason: st.reason, ultimateId: `${game.history.length}-${Date.now()}` };
+      if (st.reason === 'mat') shout('Échec et mat !');
       finish();
     } else {
-      if (game.inCheck()) sounds.check();
+      if (game.inCheck()) { sounds.check(); shout('Échec !'); }
       else if (res.move.captured) sounds.capture();
       else sounds.move();
     }
@@ -2522,7 +2523,6 @@
     b3d = new window.Board3D($('board-wrap'), tapSquare);
     $('board-wrap').classList.add('is3d');
     b3d.setLite(settings.lite);
-    b3d.onTechnique = (name) => { if (!(game && cfg && cfg.mode === 'coach' && !replay && !pz)) shout(name); };
     b3d.onSlow = () => {
       if (settings.lite) return;
       settings.lite = true; store.set('settings', settings); b3d.setLite(true);
