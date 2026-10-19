@@ -2110,10 +2110,11 @@
     gotoPly(n, animate);
   };
   $('rp-start').onclick = () => navigate(0);
-  $('rp-prev').onclick = () => navigate(replay.index - 1);
-  $('rp-next').onclick = () => navigate(replay.index + 1, true);
-  $('rp-end').onclick = () => navigate(replay.moves.length);
+  $('rp-prev').onclick = () => replay && navigate(replay.index - 1);
+  $('rp-next').onclick = () => replay && navigate(replay.index + 1, true);
+  $('rp-end').onclick = () => replay && navigate(replay.moves.length);
   $('rp-play').onclick = () => {
+    if (!replay) return;
     if (replayTimer) { stopReplayPlay(); return; }
     if (replay.index >= replay.moves.length) gotoPly(0);
     $('rp-play').innerHTML = '<span>⏸</span>Pause';

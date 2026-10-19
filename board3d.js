@@ -1631,6 +1631,14 @@
       }
     }
 
+    // Object3D.clone() sérialise userData en JSON : la référence circulaire userData.char le ferait planter
+    cloneClean(obj) {
+      const saved = [];
+      obj.traverse((o) => { if (o.userData && o.userData.char) { saved.push([o, o.userData.char]); delete o.userData.char; } });
+      try { return obj.clone(); }
+      finally { saved.forEach(([o, ch]) => { o.userData.char = ch; }); }
+    }
+
     makeChar(piece) {
       const T = this.THREE;
       const parts = root.Models3D.build(T, piece);
@@ -2343,7 +2351,7 @@
       else M.animate(c.parts, t, 'idle');
       if (el >= 0.3 && !k.proj && !k.done) {
         const g = new T.Group();
-        if (kind === 'b' && c.parts.shuriken) { g.add(c.parts.shuriken.clone()); g.scale.setScalar(c.parts.root.scale.x * 1.1); }
+        if (kind === 'b' && c.parts.shuriken) { g.add(this.cloneClean(c.parts.shuriken)); g.scale.setScalar(c.parts.root.scale.x * 1.1); }
         else {
           const col = { q: [0xfff1a8, 0xff7a1a], r: [0xd8f6ff, 0x2a8cff], k: [0xeaffff, 0x5fd8ff], n: [0xffffff, 0x9fb8ff], p: [0xffffff, 0xffc04a] }[kind] || [0xffffff, 0xffe066];
           const long = kind === 'p' || kind === 'k' || kind === 'n';
