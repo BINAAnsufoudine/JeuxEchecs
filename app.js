@@ -305,9 +305,6 @@
   });
 
   $('coach-dock-close').onclick = () => { coachDockOpen = false; renderCoachDock(); };
-  $('coach-dock-program').onclick = () => {
-    coachDockOpen = false; returnTo = 'home'; show('problems'); nextActivity();
-  };
   $('coach-dock-voice').onclick = () => {
     settings.voice = !settings.voice; saveSettings();
     if (settings.voice) speak(coachMessage || coachPlan().text); else hush();
