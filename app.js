@@ -530,7 +530,9 @@
   }
 
   const isHumanTurn = () => cfg.mode === 'local' || game.turn === cfg.playerColor;
-  const canInteract = () => (replay ? false : pz ? !!(pz.item && pz.item.line) && !pz.done && !pz.locked : !result && !thinking && isHumanTurn());
+  // Une animation 3D (déplacement, duel, technique de prise ou de mat) doit finir avant tout nouveau mouvement
+  const animBusy = () => !!(b3d && b3d.busyUntil && b3d.busyUntil * 1000 > performance.now());
+  const canInteract = (ignoreAnim = false) => (replay ? false : !ignoreAnim && animBusy() ? false : pz ? !!(pz.item && pz.item.line) && !pz.done && !pz.locked : !result && !thinking && isHumanTurn());
 
   function render() { if (replay) { renderReplay(); return; } renderBoard(); renderPlayers(); renderMoves(); renderStatus(); renderActions(); }
 
@@ -782,7 +784,7 @@
   function renderActions() {
     const plies = game.history.length;
     $('btn-undo').disabled = !!result || plies === 0 || (cfg.mode !== 'local' && plies < (cfg.playerColor === 'w' ? 1 : 2));
-    $('btn-hint').disabled = !canInteract();
+    $('btn-hint').disabled = !canInteract(true);
     $('btn-resign').disabled = !!result;
   }
 
@@ -1105,6 +1107,7 @@
 
   /* ---------- Actions ---------- */
   $('btn-undo').onclick = () => {
+    if (animBusy()) return;
     cancelAi();
     if (cfg.mode !== 'local') {
       game.undo();
@@ -2101,10 +2104,15 @@
     if (back) back(); else show('home');
   }
   $('rp-flip').onclick = () => { flipped = !flipped; render(); };
-  $('rp-start').onclick = () => { stopReplayPlay(); gotoPly(0); };
-  $('rp-prev').onclick = () => { stopReplayPlay(); gotoPly(replay.index - 1); };
-  $('rp-next').onclick = () => { stopReplayPlay(); gotoPly(replay.index + 1, true); };
-  $('rp-end').onclick = () => { stopReplayPlay(); gotoPly(replay.moves.length); };
+  const navigate = (n, animate = false) => {
+    if (!replay || animBusy()) return;
+    stopReplayPlay();
+    gotoPly(n, animate);
+  };
+  $('rp-start').onclick = () => navigate(0);
+  $('rp-prev').onclick = () => navigate(replay.index - 1);
+  $('rp-next').onclick = () => navigate(replay.index + 1, true);
+  $('rp-end').onclick = () => navigate(replay.moves.length);
   $('rp-play').onclick = () => {
     if (replayTimer) { stopReplayPlay(); return; }
     if (replay.index >= replay.moves.length) gotoPly(0);
@@ -2122,12 +2130,12 @@
   $('moves').addEventListener('click', (e) => {
     if (!replay) return;
     const span = e.target.closest('[data-ply]');
-    if (span) { stopReplayPlay(); gotoPly(Number(span.dataset.ply)); }
+    if (span) navigate(Number(span.dataset.ply));
   });
   document.addEventListener('keydown', (e) => {
     if (!replay || document.body.dataset.screen !== 'game' || !$('modal').hidden || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
-    if (e.key === 'ArrowLeft') { stopReplayPlay(); gotoPly(replay.index - 1); e.preventDefault(); }
-    else if (e.key === 'ArrowRight') { stopReplayPlay(); gotoPly(replay.index + 1, true); e.preventDefault(); }
+    if (e.key === 'ArrowLeft') { navigate(replay.index - 1); e.preventDefault(); }
+    else if (e.key === 'ArrowRight') { navigate(replay.index + 1, true); e.preventDefault(); }
   });
 
   function openReplayList(mode) {
