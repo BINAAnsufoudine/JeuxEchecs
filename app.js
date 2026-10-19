@@ -44,6 +44,8 @@
   if (setup.level > unlocked()) setup.level = unlocked();
 
   let game = null;
+  let replay = null;       // { moves, sans, fen, index, title, back } pendant la visualisation d'une partie
+  let replayTimer = null;
   let cfg = null;          // { mode, playerColor, level }
   let result = null;       // { result, reason }
   let flipped = false;
@@ -69,7 +71,8 @@
     const stableScreen = id === 'puzzle' || id === 'theme' ? 'problems' : id;
     const desktopShell = window.matchMedia('(min-width: 1000px)').matches;
     const mobileShell = window.matchMedia('(max-width: 999px)').matches && id !== 'home';
-    store.set('lastScreen', stableScreen);
+    store.set('lastScreen', replay || id === 'replay-list' || id === 'replay-external' ? 'home' : stableScreen);
+    if (id !== 'game') stopReplayPlay();
     document.body.dataset.screen = id;
     document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === id || ((desktopShell || mobileShell) && s.id === 'home')));
     document.body.classList.remove('mobile-menu-open');
@@ -80,6 +83,8 @@
       $('btn-play-menu').setAttribute('aria-expanded', 'false');
       $('progress-submenu').hidden = true;
       $('btn-progress-menu').setAttribute('aria-expanded', 'false');
+      $('replay-submenu').hidden = true;
+      $('btn-replay-menu').setAttribute('aria-expanded', 'false');
     }
     if (id === 'home') refreshHome();
     if (id === 'program') renderCoachProgram();
@@ -421,7 +426,7 @@
   const IMPORT_SHAPES = {
     player: 'object', settings: 'object', setup: 'object', unlocked: 'number', miniSize: 'number', stats: 'object', game: 'object',
     pzdone: 'object', archive: 'array', coach: 'object', mistakes: 'array', captureNotes: 'array',
-    tipsSeen: 'array', tipsDone: 'object', lessonsDone: 'object',
+    tipsSeen: 'array', tipsDone: 'object', lessonsDone: 'object', localArchive: 'array', external: 'array',
   };
   const validImportData = (data) => {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
@@ -487,6 +492,7 @@
   /* ---------- Partie ---------- */
   function startGame(conf, uciMoves = [], res = null, flip, terrainId, weatherId) {
     cancelAi();
+    replay = null; setReplayUi(false);
     pz = null; marks = null;
     attachBoard('game');
     game = new Game();
@@ -519,20 +525,20 @@
   }
 
   function save() {
-    if (!game || pz) return;
+    if (!game || pz || replay) return;
     store.set('game', { cfg, moves: game.uciList(), result, flipped, terrain: currentTerrain, weather: currentWeather });
   }
 
   const isHumanTurn = () => cfg.mode === 'local' || game.turn === cfg.playerColor;
-  const canInteract = () => (pz ? !!(pz.item && pz.item.line) && !pz.done && !pz.locked : !result && !thinking && isHumanTurn());
+  const canInteract = () => (replay ? false : pz ? !!(pz.item && pz.item.line) && !pz.done && !pz.locked : !result && !thinking && isHumanTurn());
 
-  function render() { renderBoard(); renderPlayers(); renderMoves(); renderStatus(); renderActions(); }
+  function render() { if (replay) { renderReplay(); return; } renderBoard(); renderPlayers(); renderMoves(); renderStatus(); renderActions(); }
 
   function displayToBoard(i) { return flipped ? 63 - i : i; }
 
   // Petit échiquier 2D en haut à droite : la position exacte, en icônes
   const MINI = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
-  function renderMinimap(board, last, selectedSq = -1, targets = [], mateFire = []) {
+  function renderMinimap(board, last, selectedSq = -1, targets = [], mateFire = [], arrows = []) {
     const el = $('minimap');
     let html = '';
     for (let i = 0; i < 64; i++) {
@@ -544,7 +550,21 @@
       const capture = target && (!!p || targets.some((m) => m.to === sq && m.flag === 'ep'));
       html += `<button type="button" class="${dark ? 'd' : 'l'}${lit ? ' last' : ''}${selected ? ' sel' : ''}${mateFire.includes(sq) ? ' mate-fire' : ''}${target ? ` target${capture ? ' capture' : ''}` : ''}" data-sq="${sq}" aria-label="${sqName(sq)} ${p ? pieceName(p) : mateFire.includes(sq) ? 'case vide en feu' : 'case vide'}"${selected ? ' aria-pressed="true"' : ''}>${p ? `<b class="${p === p.toUpperCase() ? 'w' : 'k'}">${MINI[p.toLowerCase()]}</b>` : ''}</button>`;
     }
-    el.innerHTML = html;
+    el.innerHTML = html + arrowsSvg(arrows);
+  }
+  // Flèches de replay en SVG (plateau 2D et mini-carte)
+  function arrowsSvg(arrows) {
+    if (!arrows.length) return '';
+    const center = (sq) => [(flipped ? 7 - (sq & 7) : sq & 7) + 0.5, (flipped ? 7 - (sq >> 3) : sq >> 3) + 0.5];
+    let body = '';
+    for (const a of arrows) {
+      const [x1, y1] = center(a.from), [x2, y2] = center(a.to);
+      const len = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+      const ex = x2 - ux * 0.1, ey = y2 - uy * 0.1, bx = ex - ux * 0.38, by = ey - uy * 0.38;
+      const color = a.color === 'red' ? '#e53935' : '#2ecc40';
+      body += `<g fill="${color}" stroke="${color}" opacity="0.88"><line x1="${x1}" y1="${y1}" x2="${bx}" y2="${by}" stroke-width="0.14" stroke-linecap="round"/><polygon stroke="none" points="${ex},${ey} ${bx - uy * 0.2},${by + ux * 0.2} ${bx + uy * 0.2},${by - ux * 0.2}"/></g>`;
+    }
+    return `<svg class="arrows-svg" viewBox="0 0 8 8" aria-hidden="true">${body}</svg>`;
   }
   const minimap = $('minimap');
   let minimapResize = null, resizeCandidate = null, suppressMinimapClick = false, minimapTap = null;
@@ -623,8 +643,9 @@
       const kingSq = s.board.indexOf(s.turn === 'w' ? 'K' : 'k');
       if (kingSq >= 0) {
         if (last && 'pnbqk'.includes(last.piece.toLowerCase())) {
-          const blackKingUltimate = result.result === '0-1' && last.piece !== 'q';
-          const ultimatePiece = blackKingUltimate ? 'k' : last.piece;
+          const movedPiece = s.board[last.to] || last.piece;
+          const blackKingUltimate = result.result === '0-1' && movedPiece !== 'q';
+          const ultimatePiece = blackKingUltimate ? 'k' : movedPiece;
           const attackerTo = blackKingUltimate ? s.board.indexOf('k') : last.to;
           const whiteQueenUltimate = ultimatePiece === 'Q';
           const flameSquares = ultimatePiece === 'q' ? s.board.reduce((squares, piece, sq) => {
@@ -635,7 +656,11 @@
             if (piece && piece === piece.toLowerCase() && piece.toLowerCase() !== 'k') squares.push(sq);
             return squares;
           }, []) : [];
-          mateUltimate = { id: result.ultimateId, from: blackKingUltimate ? attackerTo : last.from, attackerTo, to: kingSq, piece: ultimatePiece, flameSquares, energySquares };
+          const whiteFlameSquares = whiteQueenUltimate ? s.board.reduce((squares, piece, sq) => {
+            if (!piece || piece !== piece.toUpperCase()) squares.push(sq);
+            return squares;
+          }, []) : [];
+          mateUltimate = { id: result.ultimateId, from: blackKingUltimate ? attackerTo : last.from, attackerTo, to: kingSq, piece: ultimatePiece, flameSquares, energySquares, whiteFlameSquares };
         }
         if (!b3d || !mateUltimate || mateUltimate.piece.toLowerCase() !== 'q') {
           const legalKingMoves = new Set(game.movesFrom(kingSq).map((m) => m.to));
@@ -649,11 +674,12 @@
         }
       }
     }
+    const arrows = replay ? replayArrows() : [];
     if (b3d) {
       const th = THEMES[settings.theme] || THEMES.foret;
-      b3d.update({ board: s.board, selected, targets, last, check: checkSq, mateFire, mateUltimate, hint, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext, outcome: result ? result.result : null });
+      b3d.update({ board: s.board, selected, targets, last, check: checkSq, mateFire, mateUltimate, hint, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext, outcome: result ? result.result : null, arrows });
       animateNext = false;
-      renderMinimap(s.board, last, selected, targets, mateFire);
+      renderMinimap(s.board, last, selected, targets, mateFire, arrows);
       return;
     }
     const frag = document.createDocumentFragment();
@@ -689,6 +715,7 @@
       frag.appendChild(cell);
     }
     el.replaceChildren(frag);
+    if (arrows.length) el.insertAdjacentHTML('beforeend', arrowsSvg(arrows));
   }
 
 
@@ -736,7 +763,7 @@
     for (let i = 0; i < h.length; i += 2) {
       const li = document.createElement('li');
       const cls = (k) => (k === h.length - 1 ? ' class="cur"' : '');
-      li.innerHTML = `<span class="n">${i / 2 + 1}.</span><span${cls(i)}>${h[i].san}</span> ${h[i + 1] ? `<span${cls(i + 1)}>${h[i + 1].san}</span>` : ''}`;
+      li.innerHTML = `<span class="n">${i / 2 + 1}.</span><span data-ply="${i + 1}"${cls(i)}>${h[i].san}</span> ${h[i + 1] ? `<span data-ply="${i + 2}"${cls(i + 1)}>${h[i + 1].san}</span>` : ''}`;
       ol.appendChild(li);
     }
     ol.scrollTop = ol.scrollHeight;
@@ -883,6 +910,11 @@
       }
     }
     (outcome === 'win' ? sounds.win : outcome === 'loss' ? sounds.lose : sounds.draw)();
+    if (cfg.mode === 'local' && !replay) {
+      const local = store.get('localArchive', []);
+      local.push({ id: Date.now(), mode: 'local', moves: game.uciList(), result: result.result, reason: result.reason });
+      store.set('localArchive', local.slice(-30));
+    }
     setTimeout(() => {
       modal({
         title: resultText(),
@@ -1104,7 +1136,7 @@
       ],
     });
   };
-  $('btn-menu').onclick = () => { save(); show('home'); };
+  $('btn-menu').onclick = () => { if (replay) { exitReplay(); return; } save(); show('home'); };
   $('btn-game-settings').onclick = () => { returnTo = 'game'; renderSettings(); show('settings'); };
 
   /* ---------- Statistiques ---------- */
@@ -1260,7 +1292,7 @@
   /* Archive des parties et analyse en arrière-plan */
   function archiveGame() {
     const arch = store.get('archive', []);
-    arch.push({ id: Date.now(), color: cfg.playerColor, level: cfg.level, moves: game.uciList(), result: result ? result.result : '*', reason: result ? result.reason : '', analysed: game.history.length < 12 });
+    arch.push({ id: Date.now(), mode: cfg.mode, color: cfg.playerColor, level: cfg.level, moves: game.uciList(), result: result ? result.result : '*', reason: result ? result.reason : '', analysed: game.history.length < 12 });
     store.set('archive', arch.slice(-30));
     setTimeout(analyseNext, 1500);
   }
@@ -1971,11 +2003,228 @@
   $('btn-about').onclick = () => { returnTo = 'home'; show('about'); };
   $('btn-settings').onclick = () => { returnTo = 'home'; renderSettings(); show('settings'); };
 
+  /* ---------- Replay ---------- */
+  const MODE_LABELS = { ai: 'Contre ordinateur', coach: 'Partie coachée', local: 'Deux joueurs' };
+  const RESULT_LABELS = { '1-0': 'Victoire des Blancs', '0-1': 'Victoire des Noirs', '1/2-1/2': 'Partie nulle', '*': 'Partie inachevée' };
+  const escHtml = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmtDateTime = (id) => new Date(id).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+
+  function setReplayUi(on) {
+    $('replay-bar').hidden = !on;
+    $('game-actions').hidden = on;
+  }
+  function stopReplayPlay() {
+    if (replayTimer) { clearInterval(replayTimer); replayTimer = null; }
+    const btn = $('rp-play');
+    if (btn) btn.innerHTML = '<span>▶</span>Lecture';
+  }
+
+  // Seules les prises recommandées sont fléchées : la pièce prise vaut au moins autant que la pièce
+  // qui prend, ou la case d'arrivée n'est plus attaquée par l'adversaire après la prise.
+  function replayArrows() {
+    const s = game.state, out = [], seen = new Set();
+    const value = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };
+    for (const [turn, color] of [[s.turn, 'green'], [s.turn === 'w' ? 'b' : 'w', 'red']]) {
+      const st = turn === s.turn ? s : { ...s, turn, ep: -1 };
+      const enemy = turn === 'w' ? 'b' : 'w';
+      for (const m of window.Chess.legalMoves(st)) {
+        if (!m.captured) continue;
+        const gain = value[m.captured.toLowerCase()] - value[m.piece.toLowerCase()];
+        let recommended = gain >= 0;
+        if (!recommended) {
+          const after = window.Chess.makeMove(st, m);
+          recommended = !window.Chess.isAttacked(after.board, m.to, enemy);
+        }
+        if (!recommended) continue;
+        const key = `${m.from}-${m.to}-${color}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({ from: m.from, to: m.to, color });
+      }
+    }
+    return out;
+  }
+
+  function startReplay(entry, back) {
+    cancelAi(); stopReplayPlay();
+    pz = null; marks = null;
+    attachBoard('game');
+    const fen = entry.fen || window.Chess.START_FEN;
+    const probe = new Game(fen), sans = [];
+    for (const u of entry.moves || []) { const r = probe.playUci(u); if (!r) break; sans.push(r.san); }
+    replay = { moves: (entry.moves || []).slice(0, sans.length), sans, fen, index: 0, title: entry.title || 'Partie', result: entry.result || '*', back };
+    cfg = { mode: 'local', playerColor: 'w', level: 1 };
+    result = null; selected = -1; hint = null;
+    flipped = !!entry.flipped;
+    $('terrain-name').textContent = '';
+    $('game-title').textContent = `Replay · ${replay.title}`;
+    setReplayUi(true);
+    show('game');
+    gotoPly(0);
+  }
+  function gotoPly(n, animate = false) {
+    if (!replay) return;
+    n = Math.max(0, Math.min(replay.moves.length, n));
+    game = new Game(replay.fen);
+    for (let i = 0; i < n; i++) game.playUci(replay.moves[i]);
+    animateNext = animate && n === replay.index + 1;
+    replay.index = n;
+    render();
+  }
+  function renderReplay() {
+    renderBoard(); renderPlayers();
+    const ol = $('moves'); ol.innerHTML = '';
+    const sans = replay.sans, cur = replay.index;
+    const cls = (ply) => (ply === cur ? ' class="cur"' : '');
+    for (let i = 0; i < sans.length; i += 2) {
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="n">${i / 2 + 1}.</span><span data-ply="${i + 1}"${cls(i + 1)}>${escHtml(sans[i])}</span> ${sans[i + 1] ? `<span data-ply="${i + 2}"${cls(i + 2)}>${escHtml(sans[i + 1])}</span>` : ''}`;
+      ol.appendChild(li);
+    }
+    const current = ol.querySelector('.cur');
+    if (current) current.scrollIntoView({ block: 'nearest' });
+    const side = game.turn === 'w' ? 'Blancs' : 'Noirs';
+    const atEnd = cur === sans.length;
+    const status = $('status');
+    status.classList.remove('alert');
+    status.textContent = sans.length ? `Coup ${cur} / ${sans.length} · Trait aux ${side}${game.inCheck() ? ' · Échec' : ''}` : `Position · Trait aux ${side}`;
+    $('replay-info').textContent = atEnd && sans.length ? `${replay.title} — ${RESULT_LABELS[replay.result] || RESULT_LABELS['*']}` : replay.title;
+    $('rp-start').disabled = $('rp-prev').disabled = cur === 0;
+    $('rp-next').disabled = $('rp-end').disabled = atEnd;
+    $('rp-play').disabled = !sans.length;
+  }
+  function exitReplay() {
+    const back = replay && replay.back;
+    stopReplayPlay();
+    replay = null; game = null;
+    setReplayUi(false);
+    if (back) back(); else show('home');
+  }
+  $('rp-flip').onclick = () => { flipped = !flipped; render(); };
+  $('rp-start').onclick = () => { stopReplayPlay(); gotoPly(0); };
+  $('rp-prev').onclick = () => { stopReplayPlay(); gotoPly(replay.index - 1); };
+  $('rp-next').onclick = () => { stopReplayPlay(); gotoPly(replay.index + 1, true); };
+  $('rp-end').onclick = () => { stopReplayPlay(); gotoPly(replay.moves.length); };
+  $('rp-play').onclick = () => {
+    if (replayTimer) { stopReplayPlay(); return; }
+    if (replay.index >= replay.moves.length) gotoPly(0);
+    $('rp-play').innerHTML = '<span>⏸</span>Pause';
+    replayTimer = setInterval(() => {
+      if (!replay || replay.index >= replay.moves.length) { stopReplayPlay(); return; }
+      gotoPly(replay.index + 1, true);
+      if (replay.index >= replay.moves.length) stopReplayPlay();
+    }, 1400);
+  };
+  $('moves').addEventListener('click', (e) => {
+    if (!replay) return;
+    const span = e.target.closest('[data-ply]');
+    if (span) { stopReplayPlay(); gotoPly(Number(span.dataset.ply)); }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (!replay || document.body.dataset.screen !== 'game' || !$('modal').hidden || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    if (e.key === 'ArrowLeft') { stopReplayPlay(); gotoPly(replay.index - 1); e.preventDefault(); }
+    else if (e.key === 'ArrowRight') { stopReplayPlay(); gotoPly(replay.index + 1, true); e.preventDefault(); }
+  });
+
+  function openReplayList(mode) {
+    const source = mode === 'local' ? store.get('localArchive', []) : store.get('archive', []).filter((g) => (g.mode || 'ai') === mode);
+    $('replay-list-title').textContent = `Replay · ${MODE_LABELS[mode]}`;
+    const body = $('replay-list-body');
+    if (!source.length) {
+      body.innerHTML = `<p class="level-help">Aucune partie terminée dans ce mode pour le moment. Les parties « ${MODE_LABELS[mode]} » apparaîtront ici à la fin de chaque partie.</p>`;
+    } else {
+      body.innerHTML = '<div class="replay-items">' + source.map((g, i) => [g, i]).reverse().map(([g, i]) => {
+        const who = mode === 'local' ? '' : ` · ${mode === 'coach' ? 'Maître Hiro' : LEVEL_NAMES[g.level] || ''} · vous : ${g.color === 'w' ? 'Blancs' : 'Noirs'}`;
+        return `<button type="button" class="btn replay-item" data-i="${i}"><strong>${escHtml(fmtDateTime(g.id))}</strong><span>${Math.ceil(g.moves.length / 2)} coups${escHtml(who)} · ${RESULT_LABELS[g.result] || RESULT_LABELS['*']}</span></button>`;
+      }).join('') + '</div>';
+    }
+    body.onclick = (e) => {
+      const b = e.target.closest('.replay-item'); if (!b) return;
+      const g = source[Number(b.dataset.i)]; if (!g) return;
+      startReplay({ moves: g.moves, result: g.result, title: `${MODE_LABELS[mode]} · ${fmtDateTime(g.id)}`, flipped: mode !== 'local' && g.color === 'b' }, () => openReplayList(mode));
+    };
+    returnTo = 'home';
+    show('replay-list');
+  }
+
+  const looksLikeFen = (text) => /^\s*[prnbqkPRNBQK1-8]+(?:\/[prnbqkPRNBQK1-8]+){7}\s+[wb]\b/.test(text) && !/\[/.test(text);
+  function fenError(fen) {
+    const ranks = fen.split(/\s+/)[0].split('/');
+    if (ranks.length !== 8) return 'FEN invalide : 8 rangées attendues.';
+    for (const rank of ranks) {
+      const width = [...rank].reduce((sum, ch) => sum + (/\d/.test(ch) ? Number(ch) : 1), 0);
+      if (width !== 8) return 'FEN invalide : une rangée ne compte pas 8 cases.';
+    }
+    const board = fen.split(/\s+/)[0];
+    if ((board.match(/K/g) || []).length !== 1 || (board.match(/k/g) || []).length !== 1) return 'FEN invalide : un roi blanc et un roi noir sont requis.';
+    if (/[pP]/.test(ranks[0] + ranks[7])) return 'FEN invalide : pion sur la première ou la dernière rangée.';
+    return '';
+  }
+  function addExternal(text) {
+    const src = text.replace(/^\uFEFF/, '').trim();
+    if (!src) return toast('Collez un PGN ou un FEN.');
+    const entries = [];
+    if (looksLikeFen(src)) {
+      const fen = src.split(/\r?\n/)[0].trim().replace(/\s+/g, ' ');
+      const err = fenError(fen);
+      if (err) return toast(err);
+      entries.push({ kind: 'fen', title: 'Position FEN', fen, moves: [], result: '*' });
+    } else {
+      const parsed = parsePgn(src);
+      if (!parsed.games.length) return toast(`PGN invalide${parsed.error ? ` : ${parsed.error}` : '.'}`);
+      for (const g of parsed.games) {
+        entries.push({ kind: 'pgn', title: `${g.tags.White || 'Blancs'} – ${g.tags.Black || 'Noirs'}`, event: g.tags.Event || '', date: g.tags.Date || '', moves: g.moves, result: g.result !== '*' ? g.result : g.status.over ? g.status.result : '*' });
+      }
+    }
+    const list = store.get('external', []), now = Date.now();
+    entries.forEach((entry, i) => list.push({ ...entry, id: now + i }));
+    store.set('external', list.slice(-50));
+    $('ext-text').value = '';
+    renderExternal();
+    toast(`${entries.length} partie${entries.length > 1 ? 's' : ''} chargée${entries.length > 1 ? 's' : ''}`);
+    if (entries.length === 1) openExternal(now);
+  }
+  function openExternal(id) {
+    const entry = store.get('external', []).find((x) => x.id === id);
+    if (!entry) return;
+    startReplay(entry, () => { renderExternal(); returnTo = 'home'; show('replay-external'); });
+  }
+  function renderExternal() {
+    const list = store.get('external', []);
+    $('ext-history').innerHTML = list.length
+      ? '<div class="replay-items">' + list.slice().reverse().map((g) => `<div class="replay-row"><button type="button" class="btn replay-item" data-open="${g.id}"><strong>${escHtml(g.title)}</strong><span>${g.kind === 'fen' ? 'Position FEN' : `${Math.ceil(g.moves.length / 2)} coups · ${RESULT_LABELS[g.result] || RESULT_LABELS['*']}${g.event ? ` · ${escHtml(g.event)}` : ''}`} · chargée le ${escHtml(fmtDateTime(g.id))}</span></button><button type="button" class="btn ghost replay-del" data-del="${g.id}" aria-label="Supprimer">✕</button></div>`).join('') + '</div>'
+      : '<p class="level-help">Aucune partie chargée pour le moment. Les parties chargées sont conservées ici.</p>';
+  }
+  $('ext-history').onclick = (e) => {
+    const open = e.target.closest('[data-open]'), del = e.target.closest('[data-del]');
+    if (open) openExternal(Number(open.dataset.open));
+    else if (del) {
+      store.set('external', store.get('external', []).filter((x) => x.id !== Number(del.dataset.del)));
+      renderExternal();
+    }
+  };
+  $('ext-load').onclick = () => addExternal($('ext-text').value);
+  $('ext-file-btn').onclick = () => $('ext-file').click();
+  $('ext-file').onchange = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    try { addExternal(await f.text()); } catch { toast('Le fichier n’a pas pu être lu.'); }
+  };
+  $('btn-replay-menu').onclick = () => {
+    const open = $('replay-submenu').hidden;
+    $('replay-submenu').hidden = !open;
+    $('btn-replay-menu').setAttribute('aria-expanded', String(open));
+  };
+  document.querySelectorAll('[data-replay-mode]').forEach((b) => { b.onclick = () => openReplayList(b.dataset.replayMode); });
+  $('btn-replay-external').onclick = () => { renderExternal(); returnTo = 'home'; show('replay-external'); };
+
   // Bouton retour Android / navigateur : revient à l'accueil plutôt que de quitter
   history.replaceState({ s: 'root' }, '');
   history.pushState({ s: 'app' }, '');
   window.addEventListener('popstate', () => {
     if (!$('modal').hidden) closeModal();
+    else if (replay && $('game').classList.contains('active')) exitReplay();
     else if ($('puzzle').classList.contains('active')) leavePuzzle();
     else if ($('theme').classList.contains('active')) show('problems');
     else if ((document.body.dataset.screen || 'home') !== 'home') { save(); show($('settings').classList.contains('active') ? returnTo : 'home'); }

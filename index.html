@@ -36,6 +36,15 @@
           <button id="btn-new" class="btn">Nouvelle partie</button>
         </div>
       </div>
+      <div class="menu-group">
+        <button id="btn-replay-menu" class="btn primary" type="button" aria-expanded="false" aria-controls="replay-submenu">Replay</button>
+        <div id="replay-submenu" class="menu-submenu" hidden>
+          <button class="btn" data-replay-mode="ai">Contre ordinateur</button>
+          <button class="btn" data-replay-mode="coach">Partie coachée</button>
+          <button class="btn" data-replay-mode="local">Deux joueurs</button>
+          <button class="btn" id="btn-replay-external">Parties externes</button>
+        </div>
+      </div>
       <button id="btn-stats" class="btn">Statistiques</button>
       <button id="btn-rules" class="btn">Règles et conseils</button>
       <button id="btn-settings" class="btn">Réglages</button>
@@ -95,13 +104,47 @@
       </div>
       <div class="side-col">
         <ol id="moves" class="moves" aria-label="Coups joués"></ol>
-        <div class="actions">
+        <div id="replay-bar" class="replay-bar" hidden>
+          <div id="replay-info" class="replay-info" aria-live="polite"></div>
+          <div class="replay-legend"><span class="lg green"></span>Prises recommandées du camp au trait <span class="lg red"></span>Prises recommandées adverses</div>
+          <div class="actions replay-actions">
+            <button class="act" id="rp-start" aria-label="Début"><span>⏮</span>Début</button>
+            <button class="act" id="rp-prev" aria-label="Coup précédent"><span>◀</span>Précédent</button>
+            <button class="act" id="rp-play" aria-label="Lecture"><span>▶</span>Lecture</button>
+            <button class="act" id="rp-next" aria-label="Coup suivant"><span>▶︎</span>Suivant</button>
+            <button class="act" id="rp-end" aria-label="Fin"><span>⏭</span>Fin</button>
+            <button class="act" id="rp-flip" aria-label="Tourner le plateau"><span>⇅</span>Tourner</button>
+          </div>
+        </div>
+        <div class="actions" id="game-actions">
           <button class="act" id="btn-undo"><span>↶</span>Annuler</button>
           <button class="act" id="btn-hint"><span>✦</span>Indice</button>
           <button class="act" id="btn-flip"><span>⇅</span>Tourner</button>
           <button class="act" id="btn-resign"><span>⚑</span>Abandon</button>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- Replay : liste des parties -->
+  <section id="replay-list" class="screen" aria-label="Replay">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2 id="replay-list-title">Replay</h2></header>
+    <div class="panel" id="replay-list-body"></div>
+  </section>
+
+  <!-- Replay : parties externes -->
+  <section id="replay-external" class="screen" aria-label="Parties externes">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Parties externes</h2></header>
+    <div class="panel">
+      <label class="field-label" for="ext-text">Coller un PGN ou un FEN</label>
+      <textarea id="ext-text" class="ext-text" rows="6" spellcheck="false" placeholder="[Event &quot;…&quot;] 1. e4 e5 …   ou   rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
+      <div class="data-actions">
+        <button class="btn primary" id="ext-load">Charger</button>
+        <button class="btn ghost" id="ext-file-btn">Ouvrir un fichier PGN</button>
+        <input type="file" id="ext-file" accept=".pgn,.fen,.txt,.pgn.txt,text/plain,application/x-chess-pgn" hidden>
+      </div>
+      <label class="field-label">Historique des parties chargées</label>
+      <div id="ext-history"></div>
     </div>
   </section>
 

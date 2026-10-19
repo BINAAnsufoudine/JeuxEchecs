@@ -242,6 +242,32 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .status.good { color: #8fd6a2; }
 .status.bad { color: #f19a8c; }
 .actions.three { grid-template-columns: repeat(3, 1fr); }
+.replay-actions { grid-template-columns: repeat(3, 1fr); }
+.replay-bar { display: flex; flex-direction: column; gap: 8px; }
+@media (min-width: 900px) {
+  #game .replay-bar { grid-column: 2; grid-row: 1 / span 2; align-self: center; width: 150px; }
+  #game .replay-bar .actions { grid-column: auto; grid-row: auto; width: 100%; grid-template-columns: minmax(0, 1fr); }
+  #game .game-layout:has(.replay-bar:not([hidden])) { grid-template-columns: minmax(420px, 680px) 150px; }
+}
+@media (max-width: 899px) {
+  #game .replay-bar { order: 1; width: min(100%, 560px); gap: 5px; }
+  #game .replay-bar .replay-actions { grid-template-columns: repeat(3, 1fr); }
+  #game .replay-legend, #game .replay-info { font-size: 0.74rem; }
+}
+.replay-bar[hidden], #game-actions[hidden] { display: none; }
+.replay-info { font-weight: 600; font-size: 0.92rem; }
+.replay-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.78rem; color: var(--muted); }
+.replay-legend .lg { display: inline-block; width: 22px; height: 6px; border-radius: 3px; margin-left: 6px; }
+.replay-legend .lg.green { background: #2ecc40; } .replay-legend .lg.red { background: #e53935; }
+.moves span[data-ply] { cursor: pointer; }
+.arrows-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+#board { position: relative; }
+.replay-items { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.replay-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; width: 100%; }
+.replay-item span { font-size: 0.82rem; color: var(--muted); }
+.replay-row { display: flex; gap: 8px; align-items: stretch; }
+.replay-row .replay-item { flex: 1; }
+.ext-text { width: 100%; box-sizing: border-box; font-family: ui-monospace, Consolas, monospace; font-size: 0.85rem; padding: 10px; border-radius: var(--radius); border: 1px solid var(--surface); background: var(--surface); color: var(--text); resize: vertical; }
 .pz-prompt.lesson { text-align: left; font-weight: 400; background: var(--surface); border-radius: 12px; padding: 10px 12px; line-height: 1.5; }
 .coach { display: flex; gap: 10px; align-items: flex-end; margin: 2px 0 10px; }
 .coach img { width: 64px; height: 96px; object-fit: contain; flex: none; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)); transform-origin: bottom center; }
