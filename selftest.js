@@ -71,6 +71,15 @@
       assert(window.Coach.openingName(['d2d4', 'd7d5', 'c2c4', 'e7e6']) === 'Gambit dame refusé', 'gambit dame refusé non reconnu');
     });
 
+    await test('Coach : description du coup, ouverture et gaffe', () => {
+      const g = new Game();
+      ['e2e4', 'e7e5', 'd1h5', 'b8c6'].forEach((u) => g.playUci(u));
+      const d = window.Coach.describeMove(window.Chess.toFen(new Game().state), 'e2e4', [], { user: 'w' });
+      assert(/ouverture/.test(d.text), 'ouverture non annoncée');
+      const j = window.Coach.judgeMove(window.Chess.toFen(g.state), 'h5e5', g.uciList(), { user: 'w' });
+      assert(j.cls === 'blunder' && /peut être prise/.test(j.warning), 'la dame prenant e5 doit être jugée gaffe');
+    });
+
     // Stress 3D : coups rapides (cas qui laissaient des résidus), puis rythme normal, avec prises, échecs et mat
     const THREE = window.THREE;
     let board3d = null;

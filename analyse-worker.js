@@ -2,8 +2,12 @@
 importScripts('engine.js', 'search.js', 'coach-core.js');
 
 self.onmessage = (e) => {
-  const { id, moves, color, explain, review, fen } = e.data;
+  const { id, moves, color, explain, review, fen, insight } = e.data;
   try {
+    if (insight) {
+      self.postMessage({ id, ok: true, insight: self.Coach.judgeMove(insight.fen, insight.uci, insight.history, { user: insight.user }) });
+      return;
+    }
     if (review) {
       const r = self.Coach.reviewGame(moves, { fen, onProgress: (done, total) => self.postMessage({ id, progress: [done, total] }) });
       self.postMessage({ id, ok: true, review: r });

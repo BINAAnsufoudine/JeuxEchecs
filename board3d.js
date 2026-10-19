@@ -768,7 +768,8 @@
         const p = this.sqToPos(a.from), q = this.sqToPos(a.to);
         const dx = q.x - p.x, dz = q.z - p.z, len = Math.hypot(dx, dz) - 0.12;
         if (len <= 0.5) continue;
-        const mat = new T.MeshBasicMaterial({ color: a.color === 'red' ? 0xe53935 : 0x2ecc40, transparent: true, opacity: 0.88, depthTest: false });
+        const hex = { red: 0xe53935, blue: 0x2f7bff, violet: 0xa855f7 }[a.color] || 0x2ecc40;
+        const mat = new T.MeshBasicMaterial({ color: hex, transparent: true, opacity: 0.88, depthTest: false });
         const shaftLen = len - 0.42;
         const shaft = new T.Mesh(new T.BoxGeometry(shaftLen, 0.05, 0.13), mat);
         shaft.position.set(shaftLen / 2, 0, 0);

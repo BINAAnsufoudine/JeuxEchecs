@@ -61,6 +61,8 @@
   let coachMessage = '';
   let coachMood = '';
   let coachHintLevel = 0;
+  let coachArrows = [];        // flèches du dernier coup commenté (partie coachée)
+  let judging = false, judgeSeq = 0, judgeWorker = null;
   const TERRAIN_IDS = ['forest', 'desert', 'prairie', 'steppe', 'mud', 'rock', 'water'];
   const TERRAIN_NAMES = { forest: 'Forêt', desert: 'Désert', prairie: 'Prairie verte', steppe: 'Plaine sèche', mud: 'Terrain boueux', rock: 'Terrain rocheux', water: 'Flaques d’eau' };
   const WEATHER_IDS = ['sun', 'cloudy', 'drizzle', 'heavy', 'storm'];
@@ -164,11 +166,8 @@
     if (!dock) return;
     dock.hidden = !settings.coachEnabled;
     $('coach-dock-panel').hidden = !coachDockOpen;
-    $('coach-dock-toggle').setAttribute('aria-expanded', String(coachDockOpen));
-    $('coach-dock-toggle').setAttribute('aria-label', coachDockOpen ? 'Réduire Maître Hiro' : 'Ouvrir Maître Hiro');
     $('coach-dock-message').textContent = coachMessage || coachPlan().text;
     $('coach-dock-status').textContent = coachMood || (settings.voice ? 'Coach d’échecs · voix active' : 'Coach d’échecs');
-    $('coach-dock-img').src = window.Characters.dataUrl('B');
     $('coach-dock-voice').textContent = settings.voice ? '🔊' : '🔇';
     $('coach-dock-voice').setAttribute('aria-label', settings.voice ? 'Couper la voix' : 'Activer la voix');
   }
@@ -199,6 +198,8 @@
   function setCoachMessage(text, mood = '', vocalize = false) {
     coachMessage = coachGreeting(text);
     coachMood = mood;
+    // Sans bouton flottant, le panneau s'ouvre quand le coach commente la partie
+    if (cfg && cfg.mode === 'coach' && game && !replay && !pz) coachDockOpen = true;
     renderCoachDock();
     if (vocalize) speak(coachMessage);
   }
@@ -303,7 +304,6 @@
     $(id).addEventListener('change', (e) => { settings[key] = e.target.checked; saveSettings(); });
   });
 
-  $('coach-dock-toggle').onclick = () => { coachDockOpen = !coachDockOpen; renderCoachDock(); };
   $('coach-dock-close').onclick = () => { coachDockOpen = false; renderCoachDock(); };
   $('coach-dock-program').onclick = () => {
     coachDockOpen = false; returnTo = 'home'; show('problems'); nextActivity();
@@ -535,7 +535,7 @@
   const isHumanTurn = () => cfg.mode === 'local' || game.turn === cfg.playerColor;
   // Une animation 3D (déplacement, duel, technique de prise ou de mat) doit finir avant tout nouveau mouvement
   const animBusy = () => !!(b3d && b3d.busyUntil && b3d.busyUntil * 1000 > performance.now());
-  const canInteract = (ignoreAnim = false) => (replay ? false : !ignoreAnim && animBusy() ? false : pz ? !!(pz.item && pz.item.line) && !pz.done && !pz.locked : !result && !thinking && !(cfg.mode === 'coach' && speechBusy()) && isHumanTurn());
+  const canInteract = (ignoreAnim = false) => (replay ? false : !ignoreAnim && animBusy() ? false : pz ? !!(pz.item && pz.item.line) && !pz.done && !pz.locked : !result && !thinking && !judging && !(cfg.mode === 'coach' && speechBusy()) && isHumanTurn());
 
   function render() { if (replay) { renderReplay(); return; } renderBoard(); renderPlayers(); renderMoves(); renderStatus(); renderActions(); }
 
@@ -557,7 +557,8 @@
     }
     el.innerHTML = html + arrowsSvg(arrows);
   }
-  // Flèches de replay en SVG (plateau 2D et mini-carte)
+  // Flèches de replay et de coach en SVG (plateau 2D et mini-carte)
+  const ARROW_COLORS = { green: '#2ecc40', red: '#e53935', blue: '#2f7bff', violet: '#a855f7' };
   function arrowsSvg(arrows) {
     if (!arrows.length) return '';
     const center = (sq) => [(flipped ? 7 - (sq & 7) : sq & 7) + 0.5, (flipped ? 7 - (sq >> 3) : sq >> 3) + 0.5];
@@ -566,7 +567,7 @@
       const [x1, y1] = center(a.from), [x2, y2] = center(a.to);
       const len = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / len, uy = (y2 - y1) / len;
       const ex = x2 - ux * 0.1, ey = y2 - uy * 0.1, bx = ex - ux * 0.38, by = ey - uy * 0.38;
-      const color = a.color === 'red' ? '#e53935' : '#2ecc40';
+      const color = ARROW_COLORS[a.color] || ARROW_COLORS.green;
       body += `<g fill="${color}" stroke="${color}" opacity="0.88"><line x1="${x1}" y1="${y1}" x2="${bx}" y2="${by}" stroke-width="0.14" stroke-linecap="round"/><polygon stroke="none" points="${ex},${ey} ${bx - uy * 0.2},${by + ux * 0.2} ${bx + uy * 0.2},${by - ux * 0.2}"/></g>`;
     }
     return `<svg class="arrows-svg" viewBox="0 0 8 8" aria-hidden="true">${body}</svg>`;
@@ -679,7 +680,7 @@
         }
       }
     }
-    const arrows = replay ? replayArrows() : [];
+    const arrows = replay ? replayArrows() : (!pz && cfg && cfg.mode === 'coach' ? coachArrows : []);
     if (b3d) {
       const th = THEMES[settings.theme] || THEMES.foret;
       b3d.update({ board: s.board, selected, targets, last, check: checkSq, mateFire, mateUltimate, hint, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext, outcome: result ? result.result : null, arrows });
@@ -831,14 +832,51 @@
   }
 
   function commit(from, to, promo) {
+    if (!pz && cfg.mode === 'coach' && !result && !judging && colorOf(game.state.board[from]) === cfg.playerColor && window.Coach) { judgeThenPlay(from, to, promo); return; }
+    playMove(from, to, promo);
+  }
+
+  function playMove(from, to, promo, insight) {
     const res = game.play(from, to, promo);
     if (!res) return;
     selected = -1; hint = null;
     if (pz) { pzAfterMove(res); return; }
-    afterMove(res);
+    afterMove(res, insight);
   }
 
-  function afterMove(res) {
+  // Partie coachée : le coup est jugé avant d'être joué ; une erreur ou une gaffe déclenche « Êtes-vous sûr ? »
+  function judgeThenPlay(from, to, promo) {
+    const uci = sqName(from) + sqName(to) + (promo || '');
+    const seq = ++judgeSeq;
+    judging = true;
+    renderActions();
+    const payload = { fen: window.Chess.toFen(game.state), uci, history: game.uciList(), user: cfg.playerColor };
+    let timer = null;
+    const done = (ins) => {
+      clearTimeout(timer);
+      if (seq !== judgeSeq) return;
+      judging = false;
+      if (ins && (ins.cls === 'mistake' || ins.cls === 'blunder')) {
+        const text = `Êtes-vous sûr ? ${ins.warning}`;
+        setCoachMessage(text, 'worried', settings.voice);
+        modal({ title: 'Êtes-vous sûr ?', text: ins.warning, actions: [
+          { label: 'Changer de coup', primary: true, onClick: () => { selected = -1; hint = null; renderBoard(); renderActions(); } },
+          { label: 'Jouer quand même', ghost: true, onClick: () => playMove(from, to, promo, ins) },
+        ] });
+        return;
+      }
+      playMove(from, to, promo, ins);
+    };
+    try { judgeWorker = judgeWorker || new Worker('analyse-worker.js'); } catch { done(null); return; }
+    const w = judgeWorker;
+    // En cas de blocage du worker, le coup est joué sans jugement
+    timer = setTimeout(() => { if (judgeWorker === w) { w.terminate(); judgeWorker = null; } done(null); }, 8000);
+    w.onmessage = (e) => { if (e.data.id === seq) done(e.data.ok ? e.data.insight : null); };
+    w.onerror = () => done(null);
+    w.postMessage({ id: seq, insight: payload });
+  }
+
+  function afterMove(res, insight) {
     animateNext = true;
     if (cfg.mode === 'coach' && colorOf(res.move.piece) === cfg.playerColor) coachHintLevel = 0;
     const st = game.status();
@@ -850,47 +888,36 @@
       else if (res.move.captured) sounds.capture();
       else sounds.move();
     }
-    if (cfg.mode === 'coach') coachGameCommentary(res);
+    if (cfg.mode === 'coach' && !result) coachGameCommentary(res, insight);
     render();
     save();
     if (!result) maybeAiMove();
   }
 
-  function coachGameCommentary(res) {
+  function coachGameCommentary(res, insight) {
     const userPlayed = colorOf(res.move.piece) === cfg.playerColor;
-    const volume = settings.voice;
-    const level = cfg.level || 1;
-    const reflection = level <= 6
-      ? 'La patience vaut mieux qu’une attaque sans plan.'
-      : level <= 14
-        ? 'Une petite faiblesse devient grande quand on sait attendre.'
-        : 'La précision transforme l’initiative en avantage durable.';
+    const C = window.Coach;
+    let d = insight;
+    if (!d && C) {
+      const before = game.states[game.states.length - 2];
+      d = C.describeMove(window.Chess.toFen(before), window.Chess.toUci(res.move), game.uciList().slice(0, -1), { user: cfg.playerColor });
+    }
+    if (!d) return;
+    coachArrows = d.arrows || [];
+    const pick = (list) => list[game.history.length % list.length];
+    let verdict = '';
+    if (userPlayed && d.cls) {
+      const why = d.reasons[0];
+      if (d.cls === 'best') verdict = why ? `Excellent coup, c'est aussi celui que je jouerais : ${why}.` : 'Excellent coup, c\'est aussi celui que je jouerais.';
+      else if (d.cls === 'good') verdict = why ? `Bon coup : ${why}.` : pick(['Bon coup, solide.', 'Bon coup : tu gardes ta position bien coordonnée.', 'Bon choix, tu ne laisses rien à ma portée.']);
+      else if (d.cls === 'inaccuracy') verdict = pick(['Un peu imprécis : il y avait plus précis.', 'Coup jouable, mais pas le plus précis.']);
+      else verdict = 'Tu as maintenu ton coup : voyons si je peux en profiter.';
+    } else if (userPlayed && d.reasons[0]) verdict = d.reasons[0].charAt(0).toUpperCase() + d.reasons[0].slice(1) + '.';
     if (userPlayed) {
-      const line = game.inCheck()
-        ? 'Bien joué, tu imposes une question. Avant de continuer, calcule les parades plausibles et la pièce qui restera exposée.'
-        : res.move.captured
-          ? 'Tu as gagné du matériel. Vérifie maintenant la reprise adverse et ce que cette pièce défendait.'
-          : game.history.length <= 4
-            ? 'Dans l’ouverture, pense au centre et au développement. Quelle est ta pièce la moins active?'
-            : 'Ne cherche pas tout de suite un coup brillant. Compare les menaces, les pièces mal protégées et la sécurité des rois.';
-          setCoachMessage(`${line} ${reflection}`, 'happy', volume);
+      setCoachMessage([...d.parts, verdict].filter(Boolean).join(' '), d.cls === 'mistake' || d.cls === 'blunder' ? 'worried' : 'happy', settings.voice);
       return;
     }
-    const principles = level <= 6 ? [
-      ['Capablanca', 'Développe tes cavaliers et tes fous avant de déplacer plusieurs fois la même pièce.'],
-      ['Lasker', 'Avant ton coup, demande-toi quelle pièce adverse menace quelque chose.'],
-      ['Fischer', 'Le centre donne de l’espace à tes pièces. Prépare tes pions et protège ton roi.'],
-    ] : level <= 14 ? [
-      ['Capablanca', 'Améliore d’abord ta pièce la moins active, puis cherche une cible stable.'],
-      ['Botvinnik', 'Compare les pions faibles et les cases fortes avant de choisir ton plan.'],
-      ['Fischer', 'Un tempo compte: développe avec une menace et garde tes pièces coordonnées.'],
-    ] : [
-      ['Kasparov', 'Calcule les coups candidats forcés, puis évalue l’activité obtenue après les échanges.'],
-      ['Botvinnik', 'Prévois le meilleur contre-jeu adverse avant de fixer la structure de pions.'],
-      ['Capablanca', 'Convertis l’avantage par amélioration progressive; évite de relâcher l’initiative.'],
-    ];
-    const [champion, principle] = principles[Math.floor(game.history.length / 2) % principles.length];
-    setCoachMessage(`Mon coup. Principe associé à ${champion}: ${principle} À toi de trouver la réponse; je ne donne pas le coup sans demande. ${reflection}`, '', volume);
+    setCoachMessage([...d.parts, pick(['À toi de jouer.', 'Que réponds-tu ?', 'Regarde bien les menaces avant de répondre.'])].join(' '), '', settings.voice);
   }
 
   function finish() {
@@ -1039,7 +1066,7 @@
     };
     setTimeout(launch, Math.max(250, busy + 150));
   }
-  function cancelAi() { pending = null; thinking = false; }
+  function cancelAi() { pending = null; thinking = false; judgeSeq++; judging = false; coachArrows = []; }
 
   /* ---------- Saisie : toucher ou glisser ---------- */
   function tapSquare(sq, boardSq = sq) {

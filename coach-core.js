@@ -255,6 +255,129 @@
     return { ev, marks, accuracy: { w: acc('w'), b: acc('b') }, opening: openingName(moves), count: marks.length };
   }
 
+  /* ----- Commentaire de coup pour la partie coachée -----
+     « toi » = le joueur (`opts.user`), « moi » = le coach. Toutes les pièces sont désignées avec ton/ta ou mon/ma. */
+  const NAME = { p: 'pion', n: 'cavalier', b: 'fou', r: 'tour', q: 'dame', k: 'roi' };
+  const PVAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };
+  const sqn = (sq) => root.Chess.sqName(sq);
+  const own = (p, user) => {
+    const t = p.toLowerCase(), fem = t === 'r' || t === 'q';
+    return `${colorOf(p) === user ? (fem ? 'ta' : 'ton') : (fem ? 'ma' : 'mon')} ${NAME[t]}`;
+  };
+  const cap1 = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  const listOf = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} et ${items[items.length - 1]}`);
+  // Cases des pièces de `color` qui protègent `sq` : une pièce adverse fictive y est posée pour révéler les « prises »
+  function guards(s, sq, color) {
+    const b = s.board.slice();
+    b[sq] = color === 'w' ? 'p' : 'P';
+    return pseudoMoves({ ...s, board: b, turn: color, ep: -1 }).filter((m) => m.to === sq && m.captured).map((m) => m.from);
+  }
+  const captures = (s, color) => pseudoMoves({ ...s, turn: color, ep: -1 }).filter((m) => m.captured && m.captured.toLowerCase() !== 'k');
+
+  function describeMove(fen, uci, history, opts = {}) {
+    const s = fromFen(fen);
+    const m = legalMoves(s).find((x) => toUci(x) === uci || toUci(x) === uci + 'q');
+    if (!m) return null;
+    const me = s.turn, foe = enemy(me), user = opts.user || me, byUser = me === user;
+    const a = makeMove(s, m);
+    const mover = a.board[m.to], mt = mover.toLowerCase();
+    const sq = sqn(m.to), moverName = own(mover, user);
+    const S = byUser ? 'Tu' : 'Je';
+    const fem = mt === 'r' || mt === 'q';
+    const It = fem ? 'Elle' : 'Il';
+    const ply = history.length;
+
+    // Ce que la pièce jouée attaque et protège
+    const targets = captures(a, me).filter((x) => x.from === m.to)
+      .map((x) => ({ sq: x.to, p: x.captured, guarded: guards(a, x.to, foe) }))
+      .sort((x, y) => PVAL[y.p.toLowerCase()] - PVAL[x.p.toLowerCase()]);
+    const threatsBefore = captures(s, foe);
+    const myGuard = [];
+    a.board.forEach((p, i) => {
+      if (!p || i === m.to || colorOf(p) !== me || p.toLowerCase() === 'k') return;
+      if (guards(a, i, me).includes(m.to)) myGuard.push(i);
+    });
+    const wasThreatened = (i) => threatsBefore.some((t) => t.to === i && (!guards(s, i, me).length || PVAL[t.captured.toLowerCase()] > PVAL[t.piece.toLowerCase()]));
+    const guardedThreatened = myGuard.filter((i) => wasThreatened(m.from === i ? m.to : i));
+    const foeThreats = captures(a, foe)
+      .filter((x) => x.to === m.to || !guards(a, x.to, me).length || PVAL[x.captured.toLowerCase()] > PVAL[x.piece.toLowerCase()]);
+
+    const parts = [];
+    const developing = ply < 20 && 'nb'.includes(mt) && (me === 'w' ? m.from >> 3 === 7 : m.from >> 3 === 0);
+    const center = mt === 'p' && ['d4', 'e4', 'd5', 'e5'].includes(sq);
+    if (m.flag === 'castle') parts.push(`${S} roques ${m.to > m.from ? 'côté roi' : 'côté dame'} : ${byUser ? 'ton' : 'mon'} roi est plus en sécurité et ${byUser ? 'ta' : 'ma'} tour entre en jeu.`);
+    else if (m.captured) parts.push(`${S} prends ${own(m.captured, user)} en ${sq} avec ${moverName}${m.flag === 'ep' ? ' (prise en passant)' : ''}.`);
+    else if (m.promo) parts.push(`${S} promeus ${byUser ? 'ton' : 'mon'} pion en ${NAME[m.promo.toLowerCase()]}.`);
+    else if (developing) parts.push(`${cap1(moverName)} se développe en ${sq}.`);
+    else if (center) parts.push(`${cap1(moverName)} occupe le centre en ${sq}.`);
+    else parts.push(`${cap1(moverName)} va en ${sq}.`);
+    if (inCheck(a)) parts.push(byUser ? 'Tu donnes échec à mon roi.' : 'Échec à ton roi !');
+
+    if (targets.length) {
+      const names = targets.slice(0, 2).map((t) => `${own(t.p, user)} en ${sqn(t.sq)}${t.guarded.length ? '' : ' sans défense'}`);
+      parts.push(`${It} attaque ${listOf(names)}.`);
+    }
+    const showGuard = myGuard.length && (guardedThreatened.length || !targets.length) ? (guardedThreatened.length ? guardedThreatened : myGuard).slice(0, 2) : [];
+    if (showGuard.length) parts.push(`${It} protège ${listOf(showGuard.map((i) => `${own(a.board[i], user)} en ${sqn(i)}`))}.`);
+
+    // Ouverture
+    const before = openingName(history), after = openingName([...history, toUci(m)]);
+    if (after && after !== before) parts.push(`Cela fait partie de l'ouverture : ${after}.`);
+    else if (before && !after && ply < 16) parts.push(byUser ? 'Tu quittes les lignes d\'ouverture classiques.' : 'Je quitte les lignes d\'ouverture classiques.');
+
+    // Pourquoi le coup est bon
+    const reasons = [];
+    const safe = !isAttacked(a.board, m.to, foe) || guards(a, m.to, me).length > 0 && !foeThreats.some((x) => x.to === m.to && PVAL[x.piece.toLowerCase()] < PVAL[mt]);
+    if (m.captured && (safe || PVAL[m.captured.toLowerCase()] >= PVAL[m.piece.toLowerCase()])) reasons.push('il gagne du matériel sans risque');
+    if (threatsBefore.some((t) => t.to === m.from) && safe && m.from !== m.to) reasons.push(`${moverName} était menacé${fem ? 'e' : ''} et le voilà à l'abri`);
+    if (guardedThreatened.length) reasons.push(`il protège ${own(a.board[guardedThreatened[0]], user)}, qui était menacé${a.board[guardedThreatened[0]].toLowerCase().match(/[rq]/) ? 'e' : ''}`);
+    const win = targets.find((t) => !t.guarded.length || PVAL[t.p.toLowerCase()] > PVAL[mt]);
+    if (win) reasons.push(`il crée une menace sur ${own(win.p, user)}`);
+    if (m.flag === 'castle') reasons.push('le roi est à l\'abri et la tour rejoint la partie');
+    else if (developing) reasons.push('développer ses pièces tôt donne l\'initiative');
+    else if (center) reasons.push('le centre donne de l\'espace aux pièces');
+
+    // Ce qui menace après le coup (pour les alertes)
+    const danger = foeThreats.slice(0, 2).map((x) => {
+      const t = a.board[x.to].toLowerCase();
+      return `${own(a.board[x.to], user)} en ${sqn(x.to)} peut être pris${t === 'r' || t === 'q' ? 'e' : ''} par ${own(x.piece, user)}`;
+    });
+
+    const arrows = [];
+    const seen = new Set();
+    const push = (from, to, color) => { const k = `${from}-${to}-${color}`; if (!seen.has(k)) { seen.add(k); arrows.push({ from, to, color }); } };
+    for (const t of targets.slice(0, 3)) push(m.to, t.sq, byUser ? 'green' : 'red');
+    for (const i of showGuard) push(m.to, i, byUser ? 'blue' : 'violet');
+    if (byUser && opts.counter !== false) {
+      for (const x of foeThreats.slice(0, 3)) push(x.from, x.to, 'red');
+      for (const t of targets.slice(0, 2)) for (const g of t.guarded.slice(0, 2)) push(g, t.sq, 'violet');
+    }
+    return { parts, reasons, danger, arrows, opening: after, text: parts.join(' ') };
+  }
+
+  const WARN = { mistake: 'Ce coup est une erreur.', blunder: 'Ce coup est une gaffe.' };
+  // Juge le coup `uci` joué dans `fen` avant qu'il ne soit joué : description, qualité et mise en garde
+  function judgeMove(fen, uci, history, opts = {}) {
+    const depth = opts.depth || 3, q = opts.q || 5;
+    const s = fromFen(fen);
+    const pm = legalMoves(s).find((x) => toUci(x) === uci || toUci(x) === uci + 'q');
+    const d = describeMove(fen, uci, history, opts);
+    if (!pm || !d) return null;
+    const r = rootSearch(s, depth, q, null, 60);
+    if (!r.length) return d;
+    const best = r[0], same = toUci(best.m) === toUci(pm);
+    const ps = same ? best.score : moveScore(s, pm, depth, q, null);
+    let loss = same ? 0 : (isMate(best.score) && best.score > 0 && !(isMate(ps) && ps > 0)) ? 1000 : Math.max(0, best.score - ps);
+    if (!isMate(best.score) && best.score > 600 && ps > 600) loss = 0;
+    const cls = same ? 'best' : (CLASSES.find(([limit]) => loss <= limit) || CLASSES[CLASSES.length - 1])[1];
+    const matedNext = isMate(ps) && ps < 0;
+    let warning = '';
+    if (cls === 'mistake' || cls === 'blunder') {
+      warning = matedNext ? 'Ce coup laisse un échec et mat.' : (d.danger[0] ? `${cap1(d.danger[0])}.` : `${WARN[cls]} Je vois une réponse qui te coûte cher.`);
+    }
+    return { ...d, cls, loss: Math.round(loss), best: toUci(best.m), warning };
+  }
+
   function classifyError(s, pm, best, playedScore, q, captureKind) {
     if (isMate(best.score) && best.score > 0) return 'mat';
     if (isMate(playedScore) && playedScore < 0) return 'defense';
@@ -322,5 +445,5 @@
     };
   }
 
-  root.Coach = { explainError, THEME_ORDER, analyseGame, reviewGame, openingName, buildLine, themeOfSolution, defenseProblem, levelOf, balance, isFork, isPin, isFreeCapture, isEndgame };
+  root.Coach = { explainError, describeMove, judgeMove, THEME_ORDER, analyseGame, reviewGame, openingName, buildLine, themeOfSolution, defenseProblem, levelOf, balance, isFork, isPin, isFreeCapture, isEndgame };
 })(typeof self !== 'undefined' ? self : globalThis);
