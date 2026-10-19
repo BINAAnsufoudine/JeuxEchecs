@@ -856,15 +856,7 @@
       clearTimeout(timer);
       if (seq !== judgeSeq) return;
       judging = false;
-      if (ins && (ins.cls === 'mistake' || ins.cls === 'blunder')) {
-        const text = `Êtes-vous sûr ? ${ins.warning}`;
-        setCoachMessage(text, 'worried', settings.voice);
-        modal({ title: 'Êtes-vous sûr ?', text: ins.warning, actions: [
-          { label: 'Changer de coup', primary: true, onClick: () => { selected = -1; hint = null; renderBoard(); renderActions(); } },
-          { label: 'Jouer quand même', ghost: true, onClick: () => playMove(from, to, promo, ins) },
-        ] });
-        return;
-      }
+      if (ins && (ins.cls === 'mistake' || ins.cls === 'blunder')) ins.sure = true;
       playMove(from, to, promo, ins);
     };
     try { judgeWorker = judgeWorker || new Worker('analyse-worker.js'); } catch { done(null); return; }
@@ -905,6 +897,10 @@
     if (!d) return;
     coachArrows = d.arrows || [];
     const pick = (list) => list[game.history.length % list.length];
+    if (userPlayed && d.sure) {
+      setCoachMessage(`Êtes-vous sûr ? ${d.warning || ''} Utilise « Annuler » pour reprendre ton coup.`.replace(/\s+/g, ' '), 'worried', settings.voice);
+      return;
+    }
     let verdict = '';
     if (userPlayed && d.cls) {
       const why = d.reasons[0];
