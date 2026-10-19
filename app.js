@@ -2014,7 +2014,7 @@
     $('game-actions').hidden = on;
   }
   function stopReplayPlay() {
-    if (replayTimer) { clearInterval(replayTimer); replayTimer = null; }
+    if (replayTimer) { clearTimeout(replayTimer); replayTimer = null; }
     const btn = $('rp-play');
     if (btn) btn.innerHTML = '<span>▶</span>Lecture';
   }
@@ -2109,11 +2109,15 @@
     if (replayTimer) { stopReplayPlay(); return; }
     if (replay.index >= replay.moves.length) gotoPly(0);
     $('rp-play').innerHTML = '<span>⏸</span>Pause';
-    replayTimer = setInterval(() => {
+    // Attend la fin de l'animation en cours (duels, techniques) avant le coup suivant
+    const tick = () => {
       if (!replay || replay.index >= replay.moves.length) { stopReplayPlay(); return; }
       gotoPly(replay.index + 1, true);
-      if (replay.index >= replay.moves.length) stopReplayPlay();
-    }, 1400);
+      if (replay.index >= replay.moves.length) { stopReplayPlay(); return; }
+      const busy = b3d && b3d.busyUntil ? b3d.busyUntil * 1000 - performance.now() : 0;
+      replayTimer = setTimeout(tick, Math.max(2200, busy + 700));
+    };
+    replayTimer = setTimeout(tick, 600);
   };
   $('moves').addEventListener('click', (e) => {
     if (!replay) return;
