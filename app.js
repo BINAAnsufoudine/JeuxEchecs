@@ -535,7 +535,7 @@
   const isHumanTurn = () => cfg.mode === 'local' || game.turn === cfg.playerColor;
   // Une animation 3D (déplacement, duel, technique de prise ou de mat) doit finir avant tout nouveau mouvement
   const animBusy = () => !!(b3d && b3d.busyUntil && b3d.busyUntil * 1000 > performance.now());
-  const canInteract = (ignoreAnim = false) => (replay ? false : !ignoreAnim && animBusy() ? false : pz ? !!(pz.item && pz.item.line) && !pz.done && !pz.locked : !result && !thinking && isHumanTurn());
+  const canInteract = (ignoreAnim = false) => (replay ? false : !ignoreAnim && animBusy() ? false : pz ? !!(pz.item && pz.item.line) && !pz.done && !pz.locked : !result && !thinking && !(cfg.mode === 'coach' && speechBusy()) && isHumanTurn());
 
   function render() { if (replay) { renderReplay(); return; } renderBoard(); renderPlayers(); renderMoves(); renderStatus(); renderActions(); }
 
@@ -1031,7 +1031,13 @@
     // Petit délai pour que le coup du joueur s'affiche d'abord
     // Laisse le duel en cours se terminer avant que l'ordinateur ne joue
     const busy = b3d && b3d.busyUntil ? b3d.busyUntil * 1000 - performance.now() : 0;
-    setTimeout(() => { if (thinking) ask('move', cfg.level); }, Math.max(250, busy + 150));
+    const launch = () => {
+      if (!thinking) return;
+      // En partie coachée, le coach finit de parler avant de jouer
+      if (cfg.mode === 'coach' && speechBusy()) { setTimeout(launch, 200); return; }
+      ask('move', cfg.level);
+    };
+    setTimeout(launch, Math.max(250, busy + 150));
   }
   function cancelAi() { pending = null; thinking = false; }
 
@@ -1698,15 +1704,22 @@
     frVoice = vs.find((v) => /^fr(-|_|$)/i.test(v.lang) && /male|homme|thomas|paul|henri|nicolas/i.test(v.name)) || vs.find((v) => /^fr/i.test(v.lang)) || null;
   }
   if (tts) { pickVoice(); tts.onvoiceschanged = pickVoice; }
+  // Fin de la parole suivie par nos propres événements (tts.speaking est peu fiable), avec un plafond de sécurité
+  let speechUntil = 0, lastUtterance = null;
+  const speechBusy = () => !!(tts && settings.voice && speechUntil > performance.now());
   function speak(text) {
     if (!tts || !settings.voice) return;
     tts.cancel();
     const u = new SpeechSynthesisUtterance(text.replace(/[«»]/g, ''));
     u.lang = 'fr-FR'; if (frVoice) u.voice = frVoice;
     u.rate = 1.0; u.pitch = 0.9;
+    const done = () => { if (lastUtterance === u) { speechUntil = 0; if (game && !replay && !pz) renderActions(); } };
+    lastUtterance = u;
+    u.onend = done; u.onerror = done;
+    speechUntil = performance.now() + Math.min(45000, 3000 + text.length * 90);
     tts.speak(u);
   }
-  const hush = () => { if (tts) tts.cancel(); };
+  const hush = () => { speechUntil = 0; if (tts) tts.cancel(); };
   function voiceButton() {
     const b = $('pz-voice');
     b.hidden = !tts;
