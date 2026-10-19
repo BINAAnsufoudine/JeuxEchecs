@@ -132,7 +132,20 @@
       this.resize();
       if (root.ResizeObserver) new ResizeObserver(() => this.resize()).observe(container);
       else window.addEventListener('resize', () => this.resize());
-      const loop = (t) => { this.tick(t); requestAnimationFrame(loop); };
+      // La boucle ne doit jamais s'arrêter : une erreur ponctuelle ne fige plus l'affichage
+      let fails = 0, lost = false;
+      const cv = this.renderer.domElement;
+      cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); lost = true; });
+      cv.addEventListener('webglcontextrestored', () => { lost = false; this.boardKey = ''; this.resize(); });
+      const loop = (t) => {
+        requestAnimationFrame(loop);
+        if (lost) return;
+        try { this.tick(t); fails = 0; }
+        catch (err) {
+          if (fails++ === 0) console.error('Erreur 3D', err);
+          if (fails === 3) { try { this.clearTransient(); } catch { /* ignoré */ } }
+        }
+      };
       requestAnimationFrame(loop);
     }
 
