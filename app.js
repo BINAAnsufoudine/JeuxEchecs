@@ -1862,6 +1862,7 @@
       return;
     }
     res.move.captured ? sounds.capture() : sounds.move();
+    if (mated) shout('Échec et mat !'); else if (game.inCheck()) shout('Échec !');
     if (uci !== expected || mated) return pzSolved();
     pz.step++;
     pz.hintLevel = 0;
@@ -1877,6 +1878,7 @@
       pz.hintLevel = 0;
       animateNext = true; pz.locked = false;
       if (r) (r.move.captured ? sounds.capture : sounds.move)();
+      if (r && game.inCheck()) shout(game.status().over ? 'Échec et mat !' : 'Échec !');
       renderBoard();
       if (pz.step >= it.line.length) pzSolved(); else pzButtons();
     }, busyDelay(600));
@@ -2336,6 +2338,7 @@
     game = new Game(replay.fen);
     for (let i = 0; i < n; i++) game.playUci(replay.moves[i]);
     animateNext = animate && n === replay.index + 1;
+    if (animateNext && game.inCheck()) shout(game.status().over ? 'Échec et mat !' : 'Échec !');
     replay.index = n;
     render();
   }
