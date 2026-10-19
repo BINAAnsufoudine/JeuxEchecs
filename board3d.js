@@ -4,6 +4,8 @@
 
   const TEX = 1024, BORDER = 0.6, SIZE = 8 + BORDER * 2;
   const FILES = 'abcdefgh';
+  const ROTATION_SENSITIVITY = 0.3;
+  const MAX_ROTATION_STEP = 0.12;
   const PIECE_GLYPHS = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
   const TERRAINS = {
     forest: { name: 'Forêt', sky: 0x9eb5a1, ground: 0x304b35, wood: 0x493522, frame: ['#765735', '#503a25', '#302218'], squares: ['#c6d3a6', '#58734b'], kind: 'forest' },
@@ -122,6 +124,8 @@
       this.flipped = null;
       this.boardKey = '';
       this.elevation = 38;
+      this.cameraTarget = new THREE.Vector3(0, 0.3, 0);
+      this.captureCamera = null;
 
       this.raycaster = new THREE.Raycaster();
       this.bindInput();
@@ -462,7 +466,60 @@
       const radius = 13.31, elevation = this.elevation * Math.PI / 180;
       const horizontal = radius * Math.cos(elevation);
       this.camera.position.set(horizontal * sn, 0.3 + radius * Math.sin(elevation), horizontal * cs);
-      this.camera.lookAt(0.45 * sn, 0.3, 0.45 * cs);
+      this.cameraTarget.set(0.45 * sn, 0.3, 0.45 * cs);
+      this.camera.lookAt(this.cameraTarget);
+    }
+
+    startCaptureCamera(from, to, victim, now) {
+      const dying = this.dying.find((d) => d.c === victim);
+      const impactEnd = dying
+        ? dying.knightAttack ? dying.t0 : dying.t0 + (dying.impaled ? 2.4 : 1.1)
+        : now + 1;
+      const holdUntil = Math.max(impactEnd, this.busyUntil || now);
+      const center = { x: (from.x + to.x) / 2, z: (from.z + to.z) / 2 };
+      const dx = to.x - from.x, dz = to.z - from.z;
+      const length = Math.hypot(dx, dz) || 1;
+      const sideA = { x: -dz / length, z: dx / length };
+      const sideB = { x: -sideA.x, z: -sideA.z };
+      const currentX = this.camera.position.x - center.x, currentZ = this.camera.position.z - center.z;
+      const side = sideA.x * currentX + sideA.z * currentZ >= sideB.x * currentX + sideB.z * currentZ ? sideA : sideB;
+      const yaw = Math.atan2(side.x, side.z), elevation = 42 * Math.PI / 180, radius = 8.3;
+      const horizontal = radius * Math.cos(elevation);
+      this.captureCamera = {
+        start: now,
+        holdUntil,
+        fromPosition: this.camera.position.clone(),
+        fromTarget: this.cameraTarget.clone(),
+        toPosition: new this.THREE.Vector3(center.x + horizontal * Math.sin(yaw), 0.65 + radius * Math.sin(elevation), center.z + horizontal * Math.cos(yaw)),
+        toTarget: new this.THREE.Vector3(center.x, 0.65, center.z),
+      };
+    }
+
+    tickCaptureCamera(t) {
+      const c = this.captureCamera;
+      if (!c) return;
+      const smooth = (u) => { u = Math.max(0, Math.min(1, u)); return u * u * (3 - 2 * u); };
+      if (t <= c.holdUntil) {
+        const u = smooth((t - c.start) / 0.45);
+        this.camera.position.lerpVectors(c.fromPosition, c.toPosition, u);
+        this.cameraTarget.lerpVectors(c.fromTarget, c.toTarget, u);
+      } else {
+        if (!c.restoreStart) {
+          c.restoreStart = t;
+          c.restorePosition = this.camera.position.clone();
+          c.restoreTarget = this.cameraTarget.clone();
+          const yaw = this.viewYaw(), sn = Math.sin(yaw), cs = Math.cos(yaw);
+          const radius = 13.31, elevation = this.elevation * Math.PI / 180;
+          const horizontal = radius * Math.cos(elevation);
+          c.endPosition = new this.THREE.Vector3(horizontal * sn, 0.3 + radius * Math.sin(elevation), horizontal * cs);
+          c.endTarget = new this.THREE.Vector3(0.45 * sn, 0.3, 0.45 * cs);
+        }
+        const u = smooth((t - c.restoreStart) / 0.55);
+        this.camera.position.lerpVectors(c.restorePosition, c.endPosition, u);
+        this.cameraTarget.lerpVectors(c.restoreTarget, c.endTarget, u);
+        if (u >= 1) this.captureCamera = null;
+      }
+      this.camera.lookAt(this.cameraTarget);
     }
 
     square(color, opacity) {
@@ -481,6 +538,7 @@
 
       this.overlay.clear();
       this.setMateFire(o.mateUltimate && o.mateUltimate.piece.toLowerCase() === 'q' ? [] : o.mateFire || []);
+      let capture = null;
       const mark = (sq, color, opacity) => {
         if (sq < 0 || sq == null) return;
         const m = this.square(color, opacity); const p = this.sqToPos(sq);
@@ -523,6 +581,7 @@
         if (m.captured && !o.mateUltimate) {
           const v = take(vSq);
           const a = this.sqToPos(m.from), b = this.sqToPos(vSq);
+          capture = { from: a, to: b, victim: v };
           const len = Math.hypot(b.x - a.x, b.z - a.z) || 1;
           const ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
           const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); } };
@@ -596,6 +655,7 @@
         c.foe = foe == null ? null : this.sqToPos(foe);
       }
       this.chars = next;
+      if (capture && capture.victim) this.startCaptureCamera(capture.from, capture.to, capture.victim, now);
       if (o.mateUltimate && o.animate && o.mateUltimate.id !== this.mateUltimateKey) {
         const actor = next.get(o.mateUltimate.attackerTo);
         this.mateUltimateKey = o.mateUltimate.id;
@@ -625,6 +685,7 @@
       u.actorHolderBase = actor.holder.position.clone();
       u.kingBase = u.kingRoot && { position: u.kingRoot.position.clone(), rotation: u.kingRoot.rotation.clone(), scale: u.kingRoot.scale.clone() };
       u.kingHolderBase = king && king.holder.position.clone();
+      u.kingHolderVisible = king && king.holder.visible;
       if (u.fromPos) actor.holder.position.set(u.fromPos.x, 0, u.fromPos.z);
       u.fx = new T.Group(); this.scene.add(u.fx);
       if (kind === 'n' && u.piece === u.piece.toUpperCase()) {
@@ -712,6 +773,17 @@
         u.banshee = this.makeBlackBanshee(); actor.holder.add(u.banshee);
         u.bansheeBaseScale = this.formScaleMatchingActor(actor, u.banshee);
         u.banshee.scale.setScalar(0.06); actor.parts.root.visible = false;
+        const flameVictims = (u.flameSquares || [])
+          .map((sq) => this.chars.get(sq))
+          .filter((piece) => piece && piece !== king && piece.piece === piece.piece.toUpperCase());
+        u.flameVictims = flameVictims.map((character, index) => ({
+          character,
+          start: 1.35 + 1.8 * index / Math.max(1, flameVictims.length - 1),
+          position: character.parts.root.position.clone(),
+          scale: character.parts.root.scale.clone(),
+          visible: character.holder.visible,
+          phase: index * 1.73,
+        }));
         u.blackFlames = [];
         const material = (color, opacity) => new T.MeshBasicMaterial({ color, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide });
         for (const sq of u.flameSquares || []) {
@@ -1024,9 +1096,18 @@
         } else if (c === king) {
           c.anim = null;
           const burn = smooth((e - 1.5) / 3.6);
-          c.parts.root.position.y = Math.sin(t * 26) * 0.12 + burn * 0.1;
-          c.parts.root.scale.set(u.kingBase.scale.x * (1 - burn * 0.48), u.kingBase.scale.y * (1 - burn * 0.7), u.kingBase.scale.z * (1 - burn * 0.48));
+          c.parts.root.position.y = u.kingBase.position.y + Math.sin(t * 26) * 0.12 + burn * 0.1;
+          c.parts.root.scale.set(u.kingBase.scale.x * (1 - burn), u.kingBase.scale.y * (1 - burn), u.kingBase.scale.z * (1 - burn));
+          if (burn >= 1) c.holder.visible = false;
           if (e > 2.2) { this.shakeUntil = t + 0.035; this.shakeAmp = 0.035; }
+        }
+        if (c === actor) for (const victim of u.flameVictims || []) {
+          const burn = smooth((e - victim.start) / 0.85);
+          if (burn <= 0) continue;
+          const root = victim.character.parts.root;
+          root.position.y = victim.position.y + Math.sin(t * 24 + victim.phase) * 0.045 + burn * 0.12;
+          root.scale.set(victim.scale.x * (1 - burn), victim.scale.y * (1 - burn), victim.scale.z * (1 - burn));
+          if (burn >= 1) victim.character.holder.visible = false;
         }
         if (u.blackFlames) for (const item of u.blackFlames) {
           const flames = item.isGroup ? item.children : [item];
@@ -1220,6 +1301,11 @@
       if (!u) return;
       if (u.apocalypse) this.restoreFoxWorld(u);
       if (u.hiddenEnemies) u.hiddenEnemies.forEach(([piece, visible]) => { piece.holder.visible = visible; });
+      if (u.flameVictims) u.flameVictims.forEach((victim) => {
+        victim.character.holder.visible = victim.visible;
+        victim.character.parts.root.position.copy(victim.position);
+        victim.character.parts.root.scale.copy(victim.scale);
+      });
       if (u.piece && u.piece.toLowerCase() === 'q') this.setCamera(this.flipped, true);
       if (u.actor && u.actor.parts.riderRoot) u.actor.parts.riderRoot.visible = true;
       if (u.actorRoot) u.actorRoot.visible = true;
@@ -1228,7 +1314,10 @@
       if (u.actorRoot && u.actorBase) { u.actorRoot.position.copy(u.actorBase.position); u.actorRoot.rotation.copy(u.actorBase.rotation); u.actorRoot.scale.copy(u.actorBase.scale); }
       if (u.kingRoot && u.kingBase) { u.kingRoot.position.copy(u.kingBase.position); u.kingRoot.rotation.copy(u.kingBase.rotation); u.kingRoot.scale.copy(u.kingBase.scale); }
       if (u.actor && u.actorHolderBase) u.actor.holder.position.copy(u.actorHolderBase);
-      if (u.king && u.kingHolderBase) u.king.holder.position.copy(u.kingHolderBase);
+      if (u.king && u.kingHolderBase) {
+        u.king.holder.position.copy(u.kingHolderBase);
+        u.king.holder.visible = u.kingHolderVisible;
+      }
       if (u.fox && u.fox.parent) {
         u.fox.parent.remove(u.fox);
         u.fox.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material && !Array.isArray(o.material)) o.material.dispose(); });
@@ -1642,6 +1731,7 @@
       this.drawCheckChains();
       this.tickWeather(t, dt);
       this.tickCaptureScars(t);
+      this.tickCaptureCamera(t);
       // tremblement de l'image au lancer et à l'impact
       if (this.shakeUntil > t) { const a = this.shakeAmp || 0.05; this.scene.position.set((Math.random() - 0.5) * a, (Math.random() - 0.5) * a, (Math.random() - 0.5) * a); }
       else this.scene.position.set(0, 0, 0);
@@ -2200,7 +2290,8 @@
           const a = angleAt(e.clientX, e.clientY);
           let d = a - spin.a; d = Math.atan2(Math.sin(d), Math.cos(d));
           spin.moved = true; spin.a = a;
-          this.yaw = (this.yaw || 0) + d; // glisser sur le bord fait tourner le plateau
+          d = Math.max(-MAX_ROTATION_STEP, Math.min(MAX_ROTATION_STEP, d));
+          this.yaw = (this.yaw || 0) + d * ROTATION_SENSITIVITY;
           this.setCamera(this.flipped, true);
           return;
         }

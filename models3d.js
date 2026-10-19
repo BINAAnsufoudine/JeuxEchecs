@@ -344,6 +344,40 @@
       p[side < 0 ? 'legL' : 'legR'].add(mesh(geo('greave', () => new T.CylinderGeometry(0.058, 0.055, 0.12, 10)), metalMat(metal), 0, -0.13, 0));
     }
   }
+  function royalCrown(head, gold, jewel) {
+    head.add(mesh(geo('royalcrown-band', () => new T.CylinderGeometry(0.17, 0.19, 0.065, 24)), metalMat(gold), 0, 0.32, 0));
+    head.add(mesh(geo('royalcrown-rim', () => new T.TorusGeometry(0.18, 0.014, 8, 24)), mat(gold), 0, 0.355, 0).rotateX(Math.PI / 2));
+    const points = geo('royalcrown-point', () => new T.ConeGeometry(0.035, 0.17, 8));
+    for (let i = 0; i < 8; i++) {
+      const angle = i * Math.PI / 4;
+      const point = mesh(points, metalMat(gold), Math.cos(angle) * 0.15, 0.405, Math.sin(angle) * 0.15);
+      point.rotation.z = Math.cos(angle) * -0.16;
+      point.rotation.x = Math.sin(angle) * 0.16;
+      head.add(point);
+    }
+    const arch = new T.CatmullRomCurve3([
+      new T.Vector3(-0.14, 0.35, 0.065), new T.Vector3(-0.09, 0.44, 0.09),
+      new T.Vector3(0, 0.49, 0.105), new T.Vector3(0.09, 0.44, 0.09),
+      new T.Vector3(0.14, 0.35, 0.065),
+    ]);
+    head.add(new T.Mesh(new T.TubeGeometry(arch, 16, 0.012, 6, false), metalMat(gold)));
+    head.add(mesh(geo('royalcrown-cross-stem', () => new T.CylinderGeometry(0.012, 0.018, 0.08, 8)), metalMat(gold), 0, 0.52, 0));
+    head.add(mesh(geo('royalcrown-crossbar', () => new T.BoxGeometry(0.09, 0.018, 0.022)), metalMat(gold), 0, 0.54, 0));
+    head.add(mesh(geo('royalcrown-gem', () => new T.OctahedronGeometry(0.045, 0)), mat(jewel, { metalness: 0.18, roughness: 0.3 }), 0, 0.375, 0.177));
+  }
+  function royalCape(p, cloth, trim, jewel) {
+    const cape = mesh(
+      geo('royalcape', () => new T.CylinderGeometry(0.18, 0.34, 0.78, 20, 1, true, Math.PI * 0.65, Math.PI * 0.7)),
+      mat(cloth, { double: true, roughness: 0.82 }),
+      0, -0.04, -0.025,
+    );
+    p.torso.add(cape); p.cloak = cape;
+    const clasp = mesh(geo('royalcape-clasp', () => new T.OctahedronGeometry(0.07, 0)), metalMat(trim), 0, 0.31, 0.15);
+    p.torso.add(clasp);
+    p.torso.add(mesh(geo('royalcape-jewel', () => new T.OctahedronGeometry(0.035, 0)), mat(jewel, { metalness: 0.18, roughness: 0.3 }), 0, 0.31, 0.205));
+    const sash = mesh(geo('royal-sash', () => new T.BoxGeometry(0.075, 0.32, 0.025)), mat(trim), -0.065, 0.08, 0.168);
+    sash.rotation.z = 0.28; p.torso.add(sash);
+  }
 
   // Les deux cavaliers sont des ninjas en selle. La monture reste dans le même
   // groupe animé que le personnage afin de conserver les déplacements du plateau.
@@ -457,14 +491,11 @@
       return p;
     },
     K() {
-      // Chef du village en armure blanche et or, cape rouge, sabre de samouraï
+      // Roi blanc en armure cérémonielle, cape écarlate et couronne d'or
       const p = skeleton({ wide: 1.15, shirt: '#fdfdfd', pants: '#2d3e70', belt: '#e8452c', face: { eye: '#2f7fe0', grin: true } });
       armor(p, '#eef1f6', '#d4a72c');
-      const cape = mesh(geo('cape', () => new T.CylinderGeometry(0.2, 0.32, 0.5, 18, 1, true, Math.PI * 0.65, Math.PI * 0.7)), mat('#e8452c', { double: true }), 0, 0.06, -0.02);
-      p.torso.add(cape); p.cloak = cape;
-      spikes(p.head, '#f7cf3b', { n: 12, len: 0.12 });
-      p.head.add(mesh(geo('circlet', () => new T.CylinderGeometry(0.2, 0.2, 0.05, 20, 1, true)), mat('#d4a72c', { double: true }), 0, 0.26, 0));
-      for (let i = 0; i < 5; i++) { const c = mesh(geo('crownpt', () => new T.ConeGeometry(0.025, 0.08, 6)), mat('#d4a72c'), Math.cos(i * 0.35 + 1) * 0.2, 0.32, Math.sin(i * 0.35 + 1) * 0.2); p.head.add(c); }
+      royalCape(p, '#a51f36', '#d4a72c', '#2563eb');
+      royalCrown(p.head, '#e0b83f', '#d32f4f');
       aura(p, '#ffd23a', 3);
       lightning(p);
       p.great = katana(p.armR, { blade: '#eef3f8', guard: '#d4a72c', wrap: '#e8452c' }, 1.05); iceWall(p); p.weapon = 'sabre';
@@ -513,6 +544,8 @@
       const p = skeleton({ shirt: '#232338', pants: '#232338', pads: '#f3f0e6', belt: '#f2c230', shoes: '#f3f0e6', emblem: '#232338', face: { eye: '#1fa58f', fierce: true } });
       blackHair(p.head, 2);
       armor(p, '#2b2b3a', '#ffd23a');
+      royalCape(p, '#24162f', '#c9a227', '#8b35b8');
+      royalCrown(p.head, '#d4a72c', '#8b35b8');
       aura(p, '#ffd23a', 3);
       lightning(p);
       p.great = katana(p.armR, { blade: '#d8d0ff', guard: '#ffd23a', wrap: '#232338' }, 1.05); iceWall(p); p.weapon = 'sabre';
