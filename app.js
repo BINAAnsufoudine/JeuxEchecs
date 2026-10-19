@@ -1729,6 +1729,7 @@
   const speechBusy = () => !!(tts && settings.voice && speechUntil > performance.now());
   function speak(text) {
     if (!tts || !settings.voice) return;
+    if (shoutU) { pendingSpeech = text; return; }
     tts.cancel();
     const u = new SpeechSynthesisUtterance(text.replace(/[«»]/g, ''));
     u.lang = 'fr-FR'; if (frVoice) u.voice = frVoice;
@@ -1739,7 +1740,25 @@
     speechUntil = performance.now() + Math.min(45000, 3000 + text.length * 90);
     tts.speak(u);
   }
-  const hush = () => { speechUntil = 0; if (tts) tts.cancel(); };
+  const hush = () => { speechUntil = 0; shoutU = null; pendingSpeech = null; if (tts) tts.cancel(); };
+  // Cri de technique : prononcé avant l'attaque ; la parole du coach attend la fin du cri
+  let shoutU = null, pendingSpeech = null;
+  function shout(name) {
+    if (!tts || !settings.voice) return;
+    tts.cancel();
+    const u = new SpeechSynthesisUtterance(name);
+    u.lang = 'fr-FR'; if (frVoice) u.voice = frVoice;
+    u.rate = 0.95; u.pitch = 0.7; u.volume = 1;
+    const done = () => {
+      if (shoutU !== u) return;
+      shoutU = null; speechUntil = 0;
+      if (pendingSpeech) { const t = pendingSpeech; pendingSpeech = null; speak(t); }
+    };
+    shoutU = u; lastUtterance = u;
+    u.onend = done; u.onerror = done;
+    speechUntil = performance.now() + 4000;
+    tts.speak(u);
+  }
   function voiceButton() {
     const b = $('pz-voice');
     b.hidden = !tts;
@@ -2503,6 +2522,7 @@
     b3d = new window.Board3D($('board-wrap'), tapSquare);
     $('board-wrap').classList.add('is3d');
     b3d.setLite(settings.lite);
+    b3d.onTechnique = (name) => { if (!(game && cfg && cfg.mode === 'coach' && !replay && !pz)) shout(name); };
     b3d.onSlow = () => {
       if (settings.lite) return;
       settings.lite = true; store.set('settings', settings); b3d.setLite(true);

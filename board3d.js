@@ -621,15 +621,18 @@
           const len = Math.hypot(b.x - a.x, b.z - a.z) || 1;
           const ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
           const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); } };
+          const announce = (name) => { if (this.onTechnique) this.onTechnique(name, white); };
           if (kind === 'n') {
             const style = white
               ? (Math.random() < 0.5 ? 'tunnel-eat' : 'tunnel-impact')
               : (Math.random() < 0.5 ? 'eagle-release' : 'eagle-slam');
+            announce({ 'tunnel-eat': 'Tunnel dévoreur', 'tunnel-impact': 'Tunnel d\u2019impact', 'eagle-release': 'Envol de l\u2019aigle', 'eagle-slam': 'Piqué de l\u2019aigle' }[style]);
             const duration = style === 'tunnel-eat' ? 2.8 : style === 'tunnel-impact' ? 2.45 : style === 'eagle-release' ? 3.65 : 3.85;
             knightAttack = { style, start: now, from: a, target: b, duration, victim: v, hitCount: 0 };
             die({ t0: now + duration, knightAttack });
           } else if (far && (kind === 'q' || kind === 'r')) {
             // Technique à distance lancée depuis sa case : boule de feu (dame) ou dragon d'eau (tour)
+            announce(kind === 'q' ? 'Boule de feu' : 'Dragon d\u2019eau');
             shot = { tech: kind === 'q' ? 'fire' : 'water', victim: v, target: b, fire: kind === 'q' ? 0.8 : 0.9 };
             shot.flight = kind === 'q' ? 0.25 + len * 0.06 : 0.45 + len * 0.09;
             shot.impact = shot.fire + shot.flight;
@@ -637,12 +640,14 @@
             die({ t0: now + EXR + shot.impact, hit: true, explode: kind === 'q', swept: kind === 'r', counter: { start: now, end: now + EXR, at: a } });
           } else if (far && kind === 'b') {
             // Le fou fait surgir une rangée de pics du sol jusqu'à sa cible.
+            announce('Pics de terre');
             toss = { victim: v, target: b, windup: 0.4, flight: 0.25 + len * 0.07 };
             toss.impact = toss.windup + toss.flight;
             toss.runStart = toss.impact + 0.45;
             die({ t0: now + EXR + toss.impact + 0.2, hit: true, impaled: true, spikes: toss, counter: { start: now, end: now + EXR, at: a } });
           } else {
             // Corps à corps : l'attaquant s'arrête face à sa cible, puis la technique propre à chaque pièce
+            announce({ p: 'Poing de karaté', b: 'Pics de terre', r: 'Jet de flammes', q: 'Souffle de flammes', k: 'Trois coups de sabre' }[kind] || 'Coup de karaté');
             const gap = Math.min(0.62, len);
             duel = { stop: { x: b.x - ux * gap, z: b.z - uz * gap }, foe: b, len: DUEL, rate: 1.5 };
             if (kind === 'k') duel.len = 2; // trois coups de sabre en 2 s
