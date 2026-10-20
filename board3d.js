@@ -2734,7 +2734,13 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       a.light = add(new T.PointLight(0xff7a1a, 0, 6, 2));
     }
     tickFireroll(c, a, el, t, M) {
-      if (!a.ball) this.makeFirerollFx(a);
+      if (!a.ball) {
+        this.makeFirerollFx(a);
+        // la boule a la taille de la tour : son diamètre (flammes comprises) égale la hauteur du personnage
+        c.parts.root.updateMatrixWorld(true);
+        const h = new this.THREE.Box3().setFromObject(c.parts.root).getSize(new this.THREE.Vector3()).y;
+        a.size = Math.max(0.6, h) / 1.04;
+      }
       const clamp = (x) => Math.max(0, Math.min(1, x));
       const from = a.from, to = a.target, dir = a.dir;
       const hitAt = 0.5 + a.run, stop = { x: to.x - dir.x * 0.38, z: to.z - dir.z * 0.38 };
@@ -2754,8 +2760,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         c.holder.position.set(stop.x + (to.x - stop.x) * u, 0, stop.z + (to.z - stop.z) * u);
       } else if (el >= 0.5) c.holder.position.set(bx, 0, bz);
       a.ball.visible = el > 0.15 && back < 1;
-      a.ball.position.set(bx, 0.36, bz);
-      a.ball.scale.setScalar(Math.max(0.01, grow * (1 - back) * (el >= hitAt && el < hitAt + 0.15 ? 1.25 : 1)));
+      a.ball.position.set(bx, 0.52 * a.size, bz);
+      a.ball.scale.setScalar(Math.max(0.01, a.size * grow * (1 - back) * (el >= hitAt && el < hitAt + 0.15 ? 1.15 : 1)));
       // roule dans le sens du déplacement
       a.ball.rotation.set(0, 0, 0);
       a.ball.rotateOnWorldAxis(new this.THREE.Vector3(dir.z, 0, -dir.x), el * 22);
@@ -2770,7 +2776,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           fl.material.opacity = 0.85 * fade;
         });
       });
-      a.light.position.set(bx, 0.6, bz);
+      a.light.position.set(bx, a.size, bz);
       a.light.intensity = a.ball.visible ? 3 + Math.random() * 1.5 : 0;
       if (el >= hitAt && el < hitAt + 0.2) { this.shakeUntil = t + 0.05; this.shakeAmp = 0.12; }
       if (el >= a.duration) { c.parts.root.visible = true; this.endShot(a); }
