@@ -15,6 +15,7 @@
     mud: { name: 'Terrain boueux', sky: 0x9ca19a, ground: 0x514b3d, wood: 0x49352b, frame: ['#786451', '#514237', '#342b27'], squares: ['#c7b79d', '#796451'], kind: 'mud' },
     rock: { name: 'Terrain rocheux', sky: 0xa9afb4, ground: 0x62686b, wood: 0x55483c, frame: ['#8a8175', '#5b544d', '#393735'], squares: ['#d0d0c9', '#777c7e'], kind: 'rock' },
     water: { name: 'Terrain avec flaques', sky: 0x9bbbc1, ground: 0x526f66, wood: 0x59432f, frame: ['#806b50', '#5a4734', '#3d3027'], squares: ['#d0dfd8', '#63827a'], kind: 'water' },
+    beach: { name: 'Plage tropicale', sky: 0x6cc5e8, ground: 0xa88a54, wood: 0x8a6a42, frame: ['#b98d57', '#8a6238', '#5f4226'], squares: ['#ead6a0', '#b98a4c'], kind: 'beach' },
   };
   const WEATHERS = {
     sun: { name: 'Soleil', sky: 0x000000, tint: 0x000000, sun: 1.05, hemi: 0.58, rain: 0, cloud: 0, fogFar: 85 },
@@ -234,7 +235,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.base.material.color.setHex(terrain.wood);
       this.hemi.color.setHex(terrain.sky);
       this.hemi.groundColor.setHex(terrain.ground);
-      this.sun.color.setHex(terrain.kind === 'desert' || terrain.kind === 'steppe' ? 0xffe1af : 0xffffff);
+      this.sun.color.setHex(terrain.kind === 'desert' || terrain.kind === 'steppe' || terrain.kind === 'beach' ? 0xffe1af : 0xffffff);
       this.boardKey = '';
       this.buildTerrain(terrain);
     }
@@ -357,7 +358,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const wood = mat(terrain.kind === 'forest' ? 0x553b27 : 0x766044);
       const green = mat(terrain.kind === 'forest' ? 0x315d35 : 0x477a38);
       const paleGreen = mat(terrain.kind === 'forest' ? 0x527543 : 0x82a84c);
-      const sand = mat(0xd2b06f);
+      const sand = mat(terrain.kind === 'beach' ? 0xbfa468 : 0xd2b06f);
       const drySoil = mat(0xb09a6b);
       const water = mat(0x5598a2, { roughness: 0.18, metalness: 0.16, transparent: true, opacity: 0.82 });
       const mud = mat(0x493b2d, { roughness: 0.45 });
@@ -374,10 +375,40 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const spikeGeo = new T.ConeGeometry(0.17, 1.1, 7);
       const stemGeo = new T.CylinderGeometry(0.055, 0.075, 0.9, 6);
 
+      // Plage : la mer turquoise borde le sable des deux côtés du plateau
+      if (terrain.kind === 'beach') {
+        const sea = mat(0x0f8fb0, { roughness: 0.2, metalness: 0.12 });
+        const foam = mat(0xdcefee, { roughness: 0.6 });
+        const seaGeo = new T.PlaneGeometry(120, 22), foamGeo = new T.PlaneGeometry(120, 0.6);
+        for (const s of [-1, 1]) {
+          const w = add(seaGeo, sea, 0, -0.52, s * 21.5, 1, 1, 1, false); w.rotation.x = -Math.PI / 2;
+          const f = add(foamGeo, foam, 0, -0.51, s * 10.3, 1, 1, 1, false); f.rotation.x = -Math.PI / 2;
+        }
+      }
+      const frondGeo = new T.ConeGeometry(0.16, 1.5, 4), trunkPalmGeo = new T.CylinderGeometry(0.1, 0.18, 2.5, 7), nutGeo = new T.SphereGeometry(0.1, 6, 5);
+      const palmGreen = mat(0x2f8f4a), palmTrunk = mat(0x8a6a45), nutMat = mat(0x5a3b22), tide = mat(0x1fb0c4, { roughness: 0.18, metalness: 0.14, transparent: true, opacity: 0.88 });
+      const palm = (x, z, lean) => {
+        const g = new T.Group();
+        const trunk = new T.Mesh(trunkPalmGeo, palmTrunk); trunk.position.y = 1.25; trunk.castShadow = true; g.add(trunk);
+        for (let k = 0; k < 7; k++) {
+          const arm = new T.Group(); arm.position.y = 2.5; arm.rotation.y = (k / 7) * Math.PI * 2;
+          const frond = new T.Mesh(frondGeo, palmGreen); frond.position.x = 0.65; frond.rotation.z = -Math.PI / 2 - 0.5; frond.scale.z = 0.3; frond.castShadow = true;
+          arm.add(frond); g.add(arm);
+        }
+        for (let k = 0; k < 3; k++) { const nut = new T.Mesh(nutGeo, nutMat); nut.position.set(Math.cos(k * 2.1) * 0.14, 2.38, Math.sin(k * 2.1) * 0.14); g.add(nut); }
+        g.position.set(x, -0.5, z); g.rotation.z = lean; g.rotation.y = x * 0.7;
+        this.terrainGroup.add(g);
+      };
+
       // Quelques reliefs proches du socle relient visuellement le plateau au terrain.
       for (let i = 0; i < points.length; i++) {
         const [x, z] = points[i], jitter = (i % 3) * 0.16;
-        if (terrain.kind === 'forest') {
+        if (terrain.kind === 'beach') {
+          add(moundGeo, sand, x, -0.32, z, 1.7, 0.3, 1);
+          if (i % 4 === 0) palm(x, z, (i % 8 === 0 ? 1 : -1) * 0.12);
+          else if (i % 4 === 2) { const pool = add(disk, tide, x, -0.512, z, 1.3, 1, 0.8, false); pool.rotation.x = -Math.PI / 2; }
+          else if (i % 4 === 1) add(rockGeo, stone, x + 0.2, -0.3, z + 0.1, 0.5, 0.3, 0.42);
+        } else if (terrain.kind === 'forest') {
           if (i % 2 === 0) {
             add(trunkGeo, wood, x, 0.05, z, 0.8, 0.9 + jitter, 0.8);
             add(crownGeo, green, x, 0.85, z, 1.2, 1.25, 1.2);
@@ -477,11 +508,17 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (flipped !== this.flipped) this.yaw = 0; // changement de camp : on revient en face
       this.flipped = flipped;
       const a = this.viewYaw(), sn = Math.sin(a), cs = Math.cos(a);
-      const radius = 13.31, elevation = this.elevation * Math.PI / 180;
+      const radius = 13.31 * (this.zoom || 1), elevation = this.elevation * Math.PI / 180;
       const horizontal = radius * Math.cos(elevation);
       this.camera.position.set(horizontal * sn, 0.3 + radius * Math.sin(elevation), horizontal * cs);
       this.cameraTarget.set(0.45 * sn, 0.3, 0.45 * cs);
       this.camera.lookAt(this.cameraTarget);
+    }
+
+    // Toute action du joueur sur la vue reprend la main sur les caméras automatiques (prise, mat)
+    takeCamera() {
+      this.captureCamera = null;
+      if (this.mateUltimate && this.mateUltimate.camera) this.mateUltimate.camera.released = true;
     }
 
     startCaptureCamera(from, to, victim, now) {
@@ -523,7 +560,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           c.restorePosition = this.camera.position.clone();
           c.restoreTarget = this.cameraTarget.clone();
           const yaw = this.viewYaw(), sn = Math.sin(yaw), cs = Math.cos(yaw);
-          const radius = 13.31, elevation = this.elevation * Math.PI / 180;
+          const radius = 13.31 * (this.zoom || 1), elevation = this.elevation * Math.PI / 180;
           const horizontal = radius * Math.cos(elevation);
           c.endPosition = new this.THREE.Vector3(horizontal * sn, 0.3 + radius * Math.sin(elevation), horizontal * cs);
           c.endTarget = new this.THREE.Vector3(0.45 * sn, 0.3, 0.45 * cs);
@@ -538,7 +575,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
     tickMateCamera(t) {
       const u = this.mateUltimate;
-      if (!u || !u.camera || t < u.start) return;
+      if (!u || !u.camera || u.camera.released || t < u.start) return;
       const c = u.camera, elapsed = t - u.start;
       const smooth = (value) => { value = Math.max(0, Math.min(1, value)); return value * value * (3 - 2 * value); };
       if (elapsed < 0.4) {
@@ -2460,24 +2497,49 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     bindInput() {
       const el = this.renderer.domElement;
       let down = null, spin = null, lastBorderTap = 0;
+      const pointers = new Map();
+      let pinch = 0;
       const tilt = (dy) => {
+        this.takeCamera();
         this.elevation = Math.max(18, Math.min(88, this.elevation + dy * 0.35));
         this.setCamera(this.flipped, true);
       };
+      const zoomBy = (factor) => {
+        this.takeCamera();
+        this.zoom = Math.max(0.45, Math.min(1.7, (this.zoom || 1) * factor));
+        this.setCamera(this.flipped, true);
+      };
+      el.addEventListener('wheel', (e) => { e.preventDefault(); zoomBy(Math.exp(e.deltaY * 0.0015)); }, { passive: false });
       // angle du doigt autour du centre du plateau, à l'écran
       const angleAt = (x, y) => {
         const c = new this.THREE.Vector3(0, 0, 0).project(this.camera), r = el.getBoundingClientRect();
         return Math.atan2(y - (r.top + ((1 - c.y) / 2) * r.height), x - (r.left + ((c.x + 1) / 2) * r.width));
       };
       el.addEventListener('pointerdown', (e) => {
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.size === 2) {
+          const [p, q] = [...pointers.values()];
+          pinch = Math.hypot(p.x - q.x, p.y - q.y);
+          spin = null;
+          if (down) down.dragged = true;
+          return;
+        }
         down = { x: e.clientX, y: e.clientY, lastY: e.clientY, dragged: false, tilting: false };
         spin = null;
-        if (this.onBorder(e.clientX, e.clientY)) {
+        // après la partie, on fait pivoter le plateau en glissant n'importe où
+        if (this.outcome || this.onBorder(e.clientX, e.clientY)) {
           spin = { a: angleAt(e.clientX, e.clientY), moved: false, tilting: false, lastY: e.clientY };
         }
         try { el.setPointerCapture(e.pointerId); } catch { /* sans capture */ }
       });
       el.addEventListener('pointermove', (e) => {
+        if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.size === 2) {
+          const [p, q] = [...pointers.values()], d = Math.hypot(p.x - q.x, p.y - q.y);
+          if (pinch > 0 && d > 0) zoomBy(pinch / d);
+          pinch = d;
+          return;
+        }
         if (!down) return;
         const dx = e.clientX - down.x, dy = e.clientY - down.y;
         if (spin) {
@@ -2491,6 +2553,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           let d = a - spin.a; d = Math.atan2(Math.sin(d), Math.cos(d));
           spin.moved = true; spin.a = a;
           d = Math.max(-MAX_ROTATION_STEP, Math.min(MAX_ROTATION_STEP, d));
+          this.takeCamera();
           this.yaw = (this.yaw || 0) + d * ROTATION_SENSITIVITY;
           this.setCamera(this.flipped, true);
           return;
@@ -2501,12 +2564,14 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         } else if (Math.hypot(dx, dy) >= 8) down.dragged = true;
       });
       el.addEventListener('pointerup', (e) => {
+        pointers.delete(e.pointerId); pinch = 0;
+        if (pointers.size && down) { down = null; spin = null; return; }
         if (spin) {
           const moved = spin.moved; spin = null; down = null;
           if (!moved) {
             // double toucher sur le bord : retour à la vue de face
             const now = performance.now();
-            if (now - lastBorderTap < 400) { this.yaw = 0; this.setCamera(this.flipped, true); }
+            if (now - lastBorderTap < 400) { this.takeCamera(); this.yaw = 0; this.zoom = 1; this.setCamera(this.flipped, true); }
             lastBorderTap = now;
           }
           return;
@@ -2516,7 +2581,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         const { sq, boardSq } = this.pick(e.clientX, e.clientY);
         if (sq >= 0) this.onSquare(sq, boardSq);
       });
-      el.addEventListener('pointercancel', () => { down = null; spin = null; });
+      el.addEventListener('pointercancel', (e) => { pointers.delete(e.pointerId); pinch = 0; down = null; spin = null; });
     }
 
     // Le doigt est-il sur le cadre en bois (hors des 64 cases) ou juste autour du plateau ?

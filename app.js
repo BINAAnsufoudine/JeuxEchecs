@@ -63,8 +63,8 @@
   let coachHintLevel = 0;
   let coachArrows = [];        // flèches du dernier coup commenté (partie coachée)
   let judging = false, judgeSeq = 0, judgeWorker = null;
-  const TERRAIN_IDS = ['forest', 'desert', 'prairie', 'steppe', 'mud', 'rock', 'water'];
-  const TERRAIN_NAMES = { forest: 'Forêt', desert: 'Désert', prairie: 'Prairie verte', steppe: 'Plaine sèche', mud: 'Terrain boueux', rock: 'Terrain rocheux', water: 'Flaques d’eau' };
+  const TERRAIN_IDS = ['forest', 'desert', 'prairie', 'steppe', 'mud', 'rock', 'water', 'beach'];
+  const TERRAIN_NAMES = { forest: 'Forêt', desert: 'Désert', prairie: 'Prairie verte', steppe: 'Plaine sèche', mud: 'Terrain boueux', rock: 'Terrain rocheux', water: 'Flaques d’eau', beach: 'Plage tropicale' };
   const WEATHER_IDS = ['sun', 'cloudy', 'drizzle', 'heavy', 'storm'];
   const WEATHER_NAMES = { sun: 'Soleil', cloudy: 'Ciel nuageux', drizzle: 'Pluie fine', heavy: 'Grosse pluie', storm: 'Orage et éclairs' };
   let currentTerrain = 'forest';
