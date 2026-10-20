@@ -107,15 +107,21 @@
   }
 
   // Tricorne vu de face : calotte, bords relevés et pointe avant qui descend vers le spectateur, galon doré
-  function tricorne2d(ctx, cx, cy, r, color) {
-    ellipse(ctx, cx, cy - r * 0.92, r * 0.72, r * 0.42, color);
-    poly(ctx, [[cx - r * 1.55, cy - r * 0.95], [cx - r * 0.45, cy - r * 0.62], [cx, cy - r * 0.38], [cx + r * 0.45, cy - r * 0.62], [cx + r * 1.55, cy - r * 0.95], [cx + r * 0.95, cy - r * 0.62], [cx, cy - r * 0.5], [cx - r * 0.95, cy - r * 0.62]], color, LINE, 3);
-    ctx.strokeStyle = '#d4a72c'; ctx.lineWidth = 4; ctx.beginPath();
-    ctx.moveTo(cx - r * 1.5, cy - r * 0.93); ctx.lineTo(cx - r * 0.45, cy - r * 0.6); ctx.lineTo(cx, cy - r * 0.4); ctx.lineTo(cx + r * 0.45, cy - r * 0.6); ctx.lineTo(cx + r * 1.5, cy - r * 0.93); ctx.stroke();
-    ellipse(ctx, cx, cy - r * 0.5, r * 0.09, r * 0.09, '#d4a72c');
-    poly(ctx, [[cx - r * 0.2, cy - r * 1.1], [cx + r * 0.2, cy - r * 1.1], [cx + r * 0.2, cy - r * 0.8], [cx - r * 0.2, cy - r * 0.8]], '#d8352a', LINE, 2);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('火', cx, cy - r * 0.95);
+  // Chapeau de Kage vu de face : pyramide dont l'angle avant pointe vers le spectateur, losange « 火 », voile sur les côtés
+  function kage2d(ctx, cx, cy, r, o) {
+    // voile qui retombe de part et d'autre du visage
+    poly(ctx, [[cx - r * 1.25, cy - r * 0.55], [cx - r * 0.85, cy - r * 0.45], [cx - r * 0.9, cy + r * 1.3], [cx - r * 1.4, cy + r * 1.2]], o.veil, LINE, 2);
+    poly(ctx, [[cx + r * 1.25, cy - r * 0.55], [cx + r * 0.85, cy - r * 0.45], [cx + r * 0.9, cy + r * 1.3], [cx + r * 1.4, cy + r * 1.2]], o.veil, LINE, 2);
+    // bord clair puis pyramide
+    poly(ctx, [[cx - r * 1.5, cy - r * 0.62], [cx, cy - r * 0.28], [cx + r * 1.5, cy - r * 0.62], [cx + r * 1.5, cy - r * 0.54], [cx, cy - r * 0.2], [cx - r * 1.5, cy - r * 0.54]], o.rim, LINE, 2);
+    poly(ctx, [[cx - r * 1.5, cy - r * 0.62], [cx, cy - r * 1.75], [cx + r * 1.5, cy - r * 0.62], [cx, cy - r * 0.28]], o.top, LINE, 3);
+    // losange avant
+    poly(ctx, [[cx, cy - r * 0.95], [cx + r * 0.36, cy - r * 0.62], [cx, cy - r * 0.3], [cx - r * 0.36, cy - r * 0.62]], o.panel, null);
+    ctx.fillStyle = o.text; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('火', cx, cy - r * 0.6);
+    // attaches
+    ctx.strokeStyle = '#8c9096'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    for (const k of [0, 1]) { ctx.beginPath(); ctx.moveTo(cx + r * (0.55 + k * 0.28), cy - r * (1.3 - k * 0.2)); ctx.lineTo(cx + r * (0.65 + k * 0.28), cy - r * (1.12 - k * 0.2)); ctx.stroke(); }
   }
   // Cagoule : tissu sur toute la tête, sauf une fente horizontale à hauteur des yeux
   function hood2d(ctx, cx, cy, r, cloth) {
@@ -259,8 +265,8 @@
       const { cy, r } = HEAD;
       spikes(ctx, cx, cy, r, 9, 24, Math.PI * 0.95, Math.PI * 2.05, '#f7cf3b');
       face(ctx, cx, cy + 4, r, { eye: '#2f7fe0', grin: true });
-      // tricorne blanc, pointe vers l'avant
-      tricorne2d(ctx, cx, cy, r, '#f7f7f2');
+      // chapeau de Kage rouge et blanc
+      kage2d(ctx, cx, cy, r, { top: '#b51f24', rim: '#f7f7f2', panel: '#f7f7f2', text: '#b51f24', veil: '#f4f4f0' });
     },
   };
 
@@ -317,8 +323,8 @@
       const { cy, r } = HEAD;
       spikes(ctx, cx, cy - 10, r, 6, 40, Math.PI * 1.02, Math.PI * 1.98, '#ffd83a', 0.15);
       face(ctx, cx, cy, r, { eye: '#1fa58f', fierce: true });
-      // tricorne noir, pointe vers l'avant
-      tricorne2d(ctx, cx, cy, r, '#17171d');
+      // chapeau de Kage noir et rouge
+      kage2d(ctx, cx, cy, r, { top: '#141416', rim: '#141416', panel: '#c0262b', text: '#141416', veil: '#d9c497' });
     },
   };
 
