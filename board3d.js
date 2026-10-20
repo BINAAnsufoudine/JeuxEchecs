@@ -764,7 +764,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           ...o.mateUltimate, actor, king: next.get(o.mateUltimate.to),
           start: now + (actor.anim ? actor.anim.dur : 0.35) + 0.15,
           fromPos: { ...this.sqToPos(o.mateUltimate.attackerTo) }, target: this.sqToPos(o.mateUltimate.to),
-          duration: o.mateUltimate.piece === 'k' ? 9.6 : o.mateUltimate.piece === 'K' ? 7.8 : o.mateUltimate.piece.toLowerCase() === 'q' ? 6.8 : o.mateUltimate.piece.toLowerCase() === 'p' ? 3.6 : o.mateUltimate.piece === 'N' ? 4.8 : o.mateUltimate.piece === 'n' || o.mateUltimate.piece === 'b' ? 5.4 : 3.4,
+          duration: o.mateUltimate.piece === 'k' ? 9.6 : o.mateUltimate.piece === 'K' ? 7.8 : o.mateUltimate.piece.toLowerCase() === 'q' ? 6.8 : o.mateUltimate.piece.toLowerCase() === 'p' ? 3.6 : o.mateUltimate.piece === 'N' ? 4.8 : o.mateUltimate.piece === 'n' ? 5.4 : o.mateUltimate.piece === 'b' ? 5.8 : 3.4,
         } : null;
         if (this.mateUltimate) {
           this.makeMateUltimateFx(this.mateUltimate);
@@ -920,7 +920,57 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           shred.visible = false; shred.userData.seed = i; u.fx.add(shred); u.shreds.push(shred);
         }
         u.fireLight = new T.PointLight(0xdcecff, 0, 4, 2); this.scene.add(u.fireLight);
-      } else if (kind === 'n' || u.piece === 'b') {
+      } else if (u.piece === 'b') {
+        // Fou noir : des nuages d'orage noirs, d'où descend en spirale un dragon de foudre violette.
+        const glow = (color, opacity) => new T.MeshBasicMaterial({ color, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false });
+        const ink = (color) => new T.MeshBasicMaterial({ color, transparent: true, opacity: 1, depthWrite: false });
+        u.clouds = new T.Group(); u.clouds.position.set(u.target.x, 4.9, u.target.z); u.fx.add(u.clouds);
+        for (let i = 0; i < 14; i++) {
+          const puff = new T.Mesh(new T.SphereGeometry(0.32 + (i % 4) * 0.12, 14, 10), new T.MeshBasicMaterial({ color: i % 3 ? 0x17121f : 0x2a1d3a, transparent: true, opacity: 0, depthWrite: false }));
+          const a = i * 2.399, r = 0.2 + (i % 5) * 0.28;
+          puff.position.set(Math.cos(a) * r, (i % 3) * 0.2, Math.sin(a) * r); puff.scale.y = 0.45; u.clouds.add(puff);
+        }
+        u.dragon = [];
+        const n = 28;
+        for (let i = 0; i < n; i++) {
+          const seg = new T.Group(), r = 0.24 - (i / n) * 0.16;
+          seg.add(new T.Mesh(new T.SphereGeometry(r * 0.7, 10, 8), ink(0x0d0614)));
+          seg.add(new T.Mesh(new T.SphereGeometry(r, 12, 10), glow(i % 2 ? 0x9b4dff : 0xc79bff, 0.6)));
+          if (i % 3 === 1) { const fin = new T.Mesh(new T.ConeGeometry(r * 0.35, r * 1.5, 5), glow(0xe2c8ff, 0.8)); fin.position.y = r * 0.95; seg.add(fin); }
+          seg.visible = false; u.fx.add(seg); u.dragon.push(seg);
+        }
+        // Tête : gueule allongée, cornes et yeux blancs
+        const head = new T.Group(), skull = new T.Mesh(new T.SphereGeometry(0.2, 14, 10), ink(0x10071a));
+        skull.scale.set(1, 0.8, 1.6); head.add(skull);
+        const aura = new T.Mesh(new T.SphereGeometry(0.26, 14, 10), glow(0xa45cff, 0.55)); aura.scale.set(1, 0.85, 1.7); head.add(aura);
+        const jaw = new T.Mesh(new T.ConeGeometry(0.13, 0.42, 8), ink(0x10071a)); jaw.rotation.x = Math.PI / 2; jaw.position.set(0, -0.09, 0.26); head.add(jaw);
+        for (const side of [-1, 1]) {
+          const horn = new T.Mesh(new T.ConeGeometry(0.045, 0.36, 6), glow(0xe8d6ff, 0.95)); horn.position.set(side * 0.11, 0.17, -0.14); horn.rotation.set(-1.0, 0, side * -0.3); head.add(horn);
+          const eye = new T.Mesh(new T.SphereGeometry(0.035, 8, 6), glow(0xffffff, 1)); eye.position.set(side * 0.1, 0.06, 0.22); head.add(eye);
+          const whisker = new T.Mesh(new T.CylinderGeometry(0.008, 0.002, 0.5, 4), glow(0xc79bff, 0.9)); whisker.position.set(side * 0.12, -0.04, 0.42); whisker.rotation.set(Math.PI / 2, 0, side * 0.6); head.add(whisker);
+        }
+        head.visible = false; u.fx.add(head); u.dragonHead = head;
+        // Éclairs qui crépitent le long du corps, et foudres qui tombent sur le roi
+        const line = (color, count) => {
+          const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(new Float32Array(count * 3), 3));
+          const l = new T.Line(g, new T.LineBasicMaterial({ color, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }));
+          l.frustumCulled = false; u.fx.add(l); return l;
+        };
+        u.crackles = Array.from({ length: 5 }, (_, i) => line(i % 2 ? 0xffffff : 0xb98aff, 7));
+        u.strikes = Array.from({ length: 3 }, (_, i) => line(i === 1 ? 0xf2e6ff : 0x9b4dff, 10));
+        u.castBolt = line(0xc79bff, 10);
+        u.ashes = [];
+        for (let i = 0; i < 22; i++) {
+          const ash = new T.Mesh(new T.IcosahedronGeometry(0.035 + Math.random() * 0.04, 0), new T.MeshBasicMaterial({ color: i % 3 ? 0x2a2230 : 0x9b4dff, transparent: true, opacity: 0 }));
+          u.fx.add(ash); u.ashes.push(ash);
+        }
+        u.flashLight = new T.PointLight(0xa45cff, 0, 9, 2); this.scene.add(u.flashLight);
+        u.sky = {
+          background: this.scene.background && this.scene.background.isColor ? this.scene.background.clone() : null,
+          fog: this.scene.fog && this.scene.fog.color ? this.scene.fog.color.clone() : null,
+          sun: this.sun.intensity, hemi: this.hemi.intensity, exposure: this.renderer.toneMappingExposure,
+        };
+      } else if (kind === 'n') {
         // L'aigle et son ninja fusionnent en phénix de feu.
         u.phoenix = this.makePhoenix(); u.phoenix.visible = false; actor.holder.add(u.phoenix);
         u.phoenixScale = this.formScaleMatchingActor(actor, u.phoenix) * 1.05;
@@ -1521,7 +1571,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         }
         return true;
       }
-      if (kind === 'n' || u.piece === 'b') {
+      if (u.piece === 'b') return this.tickBlackDragon(u, c, e, t, M, clamp, smooth);
+      if (kind === 'n') {
         const dx = target.x - u.fromPos.x, dz = target.z - u.fromPos.z, len = Math.hypot(dx, dz) || 1;
         if (u.piece === 'N') {
           // Chien à deux têtes : fusion, bond sur le roi, trois piétinements, puis déchiquetage.
@@ -1743,6 +1794,107 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       return true;
     }
 
+    // Dragon de foudre noire : orage, appel de la foudre, descente en spirale, enroulement autour du roi
+    tickBlackDragon(u, c, e, t, M, clamp, smooth) {
+      const T = this.THREE, target = u.target, actor = u.actor, king = u.king;
+      const descend = 1.3, impact = 3.2, fadeOut = u.duration - 0.7;
+      const jag = (l, a, b, amp) => {
+        const arr = l.geometry.attributes.position.array, n = arr.length / 3;
+        for (let i = 0; i < n; i++) {
+          const f = i / (n - 1), j = i === 0 || i === n - 1 ? 0 : amp;
+          arr[i * 3] = a.x + (b.x - a.x) * f + (Math.random() - 0.5) * j;
+          arr[i * 3 + 1] = a.y + (b.y - a.y) * f + (Math.random() - 0.5) * j * 0.6;
+          arr[i * 3 + 2] = a.z + (b.z - a.z) * f + (Math.random() - 0.5) * j;
+        }
+        l.geometry.attributes.position.needsUpdate = true;
+      };
+      if (c === actor) {
+        c.anim = null; c.holder.position.set(u.fromPos.x, 0, u.fromPos.z);
+        c.holder.rotation.y = Math.atan2(target.x - u.fromPos.x, target.z - u.fromPos.z);
+        M.animate(c.parts, t, e < impact + 0.4 ? 'cast' : 'idle', clamp(e / 0.3));
+        // Le ciel s'assombrit, les nuages d'orage se forment au-dessus du roi
+        const dim = clamp(e / 0.8) * (1 - clamp((e - fadeOut) / 0.7));
+        if (u.sky) {
+          this.skyDim = dim;
+          const night = new T.Color(0x07040c);
+          if (u.sky.background && this.scene.background && this.scene.background.isColor) this.scene.background.copy(u.sky.background).lerp(night, dim * 0.9);
+          if (u.sky.fog && this.scene.fog && this.scene.fog.color) this.scene.fog.color.copy(u.sky.fog).lerp(night, dim * 0.85);
+          if (!this.weather) { this.sun.intensity = u.sky.sun * (1 - 0.85 * dim); this.hemi.intensity = u.sky.hemi * (1 - 0.75 * dim); }
+          this.renderer.toneMappingExposure = u.sky.exposure * (1 - 0.45 * dim);
+        }
+        u.clouds.rotation.y = t * 0.25;
+        u.clouds.children.forEach((puff, i) => { puff.material.opacity = 0.8 * dim; puff.position.y = (i % 3) * 0.2 + Math.sin(t * 1.3 + i) * 0.08; });
+        // Le fou lève les bras et envoie la foudre vers les nuages
+        const castOn = e > 0.6 && e < descend + 0.2;
+        u.castBolt.material.opacity = castOn ? 0.5 + Math.random() * 0.5 : 0;
+        if (castOn) jag(u.castBolt, { x: u.fromPos.x, y: 1.3, z: u.fromPos.z }, { x: target.x, y: 4.8, z: target.z }, 0.5);
+        // Trajet du dragon : spirale qui descend des nuages jusqu'au roi
+        const path = (s) => {
+          const a = s * Math.PI * 3.2, r = 1.5 * (1 - s) + 0.35;
+          return { x: target.x + Math.cos(a) * r, y: 4.7 - s * 3.95, z: target.z + Math.sin(a) * r };
+        };
+        const coil = (i, n) => {
+          const a = -i * 0.55 + t * 2.6, r = 0.46 + (i / n) * 0.12;
+          return { x: target.x + Math.cos(a) * r, y: 0.15 + (n - i) * 0.055, z: target.z + Math.sin(a) * r };
+        };
+        const head = smooth((e - descend) / (impact - descend)), wrap = smooth((e - impact) / 0.5), gone = clamp((e - fadeOut) / 0.6);
+        const n = u.dragon.length, pts = [];
+        u.dragon.forEach((seg, i) => {
+          const s = head - (i + 1) * 0.03, p = path(Math.max(0, s)), q = coil(i + 1, n + 1);
+          const pos = { x: p.x + (q.x - p.x) * wrap, y: p.y + (q.y - p.y) * wrap, z: p.z + (q.z - p.z) * wrap };
+          seg.visible = e > descend && (s > 0 || wrap > 0) && gone < 1;
+          seg.position.set(pos.x, pos.y + Math.sin(t * 9 + i * 0.7) * 0.04, pos.z);
+          seg.scale.setScalar(Math.max(0.01, 1 - gone));
+          seg.children[1].material.opacity = (0.45 + Math.abs(Math.sin(t * 17 + i)) * 0.35) * (1 - gone);
+          pts.push(seg.position);
+        });
+        const hp = path(head), hq = { x: target.x, y: 0.15 + (n + 1) * 0.055 + 0.15, z: target.z };
+        const h = u.dragonHead;
+        h.visible = e > descend && gone < 1;
+        h.position.set(hp.x + (hq.x - hp.x) * wrap, hp.y + (hq.y - hp.y) * wrap, hp.z + (hq.z - hp.z) * wrap);
+        h.scale.setScalar(Math.max(0.01, 1.5 * (1 - gone)));
+        // la tête regarde vers où elle va, puis plonge sur le roi une fois enroulée
+        const ahead = e < impact ? path(Math.min(1, head + 0.04)) : { x: target.x, y: 0.4, z: target.z };
+        if (Math.hypot(ahead.x - h.position.x, ahead.y - h.position.y, ahead.z - h.position.z) > 0.01) h.lookAt(ahead.x, ahead.y, ahead.z);
+        // éclairs qui crépitent le long du corps
+        u.crackles.forEach((l, k) => {
+          const on = pts.length > 8 && e > descend + 0.1 && gone < 1 && Math.random() < 0.7;
+          l.material.opacity = on ? 0.6 + Math.random() * 0.4 : 0;
+          if (on) { const i = Math.floor(Math.random() * (pts.length - 6)); jag(l, pts[i], pts[i + 4 + (k % 3)], 0.35); }
+        });
+        // à l'impact : la foudre tombe des nuages sur le roi à plusieurs reprises
+        const beat = (e - impact) % 0.45, striking = e > impact && e < fadeOut && beat < 0.16;
+        u.strikes.forEach((l, k) => {
+          l.material.opacity = striking ? 1 - beat / 0.16 : 0;
+          if (striking) jag(l, { x: target.x + (k - 1) * 0.4, y: 4.8, z: target.z }, { x: target.x, y: 0.5, z: target.z }, 0.6);
+        });
+        u.flashLight.position.set(h.position.x, h.position.y + 0.4, h.position.z);
+        u.flashLight.intensity = e < descend ? (castOn ? 2.5 : 0) : (striking ? 9 * (1 - beat / 0.16) : 0) + 2.2 * (1 - gone) + Math.random() * 0.6;
+        if (e >= impact && e < impact + 0.25) { this.shakeUntil = t + 0.05; this.shakeAmp = 0.16; }
+        else if (striking && beat < 0.05) { this.shakeUntil = t + 0.04; this.shakeAmp = 0.07; }
+      } else if (c === king) {
+        c.anim = null; c.holder.position.set(target.x, 0, target.z);
+        M.animate(c.parts, t, e < impact ? 'guard' : 'ko', 1);
+        if (e > impact && e < u.duration - 0.1) this.burn(u.burn || (u.burn = { c: king }), t);
+        const ashes = smooth((e - impact - 0.3) / 1.6);
+        c.parts.root.position.y = -ashes * 0.3 + (e > impact ? Math.sin(t * 34) * 0.035 * (1 - ashes) : 0);
+        c.parts.root.scale.set(u.kingBase.scale.x * (1 - ashes * 0.94), u.kingBase.scale.y * Math.max(0.008, 1 - ashes * 0.995), u.kingBase.scale.z * (1 - ashes * 0.94));
+        u.ashes.forEach((ash, i) => {
+          const age = Math.max(0, e - (impact + 0.5 + (i % 7) * 0.12)), angle = i * 2.399;
+          ash.position.set(target.x + Math.cos(angle) * (0.12 + age * 0.16), 0.12 + age * (0.7 + (i % 3) * 0.12), target.z + Math.sin(angle) * (0.12 + age * 0.16));
+          ash.material.opacity = age > 0 ? Math.max(0, 0.85 - age * 0.3) : 0;
+          ash.scale.setScalar(age > 0 ? 0.6 + Math.min(1.1, age * 0.4) : 0.001);
+        });
+        if (e >= u.duration) {
+          c.parts.root.scale.set(u.kingBase.scale.x * 0.005, u.kingBase.scale.y * 0.005, u.kingBase.scale.z * 0.005);
+          if (u.burn && !u.burnEnded) { this.endBurn(u.burn); u.burnEnded = true; }
+        }
+      }
+      // fin de l'orage : le ciel revient tel qu'il était
+      if (e >= u.duration && u.sky) this.restoreSky(u);
+      return true;
+    }
+
     resetMateUltimate() {
       const u = this.mateUltimate;
       if (!u) return;
@@ -1782,6 +1934,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (u.fx) { this.scene.remove(u.fx); u.fx.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose()); }); }
       if (u.fireLight) this.scene.remove(u.fireLight);
       if (u.flashLight) this.scene.remove(u.flashLight);
+      if (u.sky) this.restoreSky(u);
       if (u.actorLight) this.scene.remove(u.actorLight);
       if (u.columnLight) this.scene.remove(u.columnLight);
       if (u.energyLight) this.scene.remove(u.energyLight);
