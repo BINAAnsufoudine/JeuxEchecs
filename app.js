@@ -837,6 +837,8 @@
     const topColor = flipped ? 'w' : 'b';
     const playerName = String(playerProfile().name || L('Joueur', 'Player')).trim() || L('Joueur', 'Player');
     const label = (c) => {
+      // Replay : les noms des joueurs du PGN remplacent « Blancs » et « Noirs »
+      if (replay && (c === 'w' ? replay.white : replay.black)) return c === 'w' ? replay.white : replay.black;
       if (cfg.mode === 'local') return c === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
       if (c === cfg.playerColor) return playerName;
       return cfg.mode === 'coach' ? coachName() : L('Ordinateur', 'Computer');
