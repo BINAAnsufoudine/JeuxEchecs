@@ -365,7 +365,6 @@
     if (t === 'p') kunai2d(ctx, white);
     if (t === 'n') katana2d(ctx, white ? '#e3e8ef' : '#9fdcff', '#c9a227');
     if (t === 'q') { katana2d(ctx, '#cfd6df', white ? '#222' : '#c9a227', '#1d1d24', true); ctx.save(); ctx.translate(W, 0); ctx.scale(-1, 1); katana2d(ctx, '#cfd6df', white ? '#222' : '#c9a227', '#1d1d24', true); ctx.restore(); }
-    if (t === 'k') { ctx.save(); ctx.translate(-62, -62); ctx.scale(1.3, 1.3); katana2d(ctx, white ? '#eef3f8' : '#d8d0ff', white ? '#d4a72c' : '#ffd23a', white ? '#e8452c' : '#232338'); ctx.restore(); }
     if (t === 'r') { flames2d(ctx, 40, 300); flames2d(ctx, W - 40, 300); }
     cache.set(piece, c);
     return c;

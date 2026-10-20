@@ -694,7 +694,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             // Corps à corps : l'attaquant s'arrête face à sa cible, puis la technique propre à chaque pièce
             const gap = Math.min(0.62, len);
             duel = { stop: { x: b.x - ux * gap, z: b.z - uz * gap }, foe: b, len: DUEL, rate: 1.5 };
-            if (kind === 'k') duel.len = 2; // trois coups de sabre en 2 s
+            if (kind === 'k') duel.len = 2.6; // enchaînement de coups de poing et de pied
             duel.approach = 0.35 + Math.max(0, len - gap) * 0.09;
             duel.len += X2; // assaut + riposte, puis le coup final
             const o = { t0: now + duel.approach + duel.len, from: duel.stop, start: now + duel.approach, ex: true, far: true };

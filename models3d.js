@@ -517,7 +517,7 @@
       hokageHat(p.head, '#d8352a');
       aura(p, '#ffd23a', 3);
       lightning(p);
-      p.great = katana(p.armR, { blade: '#eef3f8', guard: '#d4a72c', wrap: '#e8452c' }, 1.05); iceWall(p); p.weapon = 'sabre';
+      iceWall(p); p.weapon = 'brawl';
       return p;
     },
     // Noirs
@@ -567,7 +567,7 @@
       hokageHat(p.head, '#d8352a');
       aura(p, '#ffd23a', 3);
       lightning(p);
-      p.great = katana(p.armR, { blade: '#d8d0ff', guard: '#ffd23a', wrap: '#232338' }, 1.05); iceWall(p); p.weapon = 'sabre';
+      iceWall(p); p.weapon = 'brawl';
       return p;
     },
   };
@@ -744,16 +744,18 @@
         p.armL.rotation.set(-2.6 + 2.4 * e, 0, -0.6 + 1.0 * e * (a > 0 ? 1 : 0.4)); p.armR.rotation.set(-2.6 + 2.4 * e, 0, 0.6 - 1.0 * e * (a < 0 ? 1 : 0.4));
         p.torso.rotation.y = a * 0.35 * swing;
       }
-    } else if (p.weapon === 'sabre') {
-      // roi : sabre de samouraï à deux mains, trois frappes (haut, diagonale, horizontale)
-      if (state === 'idle') { p.armR.rotation.set(-0.55, 0, 0.3); p.armL.rotation.set(-0.3, 0, -0.25); }
-      else if (state === 'select') { p.armR.rotation.set(-2.9, 0, 0.15); p.armL.rotation.set(-2.9, 0, -0.15); p.root.position.y = Math.abs(Math.sin(t * 4)) * 0.05; }
-      else if (state === 'run') { p.armR.rotation.set(-0.5, 0, 0.3); p.armL.rotation.x = -p.armR.rotation.x * 0.3; }
+    } else if (p.weapon === 'brawl') {
+      // roi : combat à mains nues, enchaînement direct du gauche, crochet du droit, coup de pied de face, coup de pied circulaire
+      if (state === 'idle') { p.armR.rotation.set(-1.0, 0, 0.35); p.armL.rotation.set(-1.15, 0, -0.35); }
+      else if (state === 'select') { p.armR.rotation.set(-1.3, 0, 0.3); p.armL.rotation.set(-1.45, 0, -0.3); p.root.position.y = Math.abs(Math.sin(t * 4)) * 0.05; }
+      else if (state === 'run') { p.armR.rotation.set(-0.9, 0, 0.3); p.armL.rotation.set(-0.9, 0, -0.3); }
       else if (state === 'punch') {
-        const move = hit % 3, u = Math.min(1, e * 1.4);
-        if (move === 0) { p.armR.rotation.set(-3.0 + 2.6 * u, 0, 0.15); p.armL.rotation.set(-3.0 + 2.6 * u, 0, -0.15); p.torso.rotation.x = 0.35 * swing; }
-        else if (move === 1) { p.armR.rotation.set(-2.4 + 1.8 * u, 0, 0.9 - 1.4 * u); p.armL.rotation.set(-2.2 + 1.6 * u, 0, 0.5 - 1.0 * u); p.torso.rotation.y = 0.5 - 1.0 * u; }
-        else { p.armR.rotation.set(-1.5, 0, 1.2 - 2.0 * u); p.armL.rotation.set(-1.5, 0, 0.8 - 1.8 * u); p.torso.rotation.y = 0.8 - 1.6 * u; p.legL.rotation.x = -0.6 * swing; }
+        const move = hit % 4;
+        p.armR.rotation.set(-1.0, 0, 0.35); p.armL.rotation.set(-1.15, 0, -0.35);
+        if (move === 0) { p.armL.rotation.set(-1.6 * swing - 0.3, 0, 0.05); p.torso.rotation.y = 0.4 * swing; } // direct du gauche
+        else if (move === 1) { p.armR.rotation.set(-1.55, 0, 0.9 - 1.3 * swing); p.torso.rotation.y = -0.6 * swing; } // crochet du droit
+        else if (move === 2) { p.legR.rotation.x = -1.7 * swing; p.torso.rotation.x = -0.25 * swing; p.root.position.y = 0.03 * swing; } // coup de pied de face
+        else { p.legL.rotation.set(-1.2 * swing, 0, 1.0 * swing); p.torso.rotation.set(-0.15 * swing, 0.9 * swing, 0.3 * swing); p.root.rotation.y = 0.5 * swing; } // coup de pied circulaire
       }
     } else if (p.weapon === 'element') {
       // tour : géant qui crache le feu à bout portant, paumes en avant
