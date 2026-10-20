@@ -106,6 +106,17 @@
     if (o.emblem) { ellipse(ctx, cx, top + 34, 15, 15, '#fff', LINE, 3); ctx.fillStyle = o.emblem; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(o.emblemChar || '武', cx, top + 35); }
   }
 
+  // Tricorne vu de face : calotte, bords relevés et pointe avant qui descend vers le spectateur, galon doré
+  function tricorne2d(ctx, cx, cy, r, color) {
+    ellipse(ctx, cx, cy - r * 0.92, r * 0.72, r * 0.42, color);
+    poly(ctx, [[cx - r * 1.55, cy - r * 0.95], [cx - r * 0.45, cy - r * 0.62], [cx, cy - r * 0.38], [cx + r * 0.45, cy - r * 0.62], [cx + r * 1.55, cy - r * 0.95], [cx + r * 0.95, cy - r * 0.62], [cx, cy - r * 0.5], [cx - r * 0.95, cy - r * 0.62]], color, LINE, 3);
+    ctx.strokeStyle = '#d4a72c'; ctx.lineWidth = 4; ctx.beginPath();
+    ctx.moveTo(cx - r * 1.5, cy - r * 0.93); ctx.lineTo(cx - r * 0.45, cy - r * 0.6); ctx.lineTo(cx, cy - r * 0.4); ctx.lineTo(cx + r * 0.45, cy - r * 0.6); ctx.lineTo(cx + r * 1.5, cy - r * 0.93); ctx.stroke();
+    ellipse(ctx, cx, cy - r * 0.5, r * 0.09, r * 0.09, '#d4a72c');
+    poly(ctx, [[cx - r * 0.2, cy - r * 1.1], [cx + r * 0.2, cy - r * 1.1], [cx + r * 0.2, cy - r * 0.8], [cx - r * 0.2, cy - r * 0.8]], '#d8352a', LINE, 2);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('火', cx, cy - r * 0.95);
+  }
   // Cagoule : tissu sur toute la tête, sauf une fente horizontale à hauteur des yeux
   function hood2d(ctx, cx, cy, r, cloth) {
     ctx.save();
@@ -248,12 +259,8 @@
       const { cy, r } = HEAD;
       spikes(ctx, cx, cy, r, 9, 24, Math.PI * 0.95, Math.PI * 2.05, '#f7cf3b');
       face(ctx, cx, cy + 4, r, { eye: '#2f7fe0', grin: true });
-      // chapeau
-      ellipse(ctx, cx, cy - r * 0.55, r * 1.6, r * 0.32, '#fdfdfd');
-      poly(ctx, [[cx - r * 0.75, cy - r * 0.6], [cx, cy - r * 1.35], [cx + r * 0.75, cy - r * 0.6]], '#fdfdfd');
-      poly(ctx, [[cx - r * 0.75, cy - r * 0.6], [cx - r * 0.35, cy - r * 0.95], [cx + r * 0.35, cy - r * 0.95], [cx + r * 0.75, cy - r * 0.6]], '#e8452c', LINE, 3);
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('影', cx, cy - r * 0.78);
+      // tricorne blanc, pointe vers l'avant
+      tricorne2d(ctx, cx, cy, r, '#f7f7f2');
     },
   };
 
@@ -310,12 +317,8 @@
       const { cy, r } = HEAD;
       spikes(ctx, cx, cy - 10, r, 6, 40, Math.PI * 1.02, Math.PI * 1.98, '#ffd83a', 0.15);
       face(ctx, cx, cy, r, { eye: '#1fa58f', fierce: true });
-      // chapeau de Kage
-      ellipse(ctx, cx, cy - r * 0.55, r * 1.6, r * 0.32, '#fdfdfd');
-      poly(ctx, [[cx - r * 0.75, cy - r * 0.6], [cx, cy - r * 1.35], [cx + r * 0.75, cy - r * 0.6]], '#fdfdfd');
-      poly(ctx, [[cx - r * 0.75, cy - r * 0.6], [cx - r * 0.35, cy - r * 0.95], [cx + r * 0.35, cy - r * 0.95], [cx + r * 0.75, cy - r * 0.6]], '#e8452c', LINE, 3);
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('火', cx, cy - r * 0.78);
+      // tricorne noir, pointe vers l'avant
+      tricorne2d(ctx, cx, cy, r, '#17171d');
     },
   };
 

@@ -370,19 +370,21 @@
     return kanjiCache.get(key);
   }
   // Chapeau de Hokage : large chapeau conique blanc, panneau rouge frappé de « 火 » sur le devant
-  function hokageHat(head, panel) {
-    const slope = Math.atan2(0.17, 0.36);
-    head.add(mesh(geo('kage-hat', () => new T.ConeGeometry(0.36, 0.17, 36)), mat('#fbfbf6', { roughness: 0.7 }), 0, 0.42, 0));
-    head.add(mesh(geo('kage-rim', () => new T.TorusGeometry(0.355, 0.012, 6, 36)), mat('#e6e2d6'), 0, 0.337, 0)).children.at(-1).rotation.x = Math.PI / 2;
-    head.add(mesh(geo('kage-top', () => new T.SphereGeometry(0.03, 10, 8)), mat(panel), 0, 0.505, 0));
-    const front = new T.Mesh(geo('kage-panel', () => new T.PlaneGeometry(0.2, 0.11)), new T.MeshStandardMaterial({ map: kanjiTexture('火', panel, '#ffffff'), roughness: 0.7 }));
-    front.position.set(0, 0.425, 0.183); front.rotation.x = -(Math.PI / 2 - slope);
+  // Chapeau de chef : tricorne à la couleur du camp, un angle pointé vers l'avant, galon doré et plaque « 火 »
+  function hokageHat(head, color, trim, panel) {
+    const cloth = mat(color, { double: true, roughness: 0.75 });
+    // bord relevé en triangle : prisme à trois pans, un angle vers +z (devant)
+    head.add(mesh(geo('tricorne-brim', () => new T.CylinderGeometry(0.34, 0.25, 0.13, 3, 1, true)), cloth, 0, 0.385, 0));
+    head.add(mesh(geo('tricorne-floor', () => new T.CylinderGeometry(0.25, 0.25, 0.01, 3)), cloth, 0, 0.322, 0));
+    head.add(mesh(geo('tricorne-trim', () => new T.CylinderGeometry(0.343, 0.343, 0.02, 3, 1, true)), mat(trim, { double: true, metalness: 0.5, roughness: 0.35 }), 0, 0.445, 0));
+    // calotte arrondie au centre
+    head.add(mesh(geo('tricorne-crown', () => new T.SphereGeometry(0.18, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2)), mat(color, { roughness: 0.75 }), 0, 0.33, 0));
+    head.add(mesh(geo('tricorne-band', () => new T.CylinderGeometry(0.182, 0.182, 0.03, 24, 1, true)), mat(trim, { double: true }), 0, 0.345, 0));
+    // pointe avant soulignée d'une cocarde
+    head.add(mesh(geo('tricorne-knot', () => new T.SphereGeometry(0.03, 10, 8)), mat(trim), 0, 0.43, 0.3));
+    const front = new T.Mesh(geo('kage-panel', () => new T.PlaneGeometry(0.11, 0.07)), new T.MeshStandardMaterial({ map: kanjiTexture('火', panel, '#ffffff'), roughness: 0.7 }));
+    front.position.set(0, 0.42, 0.172); front.rotation.x = -0.35;
     head.add(front);
-    // Rubans du chapeau noués sous le menton
-    for (const side of [-1, 1]) {
-      const tie = mesh(geo('kage-tie', () => new T.BoxGeometry(0.012, 0.2, 0.012)), mat(panel), side * 0.15, 0.24, 0.07);
-      tie.rotation.z = side * 0.35; head.add(tie);
-    }
   }
   // Manteau de Hokage : long manteau ouvert devant, flammes à l'ourlet, « 火影 » brodé dans le dos
   function hokageRobe(p, cloth, flame) {
@@ -523,7 +525,7 @@
       // Roi blanc en Hokage : manteau blanc à flammes rouges et chapeau de Kage
       const p = skeleton({ wide: 1.15, shirt: '#2d5a3d', pants: '#2d3e70', belt: '#e8452c', face: { eye: '#2f7fe0', grin: true } });
       hokageRobe(p, '#fbfbf6', '#e8452c');
-      hokageHat(p.head, '#d8352a');
+      hokageHat(p.head, '#f7f7f2', '#d4a72c', '#d8352a');
       aura(p, '#ffd23a', 3);
       lightning(p);
       iceWall(p); p.weapon = 'brawl';
@@ -574,7 +576,7 @@
       blackHair(p.head, 2);
       // Roi noir en Hokage : manteau sombre à flammes rouges et chapeau de Kage
       hokageRobe(p, '#2a2438', '#e8452c');
-      hokageHat(p.head, '#d8352a');
+      hokageHat(p.head, '#17171d', '#d4a72c', '#d8352a');
       aura(p, '#ffd23a', 3);
       lightning(p);
       iceWall(p); p.weapon = 'brawl';
