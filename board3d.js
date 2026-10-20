@@ -669,6 +669,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             const duration = style === 'tunnel-eat' ? 2.8 : style === 'tunnel-impact' ? 2.45 : style === 'eagle-release' ? 3.65 : 3.85;
             knightAttack = { style, start: now, from: a, target: b, duration, victim: v, hitCount: 0 };
             die({ t0: now + duration, knightAttack });
+          } else if (far && kind === 'q') {
+            // Dame : une ligne de flammes (blanches et éblouissantes ou noires) court au sol jusqu'à la cible et la consume
+            const travel = 0.3 + len * 0.09;
+            knightAttack = { style: 'flameline', white, start: now, from: a, target: b, travel, duration: 0.45 + travel + 2.0, victim: v, dir: { x: ux, z: uz }, len, fx: [] };
+            die({ t0: now + knightAttack.duration, knightAttack });
           } else if (kind === 'r' && white) {
             // Tour blanche : elle devient une boule de feu qui roule jusqu'à sa cible en laissant des flammes derrière elle
             const run = 0.18 + len * 0.045;
@@ -2355,6 +2360,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (a.style === 'chidori') { this.tickChidori(c, a, el, t, M); return; }
       if (a.style === 'orb') { this.tickOrb(c, a, el, t, M); return; }
       if (a.style === 'fireroll') { this.tickFireroll(c, a, el, t, M); return; }
+      if (a.style === 'flameline') { this.tickFlameline(c, a, el, t, M); return; }
       const T = this.THREE, white = a.style.startsWith('tunnel') || a.style.startsWith('spin');
       const from = new T.Vector3(a.from.x, 0, a.from.z), target = new T.Vector3(a.target.x, 0, a.target.z);
       const travelEnd = white ? 0.88 : 1.08;
@@ -2781,6 +2787,107 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (el >= hitAt && el < hitAt + 0.2) { this.shakeUntil = t + 0.05; this.shakeAmp = 0.12; }
       if (el >= a.duration) { c.parts.root.visible = true; this.endShot(a); }
     }
+    // Dame : flammes blanches éblouissantes (dame blanche) ou noires (dame noire) qui brûlent le sol jusqu'à la cible
+    makeFlamelineFx(a) {
+      const T = this.THREE;
+      const add = (o) => { this.scene.add(o); a.fx.push(o); return o; };
+      const W = a.white;
+      // blanches : lumineuses et additives ; noires : opaques et sombres pour rester visibles
+      const flameMat = (k) => new T.MeshBasicMaterial(W
+        ? { color: k % 2 ? 0xffffff : 0xcfe9ff, transparent: true, opacity: 0.9, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide }
+        : { color: k % 2 ? 0x07050c : 0x3a1450, transparent: true, opacity: 0.92, depthWrite: false, side: T.DoubleSide });
+      a.trail = [];
+      const n = Math.max(6, Math.round(a.len * 5));
+      for (let i = 1; i <= n; i++) {
+        const g = new T.Group(), f = i / n;
+        g.position.set(a.from.x + (a.target.x - a.from.x) * f, 0.02, a.from.z + (a.target.z - a.from.z) * f);
+        for (let k = 0; k < 3; k++) {
+          const fl = new T.Mesh(new T.ConeGeometry(0.06 + k * 0.02, 0.24 + k * 0.08, 7, 1, true), flameMat(k));
+          fl.position.set((k - 1) * 0.07, 0.12 + k * 0.03, ((i + k) % 2 ? 0.05 : -0.05)); fl.userData.phase = i * 1.3 + k; g.add(fl);
+        }
+        const scorch = new T.Mesh(new T.CircleGeometry(0.15, 16), new T.MeshBasicMaterial({ color: W ? 0x3a3a40 : 0x120a16, transparent: true, opacity: 0.55, depthWrite: false }));
+        scorch.rotation.x = -Math.PI / 2; scorch.position.y = -0.012; g.add(scorch);
+        g.visible = false; g.userData.f = f; add(g); a.trail.push(g);
+      }
+      // tête de la vague de flammes et grand brasier sur la cible
+      a.head = add(new T.Mesh(new T.SphereGeometry(0.16, 14, 10), new T.MeshBasicMaterial(W ? { color: 0xffffff, transparent: true, opacity: 0.95, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false } : { color: 0x2a0e3a, transparent: true, opacity: 0.95, depthWrite: false })));
+      a.blaze = add(new T.Group());
+      a.blaze.position.set(a.target.x, 0, a.target.z);
+      for (let k = 0; k < 9; k++) {
+        const ang = k * Math.PI * 2 / 9, h = 0.9 + (k % 3) * 0.35;
+        const fl = new T.Mesh(new T.ConeGeometry(0.13 + (k % 2) * 0.05, h, 8, 1, true), flameMat(k));
+        fl.position.set(Math.cos(ang) * 0.2, h / 2, Math.sin(ang) * 0.2); fl.userData = { phase: k * 1.7, base: h }; a.blaze.add(fl);
+      }
+      const core = new T.Mesh(new T.ConeGeometry(0.22, 1.6, 9, 1, true), flameMat(1));
+      core.position.y = 0.8; core.userData = { phase: 0.5, base: 1.6 }; a.blaze.add(core);
+      a.blaze.scale.setScalar(0.01); a.blaze.visible = false;
+      a.light = add(new T.PointLight(W ? 0xf2f8ff : 0x7a2aa0, 0, 7, 2));
+      if (W) a.sky = { exposure: this.renderer.toneMappingExposure };
+    }
+    tickFlameline(c, a, el, t, M) {
+      if (!a.trail) this.makeFlamelineFx(a);
+      const clamp = (x) => Math.max(0, Math.min(1, x));
+      const from = a.from, to = a.target;
+      const launch = 0.45, arrive = launch + a.travel, end = a.duration;
+      c.holder.rotation.y = Math.atan2(a.dir.x, a.dir.z);
+      if (el < end - 0.35) {
+        c.holder.position.set(from.x, 0, from.z);
+        M.animate(c.parts, t, el < arrive + 0.3 ? 'cast' : 'idle', clamp(el / 0.3));
+      } else {
+        // la dame prend la case de sa victime consumée
+        M.animate(c.parts, t, 'run');
+        const u = clamp((el - (end - 0.35)) / 0.35);
+        c.holder.position.set(from.x + (to.x - from.x) * u, 0, from.z + (to.z - from.z) * u);
+      }
+      const prog = clamp((el - launch) / a.travel);
+      a.head.visible = el >= launch && el < arrive;
+      a.head.position.set(from.x + (to.x - from.x) * prog, 0.18, from.z + (to.z - from.z) * prog);
+      a.head.scale.setScalar(0.8 + Math.abs(Math.sin(t * 25)) * 0.5);
+      const fade = 1 - clamp((el - (end - 0.5)) / 0.5);
+      a.trail.forEach((g) => {
+        g.visible = el >= launch && g.userData.f <= prog + 0.02 && fade > 0;
+        g.children.forEach((fl) => {
+          if (fl.userData.phase === undefined) { fl.material.opacity = 0.55 * fade; return; }
+          fl.scale.y = (0.7 + Math.abs(Math.sin(t * 14 + fl.userData.phase)) * 0.5) * fade;
+          fl.material.opacity = (a.white ? 0.9 : 0.92) * fade;
+        });
+      });
+      // à l'arrivée, les flammes grandissent et engloutissent la cible
+      const grow = clamp((el - arrive) / 0.6);
+      a.blaze.visible = el >= arrive && fade > 0;
+      a.blaze.scale.set(Math.max(0.01, grow * fade), Math.max(0.01, grow * fade * (1 + Math.sin(t * 9) * 0.06)), Math.max(0.01, grow * fade));
+      a.blaze.children.forEach((fl) => { fl.scale.y = 0.75 + Math.abs(Math.sin(t * 12 + fl.userData.phase)) * 0.45; });
+      a.blaze.rotation.y = t * 1.5;
+      const lightAt = el < arrive ? a.head.position : a.blaze.position;
+      a.light.position.set(lightAt.x, 0.8, lightAt.z);
+      a.light.intensity = el < launch ? 0 : (a.white ? 6 : 4) * fade + Math.random();
+      // lumière éblouissante de la dame blanche : l'image se voile de blanc un instant
+      if (a.sky) this.renderer.toneMappingExposure = a.sky.exposure * (1 + (el >= launch ? 0.9 * Math.max(0, 1 - Math.abs(el - arrive) / 0.6) : 0));
+      if (el >= arrive && el < arrive + 0.2) { this.shakeUntil = t + 0.05; this.shakeAmp = 0.06; }
+      if (el >= end) { if (a.sky) { this.renderer.toneMappingExposure = a.sky.exposure; a.sky = null; } this.endShot(a); }
+    }
+    // Cible des flammes de la dame : elle se tord dans le brasier puis se consume et disparaît
+    tickFlamelineVictim(d, a, c, el, t, M) {
+      const arrive = 0.45 + a.travel, p = a.target;
+      c.holder.position.set(p.x, 0, p.z);
+      c.holder.rotation.y = Math.atan2(-a.dir.x, -a.dir.z);
+      if (el < arrive) { M.animate(c.parts, t, 'guard', 1); return true; }
+      M.animate(c.parts, t, 'ko', 1);
+      if (!d.tint) {
+        d.tint = [];
+        c.parts.root.traverse((o) => { if (o.isMesh && o.material && o.material.color && o.material.blending !== this.THREE.AdditiveBlending) { o.material = o.material.clone(); d.tint.push(o.material); } });
+      }
+      const burn = Math.max(0, Math.min(1, (el - arrive - 0.3) / 1.3));
+      const ash = new this.THREE.Color(a.white ? 0xffffff : 0x0c0910);
+      d.tint.forEach((m) => m.color.lerp(ash, 0.06));
+      c.parts.root.position.set(Math.sin(t * 30) * 0.03 * (1 - burn), 0, 0);
+      c.parts.root.scale.set(d.base * (1 - burn * 0.4), d.base * Math.max(0.01, 1 - burn), d.base * (1 - burn * 0.4));
+      if (burn >= 1) {
+        c.holder.visible = false;
+        if (!d.tintFreed) { d.tint.forEach((m) => m.dispose()); d.tintFreed = true; }
+      }
+      return el < a.duration;
+    }
     // Cible de la boule de feu : elle s'embrase au choc puis est éjectée au loin en brûlant
     tickFirerollVictim(d, a, c, el, t, M) {
       const hitAt = 0.5 + a.run, p = a.target;
@@ -2824,6 +2931,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (a.style === 'chidori') return this.tickChidoriVictim(d, a, c, el, t, M);
       if (a.style === 'orb') return this.tickOrbVictim(d, a, c, el, t, M);
       if (a.style === 'fireroll') return this.tickFirerollVictim(d, a, c, el, t, M);
+      if (a.style === 'flameline') return this.tickFlamelineVictim(d, a, c, el, t, M);
       if (a.style === 'tunnel-eat') {
         if (el < 1.55) { c.holder.position.set(a.target.x, 0, a.target.z); return true; }
         M.animate(c.parts, t, 'ko');
@@ -3044,6 +3152,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     endShot(c) {
       const s = c && c.fx ? c : c && c.anim && c.anim.shot;
       if (!s) return;
+      if (s.sky && s.style === 'flameline') { this.renderer.toneMappingExposure = s.sky.exposure; s.sky = null; }
       if (s.sky) this.restoreSky(s);
       for (const o of s.fx || []) {
         this.scene.remove(o);
