@@ -1,8 +1,9 @@
 /* Cavalier — cache hors ligne */
-const CACHE = 'cavalier-v143';
+const CACHE = 'cavalier-v144';
 // Ne précacher que les fichiers effectivement présents : un seul fichier absent
 // fait échouer addAll et empêche toute installation du service worker.
-const FILES = ['./', 'index.html', 'style.css', 'engine.js', 'app.js', 'ai-worker.js', 'search.js', 'coach-core.js', 'analyse-worker.js', 'puzzles.js', 'i18n.js', 'lessons.js', 'champions.js', 'characters.js', 'board3d.js', 'models3d.js', 'stockfish.js', 'stockfish.wasm', 'vendor/three.min.js', 'icon.svg'];
+const FILES = ['./', 'index.html', 'style.css', 'engine.js', 'app.js', 'ai-worker.js', 'search.js', 'coach-core.js', 'analyse-worker.js', 'puzzles.js', 'i18n.js', 'lessons.js', 'champions.js', 'characters.js', 'board3d.js', 'models3d.js', 'stockfish.js', 'stockfish.wasm', 'vendor/three.min.js', 'icon.svg',
+  'champions/steinitz.jpg', 'champions/lasker.jpg', 'champions/capablanca.jpg', 'champions/alekhine.jpg', 'champions/tal.jpg', 'champions/petrosian.jpg', 'champions/fischer.jpg', 'champions/karpov.jpg', 'champions/kasparov.jpg', 'champions/carlsen.jpg'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });

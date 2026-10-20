@@ -1,10 +1,12 @@
 /* Cavalier — « Comme un champion » : idées et principes des champions du monde.
    style : profil de jeu sur 5 axes (0 à 1), comparé au style du joueur pour classer les champions.
    principles : chaque principe est expliqué puis appliqué sur un problème du thème indiqué.
-   tips : rappels donnés par l'entraîneur pendant une partie, selon la situation. */
+   tips : rappels donnés par l'entraîneur pendant une partie, selon la situation.
+   photo : portrait libre de droits ou sous licence libre (Wikimedia Commons), avec son auteur et sa licence. */
 window.CHAMPIONS = [
   {
-    id: 'steinitz', name: 'Wilhelm Steinitz', origin: 'Je suis né à Prague, en Bohême, dans l\'Empire d\'Autriche, et je suis devenu américain plus tard.', period: 'de 1886 à 1894', years: 8,
+    id: 'steinitz', name: 'Wilhelm Steinitz', photo: { src: 'champions/steinitz.jpg', author: 'Fritz Schumann', license: 'Public domain', page: 'https://commons.wikimedia.org/wiki/File:Steinitz,_William-4_-_DPLA_-_9eeab9ac335135c24b69ab7e36fc5354_(cropped).jpg' },
+    origin: 'Je suis né à Prague, en Bohême, dans l\'Empire d\'Autriche, et je suis devenu américain plus tard.', period: 'de 1886 à 1894', years: 8,
     reign: 'Champion du monde de 1886 à 1894',
     tagline: 'Le père du jeu positionnel',
     style: { attaque: 0.2, tactique: 0.3, positionnel: 0.9, finale: 0.5, defense: 0.8 },
@@ -24,7 +26,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'lasker', name: 'Emanuel Lasker', origin: 'Je viens d\'Allemagne.', period: 'de 1894 à 1921', years: 27,
+    id: 'lasker', name: 'Emanuel Lasker', photo: { src: 'champions/lasker.jpg', author: L('auteur inconnu', 'unknown author'), license: 'CC BY-SA 3.0 de', page: 'https://commons.wikimedia.org/wiki/File:Bundesarchiv_Bild_102-00457,_Emanuel_Lasker.jpg' },
+    origin: 'Je viens d\'Allemagne.', period: 'de 1894 à 1921', years: 27,
     reign: 'Champion du monde de 1894 à 1921',
     tagline: 'Le combattant pragmatique',
     style: { attaque: 0.5, tactique: 0.7, positionnel: 0.6, finale: 0.7, defense: 0.8 },
@@ -44,7 +47,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'capablanca', name: 'José Raúl Capablanca', origin: 'Je viens de Cuba.', period: 'de 1921 à 1927', years: 6,
+    id: 'capablanca', name: 'José Raúl Capablanca', photo: { src: 'champions/capablanca.jpg', author: 'Keystone-France', license: 'Public domain', page: 'https://commons.wikimedia.org/wiki/File:Jos%C3%A9_Ra%C3%BAl_Capablanca_1931.jpg' },
+    origin: 'Je viens de Cuba.', period: 'de 1921 à 1927', years: 6,
     reign: 'Champion du monde de 1921 à 1927',
     tagline: 'La machine à finales',
     style: { attaque: 0.3, tactique: 0.5, positionnel: 0.9, finale: 1, defense: 0.6 },
@@ -64,7 +68,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'alekhine', name: 'Alexandre Alekhine', origin: 'Je suis né en Russie, à Moscou, et je suis devenu français.', period: 'de 1927 à 1935, puis de 1937 à 1946', years: 17,
+    id: 'alekhine', name: 'Alexandre Alekhine', photo: { src: 'champions/alekhine.jpg', author: 'Bain Collection, Library of Congress', license: 'Public domain', page: 'https://commons.wikimedia.org/wiki/File:Alexandre_Alekhine_01.jpg' },
+    origin: 'Je suis né en Russie, à Moscou, et je suis devenu français.', period: 'de 1927 à 1935, puis de 1937 à 1946', years: 17,
     reign: 'Champion du monde de 1927 à 1935 et de 1937 à 1946',
     tagline: "L'attaquant inventif",
     style: { attaque: 0.9, tactique: 0.9, positionnel: 0.6, finale: 0.4, defense: 0.3 },
@@ -84,7 +89,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'tal', name: 'Mikhaïl Tal', origin: 'Je viens de Lettonie, à Riga, du temps de l’Union soviétique.', period: 'de 1960 à 1961', years: 1,
+    id: 'tal', name: 'Mikhaïl Tal', photo: { src: 'champions/tal.jpg', author: 'Harry Pot / Anefo', license: 'CC BY-SA 3.0 nl', page: 'https://commons.wikimedia.org/wiki/File:Mikhail_Tal_1962.jpg' },
+    origin: 'Je viens de Lettonie, à Riga, du temps de l’Union soviétique.', period: 'de 1960 à 1961', years: 1,
     reign: 'Champion du monde de 1960 à 1961',
     tagline: 'Le magicien de Riga',
     style: { attaque: 1, tactique: 1, positionnel: 0.3, finale: 0.2, defense: 0.2 },
@@ -104,7 +110,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'petrosian', name: 'Tigran Petrosian', origin: 'Je suis arménien, né à Tbilissi, en Géorgie, du temps de l’Union soviétique.', period: 'de 1963 à 1969', years: 6,
+    id: 'petrosian', name: 'Tigran Petrosian', photo: { src: 'champions/petrosian.jpg', author: 'Harry Pot / Anefo', license: 'CC0', page: 'https://commons.wikimedia.org/wiki/File:Petrosian_1962_(cropped).jpg' },
+    origin: 'Je suis arménien, né à Tbilissi, en Géorgie, du temps de l’Union soviétique.', period: 'de 1963 à 1969', years: 6,
     reign: 'Champion du monde de 1963 à 1969',
     tagline: 'Le maître de la prophylaxie',
     style: { attaque: 0.2, tactique: 0.4, positionnel: 0.9, finale: 0.6, defense: 1 },
@@ -124,7 +131,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'fischer', name: 'Bobby Fischer', origin: 'Je viens des États-Unis.', period: 'de 1972 à 1975', years: 3,
+    id: 'fischer', name: 'Bobby Fischer', photo: { src: 'champions/fischer.jpg', author: 'Bert Verhoeff / Anefo', license: 'CC0', page: 'https://commons.wikimedia.org/wiki/File:Bobby_Fischer_1972.jpg' },
+    origin: 'Je viens des États-Unis.', period: 'de 1972 à 1975', years: 3,
     reign: 'Champion du monde de 1972 à 1975',
     tagline: 'La clarté et la précision',
     style: { attaque: 0.7, tactique: 0.8, positionnel: 0.7, finale: 0.8, defense: 0.5 },
@@ -144,7 +152,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'karpov', name: 'Anatoly Karpov', origin: 'Je viens de Russie, du temps de l’Union soviétique.', period: 'de 1975 à 1985', years: 10,
+    id: 'karpov', name: 'Anatoly Karpov', photo: { src: 'champions/karpov.jpg', author: 'Veni Markovski', license: 'CC BY-SA 4.0', page: 'https://commons.wikimedia.org/wiki/File:Anatoly_Karpov_2017_april.jpg' },
+    origin: 'Je viens de Russie, du temps de l’Union soviétique.', period: 'de 1975 à 1985', years: 10,
     reign: 'Champion du monde de 1975 à 1985',
     tagline: 'Le boa constricteur',
     style: { attaque: 0.3, tactique: 0.5, positionnel: 1, finale: 0.8, defense: 0.7 },
@@ -164,7 +173,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'kasparov', name: 'Garry Kasparov', origin: 'Je suis né à Bakou, en Azerbaïdjan, du temps de l’Union soviétique, et j’ai défendu les couleurs de la Russie.', period: 'de 1985 à 2000', years: 15,
+    id: 'kasparov', name: 'Garry Kasparov', photo: { src: 'champions/kasparov.jpg', author: 'Fryta 73', license: 'CC BY-SA 2.0', page: 'https://commons.wikimedia.org/wiki/File:Garri_Kasparow_(18776605665)_(cropped)_2.jpg' },
+    origin: 'Je suis né à Bakou, en Azerbaïdjan, du temps de l’Union soviétique, et j’ai défendu les couleurs de la Russie.', period: 'de 1985 à 2000', years: 15,
     reign: 'Champion du monde de 1985 à 2000',
     tagline: "L'énergie et l'initiative",
     style: { attaque: 0.9, tactique: 0.9, positionnel: 0.7, finale: 0.5, defense: 0.4 },
@@ -184,7 +194,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'carlsen', name: 'Magnus Carlsen', origin: 'Je viens de Norvège.', period: 'de 2013 à 2023', years: 10,
+    id: 'carlsen', name: 'Magnus Carlsen', photo: { src: 'champions/carlsen.jpg', author: 'Miroslav Vajdić', license: 'CC BY 4.0', page: 'https://commons.wikimedia.org/wiki/File:Magnus_Carlsen_at_Rapid_Blitz_2025_(v2).jpg' },
+    origin: 'Je viens de Norvège.', period: 'de 2013 à 2023', years: 10,
     reign: 'Champion du monde de 2013 à 2023',
     tagline: 'La pression sans fin',
     style: { attaque: 0.5, tactique: 0.7, positionnel: 0.9, finale: 1, defense: 0.7 },

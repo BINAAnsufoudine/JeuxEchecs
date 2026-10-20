@@ -179,6 +179,7 @@
     $('coach-dock-message').textContent = coachMessage || coachPlan().text;
     const champ = activeChampion();
     dock.querySelector('.coach-dock-head strong').textContent = coachName();
+    showCoachFace($('coach-dock-img'), true);
     const role = champ ? champ.reign : L('Coach d’échecs', 'Chess coach');
     $('coach-dock-status').textContent = coachMood || (settings.voice ? `${role} · ${L('voix active', 'voice on')}` : role);
     $('coach-dock-voice').textContent = settings.voice ? '🔊' : '🔇';
@@ -847,6 +848,8 @@
     for (const [pos, c] of [['bottom', bottomColor], ['top', topColor]]) {
       const name = $('name-' + pos);
       name.textContent = label(c);
+      const champ = !replay && cfg.mode === 'coach' && c !== cfg.playerColor && activeChampion();
+      if (champ && champ.photo) { const im = document.createElement('img'); im.className = 'player-photo'; im.src = champ.photo.src; im.alt = ''; name.prepend(im); }
       name.classList.toggle('turn', !result && game.turn === c);
       const adv = material(c);
       $('cap-' + pos).innerHTML = capturedBy(c) + (adv > 0 ? `<small>+${adv}</small>` : '');
@@ -1870,6 +1873,18 @@
     return id ? champById(id) || null : null;
   }
   const coachName = () => { const c = activeChampion(); return c ? c.name : COACH; };
+  // Portrait affiché pour celui qui parle : photo du champion, sinon le personnage de Maître Hiro
+  let hiroFace = '';
+  function showCoachFace(img, emptyWhenHiro) {
+    const c = activeChampion();
+    if (!hiroFace) { try { hiroFace = window.Characters.dataUrl('B'); } catch { hiroFace = ''; } }
+    const src = c && c.photo ? c.photo.src : emptyWhenHiro ? '' : hiroFace;
+    img.classList.toggle('photo', !!(c && c.photo));
+    img.hidden = !src;
+    if (src && img.getAttribute('src') !== src) img.src = src;
+    img.alt = c ? c.name : '';
+    img.title = c && c.photo ? L(`Photo : ${c.photo.author} (${c.photo.license}, Wikimedia Commons)`, `Photo: ${c.photo.author} (${c.photo.license}, Wikimedia Commons)`) : '';
+  }
   // Voix de Maître Hiro : synthèse vocale du navigateur, dans la langue de l'interface
   const tts = window.speechSynthesis;
   let frVoice = null;
@@ -1931,6 +1946,7 @@
     const p = $('pz-prompt');
     p.textContent = text;
     $('coach').querySelector('.bubble b').textContent = coachName();
+    showCoachFace($('coach-img'));
     coachMessage = text; coachMood = mood; renderCoachDock();
     speak(text);
     const box = $('coach');
@@ -2394,9 +2410,10 @@
       <button data-lv="above" class="${championLevel === 'above' ? 'on' : ''}" aria-pressed="${championLevel === 'above'}">${L('Un cran au-dessus', 'One step above')}</button></div>
       <p class="pz-cap">${L(`Problèmes choisis pour ton Elo estimé (${estimatedElo()}) · partie d'application au niveau ${LEVEL_NAMES[level]} (Elo ${LEVEL_ELO[level]}).`, `Puzzles chosen for your estimated Elo (${estimatedElo()}) · practice game at level ${LEVEL_NAMES[level]} (Elo ${LEVEL_ELO[level]}).`)}</p>`;
     html += list.map(({ c, match }, i) => `<article class="champ-card">
-      <div class="champ-head"><span class="ico">♚</span><div><b>${i + 1}. ${c.name}</b><small>${c.reign}</small></div>${match != null ? `<span class="chip ${match >= 75 ? 'ok' : match >= 60 ? 'warm' : 'free'}" title="${L('Proximité avec ton style', 'Closeness to your style')}">${match} %</span>` : ''}</div>
+      <div class="champ-head">${c.photo ? `<img class="champ-photo" src="${c.photo.src}" alt="${c.name}">` : '<span class="ico">♚</span>'}<div><b>${i + 1}. ${c.name}</b><small>${c.reign}</small></div>${match != null ? `<span class="chip ${match >= 75 ? 'ok' : match >= 60 ? 'warm' : 'free'}" title="${L('Proximité avec ton style', 'Closeness to your style')}">${match} %</span>` : ''}</div>
       <p class="champ-tag">${c.tagline}${done[c.id] ? L(' · cours suivi ✓', ' · course done ✓') : ''}</p>
       <p class="pz-cap">${c.principles.map((p) => p.title).join(' · ')}</p>
+      ${c.photo ? `<p class="photo-credit">${L('Photo', 'Photo')} : <a href="${c.photo.page}" target="_blank" rel="noopener">${c.photo.author}</a> · ${c.photo.license} · Wikimedia Commons</p>` : ''}
       <div class="champ-actions"><button class="btn primary" data-champ-lesson="${c.id}">${L('Cours guidé', 'Guided course')}</button><button class="btn ghost" data-champ-game="${c.id}">${L(`Affronter ${champShort(c)}`, `Play against ${champShort(c)}`)}</button></div>
     </article>`).join('');
     const body = $('champions-body');
