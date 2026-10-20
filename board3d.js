@@ -764,7 +764,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           ...o.mateUltimate, actor, king: next.get(o.mateUltimate.to),
           start: now + (actor.anim ? actor.anim.dur : 0.35) + 0.15,
           fromPos: { ...this.sqToPos(o.mateUltimate.attackerTo) }, target: this.sqToPos(o.mateUltimate.to),
-          duration: o.mateUltimate.piece === 'k' ? 9.6 : o.mateUltimate.piece === 'K' ? 7.8 : o.mateUltimate.piece.toLowerCase() === 'q' ? 6.8 : o.mateUltimate.piece.toLowerCase() === 'p' ? 3.6 : o.mateUltimate.piece === 'N' ? 4.8 : o.mateUltimate.piece === 'n' ? 5.4 : 3.4,
+          duration: o.mateUltimate.piece === 'k' ? 9.6 : o.mateUltimate.piece === 'K' ? 7.8 : o.mateUltimate.piece.toLowerCase() === 'q' ? 6.8 : o.mateUltimate.piece.toLowerCase() === 'p' ? 3.6 : o.mateUltimate.piece === 'N' ? 4.8 : o.mateUltimate.piece === 'n' || o.mateUltimate.piece === 'b' ? 5.4 : 3.4,
         } : null;
         if (this.mateUltimate) {
           this.makeMateUltimateFx(this.mateUltimate);
@@ -920,7 +920,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           shred.visible = false; shred.userData.seed = i; u.fx.add(shred); u.shreds.push(shred);
         }
         u.fireLight = new T.PointLight(0xdcecff, 0, 4, 2); this.scene.add(u.fireLight);
-      } else if (kind === 'n') {
+      } else if (kind === 'n' || u.piece === 'b') {
         // L'aigle et son ninja fusionnent en phénix de feu.
         u.phoenix = this.makePhoenix(); u.phoenix.visible = false; actor.holder.add(u.phoenix);
         u.phoenixScale = this.formScaleMatchingActor(actor, u.phoenix) * 1.05;
@@ -1272,9 +1272,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         crest.position.set(0, 1.62 + i * 0.02, 0.36 - i * 0.09); crest.rotation.x = -0.5 - i * 0.18; bird.add(crest); flames.push(crest);
       }
       // Longue queue de flammes.
-      for (let i = 0; i < 6; i++) {
-        const tail = new T.Mesh(new T.ConeGeometry(0.07, 0.95 + (i % 3) * 0.2, 7), fire(i % 2 ? 0xff3a0b : 0xffb52a));
-        tail.position.set((i - 2.5) * 0.07, 0.7, -0.62); tail.rotation.x = -Math.PI / 2 - 0.45; tail.rotation.z = (i - 2.5) * 0.12; bird.add(tail); flames.push(tail);
+      for (let i = 0; i < 9; i++) {
+        const len = 1.5 + (i % 3) * 0.35;
+        const tail = new T.Mesh(new T.ConeGeometry(0.075, len, 7), fire(i % 3 === 0 ? 0xff3a0b : i % 3 === 1 ? 0xffb52a : 0xff7a1a));
+        tail.position.set((i - 4) * 0.055, 0.66, -0.35 - len / 2); tail.rotation.x = -Math.PI / 2 - 0.3; tail.rotation.z = (i - 4) * 0.08; bird.add(tail); flames.push(tail);
       }
       // Ailes : plumes ardentes articulées depuis l'épaule.
       const wings = [];
@@ -1520,7 +1521,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         }
         return true;
       }
-      if (kind === 'n') {
+      if (kind === 'n' || u.piece === 'b') {
         const dx = target.x - u.fromPos.x, dz = target.z - u.fromPos.z, len = Math.hypot(dx, dz) || 1;
         if (u.piece === 'N') {
           // Chien à deux têtes : fusion, bond sur le roi, trois piétinements, puis déchiquetage.
@@ -1735,7 +1736,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           if (e > 2.0) { king.parts.root.rotation.set(-Math.PI / 2, 0, 0); king.parts.root.scale.y = u.kingBase.scale.y * 0.52; king.parts.root.position.y = 0.03; }
         }
       }
-      if (kind === 'b' && this.mateUltimate === u) {
+      if (u.piece === 'B' && this.mateUltimate === u) {
         const hit = (e % 0.72) < 0.18;
         if (hit) { this.shakeUntil = t + 0.04; this.shakeAmp = 0.06; }
       }

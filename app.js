@@ -739,7 +739,7 @@
       if (kingSq >= 0) {
         if (last && 'pnbqk'.includes(last.piece.toLowerCase())) {
           const movedPiece = s.board[last.to] || last.piece;
-          const blackKingUltimate = result.result === '0-1' && movedPiece !== 'q' && movedPiece !== 'n';
+          const blackKingUltimate = result.result === '0-1' && !['q', 'n', 'b'].includes(movedPiece); // dame, cavalier et fou noirs ont leur propre attaque
           const ultimatePiece = blackKingUltimate ? 'k' : movedPiece;
           const attackerTo = blackKingUltimate ? s.board.indexOf('k') : last.to;
           const whiteQueenUltimate = ultimatePiece === 'Q';
