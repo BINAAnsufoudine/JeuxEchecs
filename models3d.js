@@ -287,6 +287,15 @@
     const hole = mesh(geo('shuhole', () => new T.CylinderGeometry(0.025, 0.025, 0.045, 10)), mat('#111')); hole.rotation.x = Math.PI / 2; star.add(hole);
     return star;
   }
+  // Katana rangé dans son fourreau, en travers du dos (poignée au-dessus de l'épaule droite)
+  function backKatana(p, o = {}) {
+    const g = new T.Group(); g.position.set(0, 0.16, -0.235); g.rotation.z = -0.75;
+    g.add(mesh(geo('bk-saya', () => new T.CylinderGeometry(0.022, 0.02, 0.62, 10)), mat(o.saya || '#1d1d24', { roughness: 0.5 }), 0, -0.05, 0));
+    g.add(mesh(geo('bk-kojiri', () => new T.CylinderGeometry(0.024, 0.024, 0.03, 10)), metalMat(o.guard || '#c9a227'), 0, -0.36, 0));
+    g.add(mesh(geo('tsuba', () => new T.CylinderGeometry(0.045, 0.045, 0.012, 14)), metalMat(o.guard || '#c9a227'), 0, 0.265, 0));
+    g.add(mesh(geo('bk-handle', () => new T.CylinderGeometry(0.017, 0.017, 0.16, 8)), mat(o.wrap || '#c9a227'), 0, 0.35, 0));
+    p.torso.add(g); p.backKatana = g;
+  }
   function shuriken(p, o) {
     const star = shurikenMesh(o);
     star.position.set(0, 0.18, -0.2); star.rotation.z = 0.4;
@@ -542,6 +551,7 @@
       blackHair(p.head, 2);
       for (let i = 0; i < 6; i++) p.head.add(mesh(geo('dot', () => new T.SphereGeometry(0.012, 6, 4)), mat('#b8735a'), (i % 3 - 1) * 0.04, 0.33 + (i < 3 ? 0 : 0.03), 0.08 - (i < 3 ? 0 : 0.03)));
       shuriken(p, { metal: '#f2c230', hub: '#2a4fa8' }); p.weapon = 'fist';
+      backKatana(p, { saya: '#1b1b24', guard: '#c9a227', wrap: '#2a4fa8' });
       aura(p, '#ffffff', 1);
       return p;
     },
