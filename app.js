@@ -2763,6 +2763,9 @@
     game = new Game(replay.fen);
     for (let i = 0; i < n; i++) game.playUci(replay.moves[i]);
     animateNext = animate && n === replay.index + 1;
+    // Position finale de mat : même attaque de mat qu'en partie quand on y arrive coup par coup
+    const st = game.status();
+    result = st.over ? { result: st.result, reason: st.reason, ultimateId: `replay-${n}-${Date.now()}` } : null;
     if (animateNext && game.inCheck()) shout(game.status().over ? L('Échec et mat !', 'Checkmate!') : L('Échec !', 'Check!'));
     replay.index = n;
     render();
