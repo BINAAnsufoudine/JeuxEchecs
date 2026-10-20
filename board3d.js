@@ -737,10 +737,13 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
       for (const c of old.values()) this.pieces.remove(c.holder);
       const captureFoes = this.captureFoes(o.board);
+      const watch = this.nearestFoes(o.board);
       for (const [sq, c] of next) {
         c.selected = sq === o.selected; c.inCheck = sq === o.check;
         const foe = captureFoes.get(sq);
         c.foe = foe == null ? null : this.sqToPos(foe);
+        const seen = watch.get(sq);
+        c.watch = seen == null ? null : this.sqToPos(seen);
       }
       this.chars = next;
       if (capture && capture.victim) this.startCaptureCamera(capture.from, capture.to, capture.victim, now);
@@ -1808,6 +1811,27 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
     // Les animations de duel ne concernent que deux voisins dont l'un peut
     // réellement capturer l'autre selon les règles légales des échecs.
+    // Pour chaque pièce, l'adversaire le plus proche ; à distance égale, le plus fort
+    nearestFoes(board) {
+      const STRENGTH = { q: 9, r: 5, b: 3.2, n: 3, k: 4, p: 1 };
+      const out = new Map();
+      for (let a = 0; a < 64; a++) {
+        const pa = board[a];
+        if (!pa) continue;
+        const white = pa === pa.toUpperCase();
+        let best = -1, bestD = Infinity, bestS = -1;
+        for (let b = 0; b < 64; b++) {
+          const pb = board[b];
+          if (!pb || (pb === pb.toUpperCase()) === white) continue;
+          const dr = (a >> 3) - (b >> 3), df = (a & 7) - (b & 7), d = dr * dr + df * df;
+          const st = STRENGTH[pb.toLowerCase()] || 0;
+          if (d < bestD || (d === bestD && st > bestS)) { best = b; bestD = d; bestS = st; }
+        }
+        if (best >= 0) out.set(a, best);
+      }
+      return out;
+    }
+
     captureFoes(board) {
       const foes = new Map(), chess = root.Chess;
       if (!chess || !chess.legalMoves) return foes;
@@ -2113,7 +2137,9 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           continue;
         }
         if (c.selected) state = 'select';
-        turn(c, restYaw + (c.parts.yawOffset || 0));
+        // Les personnages ne suivent plus la caméra : ils fixent l'adversaire le plus proche (ou le plus fort à égalité)
+        const at = c.holder.position;
+        turn(c, (c.watch ? Math.atan2(c.watch.x - at.x, c.watch.z - at.z) : restYaw) + (c.parts.yawOffset || 0));
         if (c.inCheck && c.parts.wall) { state = 'guard'; k = 1; } // le roi en échec lève son mur de glace
         M.animate(c.parts, t, state, k);
         if (c.inCheck) c.parts.root.position.x = Math.sin(t * 40) * 0.025; // le roi tremble en échec
