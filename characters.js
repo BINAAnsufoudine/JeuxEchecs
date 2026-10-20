@@ -379,7 +379,10 @@
   }
   // Taille relative selon le rang (le roi domine le plateau)
   const SIZE = { p: 0.78, n: 0.88, b: 0.9, r: 0.95, q: 1.0, k: 1.06 };
-  const NAMES = {
+  const NAMES = root.LANG === 'en' ? {
+    w: { p: 'White ninja', n: 'Ninja on a white dog', b: 'Hermit', r: 'Colossus', q: 'Kunoichi', k: 'Village chief' },
+    b: { p: 'Black ninja', n: 'Ninja on an eagle', b: 'Monk', r: 'Brute', q: 'Warrior', k: 'Golden Hokage' },
+  } : {
     w: { p: 'Ninja blanc', n: 'Ninja sur chien blanc', b: 'Ermite', r: 'Colosse', q: 'Kunoichi', k: 'Chef du village' },
     b: { p: 'Ninja noir', n: 'Ninja sur aigle', b: 'Moine', r: 'Brute', q: 'Guerrière', k: 'Hokage doré' },
   };

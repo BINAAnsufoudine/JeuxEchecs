@@ -195,6 +195,21 @@
     return { checked, errors, captures };
   }
 
+  // Langue de l'interface (le worker charge aussi i18n.js)
+  const EN = root.LANG === 'en';
+  const OPENINGS_EN = {
+    'Partie espagnole (Ruy Lopez)': 'Spanish Game (Ruy Lopez)', 'Partie italienne': 'Italian Game', 'Partie écossaise': 'Scotch Game',
+    'Défense russe (Petrov)': 'Russian Defense (Petrov)', 'Défense Philidor': 'Philidor Defense', 'Partie des quatre cavaliers': 'Four Knights Game',
+    'Gambit du roi': "King's Gambit", 'Partie viennoise': 'Vienna Game', 'Partie du pion roi (jeu ouvert)': "King's Pawn Game (open game)",
+    'Défense sicilienne': 'Sicilian Defense', 'Défense française': 'French Defense', 'Défense Caro-Kann': 'Caro-Kann Defense',
+    'Défense scandinave': 'Scandinavian Defense', 'Défense Pirc': 'Pirc Defense', 'Défense Alekhine': "Alekhine's Defense",
+    'Défense moderne': 'Modern Defense', 'Partie du pion roi': "King's Pawn Game",
+    'Gambit dame refusé': "Queen's Gambit Declined", 'Gambit dame accepté': "Queen's Gambit Accepted", 'Gambit dame': "Queen's Gambit",
+    'Défense slave': 'Slav Defense', 'Défense est-indienne': "King's Indian Defense", 'Défense nimzo-indienne': 'Nimzo-Indian Defense',
+    'Défense indienne': 'Indian Defense', 'Défense hollandaise': 'Dutch Defense', 'Partie de la dame': "Queen's Pawn Game (d5)", 'Partie du pion dame': "Queen's Pawn Game",
+    'Partie anglaise': 'English Opening', 'Partie Réti': 'Réti Opening', 'Attaque Bird': "Bird's Opening", 'Ouverture Larsen': "Larsen's Opening",
+    'Ouverture du fianchetto roi': "King's Fianchetto Opening", 'Ouverture Dunst': 'Dunst Opening',
+  };
   // Ouvertures reconnues (coups UCI) ; la plus longue séquence commune gagne
   const OPENINGS = [
     ['Partie espagnole (Ruy Lopez)', 'e2e4 e7e5 g1f3 b8c6 f1b5'], ['Partie italienne', 'e2e4 e7e5 g1f3 b8c6 f1c4'],
@@ -209,7 +224,7 @@
     ['Défense indienne', 'd2d4 g8f6'], ['Défense hollandaise', 'd2d4 f7f5'], ['Partie de la dame', 'd2d4 d7d5'], ['Partie du pion dame', 'd2d4'],
     ['Partie anglaise', 'c2c4'], ['Partie Réti', 'g1f3'], ['Attaque Bird', 'f2f4'], ['Ouverture Larsen', 'b2b3'],
     ['Ouverture du fianchetto roi', 'g2g3'], ['Ouverture Dunst', 'b1c3'],
-  ].map(([name, line]) => ({ name, line: line.split(' ') })).sort((a, b) => b.line.length - a.line.length);
+  ].map(([name, line]) => ({ name: EN ? (OPENINGS_EN[name] || name) : name, line: line.split(' ') })).sort((a, b) => b.line.length - a.line.length);
   const openingName = (moves) => {
     const hit = OPENINGS.find((o) => o.line.every((u, i) => moves[i] === u));
     return hit ? hit.name : null;
@@ -257,15 +272,16 @@
 
   /* ----- Commentaire de coup pour la partie coachée -----
      « toi » = le joueur (`opts.user`), « moi » = le coach. Toutes les pièces sont désignées avec ton/ta ou mon/ma. */
-  const NAME = { p: 'pion', n: 'cavalier', b: 'fou', r: 'tour', q: 'dame', k: 'roi' };
+  const NAME = EN ? { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' } : { p: 'pion', n: 'cavalier', b: 'fou', r: 'tour', q: 'dame', k: 'roi' };
   const PVAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };
   const sqn = (sq) => root.Chess.sqName(sq);
   const own = (p, user) => {
     const t = p.toLowerCase(), fem = t === 'r' || t === 'q';
+    if (EN) return `${colorOf(p) === user ? 'your' : 'my'} ${NAME[t]}`;
     return `${colorOf(p) === user ? (fem ? 'ta' : 'ton') : (fem ? 'ma' : 'mon')} ${NAME[t]}`;
   };
   const cap1 = (t) => t.charAt(0).toUpperCase() + t.slice(1);
-  const listOf = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} et ${items[items.length - 1]}`);
+  const listOf = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} ${EN ? 'and' : 'et'} ${items[items.length - 1]}`);
   // Cases des pièces de `color` qui protègent `sq` : une pièce adverse fictive y est posée pour révéler les « prises »
   function guards(s, sq, color) {
     const b = s.board.slice();
@@ -305,6 +321,7 @@
     const parts = [];
     const developing = ply < 20 && 'nb'.includes(mt) && (me === 'w' ? m.from >> 3 === 7 : m.from >> 3 === 0);
     const center = mt === 'p' && ['d4', 'e4', 'd5', 'e5'].includes(sq);
+    if (EN) return describeMoveEn({ s, m, a, me, foe, user, byUser, mover, mt, sq, moverName, ply, targets, threatsBefore, myGuard, guardedThreatened, foeThreats, developing, center, history, counter: opts.counter });
     if (m.flag === 'castle') parts.push(`${S} roques ${m.to > m.from ? 'côté roi' : 'côté dame'} : ${byUser ? 'ton' : 'mon'} roi est plus en sécurité et ${byUser ? 'ta' : 'ma'} tour entre en jeu.`);
     else if (m.captured) parts.push(`${S} prends ${own(m.captured, user)} en ${sq} avec ${moverName}${m.flag === 'ep' ? ' (prise en passant)' : ''}.`);
     else if (m.promo) parts.push(`${S} promeus ${byUser ? 'ton' : 'mon'} pion en ${NAME[m.promo.toLowerCase()]}.`);
@@ -355,7 +372,51 @@
     return { parts, reasons, danger, arrows, opening: after, text: parts.join(' ') };
   }
 
-  const WARN = { mistake: 'Ce coup est une erreur.', blunder: 'Ce coup est une gaffe.' };
+  // Même commentaire que describeMove, rédigé en anglais
+  function describeMoveEn(x) {
+    const { m, a, me, foe, user, byUser, mover, mt, sq, moverName, ply, targets, threatsBefore, myGuard, guardedThreatened, foeThreats, developing, center, history } = x;
+    const S = byUser ? 'You' : 'I';
+    const parts = [];
+    if (m.flag === 'castle') parts.push(`${S} castle ${m.to > m.from ? 'kingside' : 'queenside'}: ${byUser ? 'your' : 'my'} king is safer and ${byUser ? 'your' : 'my'} rook comes into play.`);
+    else if (m.captured) parts.push(`${S} take ${own(m.captured, user)} on ${sq} with ${moverName}${m.flag === 'ep' ? ' (en passant)' : ''}.`);
+    else if (m.promo) parts.push(`${S} promote ${byUser ? 'your' : 'my'} pawn to a ${NAME[m.promo.toLowerCase()]}.`);
+    else if (developing) parts.push(`${cap1(moverName)} develops to ${sq}.`);
+    else if (center) parts.push(`${cap1(moverName)} takes the center on ${sq}.`);
+    else parts.push(`${cap1(moverName)} goes to ${sq}.`);
+    if (inCheck(a)) parts.push(byUser ? 'You give check to my king.' : 'Check to your king!');
+    if (targets.length) {
+      const names = targets.slice(0, 2).map((t) => `${own(t.p, user)} on ${sqn(t.sq)}${t.guarded.length ? '' : ' (undefended)'}`);
+      parts.push(`It attacks ${listOf(names)}.`);
+    }
+    const showGuard = myGuard.length && (guardedThreatened.length || !targets.length) ? (guardedThreatened.length ? guardedThreatened : myGuard).slice(0, 2) : [];
+    if (showGuard.length) parts.push(`It protects ${listOf(showGuard.map((i) => `${own(a.board[i], user)} on ${sqn(i)}`))}.`);
+    const before = openingName(history), after = openingName([...history, toUci(m)]);
+    if (after && after !== before) parts.push(`This is part of the opening: ${after}.`);
+    else if (before && !after && ply < 16) parts.push(byUser ? 'You leave the classical opening lines.' : 'I leave the classical opening lines.');
+    const reasons = [];
+    const safe = !isAttacked(a.board, m.to, foe) || guards(a, m.to, me).length > 0 && !foeThreats.some((t) => t.to === m.to && PVAL[t.piece.toLowerCase()] < PVAL[mt]);
+    if (m.captured && (safe || PVAL[m.captured.toLowerCase()] >= PVAL[m.piece.toLowerCase()])) reasons.push('it wins material safely');
+    if (threatsBefore.some((t) => t.to === m.from) && safe && m.from !== m.to) reasons.push(`${moverName} was threatened and is now safe`);
+    if (guardedThreatened.length) reasons.push(`it protects ${own(a.board[guardedThreatened[0]], user)}, which was threatened`);
+    const win = targets.find((t) => !t.guarded.length || PVAL[t.p.toLowerCase()] > PVAL[mt]);
+    if (win) reasons.push(`it creates a threat on ${own(win.p, user)}`);
+    if (m.flag === 'castle') reasons.push('the king is safe and the rook joins the game');
+    else if (developing) reasons.push('developing your pieces early gives you the initiative');
+    else if (center) reasons.push('the center gives your pieces space');
+    const danger = foeThreats.slice(0, 2).map((t) => `${own(a.board[t.to], user)} on ${sqn(t.to)} can be taken by ${own(t.piece, user)}`);
+    const arrows = [];
+    const seen = new Set();
+    const push = (from, to, color) => { const k = `${from}-${to}-${color}`; if (!seen.has(k)) { seen.add(k); arrows.push({ from, to, color }); } };
+    for (const t of targets.slice(0, 3)) push(m.to, t.sq, byUser ? 'green' : 'red');
+    for (const i of showGuard) push(m.to, i, byUser ? 'blue' : 'violet');
+    if (byUser && x.counter !== false) {
+      for (const t of foeThreats.slice(0, 3)) push(t.from, t.to, 'red');
+      for (const t of targets.slice(0, 2)) for (const g of t.guarded.slice(0, 2)) push(g, t.sq, 'violet');
+    }
+    return { parts, reasons, danger, arrows, opening: after, text: parts.join(' ') };
+  }
+
+  const WARN = EN ? { mistake: 'This move is a mistake.', blunder: 'This move is a blunder.' } : { mistake: 'Ce coup est une erreur.', blunder: 'Ce coup est une gaffe.' };
   // Juge le coup `uci` joué dans `fen` avant qu'il ne soit joué : description, qualité et mise en garde
   function judgeMove(fen, uci, history, opts = {}) {
     const depth = opts.depth || 3, q = opts.q || 5;
@@ -373,7 +434,7 @@
     const matedNext = isMate(ps) && ps < 0;
     let warning = '';
     if (cls === 'mistake' || cls === 'blunder') {
-      warning = matedNext ? 'Ce coup laisse un échec et mat.' : (d.danger[0] ? `${cap1(d.danger[0])}.` : `${WARN[cls]} Je vois une réponse qui te coûte cher.`);
+      warning = matedNext ? (EN ? 'This move allows checkmate.' : 'Ce coup laisse un échec et mat.') : (d.danger[0] ? `${cap1(d.danger[0])}.` : `${WARN[cls]} ${EN ? 'I see a reply that costs you dearly.' : 'Je vois une réponse qui te coûte cher.'}`);
     }
     return { ...d, cls, loss: Math.round(loss), best: toUci(best.m), warning };
   }

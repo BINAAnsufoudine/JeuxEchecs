@@ -1,5 +1,5 @@
 /* Cavalier — analyse des parties en arrière-plan */
-importScripts('engine.js', 'search.js', 'coach-core.js');
+importScripts('i18n.js', 'engine.js', 'search.js', 'coach-core.js');
 
 self.onmessage = (e) => {
   const { id, moves, color, explain, review, fen, insight } = e.data;
