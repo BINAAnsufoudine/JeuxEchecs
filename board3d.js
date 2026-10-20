@@ -742,7 +742,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           ...o.mateUltimate, actor, king: next.get(o.mateUltimate.to),
           start: now + (actor.anim ? actor.anim.dur : 0.35) + 0.15,
           fromPos: { ...this.sqToPos(o.mateUltimate.attackerTo) }, target: this.sqToPos(o.mateUltimate.to),
-          duration: o.mateUltimate.piece === 'k' ? 9.6 : o.mateUltimate.piece === 'K' ? 7.8 : o.mateUltimate.piece.toLowerCase() === 'q' ? 6.8 : o.mateUltimate.piece.toLowerCase() === 'p' ? 3.6 : o.mateUltimate.piece.toLowerCase() === 'n' ? 4.0 : 3.4,
+          duration: o.mateUltimate.piece === 'k' ? 9.6 : o.mateUltimate.piece === 'K' ? 7.8 : o.mateUltimate.piece.toLowerCase() === 'q' ? 6.8 : o.mateUltimate.piece.toLowerCase() === 'p' ? 3.6 : o.mateUltimate.piece === 'N' ? 4.8 : o.mateUltimate.piece === 'n' ? 5.4 : 3.4,
         } : null;
         if (this.mateUltimate) {
           this.makeMateUltimateFx(this.mateUltimate);
@@ -858,27 +858,73 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (u.fromPos) actor.holder.position.set(u.fromPos.x, 0, u.fromPos.z);
       u.fx = new T.Group(); this.scene.add(u.fx);
       if (kind === 'n' && u.piece === u.piece.toUpperCase()) {
-        // Le chien blanc prend la place du ninja et devient une bête à deux têtes.
-        if (actor.parts.riderRoot) actor.parts.riderRoot.visible = false;
+        // Le ninja se fond dans son chien blanc, qui devient une bête à deux têtes.
+        u.hiddenParts = u.actorRoot.children.filter((o) => o.isMesh && o.position.z >= 0.28 && o.visible);
         u.extraHeads = [];
+        const fur = new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.82 });
+        const dark = new T.MeshStandardMaterial({ color: 0x25232a, roughness: 0.6 });
+        const eyes = new T.MeshBasicMaterial({ color: 0xff2a1a });
+        const fang = new T.MeshStandardMaterial({ color: 0xfff8e8, roughness: 0.4 });
         for (const side of [-1, 1]) {
-          const head = new T.Mesh(new T.SphereGeometry(0.19, 16, 12), new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.82 }));
-          head.position.set(side * 0.17, 0.39, 0.35); u.actorRoot.add(head); u.extraHeads.push(head);
-          const muzzle = new T.Mesh(new T.SphereGeometry(0.11, 12, 8), new T.MeshStandardMaterial({ color: 0xf4f4f4, roughness: 0.9 }));
-          muzzle.position.set(side * 0.17, 0.32, 0.51); head.add(muzzle);
+          const neck = new T.Group(); neck.position.set(side * 0.17, 0.36, 0.2); neck.rotation.y = side * 0.22; u.actorRoot.add(neck);
+          const ball = (material, pos, scale) => { const m = new T.Mesh(new T.SphereGeometry(1, 16, 12), material); m.position.set(...pos); m.scale.set(...scale); neck.add(m); return m; };
+          ball(fur, [0, 0.03, 0.08], [0.13, 0.13, 0.16]);
+          ball(fur, [0, 0.07, 0.2], [0.19, 0.19, 0.19]);
+          ball(fur, [0, 0.0, 0.37], [0.12, 0.09, 0.14]);
+          ball(dark, [0, 0.02, 0.5], [0.032, 0.028, 0.024]);
+          const jaw = new T.Group(); jaw.position.set(0, -0.06, 0.3); neck.add(jaw);
+          const jawMesh = new T.Mesh(new T.SphereGeometry(1, 12, 8), fur); jawMesh.position.set(0, -0.02, 0.06); jawMesh.scale.set(0.1, 0.035, 0.12); jaw.add(jawMesh);
+          for (const s of [-1, 1]) {
+            ball(eyes, [s * 0.085, 0.13, 0.34], [0.026, 0.026, 0.02]);
+            const ear = new T.Mesh(new T.ConeGeometry(0.06, 0.18, 6), fur); ear.position.set(s * 0.11, 0.27, 0.16); ear.rotation.z = s * -0.35; neck.add(ear);
+            const top = new T.Mesh(new T.ConeGeometry(0.018, 0.08, 5), fang); top.position.set(s * 0.05, -0.08, 0.42); top.rotation.x = Math.PI; neck.add(top);
+            const low = new T.Mesh(new T.ConeGeometry(0.016, 0.07, 5), fang); low.position.set(s * 0.045, 0.02, 0.14); jaw.add(low);
+          }
+          neck.userData = { side, jaw }; neck.scale.setScalar(0.01); u.extraHeads.push(neck);
         }
+        u.fusionRing = new T.Mesh(new T.TorusGeometry(0.55, 0.05, 8, 40), new T.MeshBasicMaterial({ color: 0xe8f4ff, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false }));
+        u.fusionRing.rotation.x = Math.PI / 2; u.fx.add(u.fusionRing);
+        u.dust = [];
+        for (let i = 0; i < 3; i++) {
+          const ring = new T.Mesh(new T.RingGeometry(0.3, 0.42, 32), new T.MeshBasicMaterial({ color: 0xcdbfa6, transparent: true, opacity: 0, side: T.DoubleSide, depthWrite: false }));
+          ring.rotation.x = -Math.PI / 2; ring.position.set(u.target.x, 0.04, u.target.z); u.fx.add(ring); u.dust.push(ring);
+        }
+        // Lambeaux du roi arrachés par les deux gueules.
+        u.shreds = [];
+        const kingWhite = king && king.piece === king.piece.toUpperCase();
+        for (let i = 0; i < 26; i++) {
+          const color = i % 4 === 0 ? 0xc9a227 : i % 3 === 0 ? 0x8b1e2a : kingWhite ? 0xf1ece0 : 0x26232b;
+          const shred = new T.Mesh(new T.BoxGeometry(0.07 + Math.random() * 0.06, 0.03, 0.05 + Math.random() * 0.05), new T.MeshStandardMaterial({ color, roughness: 0.8, transparent: true, opacity: 1 }));
+          shred.visible = false; shred.userData.seed = i; u.fx.add(shred); u.shreds.push(shred);
+        }
+        u.fireLight = new T.PointLight(0xdcecff, 0, 4, 2); this.scene.add(u.fireLight);
       } else if (kind === 'n') {
-        // L'aigle et son ninja se fondent en phénix : les ailes deviennent ardentes.
-        if (actor.parts.riderRoot) actor.parts.riderRoot.visible = false;
-        const fireMat = new T.MeshBasicMaterial({ color: 0xff6a16, transparent: true, opacity: 0.82, blending: T.AdditiveBlending, depthWrite: false });
+        // L'aigle et son ninja fusionnent en phénix de feu.
+        u.phoenix = this.makePhoenix(); u.phoenix.visible = false; actor.holder.add(u.phoenix);
+        u.phoenixScale = this.formScaleMatchingActor(actor, u.phoenix) * 1.05;
+        u.phoenix.scale.setScalar(0.05);
+        const fireMat = new T.MeshBasicMaterial({ color: 0xff6a16, transparent: true, opacity: 0.85, depthWrite: false });
+        // Tourbillon de flammes au moment de la fusion.
+        u.vortex = [];
+        for (let i = 0; i < 12; i++) {
+          const flame = new T.Mesh(new T.ConeGeometry(0.08 + (i % 3) * 0.03, 0.4 + (i % 4) * 0.12, 7), fireMat.clone());
+          flame.material.color.setHex(i % 2 ? 0xff3a0b : 0xffb52a); flame.visible = false;
+          flame.userData.a = i * Math.PI * 2 / 12; u.fx.add(flame); u.vortex.push(flame);
+        }
+        // Brasier autour du roi pendant l'étreinte des ailes.
         u.flames = [];
         for (let i = 0; i < 11; i++) {
           const flame = new T.Mesh(new T.ConeGeometry(0.1 + (i % 3) * 0.035, 0.45 + (i % 4) * 0.12, 7), fireMat.clone());
           const angle = i * Math.PI * 2 / 11;
           flame.position.set(u.target.x + Math.cos(angle) * 0.42, 0.65 + (i % 3) * 0.18, u.target.z + Math.sin(angle) * 0.42);
-          flame.rotation.z = Math.cos(angle) * 0.3; u.fx.add(flame); u.flames.push(flame);
+          flame.rotation.z = Math.cos(angle) * 0.3; flame.visible = false; u.fx.add(flame); u.flames.push(flame);
         }
-        u.fireLight = new T.PointLight(0xff6a16, 0, 5, 2); u.fireLight.position.set(u.target.x, 1.3, u.target.z); this.scene.add(u.fireLight);
+        u.ashes = [];
+        for (let i = 0; i < 22; i++) {
+          const ash = new T.Mesh(new T.IcosahedronGeometry(0.035 + Math.random() * 0.04, 0), new T.MeshBasicMaterial({ color: i % 3 ? 0x56524e : 0xff8a32, transparent: true, opacity: 0 }));
+          u.fx.add(ash); u.ashes.push(ash);
+        }
+        u.fireLight = new T.PointLight(0xff6a16, 0, 7, 2); this.scene.add(u.fireLight);
       } else if (kind === 'b') {
         // L'éclair du fou appelle trois foudres verticales au-dessus du roi.
         u.bolts = [];
@@ -998,21 +1044,27 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       } else if (kind === 'k' && u.piece === 'k') {
         actor.parts.root.visible = false;
         u.susanoo = this.makeSusanoo(); actor.holder.add(u.susanoo); u.susanoo.scale.setScalar(0.05);
-        u.impactTarget = { x: 0, z: 0 };
-        u.meteor = new T.Group();
-        const meteorRock = new T.Mesh(new T.IcosahedronGeometry(1.18, 1), new T.MeshStandardMaterial({ color: 0x30251f, roughness: 0.96, emissive: 0x641a08, emissiveIntensity: 0.7 }));
-        meteorRock.scale.set(1, 0.82, 1.08); u.meteor.add(meteorRock);
-        const meteorCore = new T.Mesh(new T.SphereGeometry(0.74, 16, 12), new T.MeshBasicMaterial({ color: 0xff7625, transparent: true, opacity: 0.68, blending: T.AdditiveBlending, depthWrite: false }));
-        u.meteor.add(meteorCore); u.meteorFlames = [];
-        for (let i = 0; i < 12; i++) {
-          const flame = new T.Mesh(new T.ConeGeometry(0.16 + (i % 3) * 0.06, 1.05 + (i % 4) * 0.28, 7), new T.MeshBasicMaterial({ color: i % 2 ? 0xff3a0b : 0xffc14b, transparent: true, opacity: 0.84, blending: T.AdditiveBlending, depthWrite: false }));
-          const angle = i * Math.PI * 2 / 12;
-          flame.position.set(Math.cos(angle) * 0.74, 0.45 + (i % 3) * 0.12, Math.sin(angle) * 0.74);
-          flame.rotation.z = Math.cos(angle) * 0.6; u.meteor.add(flame); u.meteorFlames.push(flame);
-        }
-        u.meteor.position.set(u.impactTarget.x, 12, u.impactTarget.z); u.fx.add(u.meteor);
-        u.shockwave = new T.Mesh(new T.RingGeometry(0.8, 1, 48), new T.MeshBasicMaterial({ color: 0xff8a32, transparent: true, opacity: 0.95, side: T.DoubleSide, blending: T.AdditiveBlending, depthWrite: false }));
-        u.shockwave.rotation.x = -Math.PI / 2; u.shockwave.position.y = 0.025; u.shockwave.scale.setScalar(0.01); u.fx.add(u.shockwave);
+        // Deux météorites invoquées, qui s'écrasent l'une après l'autre de part et d'autre du samouraï.
+        u.meteors = [{ x: -2.1, z: -1.5, start: 1.15, impact: 3.45 }, { x: 2.0, z: 1.7, start: 1.75, impact: 4.15 }].map((spec) => {
+          const group = new T.Group();
+          const rock = new T.Mesh(new T.IcosahedronGeometry(1.18, 1), new T.MeshStandardMaterial({ color: 0x30251f, roughness: 0.96, emissive: 0x641a08, emissiveIntensity: 0.7 }));
+          rock.scale.set(1, 0.82, 1.08); group.add(rock);
+          const core = new T.Mesh(new T.SphereGeometry(0.74, 16, 12), new T.MeshBasicMaterial({ color: 0xff7625, transparent: true, opacity: 0.68, blending: T.AdditiveBlending, depthWrite: false }));
+          group.add(core);
+          const flames = [];
+          for (let i = 0; i < 12; i++) {
+            const flame = new T.Mesh(new T.ConeGeometry(0.16 + (i % 3) * 0.06, 1.05 + (i % 4) * 0.28, 7), new T.MeshBasicMaterial({ color: i % 2 ? 0xff3a0b : 0xffc14b, transparent: true, opacity: 0.84, blending: T.AdditiveBlending, depthWrite: false }));
+            const angle = i * Math.PI * 2 / 12;
+            flame.position.set(Math.cos(angle) * 0.74, 0.45 + (i % 3) * 0.12, Math.sin(angle) * 0.74);
+            flame.rotation.z = Math.cos(angle) * 0.6; group.add(flame); flames.push(flame);
+          }
+          // Arrivée en biais depuis le ciel, du côté opposé à l'impact.
+          const from = { x: spec.x * 2.4, y: 13, z: spec.z * 2.4 };
+          group.position.set(from.x, from.y, from.z); u.fx.add(group);
+          const shockwave = new T.Mesh(new T.RingGeometry(0.8, 1, 48), new T.MeshBasicMaterial({ color: 0xff8a32, transparent: true, opacity: 0, side: T.DoubleSide, blending: T.AdditiveBlending, depthWrite: false }));
+          shockwave.rotation.x = -Math.PI / 2; shockwave.position.set(spec.x, 0.025, spec.z); shockwave.scale.setScalar(0.01); u.fx.add(shockwave);
+          return { ...spec, from, group, flames, shockwave };
+        });
         u.fireLight = new T.PointLight(0xff5b1b, 0, 16, 2); u.fireLight.position.set(0, 2, 0); this.scene.add(u.fireLight);
         u.debris = [];
         for (let i = 0; i < 48; i++) {
@@ -1176,6 +1228,50 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       return warrior;
     }
 
+    makePhoenix() {
+      const T = this.THREE, bird = new T.Group(), flames = [];
+      const plumage = new T.MeshStandardMaterial({ color: 0xe8500e, roughness: 0.55, emissive: 0xb02800, emissiveIntensity: 0.5 });
+      const gold = new T.MeshStandardMaterial({ color: 0xffb22a, roughness: 0.4, emissive: 0xc06a00, emissiveIntensity: 0.4 });
+      const eye = new T.MeshBasicMaterial({ color: 0xfff6c8 });
+      // Mélange normal : les flammes restent orangées même sur un décor clair.
+      const fire = (color, opacity = 0.88) => new T.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: T.DoubleSide });
+      const sphere = (parent, material, position, scale) => { const m = new T.Mesh(new T.SphereGeometry(1, 18, 14), material); m.position.set(...position); m.scale.set(...scale); parent.add(m); return m; };
+      sphere(bird, plumage, [0, 0.95, 0], [0.26, 0.3, 0.42]);
+      sphere(bird, gold, [0, 0.9, 0.22], [0.2, 0.24, 0.24]);
+      const neck = sphere(bird, plumage, [0, 1.22, 0.3], [0.14, 0.2, 0.14]); neck.rotation.x = -0.4;
+      sphere(bird, plumage, [0, 1.42, 0.38], [0.16, 0.15, 0.18]);
+      const beak = new T.Mesh(new T.ConeGeometry(0.06, 0.22, 8), gold); beak.position.set(0, 1.38, 0.6); beak.rotation.x = Math.PI / 2 + 0.25; bird.add(beak);
+      for (const side of [-1, 1]) sphere(bird, eye, [side * 0.09, 1.46, 0.5], [0.03, 0.03, 0.02]);
+      // Crête de flammes sur la tête.
+      for (let i = 0; i < 4; i++) {
+        const crest = new T.Mesh(new T.ConeGeometry(0.045, 0.32 + i * 0.05, 6), fire(i % 2 ? 0xffd04a : 0xff4a12));
+        crest.position.set(0, 1.62 + i * 0.02, 0.36 - i * 0.09); crest.rotation.x = -0.5 - i * 0.18; bird.add(crest); flames.push(crest);
+      }
+      // Longue queue de flammes.
+      for (let i = 0; i < 6; i++) {
+        const tail = new T.Mesh(new T.ConeGeometry(0.07, 0.95 + (i % 3) * 0.2, 7), fire(i % 2 ? 0xff3a0b : 0xffb52a));
+        tail.position.set((i - 2.5) * 0.07, 0.7, -0.62); tail.rotation.x = -Math.PI / 2 - 0.45; tail.rotation.z = (i - 2.5) * 0.12; bird.add(tail); flames.push(tail);
+      }
+      // Ailes : plumes ardentes articulées depuis l'épaule.
+      const wings = [];
+      for (const side of [-1, 1]) {
+        const wing = new T.Group(); wing.position.set(side * 0.2, 1.05, -0.02); wing.userData.side = side; bird.add(wing);
+        sphere(wing, plumage, [side * 0.38, 0, 0], [0.42, 0.06, 0.2]);
+        for (let i = 0; i < 8; i++) {
+          const feather = new T.Mesh(new T.ConeGeometry(0.09, 0.62 + i * 0.05, 6), fire(i % 2 ? 0xff5a12 : 0xffc14b));
+          feather.position.set(side * (0.18 + i * 0.13), -0.05 - i * 0.012, -0.12);
+          feather.rotation.x = -Math.PI / 2 + 0.25; feather.rotation.z = side * (0.15 + i * 0.05); wing.add(feather); flames.push(feather);
+        }
+        wings.push(wing);
+      }
+      for (const side of [-1, 1]) {
+        const claw = new T.Mesh(new T.ConeGeometry(0.04, 0.32, 6), gold); claw.position.set(side * 0.1, 0.56, 0.05); claw.rotation.x = Math.PI; bird.add(claw);
+      }
+      flames.forEach((f, i) => { f.userData.phase = i * 1.37; });
+      bird.userData = { wings, flames, plumage };
+      return bird;
+    }
+
     devastateForFox(u) {
       if (u.apocalypse) return;
       const T = this.THREE;
@@ -1313,7 +1409,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         return true;
       }
       if (kind === 'k' && u.piece === 'k') {
-        const impactAt = 3.45;
+        const impactAt = u.meteors[0].impact;
         if (c === actor) {
           c.anim = null; c.holder.position.set(0, 0, 0); c.holder.rotation.y = Math.sin(t * 0.42) * 0.12;
           c.parts.root.visible = false;
@@ -1322,32 +1418,38 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           u.susanoo.rotation.y = Math.sin(t * 0.55) * 0.08;
           u.susanoo.userData.armor.emissiveIntensity = 0.55 + Math.abs(Math.sin(t * 8)) * 0.7;
           u.susanoo.userData.wings.forEach((wing, i) => { wing.rotation.z = (i ? -1 : 1) * (0.08 + Math.sin(t * 4.5 + i) * 0.18); });
-          const descent = smooth((e - 1.15) / (impactAt - 1.15));
-          u.meteor.visible = e < impactAt;
-          u.meteor.position.set(u.impactTarget.x, 12 - descent * 10.6, u.impactTarget.z);
-          u.meteor.rotation.set(t * 0.72, t * 0.55, t * 0.68);
-          u.meteorFlames.forEach((flame, i) => { flame.scale.y = 0.8 + Math.abs(Math.sin(t * 15 + i)) * 0.75; });
+          let shake = 0;
+          for (const m of u.meteors) {
+            const descent = smooth((e - m.start) / (m.impact - m.start));
+            m.group.visible = e < m.impact;
+            m.group.position.set(m.from.x + (m.x - m.from.x) * descent, m.from.y + (1.4 - m.from.y) * descent, m.from.z + (m.z - m.from.z) * descent);
+            m.group.rotation.set(t * 0.72, t * 0.55, t * 0.68);
+            m.flames.forEach((flame, i) => { flame.scale.y = 0.8 + Math.abs(Math.sin(t * 15 + i)) * 0.75; });
+            if (e >= m.impact) {
+              const blast = Math.min(1, (e - m.impact) / 0.9);
+              m.shockwave.scale.setScalar(0.1 + blast * 14); m.shockwave.material.opacity = 0.96 * (1 - blast);
+              shake = Math.max(shake, 0.26 * (1 - blast * 0.4));
+            }
+          }
           if (e >= impactAt) {
             this.devastateForFox(u);
-            u.meteor.visible = false;
             if (u.fireLight) u.fireLight.intensity = 5 + Math.abs(Math.sin(t * 6)) * 4;
-            const blast = Math.min(1, (e - impactAt) / 0.9);
-            if (u.shockwave) { u.shockwave.scale.setScalar(0.1 + blast * 16); u.shockwave.material.opacity = 0.96 * (1 - blast); }
             if (u.debris) u.debris.forEach((rock, i) => {
-              const age = Math.max(0, e - impactAt - (i % 8) * 0.025), angle = i * 2.399;
-              const radius = 2.1 + (i % 6) * 0.43;
+              // Chaque météorite projette la moitié des rochers enflammés autour de son point d'impact.
+              const m = u.meteors[i % 2];
+              if (e < m.impact) { rock.visible = false; return; }
+              const age = Math.max(0, e - m.impact - (i % 8) * 0.025), angle = i * 2.399;
+              const radius = 1.6 + (i % 6) * 0.4;
               rock.visible = true;
-              if (age < 0.72) {
-                rock.position.set(Math.cos(angle) * (0.35 + age * radius * 1.8), Math.max(0.1, Math.sin(age * Math.PI) * (2.5 + (i % 4) * 0.8)), Math.sin(angle) * (0.35 + age * radius * 1.8));
-              } else {
-                rock.position.set(Math.cos(angle) * radius, 0.2 + (i % 3) * 0.08, Math.sin(angle) * radius);
-              }
+              const spread = age < 0.72 ? 0.35 + age * radius * 1.8 : radius;
+              const y = age < 0.72 ? Math.max(0.1, Math.sin(age * Math.PI) * (2.5 + (i % 4) * 0.8)) : 0.2 + (i % 3) * 0.08;
+              rock.position.set(m.x + Math.cos(angle) * spread, y, m.z + Math.sin(angle) * spread);
               rock.rotation.set(age * 7 + i, age * 9, age * 6);
               rock.userData.fire.scale.y = 0.7 + Math.abs(Math.sin(t * 13 + i)) * 0.9;
               rock.userData.fire.material.opacity = 0.6 + Math.abs(Math.sin(t * 15 + i)) * 0.35;
             });
-            this.shakeUntil = t + 0.045; this.shakeAmp = 0.24 * (1 - blast * 0.35);
           }
+          if (shake > 0) { this.shakeUntil = t + 0.045; this.shakeAmp = shake; }
         } else if (c === king && e >= impactAt) {
           c.anim = null; c.holder.visible = false;
         }
@@ -1394,6 +1496,154 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         }
         return true;
       }
+      if (kind === 'n') {
+        const dx = target.x - u.fromPos.x, dz = target.z - u.fromPos.z, len = Math.hypot(dx, dz) || 1;
+        if (u.piece === 'N') {
+          // Chien à deux têtes : fusion, bond sur le roi, trois piétinements, puis déchiquetage.
+          const stand = { x: target.x - dx / len * 0.32, z: target.z - dz / len * 0.32 };
+          const stompStart = 1.25, stompEnd = 2.75, slams = clamp((e - stompStart) / (stompEnd - stompStart)) * 3;
+          if (c === actor) {
+            c.anim = null; c.holder.rotation.y = Math.atan2(dx, dz);
+            const fuse = smooth(e / 0.5);
+            if (c.parts.riderRoot) {
+              c.parts.riderRoot.visible = fuse < 1;
+              c.parts.riderRoot.scale.setScalar(0.68 * (1 - fuse * 0.95));
+              c.parts.riderRoot.position.y = 0.43 - fuse * 0.25;
+            }
+            u.hiddenParts.forEach((o) => { o.visible = e < 0.3; });
+            const heads = smooth((e - 0.3) / 0.3);
+            u.actorRoot.scale.copy(u.actorBase.scale).multiplyScalar(1 + heads * 0.4);
+            u.fusionRing.position.set(u.fromPos.x, 0.45, u.fromPos.z);
+            u.fusionRing.scale.setScalar(0.4 + smooth(e / 0.6) * 1.6);
+            u.fusionRing.material.opacity = e < 0.7 ? Math.sin(Math.PI * clamp(e / 0.7)) * 0.9 : 0;
+            if (u.fireLight) { u.fireLight.position.set(c.holder.position.x, 1, c.holder.position.z); u.fireLight.intensity = e < 0.7 ? Math.sin(Math.PI * clamp(e / 0.7)) * 4 : 0; }
+            let pitch = Math.sin(t * 15) * 0.05, lift = 0;
+            if (e < 0.55) {
+              M.animate(c.parts, t, 'guard', 1);
+              c.holder.position.set(u.fromPos.x, 0, u.fromPos.z);
+            } else if (e < stompStart) {
+              M.animate(c.parts, t, 'run');
+              const p = smooth((e - 0.55) / (stompStart - 0.55));
+              c.holder.position.set(u.fromPos.x + (stand.x - u.fromPos.x) * p, Math.sin(Math.PI * p) * 0.9, u.fromPos.z + (stand.z - u.fromPos.z) * p);
+            } else if (e < stompEnd) {
+              M.animate(c.parts, t, 'run');
+              c.holder.position.set(stand.x, 0, stand.z);
+              // Se cabre puis retombe de tout son poids sur le roi.
+              const ph = slams % 1;
+              pitch = -0.6 * Math.sin(Math.PI * ph); lift = 0.18 * Math.sin(Math.PI * ph);
+              if (ph < 0.08) { this.shakeUntil = t + 0.05; this.shakeAmp = 0.12; }
+            } else {
+              M.animate(c.parts, t, 'guard', 1);
+              const p = smooth((e - stompEnd) / 0.4);
+              c.holder.position.set(stand.x + (target.x - stand.x) * p * 0.5, 0, stand.z + (target.z - stand.z) * p * 0.5);
+              pitch = 0.12 + Math.sin(t * 22) * 0.05;
+            }
+            u.actorRoot.rotation.set(pitch, 0, e > stompEnd ? Math.sin(t * 18) * 0.06 : 0);
+            u.actorRoot.position.y = u.actorBase.position.y + lift;
+            u.extraHeads.forEach((neck) => {
+              const side = neck.userData.side;
+              neck.scale.setScalar(Math.max(0.01, heads));
+              if (e > stompEnd) {
+                // Les deux gueules mordent tour à tour et secouent la tête pour arracher.
+                const bite = Math.sin(t * 13 + (side > 0 ? Math.PI : 0));
+                neck.rotation.set(0.45 + bite * 0.3, side * 0.22 + Math.sin(t * 31 + side) * 0.3, 0);
+                neck.userData.jaw.rotation.x = 0.15 + Math.max(0, -bite) * 0.5;
+              } else {
+                neck.rotation.set(-0.1 + Math.abs(Math.sin(t * 9 + side)) * -0.2, side * 0.22, 0);
+                neck.userData.jaw.rotation.x = 0.1 + Math.abs(Math.sin(t * 11 + side)) * 0.35;
+              }
+            });
+            u.dust.forEach((ring, i) => {
+              const age = slams - i;
+              ring.visible = age > 0 && age < 1;
+              ring.scale.setScalar(1 + clamp(age) * 3);
+              ring.material.opacity = age > 0 ? 0.55 * (1 - clamp(age)) : 0;
+            });
+            u.shreds.forEach((shred, i) => {
+              const age = e - (stompEnd + 0.1 + (i % 9) * 0.15);
+              shred.visible = age > 0;
+              if (age <= 0) return;
+              const angle = i * 2.399, reach = Math.min(age, 0.9) * (1.2 + (i % 4) * 0.35);
+              shred.position.set(target.x + Math.cos(angle) * reach, Math.max(0.03, 0.5 + age * 2.4 - age * age * 4), target.z + Math.sin(angle) * reach);
+              shred.rotation.set(age * 9 + i, age * 7, age * 11);
+            });
+            if (e >= u.duration) { c.holder.position.set(target.x, 0, target.z); u.actorRoot.rotation.set(0, 0, 0); u.actorRoot.position.y = u.actorBase.position.y; }
+          } else if (c === king) {
+            c.anim = null; c.holder.position.set(target.x, 0, target.z);
+            const crushed = Math.floor(slams + 0.92);
+            const squash = 1 - Math.min(3, crushed) * 0.17;
+            const shred = smooth((e - stompEnd - 0.1) / 1.4);
+            const s = 1 - shred;
+            c.parts.root.scale.set(u.kingBase.scale.x * (1 + (1 - squash) * 0.6) * s, u.kingBase.scale.y * squash * s, u.kingBase.scale.z * (1 + (1 - squash) * 0.6) * s);
+            c.parts.root.position.y = u.kingBase.position.y;
+            c.parts.root.rotation.set(0, e > stompEnd ? Math.sin(t * 27) * 0.4 : 0, e > stompEnd ? Math.sin(t * 19) * 0.3 : 0);
+            if (shred >= 1) c.holder.visible = false;
+          }
+          return true;
+        }
+        // Phénix : fusion dans un tourbillon de feu, vol jusqu'au roi, étreinte des ailes jusqu'aux cendres.
+        const front = { x: target.x - dx / len * 0.75, z: target.z - dz / len * 0.75 };
+        const bird = u.phoenix, wrapStart = 2.6;
+        if (c === actor) {
+          c.anim = null; c.holder.rotation.y = Math.atan2(dx, dz);
+          const fuse = smooth(e / 0.8);
+          if (e < 0.8) {
+            M.animate(c.parts, t, 'run');
+            c.parts.root.visible = true;
+            c.parts.root.rotation.set(0, e * 14, 0);
+            c.parts.root.scale.copy(u.actorBase.scale).multiplyScalar(1 - fuse * 0.85);
+          } else c.parts.root.visible = false;
+          u.vortex.forEach((flame, i) => {
+            flame.visible = e < 1.0;
+            const a = flame.userData.a + t * 9, r = 0.55 * (1 - fuse * 0.6);
+            flame.position.set(c.holder.position.x + Math.cos(a) * r, c.holder.position.y + 0.25 + (i % 4) * 0.18 + fuse * 0.3, c.holder.position.z + Math.sin(a) * r);
+            flame.material.opacity = e < 1.0 ? 0.85 * (1 - clamp((e - 0.8) / 0.2)) : 0;
+          });
+          bird.visible = e > 0.45;
+          bird.scale.setScalar(0.05 + smooth((e - 0.45) / 0.6) * u.phoenixScale);
+          if (e < 0.9) c.holder.position.set(u.fromPos.x, fuse * 1.0, u.fromPos.z);
+          else if (e < 2.1) {
+            const f = smooth((e - 0.9) / 1.2);
+            c.holder.position.set(u.fromPos.x + (front.x - u.fromPos.x) * f, (1 - f) * 1.0 + Math.sin(Math.PI * f) * 1.0, u.fromPos.z + (front.z - u.fromPos.z) * f);
+          } else c.holder.position.set(front.x, 0, front.z);
+          // Battements en vol, ailes déployées à l'atterrissage, puis repliées sur le roi.
+          const spread = smooth((e - 2.1) / 0.4), wrap = smooth((e - wrapStart) / 0.7);
+          bird.userData.wings.forEach((wing) => {
+            const side = wing.userData.side;
+            wing.rotation.z = e < 2.1 ? side * Math.sin(t * 14) * 0.55 : side * (-0.35 * spread * (1 - wrap) + Math.sin(t * 6) * 0.04);
+            wing.rotation.y = -side * wrap * 1.3;
+          });
+          bird.position.y = e < 2.1 ? Math.sin(t * 14) * 0.04 : 0;
+          bird.rotation.x = e > wrapStart ? wrap * 0.2 : 0;
+          bird.userData.plumage.emissiveIntensity = 0.9 + Math.abs(Math.sin(t * 9)) * 0.7;
+          bird.userData.flames.forEach((f) => { const w = 0.8 + Math.abs(Math.sin(t * 15 + f.userData.phase)) * 0.5; f.scale.set(1, w, 1); });
+          if (u.fireLight) { u.fireLight.position.set(c.holder.position.x, c.holder.position.y + 1.2, c.holder.position.z); u.fireLight.intensity = bird.visible ? 0.8 + Math.abs(Math.sin(t * 8)) * 0.8 + wrap * 1.2 : 0; }
+          if (e >= u.duration) c.holder.position.set(target.x, 0, target.z);
+        } else if (c === king) {
+          c.anim = null; c.holder.position.set(target.x, 0, target.z);
+          const blaze = e > wrapStart + 0.2;
+          if (u.flames) u.flames.forEach((f, i) => {
+            f.visible = blaze && e < u.duration - 0.3;
+            f.position.y = 0.55 + Math.abs(Math.sin(t * 12 + i)) * 0.45; f.material.opacity = 0.45 + Math.abs(Math.sin(t * 15 + i)) * 0.5;
+          });
+          if (blaze && e < u.duration - 0.1) this.burn(u.burn || (u.burn = { c: king }), t);
+          const ashes = smooth((e - wrapStart - 0.4) / 2.0);
+          c.parts.root.position.y = -ashes * 0.3 + (blaze ? Math.sin(t * 30) * 0.03 : 0);
+          c.parts.root.rotation.x = -ashes * 0.4;
+          c.parts.root.scale.set(u.kingBase.scale.x * (1 - ashes * 0.94), u.kingBase.scale.y * Math.max(0.008, 1 - ashes * 0.995), u.kingBase.scale.z * (1 - ashes * 0.94));
+          u.ashes.forEach((ash, i) => {
+            const age = Math.max(0, e - (wrapStart + 0.8 + (i % 7) * 0.12)), angle = i * 2.399;
+            ash.position.set(target.x + Math.cos(angle) * (0.12 + age * 0.16), 0.12 + age * (0.65 + (i % 3) * 0.12), target.z + Math.sin(angle) * (0.12 + age * 0.16));
+            ash.material.opacity = age > 0 ? Math.max(0, 0.85 - age * 0.3) : 0;
+            ash.scale.setScalar(age > 0 ? 0.6 + Math.min(1.1, age * 0.4) : 0.001);
+          });
+          if (e >= u.duration) {
+            c.parts.root.scale.set(u.kingBase.scale.x * 0.005, u.kingBase.scale.y * 0.005, u.kingBase.scale.z * 0.005);
+            if (u.burn && !u.burnEnded) { this.endBurn(u.burn); u.burnEnded = true; }
+          }
+        }
+        return true;
+      }
       if (c === actor) {
         c.anim = null; c.holder.rotation.y = Math.atan2(target.x - u.fromPos.x, target.z - u.fromPos.z);
         if (kind === 'p') {
@@ -1403,18 +1653,6 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           c.parts.root.position.y = e >= 1.9 ? 0.72 : 0;
           c.parts.root.rotation.set(0, 0, 0);
           if (e > 1.45) c.holder.position.set(target.x, land * 0.55, target.z);
-        } else if (kind === 'n' && u.piece === u.piece.toUpperCase()) {
-          M.animate(c.parts, t, 'run');
-          const p = smooth(e / 0.75);
-          c.holder.position.set(u.fromPos.x + (target.x - u.fromPos.x) * p, e < 1.2 ? Math.sin(Math.PI * clamp(e / 1.2)) * 0.85 : 0, u.fromPos.z + (target.z - u.fromPos.z) * p);
-          c.parts.root.rotation.set(0, 0, Math.sin(t * 15) * 0.08);
-          if (u.extraHeads) u.extraHeads.forEach((h, i) => { h.rotation.x = -0.2 - Math.abs(Math.sin(t * 12 + i)) * 0.45; });
-        } else if (kind === 'n') {
-          M.animate(c.parts, t, 'run');
-          const p = smooth(e / 0.9);
-          c.holder.position.set(u.fromPos.x + (target.x - u.fromPos.x) * p, 1.25 * Math.sin(Math.PI * p) + (e > 0.9 ? Math.max(0, 1.6 - (e - 0.9) * 1.3) : 0), u.fromPos.z + (target.z - u.fromPos.z) * p);
-          if (c.parts.mountWings) c.parts.mountWings.forEach((w) => { w.rotation.z = w.userData.side * (0.15 + Math.sin(t * 15) * 0.48); });
-          c.parts.root.rotation.set(0, 0, Math.sin(t * 9) * 0.08);
         } else {
           const p = smooth(e / 0.48), dx = target.x - u.fromPos.x, dz = target.z - u.fromPos.z, len = Math.hypot(dx, dz) || 1;
           const hug = { x: target.x - dx / len * 0.42, z: target.z - dz / len * 0.42 };
@@ -1449,13 +1687,6 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           if (e < 0.6) king.parts.root.position.y = smooth(e / 0.6) * 2.35;
           else if (e < 2.1) king.parts.root.position.y = 2.35 - smooth((e - 0.6) / 1.5) * 2.25;
           else { king.parts.root.position.y = 0.035; king.parts.root.rotation.set(-Math.PI / 2, 0, 0); king.parts.root.scale.y = u.kingBase.scale.y * 0.48; }
-        } else if (kind === 'n' && u.piece !== u.piece.toUpperCase()) {
-          const burn = clamp((e - 0.55) / 2.8);
-          king.parts.root.position.y = -burn * 0.25;
-          king.parts.root.scale.set(u.kingBase.scale.x * (1 - burn * 0.72), u.kingBase.scale.y * Math.max(0.04, 1 - burn), u.kingBase.scale.z * (1 - burn * 0.72));
-          king.parts.root.rotation.x = -burn * 0.4;
-          if (u.fireLight) u.fireLight.intensity = Math.max(0, 2.8 * (1 - e / u.duration));
-          if (u.flames) u.flames.forEach((f, i) => { f.position.y = 0.55 + Math.abs(Math.sin(t * 12 + i)) * 0.45; f.material.opacity = 0.45 + Math.abs(Math.sin(t * 15 + i)) * 0.5; });
         } else if (kind === 'b') {
           const beat = e % 0.58, strike = beat < 0.2, flash = strike ? 1 - beat / 0.2 : 0;
           if (u.bolts) u.bolts.forEach((b, i) => { b.material.opacity = strike ? flash * (i === 1 ? 1 : 0.9) : 0; });
@@ -1501,7 +1732,9 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (u.actor && u.actor.parts.riderRoot) u.actor.parts.riderRoot.visible = true;
       if (u.actorRoot) u.actorRoot.visible = true;
       if (u.burn && u.burn.flames && !u.burnEnded) { this.endBurn(u.burn); u.burnEnded = true; }
-      if (u.extraHeads) u.extraHeads.forEach((h) => { h.parent && h.parent.remove(h); h.geometry.dispose(); h.material.dispose(); });
+      if (u.extraHeads) u.extraHeads.forEach((h) => { h.parent && h.parent.remove(h); h.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); });
+      if (u.hiddenParts) u.hiddenParts.forEach((o) => { o.visible = true; });
+      if (u.actor && u.actor.parts.riderRoot && u.piece === 'N') { u.actor.parts.riderRoot.scale.setScalar(0.68); u.actor.parts.riderRoot.position.y = 0.43; }
       if (u.actorRoot && u.actorBase) { u.actorRoot.position.copy(u.actorBase.position); u.actorRoot.rotation.copy(u.actorBase.rotation); u.actorRoot.scale.copy(u.actorBase.scale); }
       if (u.kingRoot && u.kingBase) { u.kingRoot.position.copy(u.kingBase.position); u.kingRoot.rotation.copy(u.kingBase.rotation); u.kingRoot.scale.copy(u.kingBase.scale); }
       if (u.actor && u.actorHolderBase) u.actor.holder.position.copy(u.actorHolderBase);
@@ -1517,7 +1750,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         u.banshee.parent.remove(u.banshee);
         u.banshee.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material && !Array.isArray(o.material)) o.material.dispose(); });
       }
-      for (const model of [u.angel, u.susanoo]) if (model && model.parent) {
+      for (const model of [u.angel, u.susanoo, u.phoenix]) if (model && model.parent) {
         model.parent.remove(model);
         model.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material && !Array.isArray(o.material)) o.material.dispose(); });
       }
