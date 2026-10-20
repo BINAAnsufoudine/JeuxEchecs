@@ -27,6 +27,7 @@
   // Avant chaque prise, les deux pièces s'affrontent : l'attaquant frappe, la cible riposte avec sa propre arme
   const X1 = 0.6, X2 = 1.4; // corps à corps : assaut jusqu'à X1, riposte de la cible jusqu'à X2
   const EXR = 1.1; // à distance : la cible tire d'abord sa propre technique sur l'attaquant
+const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
   class Board3D {
     constructor(container, onSquare) {
@@ -634,7 +635,8 @@
             shot.flight = kind === 'q' ? 0.25 + len * 0.06 : 0.45 + len * 0.09;
             shot.impact = shot.fire + shot.flight;
             shot.runStart = shot.impact + 0.9;
-            die({ t0: now + EXR + shot.impact, hit: true, explode: kind === 'q', swept: kind === 'r', counter: { start: now, end: now + EXR, at: a } });
+            const fireball = kind === 'q';
+            die({ t0: now + EXR + shot.impact, hit: true, burn: fireball, burnAt: now + EXR + shot.impact, swept: kind === 'r', counter: { start: now, end: now + EXR, at: a } });
           } else if (far && kind === 'b') {
             // Le fou fait surgir une rangée de pics du sol jusqu'à sa cible.
             toss = { victim: v, target: b, windup: 0.4, flight: 0.25 + len * 0.07 };
@@ -664,6 +666,10 @@
           if (duel) mover.anim.dur = duel.approach;
           if (toss || shot) { mover.anim.t0 = now + EXR; mover.anim.pre = now; } // la cible tire d'abord
           this.busyUntil = now + mover.anim.dur + (duel ? duel.len + 0.35 : 0) + (toss ? EXR + toss.runStart : 0) + (shot ? EXR + shot.runStart : 0) + (knightAttack ? 0.35 : 0);
+          // laisse la victime embrochée finir d'être éjectée avant tout autre coup
+          if (toss) this.busyUntil = Math.max(this.busyUntil, now + EXR + toss.impact + 0.2 + 2.4);
+          const burning = this.dying.find((x) => x.c === (capture && capture.victim) && x.burn);
+          if (burning) this.busyUntil = Math.max(this.busyUntil, burning.t0 + BURN_TIME);
           next.set(m.to, mover);
         }
         if (m.flag === 'castle') {
@@ -1839,8 +1845,14 @@
           this.pieces.remove(d.c.holder);
           return false;
         }
-        const u = (t - d.t0) / (d.impaled ? 2.4 : d.far ? 1.1 : 0.8);
-        if (d.burn && t > (d.start || d.t0) + X2 + 0.15) this.burn(d, t);
+        const u = (t - d.t0) / (d.impaled ? 2.4 : d.burn ? BURN_TIME : d.far || d.explode || d.swept ? 1.1 : 0.8);
+        if (d.burn && t > (d.burnAt !== undefined ? d.burnAt : (d.start || d.t0) + X2 + 0.15)) this.burn(d, t);
+        if (u < 0 && d.impaled && d.spikes.spikes && d.spikes.spikes[d.spikes.spikes.length - 1].scale.y > 0.02) {
+          // la cible est soulevée au sommet de la dernière pique pendant qu'elle surgit
+          M.animate(d.c.parts, t, 'ko');
+          this.impalePose(d);
+          return true;
+        }
         if (u < 0) {
           // pendant le duel, la cible se défend : mur de terre (pion), mur de glace (roi), ou riposte
           const p = d.c.holder.position;
@@ -1873,13 +1885,18 @@
         M.animate(d.c.parts, t, 'ko');
         const r = d.c.parts.root;
         if (d.impaled) {
-          // La cible reste plaquée ventre contre les pics pendant leur apparition.
-          r.position.set(0, 0.1, 0);
-          r.rotation.set(-Math.PI / 2, 0, 0);
-          r.scale.setScalar(d.base * (1 - u * 0.18));
+          // Embrochée un instant, la cible glisse le long de la dernière pique puis est projetée hors du plateau.
+          this.impalePose(d);
+        } else if (d.burn) {
+          // brûlée sur place jusqu'aux cendres : elle s'affaisse et s'enfonce
+          r.position.set(0, -u * 0.3, 0);
+          r.rotation.set(-u * 0.5, 0, 0);
+          r.scale.set(d.base * (1 - u * 0.3), d.base * Math.max(0.05, 1 - u), d.base * (1 - u * 0.3));
+          d.c.shadow.visible = false;
+          return true;
         } else if (d.explode) {
           // soufflé par l'explosion : projeté haut, tourne vite et rétrécit
-          r.position.set(d.dx * u * 2.4, Math.sin(Math.PI * u) * 2.2, d.dz * u * 2.4);
+          r.position.set(d.dx * u * 9, Math.sin(Math.PI * u) * 2.2, d.dz * u * 9);
           r.rotation.set(u * 16, u * 6, u * 9);
         } else if (d.far) {
           // Coup final du duel : la cible est éjectée hors de l'échiquier.
@@ -1887,20 +1904,13 @@
           r.rotation.set(u * 14, u * 3, u * 6);
         } else if (d.swept) {
           // emporté par le dragon d'eau
-          r.position.set(d.dx * u * 3.2, 0.3 + Math.sin(u * 9) * 0.15, d.dz * u * 3.2);
+          r.position.set(d.dx * u * 9, 0.3 + Math.sin(u * 9) * 0.15, d.dz * u * 9);
           r.rotation.set(u * 4, u * 12, 0);
-        } else if (d.burn) {
-          // réduit en cendres : il s'affaisse et s'enfonce
-          r.position.set(0, -u * 0.3, 0);
-          r.rotation.set(-u * 0.5, 0, 0);
-          r.scale.set(d.base * (1 - u * 0.3), d.base * Math.max(0.05, 1 - u), d.base * (1 - u * 0.3));
-          d.c.shadow.visible = false;
-          return true;
         } else {
           r.position.set(d.dx * u * 1.6, Math.sin(Math.PI * u) * 1.1, d.dz * u * 1.6);
           r.rotation.set(u * 9, 0, u * 4);
         }
-        if (!d.impaled) r.scale.setScalar(d.base * (1 - u * (d.far ? 0.4 : 0.8)));
+        if (!d.impaled) r.scale.setScalar(d.base * (1 - u * (d.far || d.explode || d.swept ? 0.4 : 0.8)));
         d.c.shadow.visible = false;
         return true;
       });
@@ -1969,6 +1979,16 @@
       for (const m of d.mats) m.dispose();
     }
 
+    // Victime embrochée : suit la pointe de la dernière pique tout au long de sa montée
+    impalePose(d) {
+      const last = d.spikes.spikes[d.spikes.spikes.length - 1];
+      const r = d.c.parts.root;
+      r.position.set(0, d.spikes.tipH * last.scale.y, 0);
+      r.rotation.set(-Math.PI / 2, 0, 0);
+      r.scale.setScalar(d.base);
+      d.c.shadow.visible = false;
+    }
+
     // Le fou fait monter une rangée de pics du sol jusqu'à la cible.
     flySpikes(c, s, el, t) {
       const T = this.THREE;
@@ -1993,6 +2013,7 @@
           spike.add(shard);
           spike.position.lerpVectors(s.start, end, f);
           spike.scale.y = 0.001;
+          s.tipH = height;
           s.proj.add(spike); s.spikes.push(spike);
         }
         this.scene.add(s.proj);
