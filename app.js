@@ -177,7 +177,10 @@
     dock.hidden = !settings.coachEnabled;
     $('coach-dock-panel').hidden = !coachDockOpen;
     $('coach-dock-message').textContent = coachMessage || coachPlan().text;
-    $('coach-dock-status').textContent = coachMood || (settings.voice ? L('Coach d’échecs · voix active', 'Chess coach · voice on') : L('Coach d’échecs', 'Chess coach'));
+    const champ = activeChampion();
+    dock.querySelector('.coach-dock-head strong').textContent = coachName();
+    const role = champ ? champ.reign : L('Coach d’échecs', 'Chess coach');
+    $('coach-dock-status').textContent = coachMood || (settings.voice ? `${role} · ${L('voix active', 'voice on')}` : role);
     $('coach-dock-voice').textContent = settings.voice ? '🔊' : '🔇';
     $('coach-dock-voice').setAttribute('aria-label', settings.voice ? L('Couper la voix', 'Mute the voice') : L('Activer la voix', 'Turn the voice on'));
   }
@@ -520,14 +523,14 @@
     $('terrain-name').textContent = `${TERRAIN_NAMES[currentTerrain]} · ${WEATHER_NAMES[currentWeather]}`;
     flipped = flip !== undefined ? flip : conf.mode !== 'local' && conf.playerColor === 'b';
     selected = -1; hint = null;
-    $('game-title').textContent = conf.mode === 'local' ? L('Deux joueurs', 'Two players') : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Comme ${champShort(champById(conf.champion))}`, `Like ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`;
+    $('game-title').textContent = conf.mode === 'local' ? L('Deux joueurs', 'Two players') : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`;
     show('game');
     if (conf.mode === 'coach') {
       coachDockOpen = false;
       coachHintLevel = 0;
       const focus = cfg.coachTheme ? L(` Objectif du jour: ${PZ[cfg.coachTheme].name.toLowerCase()}.`, ` Today's goal: ${PZ[cfg.coachTheme].name.toLowerCase()}.`) : '';
       const champ = conf.champion && champById(conf.champion);
-      setCoachMessage(champ ? L(`Partie comme ${champ.name}. Je te rappellerai ses principes quand la situation se présentera.`, `Game like ${champ.name}. I will remind you of their principles when the situation arises.`) : L(`Nous allons jouer une partie à ton niveau. Je commenterai les idées et te laisserai chercher les coups.${focus}`, `We are going to play a game at your level. I will comment on the ideas and let you find the moves.${focus}`), 'happy');
+      setCoachMessage(champ ? L(`Je suis ${champ.name}, et c'est moi ton adversaire. Je te rappellerai mes principes quand la situation se présentera.`, `I am ${champ.name}, and I am your opponent. I will remind you of my principles when the situation arises.`) : L(`Nous allons jouer une partie à ton niveau. Je commenterai les idées et te laisserai chercher les coups.${focus}`, `We are going to play a game at your level. I will comment on the ideas and let you find the moves.${focus}`), 'happy');
     }
     render();
     save();
@@ -535,7 +538,7 @@
       const side = conf.playerColor === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
       toast(L(`Tirage au sort : tu joues les ${side}`, `Random draw: you play ${side}`));
       const champ = conf.mode === 'coach' && conf.champion && champById(conf.champion);
-      if (champ) setCoachMessage(L(`Tu joues les ${side}. Aujourd'hui, joue comme ${champ.name} : ${champ.tagline.toLowerCase()}. ${championTip()}`, `You play ${side}. Today, play like ${champ.name}: ${champ.tagline.toLowerCase()}. ${championTip()}`).trim(), 'happy', true);
+      if (champ) setCoachMessage(L(`Tu joues les ${side}. Je suis ${champ.name} et je joue contre toi. Montre-moi ce que tu as retenu de mon cours. ${championTip()}`, `You play ${side}. I am ${champ.name} and I play against you. Show me what you learned in my course. ${championTip()}`).trim(), 'happy', true);
       else if (conf.mode === 'coach') setCoachMessage(L(`Tu joues les ${side}. Je serai ton adversaire et je t’aiderai à réfléchir sans te souffler les coups.`, `You play ${side}. I will be your opponent and help you think without giving away the moves.`), 'happy', true);
     }
     maybeAiMove();
@@ -836,7 +839,7 @@
     const label = (c) => {
       if (cfg.mode === 'local') return c === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
       if (c === cfg.playerColor) return playerName;
-      return cfg.mode === 'coach' ? L('Maître Hiro', 'Master Hiro') : L('Ordinateur', 'Computer');
+      return cfg.mode === 'coach' ? coachName() : L('Ordinateur', 'Computer');
     };
     for (const [pos, c] of [['bottom', bottomColor], ['top', topColor]]) {
       const name = $('name-' + pos);
@@ -866,7 +869,7 @@
     if (thinking) { st.textContent = L("L'ordinateur réfléchit…", 'The computer is thinking…'); return; }
     const side = game.turn === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
     if (game.inCheck()) { st.textContent = L('Échec !', 'Check!'); st.classList.add('alert'); return; }
-    st.textContent = cfg.mode !== 'local' ? (isHumanTurn() ? L('À vous de jouer', 'Your move') : cfg.mode === 'coach' ? L('Maître Hiro réfléchit…', 'Master Hiro is thinking…') : '') : L(`Au tour des ${side}`, `${side} to move`);
+    st.textContent = cfg.mode !== 'local' ? (isHumanTurn() ? L('À vous de jouer', 'Your move') : cfg.mode === 'coach' ? L(`${coachName()} réfléchit…`, `${coachName()} is thinking…`) : '') : L(`Au tour des ${side}`, `${side} to move`);
   }
 
   function renderActions() {
@@ -880,7 +883,7 @@
     if (!result) return '';
     if (result.result === '1/2-1/2') return L('Partie nulle', 'Draw');
     const winner = result.result === '1-0' ? 'w' : 'b';
-    if (cfg.mode !== 'local') return winner === cfg.playerColor ? L('Vous gagnez', 'You win') : cfg.mode === 'coach' ? L('Maître Hiro gagne', 'Master Hiro wins') : L("L'ordinateur gagne", 'The computer wins');
+    if (cfg.mode !== 'local') return winner === cfg.playerColor ? L('Vous gagnez', 'You win') : cfg.mode === 'coach' ? L(`${coachName()} gagne`, `${coachName()} wins`) : L("L'ordinateur gagne", 'The computer wins');
     return winner === 'w' ? L('Les Blancs gagnent', 'White wins') : L('Les Noirs gagnent', 'Black wins');
   }
 
@@ -1143,9 +1146,24 @@
       if (!thinking) return;
       // En partie coachée, le coach finit de parler avant de jouer
       if (cfg.mode === 'coach' && speechBusy()) { setTimeout(launch, 200); return; }
+      const book = championBookMove();
+      if (book) {
+        const res = game.playUci(book);
+        if (res) { thinking = false; afterMove(res); return; }
+      }
       ask('move', cfg.level);
     };
     setTimeout(launch, Math.max(250, busy + 150));
+  }
+  // Coup tiré du répertoire d'ouvertures du champion adversaire (suites UCI dont le début correspond à la partie)
+  function championBookMove() {
+    const champ = activeChampion();
+    if (!champ || !champ.openings) return null;
+    const played = game.uciList();
+    const next = champ.openings.map((line) => line.split(' '))
+      .filter((line) => line.length > played.length && played.every((u, i) => line[i] === u))
+      .map((line) => line[played.length]);
+    return next.length ? next[Math.floor(Math.random() * next.length)] : null;
   }
   function cancelAi() { pending = null; thinking = false; judgeSeq++; judging = false; coachArrows = []; }
 
@@ -1415,7 +1433,7 @@
   /* Archive des parties et analyse en arrière-plan */
   function archiveGame() {
     const arch = store.get('archive', []);
-    arch.push({ id: Date.now(), mode: cfg.mode, color: cfg.playerColor, level: cfg.level, moves: game.uciList(), result: result ? result.result : '*', reason: result ? result.reason : '', analysed: game.history.length < 12 });
+    arch.push({ id: Date.now(), mode: cfg.mode, color: cfg.playerColor, level: cfg.level, champion: cfg.champion || undefined, moves: game.uciList(), result: result ? result.result : '*', reason: result ? result.reason : '', analysed: game.history.length < 12 });
     store.set('archive', arch.slice(-30));
     setTimeout(analyseNext, 1500);
   }
@@ -1841,6 +1859,12 @@
 
   /* L'entraîneur */
   const COACH = L('Maître Hiro', 'Master Hiro');
+  // Pendant son cours ou sa partie, c'est le champion choisi qui parle et qui joue
+  function activeChampion() {
+    const id = pz ? pz.lesson && pz.lesson.champion : !replay && cfg && cfg.mode === 'coach' && cfg.champion;
+    return id ? champById(id) || null : null;
+  }
+  const coachName = () => { const c = activeChampion(); return c ? c.name : COACH; };
   // Voix de Maître Hiro : synthèse vocale du navigateur, dans la langue de l'interface
   const tts = window.speechSynthesis;
   let frVoice = null;
@@ -1901,6 +1925,7 @@
     text = coachGreeting(text);
     const p = $('pz-prompt');
     p.textContent = text;
+    $('coach').querySelector('.bubble b').textContent = coachName();
     coachMessage = text; coachMood = mood; renderCoachDock();
     speak(text);
     const box = $('coach');
@@ -2253,9 +2278,9 @@
     if (m) {
       const pr = ch.principles.find((p) => p.theme === m.theme);
       return {
-        text: L(`Retour sur ta partie du ${fmtDate(m.date)}. Au coup ${m.move}, tu as joué ${m.played}. Souviens-toi : ${pr.title.toLowerCase()}. Joue ce coup comme ${name} l'aurait joué.`, `Back to your game of ${fmtDate(m.date)}. On move ${m.move}, you played ${m.played}. Remember: ${pr.title.toLowerCase()}. Play this move as ${name} would have.`),
+        text: L(`Retour sur ta partie du ${fmtDate(m.date)}. Au coup ${m.move}, tu as joué ${m.played}. Souviens-toi : ${pr.title.toLowerCase()}. Joue ce coup comme je l'aurais joué.`, `Back to your game of ${fmtDate(m.date)}. On move ${m.move}, you played ${m.played}. Remember: ${pr.title.toLowerCase()}. Play this move as I would have.`),
         fen: m.fen, line: m.line, alts: m.alts, mistake: m.id, theme: m.theme,
-        why: L(`Voilà le coup de ${name}. La prochaine fois que cette situation se présente, pense à : ${pr.title.toLowerCase()}.`, `That's ${name}'s move. Next time this situation comes up, think: ${pr.title.toLowerCase()}.`),
+        why: L(`Voilà mon coup. La prochaine fois que cette situation se présente, pense à : ${pr.title.toLowerCase()}.`, `That's my move. Next time this situation comes up, think: ${pr.title.toLowerCase()}.`),
       };
     }
     // Sans faute sur ces thèmes : la position de ta dernière partie où la situation-clé du champion est apparue
@@ -2266,7 +2291,7 @@
       for (let i = 0; i < g.moves.length; i++) {
         if (!G.playUci(g.moves[i])) break;
         if ((finaleChamp ? isEndgameBoard(G.state.board) : i >= 15) && G.turn === g.color) {
-          return { text: L(`Retour sur ta partie du ${fmtDate(g.id)}, au coup ${Math.floor(i / 2) + 1}. ${finaleChamp ? ch.tips.finale : ch.tips.milieu} Observe la position et cherche le plan de ${name}.`, `Back to your game of ${fmtDate(g.id)}, move ${Math.floor(i / 2) + 1}. ${finaleChamp ? ch.tips.finale : ch.tips.milieu} Study the position and look for ${name}'s plan.`), fen: window.Chess.toFen(G.state) };
+          return { text: L(`Retour sur ta partie du ${fmtDate(g.id)}, au coup ${Math.floor(i / 2) + 1}. ${finaleChamp ? ch.tips.finale : ch.tips.milieu} Observe la position et cherche mon plan.`, `Back to your game of ${fmtDate(g.id)}, move ${Math.floor(i / 2) + 1}. ${finaleChamp ? ch.tips.finale : ch.tips.milieu} Study the position and look for my plan.`), fen: window.Chess.toFen(G.state) };
         }
       }
     }
@@ -2276,20 +2301,21 @@
     const ch = champById(id);
     if (!ch) return;
     const name = champShort(ch), used = new Set();
-    const steps = [{ text: L(`Bonjour, je suis ${COACH}. Aujourd'hui, on apprend à jouer comme ${ch.name}, ${ch.reign.charAt(0).toLowerCase() + ch.reign.slice(1)}. ${ch.intro}`, `Hello, I'm ${COACH}. Today we learn to play like ${ch.name}, ${ch.reign.charAt(0).toLowerCase() + ch.reign.slice(1)}. ${ch.intro}`) }];
+    const lc = (t) => t.charAt(0).toLowerCase() + t.slice(1);
+    const steps = [{ text: L(`Bonjour, ${lc(ch.intro)} Aujourd'hui, c'est moi qui te donne le cours : je vais t'apprendre à jouer comme moi.`, `Hello, ${ch.intro} Today I am your teacher: I will teach you to play like me.`) }];
     ch.principles.forEach((p, i) => {
       steps.push({ text: L(`Principe ${i + 1} : ${p.title}. ${p.text}`, `Principle ${i + 1}: ${p.title}. ${p.text}`) });
       const it = championPuzzle(p.theme, used);
       if (it) {
         used.add(it.id);
-        steps.push({ text: L(`À toi, comme ${name} : ${p.task.charAt(0).toLowerCase() + p.task.slice(1)}`, `Your turn, like ${name}: ${p.task.charAt(0).toLowerCase() + p.task.slice(1)}`), fen: it.fen, line: it.line, alts: it.alts, theme: p.theme, why: L(`Bravo ! C'est exactement l'idée de ${name} : ${p.title.toLowerCase()}.`, `Well done! That's exactly ${name}'s idea: ${p.title.toLowerCase()}.`) });
+        steps.push({ text: L(`À toi, joue comme moi : ${lc(p.task)}`, `Your turn, play like me: ${lc(p.task)}`), fen: it.fen, line: it.line, alts: it.alts, theme: p.theme, why: L(`Bravo ! C'est exactement mon idée : ${p.title.toLowerCase()}.`, `Well done! That's exactly my idea: ${p.title.toLowerCase()}.`) });
       }
     });
     const mine = championPersonalStep(ch);
     if (mine) steps.push(mine);
     const level = championGameLevel();
-    steps.push({ text: L(`Tu connais maintenant les idées de ${name}. Pour les appliquer, joue une partie « comme ${name} » au niveau ${LEVEL_NAMES[level]} : je te rappellerai ses principes quand la situation se présentera.`, `You now know ${name}'s ideas. To apply them, play a game “like ${name}” at level ${LEVEL_NAMES[level]}: I will remind you of the principles when the situation arises.`) });
-    pz = { kind: 'lesson', lesson: { title: L(`Comme ${name}`, `Like ${name}`), theme: ch.principles[0].theme, champion: ch.id }, steps, idx: 0 };
+    steps.push({ text: L(`Tu connais maintenant mes idées. Pour les appliquer, affronte-moi dans une partie au niveau ${LEVEL_NAMES[level]} : je jouerai contre toi et je te rappellerai mes principes quand la situation se présentera.`, `You now know my ideas. To apply them, face me in a game at level ${LEVEL_NAMES[level]}: I will play against you and remind you of my principles when the situation arises.`) });
+    pz = { kind: 'lesson', lesson: { title: L(`Le cours de ${name}`, `${name}'s course`), theme: ch.principles[0].theme, champion: ch.id }, steps, idx: 0 };
     enterPuzzleMode();
     loadLessonStep();
   }
@@ -2301,9 +2327,9 @@
     const level = championGameLevel();
     modal({
       title: L(`Cours terminé : ${ch.name}`, `Course finished: ${ch.name}`),
-      text: L(`Prêt à jouer comme ${champShort(ch)} ? Partie coachée au niveau ${LEVEL_NAMES[level]} (Elo ${LEVEL_ELO[level]}).`, `Ready to play like ${champShort(ch)}? Coached game at level ${LEVEL_NAMES[level]} (Elo ${LEVEL_ELO[level]}).`),
+      text: L(`${ch.name} : « Prêt à m'affronter ? » Partie au niveau ${LEVEL_NAMES[level]} (Elo ${LEVEL_ELO[level]}).`, `${ch.name}: “Ready to face me?” Game at level ${LEVEL_NAMES[level]} (Elo ${LEVEL_ELO[level]}).`),
       actions: [
-        { label: L(`Jouer comme ${champShort(ch)}`, `Play like ${champShort(ch)}`), primary: true, onClick: () => startChampionGame(id) },
+        { label: L(`Affronter ${champShort(ch)}`, `Play against ${champShort(ch)}`), primary: true, onClick: () => startChampionGame(id) },
         { label: L('Plus tard', 'Later'), ghost: true },
       ],
     });
@@ -2364,7 +2390,7 @@
       <div class="champ-head"><span class="ico">♚</span><div><b>${i + 1}. ${c.name}</b><small>${c.reign}</small></div>${match != null ? `<span class="chip ${match >= 75 ? 'ok' : match >= 60 ? 'warm' : 'free'}" title="${L('Proximité avec ton style', 'Closeness to your style')}">${match} %</span>` : ''}</div>
       <p class="champ-tag">${c.tagline}${done[c.id] ? L(' · cours suivi ✓', ' · course done ✓') : ''}</p>
       <p class="pz-cap">${c.principles.map((p) => p.title).join(' · ')}</p>
-      <div class="champ-actions"><button class="btn primary" data-champ-lesson="${c.id}">${L('Cours guidé', 'Guided course')}</button><button class="btn ghost" data-champ-game="${c.id}">${L(`Partie comme ${champShort(c)}`, `Play like ${champShort(c)}`)}</button></div>
+      <div class="champ-actions"><button class="btn primary" data-champ-lesson="${c.id}">${L('Cours guidé', 'Guided course')}</button><button class="btn ghost" data-champ-game="${c.id}">${L(`Affronter ${champShort(c)}`, `Play against ${champShort(c)}`)}</button></div>
     </article>`).join('');
     const body = $('champions-body');
     body.innerHTML = html;
@@ -2578,7 +2604,8 @@
   const pgnDate = (id) => { const d = new Date(id); return `${d.getFullYear()}.${pad2(d.getMonth() + 1)}.${pad2(d.getDate())}`; };
   const sideNames = (c) => {
     if (c.mode === 'local') return { white: L('Joueur 1', 'Player 1'), black: L('Joueur 2', 'Player 2') };
-    const ai = c.mode === 'coach' ? L('Maître Hiro', 'Master Hiro') : `${L('Ordinateur', 'Computer')} ${LEVEL_NAMES[c.level] || ''}`.trim();
+    const champ = c.champion && champById(c.champion);
+    const ai = champ ? champ.name : c.mode === 'coach' ? L('Maître Hiro', 'Master Hiro') : `${L('Ordinateur', 'Computer')} ${LEVEL_NAMES[c.level] || ''}`.trim();
     const me = L('Joueur', 'Player');
     return c.playerColor === 'w' ? { white: me, black: ai } : { white: ai, black: me };
   };
@@ -2797,14 +2824,14 @@
       body.innerHTML = `<p class="level-help">${L(`Aucune partie terminée dans ce mode pour le moment. Les parties « ${MODE_LABELS[mode]} » apparaîtront ici à la fin de chaque partie.`, `No finished game in this mode yet. “${MODE_LABELS[mode]}” games will appear here at the end of each game.`)}</p>`;
     } else {
       body.innerHTML = '<div class="replay-items">' + source.map((g, i) => [g, i]).reverse().map(([g, i]) => {
-        const who = mode === 'local' ? '' : ` · ${mode === 'coach' ? L('Maître Hiro', 'Master Hiro') : LEVEL_NAMES[g.level] || ''} · ${L('vous', 'you')}: ${g.color === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black')}`;
+        const who = mode === 'local' ? '' : ` · ${g.champion && champById(g.champion) ? champById(g.champion).name : mode === 'coach' ? L('Maître Hiro', 'Master Hiro') : LEVEL_NAMES[g.level] || ''} · ${L('vous', 'you')}: ${g.color === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black')}`;
         return `<button type="button" class="btn replay-item" data-i="${i}"><strong>${escHtml(fmtDateTime(g.id))}</strong><span>${Math.ceil(g.moves.length / 2)} ${L('coups', 'moves')}${escHtml(who)} · ${RESULT_LABELS[g.result] || RESULT_LABELS['*']}</span></button>`;
       }).join('') + '</div>';
     }
     body.onclick = (e) => {
       const b = e.target.closest('.replay-item'); if (!b) return;
       const g = source[Number(b.dataset.i)]; if (!g) return;
-      startReplay({ moves: g.moves, result: g.result, title: `${MODE_LABELS[mode]} · ${fmtDateTime(g.id)}`, flipped: mode !== 'local' && g.color === 'b', date: pgnDate(g.id), ...sideNames({ mode, playerColor: g.color, level: g.level }) }, () => openReplayList(mode));
+      startReplay({ moves: g.moves, result: g.result, title: `${MODE_LABELS[mode]} · ${fmtDateTime(g.id)}`, flipped: mode !== 'local' && g.color === 'b', date: pgnDate(g.id), ...sideNames({ mode, playerColor: g.color, level: g.level, champion: g.champion }) }, () => openReplayList(mode));
     };
     returnTo = 'home';
     show('replay-list');
