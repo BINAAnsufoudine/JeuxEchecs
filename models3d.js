@@ -331,52 +331,61 @@
     const saya = mesh(geo('saya', () => new T.CylinderGeometry(0.02, 0.018, 0.5, 8)), mat('#1d1d24'), -0.17, 0.0, -0.05);
     saya.rotation.set(1.2, 0, 0.25); p.torso.add(saya);
   }
-  function armor(p, metal, trim) {
-    const plate = mesh(geo('chestplate', () => new T.CylinderGeometry(0.16, 0.185, 0.24, 16)), metalMat(metal), 0, 0.17, 0);
-    p.torso.add(plate);
-    p.torso.add(mesh(geo('platetrim', () => new T.CylinderGeometry(0.188, 0.188, 0.03, 16)), mat(trim), 0, 0.05, 0));
+  // Kanji blanc sur fond coloré, pour le chapeau et le dos du manteau de Hokage
+  const kanjiCache = new Map();
+  function kanjiTexture(text, bg, fg, vertical) {
+    const key = text + bg + fg + vertical;
+    if (!kanjiCache.has(key)) {
+      const c = document.createElement('canvas');
+      c.width = vertical ? 128 : 256; c.height = vertical ? 256 : 128;
+      const ctx = c.getContext('2d');
+      if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, c.width, c.height); }
+      ctx.fillStyle = fg; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = 'bold 100px "Noto Sans CJK JP", "Yu Gothic", "MS Gothic", sans-serif';
+      if (vertical) [...text].forEach((ch, i) => ctx.fillText(ch, 64, 70 + i * 116));
+      else ctx.fillText(text, 128, 70);
+      const tex = new T.CanvasTexture(c);
+      if ('colorSpace' in tex) tex.colorSpace = T.SRGBColorSpace;
+      kanjiCache.set(key, tex);
+    }
+    return kanjiCache.get(key);
+  }
+  // Chapeau de Hokage : large chapeau conique blanc, panneau rouge frappé de « 火 » sur le devant
+  function hokageHat(head, panel) {
+    const slope = Math.atan2(0.17, 0.36);
+    head.add(mesh(geo('kage-hat', () => new T.ConeGeometry(0.36, 0.17, 36)), mat('#fbfbf6', { roughness: 0.7 }), 0, 0.42, 0));
+    head.add(mesh(geo('kage-rim', () => new T.TorusGeometry(0.355, 0.012, 6, 36)), mat('#e6e2d6'), 0, 0.337, 0)).children.at(-1).rotation.x = Math.PI / 2;
+    head.add(mesh(geo('kage-top', () => new T.SphereGeometry(0.03, 10, 8)), mat(panel), 0, 0.505, 0));
+    const front = new T.Mesh(geo('kage-panel', () => new T.PlaneGeometry(0.2, 0.11)), new T.MeshStandardMaterial({ map: kanjiTexture('火', panel, '#ffffff'), roughness: 0.7 }));
+    front.position.set(0, 0.425, 0.183); front.rotation.x = -(Math.PI / 2 - slope);
+    head.add(front);
+    // Rubans du chapeau noués sous le menton
     for (const side of [-1, 1]) {
-      const pd = mesh(geo('pauldron', () => new T.SphereGeometry(0.11, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2)), metalMat(metal), side * 0.2, 0.28, 0);
-      pd.scale.set(1.1, 0.8, 1.1); p.torso.add(pd);
-      p.torso.add(mesh(geo('pdtrim', () => new T.TorusGeometry(0.11, 0.012, 6, 18)), mat(trim), side * 0.2, 0.28, 0)).children.at(-1).rotation.x = Math.PI / 2;
-      // gantelets et jambières
-      p[side < 0 ? 'armL' : 'armR'].add(mesh(geo('gauntlet', () => new T.CylinderGeometry(0.05, 0.05, 0.08, 10)), metalMat(metal), 0, -0.16, 0));
-      p[side < 0 ? 'legL' : 'legR'].add(mesh(geo('greave', () => new T.CylinderGeometry(0.058, 0.055, 0.12, 10)), metalMat(metal), 0, -0.13, 0));
+      const tie = mesh(geo('kage-tie', () => new T.BoxGeometry(0.012, 0.2, 0.012)), mat(panel), side * 0.15, 0.24, 0.07);
+      tie.rotation.z = side * 0.35; head.add(tie);
     }
   }
-  function royalCrown(head, gold, jewel) {
-    head.add(mesh(geo('royalcrown-band', () => new T.CylinderGeometry(0.17, 0.19, 0.065, 24)), metalMat(gold), 0, 0.32, 0));
-    head.add(mesh(geo('royalcrown-rim', () => new T.TorusGeometry(0.18, 0.014, 8, 24)), mat(gold), 0, 0.355, 0).rotateX(Math.PI / 2));
-    const points = geo('royalcrown-point', () => new T.ConeGeometry(0.035, 0.17, 8));
-    for (let i = 0; i < 8; i++) {
-      const angle = i * Math.PI / 4;
-      const point = mesh(points, metalMat(gold), Math.cos(angle) * 0.15, 0.405, Math.sin(angle) * 0.15);
-      point.rotation.z = Math.cos(angle) * -0.16;
-      point.rotation.x = Math.sin(angle) * 0.16;
-      head.add(point);
-    }
-    const arch = new T.CatmullRomCurve3([
-      new T.Vector3(-0.14, 0.35, 0.065), new T.Vector3(-0.09, 0.44, 0.09),
-      new T.Vector3(0, 0.49, 0.105), new T.Vector3(0.09, 0.44, 0.09),
-      new T.Vector3(0.14, 0.35, 0.065),
-    ]);
-    head.add(new T.Mesh(new T.TubeGeometry(arch, 16, 0.012, 6, false), metalMat(gold)));
-    head.add(mesh(geo('royalcrown-cross-stem', () => new T.CylinderGeometry(0.012, 0.018, 0.08, 8)), metalMat(gold), 0, 0.52, 0));
-    head.add(mesh(geo('royalcrown-crossbar', () => new T.BoxGeometry(0.09, 0.018, 0.022)), metalMat(gold), 0, 0.54, 0));
-    head.add(mesh(geo('royalcrown-gem', () => new T.OctahedronGeometry(0.045, 0)), mat(jewel, { metalness: 0.18, roughness: 0.3 }), 0, 0.375, 0.177));
-  }
-  function royalCape(p, cloth, trim, jewel) {
-    const cape = mesh(
-      geo('royalcape', () => new T.CylinderGeometry(0.18, 0.34, 0.78, 20, 1, true, Math.PI * 0.65, Math.PI * 0.7)),
-      mat(cloth, { double: true, roughness: 0.82 }),
-      0, -0.04, -0.025,
+  // Manteau de Hokage : long manteau ouvert devant, flammes à l'ourlet, « 火影 » brodé dans le dos
+  function hokageRobe(p, cloth, flame) {
+    const robe = mesh(
+      geo('kage-robe', () => new T.CylinderGeometry(0.2, 0.31, 0.72, 24, 1, true, 0.42, Math.PI * 2 - 0.84)),
+      mat(cloth, { double: true, roughness: 0.85 }),
+      0, -0.06, -0.01,
     );
-    p.torso.add(cape); p.cloak = cape;
-    const clasp = mesh(geo('royalcape-clasp', () => new T.OctahedronGeometry(0.07, 0)), metalMat(trim), 0, 0.31, 0.15);
-    p.torso.add(clasp);
-    p.torso.add(mesh(geo('royalcape-jewel', () => new T.OctahedronGeometry(0.035, 0)), mat(jewel, { metalness: 0.18, roughness: 0.3 }), 0, 0.31, 0.205));
-    const sash = mesh(geo('royal-sash', () => new T.BoxGeometry(0.075, 0.32, 0.025)), mat(trim), -0.065, 0.08, 0.168);
-    sash.rotation.z = 0.28; p.torso.add(sash);
+    p.torso.add(robe); p.cloak = robe;
+    const flames = mat(flame, { double: true });
+    const tongue = geo('kage-flame', () => new T.ConeGeometry(0.045, 0.16, 4));
+    for (let i = 0; i < 16; i++) {
+      const a = 0.55 + i * (Math.PI * 2 - 1.1) / 15;
+      const f = mesh(tongue, flames, Math.sin(a) * 0.307, -0.35 + (i % 2) * 0.02, Math.cos(a) * 0.307 - 0.01);
+      f.scale.y = 0.8 + (i % 3) * 0.25; p.torso.add(f);
+    }
+    const back = new T.Mesh(geo('kage-back', () => new T.PlaneGeometry(0.11, 0.22)), new T.MeshBasicMaterial({ map: kanjiTexture('火影', null, flame, true), transparent: true, depthWrite: false }));
+    back.position.set(0, 0.0, -0.275); back.rotation.set(-0.13, Math.PI, 0); p.torso.add(back);
+    for (const side of [-1, 1]) {
+      const lapel = mesh(geo('kage-lapel', () => new T.BoxGeometry(0.035, 0.36, 0.02)), mat(cloth), side * 0.085, 0.1, 0.172);
+      lapel.rotation.z = side * -0.12; p.torso.add(lapel);
+    }
   }
 
   // Les deux cavaliers sont des ninjas en selle. La monture reste dans le même
@@ -491,11 +500,10 @@
       return p;
     },
     K() {
-      // Roi blanc en armure cérémonielle, cape écarlate et couronne d'or
-      const p = skeleton({ wide: 1.15, shirt: '#fdfdfd', pants: '#2d3e70', belt: '#e8452c', face: { eye: '#2f7fe0', grin: true } });
-      armor(p, '#eef1f6', '#d4a72c');
-      royalCape(p, '#a51f36', '#d4a72c', '#2563eb');
-      royalCrown(p.head, '#e0b83f', '#d32f4f');
+      // Roi blanc en Hokage : manteau blanc à flammes rouges et chapeau de Kage
+      const p = skeleton({ wide: 1.15, shirt: '#2d5a3d', pants: '#2d3e70', belt: '#e8452c', face: { eye: '#2f7fe0', grin: true } });
+      hokageRobe(p, '#fbfbf6', '#e8452c');
+      hokageHat(p.head, '#d8352a');
       aura(p, '#ffd23a', 3);
       lightning(p);
       p.great = katana(p.armR, { blade: '#eef3f8', guard: '#d4a72c', wrap: '#e8452c' }, 1.05); iceWall(p); p.weapon = 'sabre';
@@ -543,9 +551,9 @@
     k() {
       const p = skeleton({ shirt: '#232338', pants: '#232338', pads: '#f3f0e6', belt: '#f2c230', shoes: '#f3f0e6', emblem: '#232338', face: { eye: '#1fa58f', fierce: true } });
       blackHair(p.head, 2);
-      armor(p, '#2b2b3a', '#ffd23a');
-      royalCape(p, '#24162f', '#c9a227', '#8b35b8');
-      royalCrown(p.head, '#d4a72c', '#8b35b8');
+      // Roi noir en Hokage : manteau sombre à flammes rouges et chapeau de Kage
+      hokageRobe(p, '#2a2438', '#e8452c');
+      hokageHat(p.head, '#d8352a');
       aura(p, '#ffd23a', 3);
       lightning(p);
       p.great = katana(p.armR, { blade: '#d8d0ff', guard: '#ffd23a', wrap: '#232338' }, 1.05); iceWall(p); p.weapon = 'sabre';

@@ -290,14 +290,23 @@
       spikes(ctx, cx, cy - 6, r, 7, 26, Math.PI * 0.95, Math.PI * 2.05, '#1b1b1f', 0.1);
       face(ctx, cx, cy, r * 0.95, { eye: '#222', fierce: true });
     },
-    // Roi : forme ultime, cheveux dorés dressés, aura dorée et éclairs
+    // Roi : Hokage des guerriers, manteau sombre à flammes, chapeau de Kage, aura dorée et éclairs
     k(ctx) {
       aura(ctx, W / 2, 200, 135, 195, 'rgba(255,240,120,0.85)', 'rgba(255,190,30,0.4)');
       lightning(ctx, 40, 120, '#9be7ff'); lightning(ctx, 200, 200, '#9be7ff'); lightning(ctx, 52, 250, '#9be7ff');
-      body(ctx, { shirt: '#232338', pants: '#232338', pads: '#f3f0e6', belt: '#f2c230', shoes: '#f3f0e6', emblem: '#232338', emblemChar: '王' });
-      const { cx, cy, r } = HEAD;
-      spikes(ctx, cx, cy - 10, r, 6, 70, Math.PI * 1.02, Math.PI * 1.98, '#ffd83a', 0.15);
+      const cx = W / 2;
+      poly(ctx, [[cx - 60, 196], [cx + 60, 196], [cx + 82, 352], [cx - 82, 352]], '#2a2438');
+      for (let i = 0; i < 7; i++) poly(ctx, [[cx - 82 + i * 23.4, 352], [cx - 70 + i * 23.4, 318], [cx - 58 + i * 23.4, 352]], '#e8452c', LINE, 3);
+      body(ctx, { shirt: '#232338', pants: '#232338', pads: '#f3f0e6', belt: '#f2c230', sleeve: '#2a2438', shoes: '#f3f0e6', emblem: '#232338', emblemChar: '火' });
+      const { cy, r } = HEAD;
+      spikes(ctx, cx, cy - 10, r, 6, 40, Math.PI * 1.02, Math.PI * 1.98, '#ffd83a', 0.15);
       face(ctx, cx, cy, r, { eye: '#1fa58f', fierce: true });
+      // chapeau de Kage
+      ellipse(ctx, cx, cy - r * 0.55, r * 1.6, r * 0.32, '#fdfdfd');
+      poly(ctx, [[cx - r * 0.75, cy - r * 0.6], [cx, cy - r * 1.35], [cx + r * 0.75, cy - r * 0.6]], '#fdfdfd');
+      poly(ctx, [[cx - r * 0.75, cy - r * 0.6], [cx - r * 0.35, cy - r * 0.95], [cx + r * 0.35, cy - r * 0.95], [cx + r * 0.75, cy - r * 0.6]], '#e8452c', LINE, 3);
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('火', cx, cy - r * 0.78);
     },
   };
 
@@ -361,7 +370,7 @@
   const SIZE = { p: 0.78, n: 0.88, b: 0.9, r: 0.95, q: 1.0, k: 1.06 };
   const NAMES = {
     w: { p: 'Ninja apprenti', n: 'Ninja sur chien blanc', b: 'Ermite', r: 'Colosse', q: 'Kunoichi', k: 'Chef du village' },
-    b: { p: 'Soldat', n: 'Ninja sur aigle', b: 'Moine', r: 'Brute', q: 'Guerrière', k: 'Guerrier doré' },
+    b: { p: 'Soldat', n: 'Ninja sur aigle', b: 'Moine', r: 'Brute', q: 'Guerrière', k: 'Hokage doré' },
   };
 
   root.Characters = { canvasFor, dataUrl, SIZE, NAMES, W, H };

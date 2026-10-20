@@ -94,6 +94,7 @@
     if (id === 'program') renderCoachProgram();
     if (id === 'stats') renderStats();
     if (id === 'problems') renderProblems();
+    if (id === 'champions') renderChampions();
     updateCoachDockForScreen(id);
     if (desktopShell) document.getElementById(id)?.scrollTo(0, 0);
     else window.scrollTo(0, 0);
@@ -107,6 +108,12 @@
     const player = playerProfile();
     $('home-player-name').textContent = player.name || 'Joueur';
     $('home-player-elo').textContent = `Elo estimé : ${estimatedElo()}`;
+    const style = dominantStyle();
+    $('home-player-style').hidden = !style;
+    if (style) {
+      $('home-player-style').textContent = `Style : ${style.label}`;
+      $('home-player-style').title = `Le style qui revient le plus souvent : ${style.n} de tes ${style.games} dernières parties contre l'ordinateur.`;
+    }
     const oldStats = Object.values(store.get('stats', {}));
     const games = player.games || oldStats.reduce((sum, row) => sum + row.win + row.loss + row.draw, 0);
     const puzzles = player.puzzles || Object.keys(store.get('pzdone', {})).length;
@@ -177,6 +184,7 @@
     else if (id === 'program') coachMessage = coachPlan().text;
     else if (id === 'game' && cfg && cfg.mode === 'coach') coachMessage = game && game.turn === cfg.playerColor ? 'À toi de jouer. Cherche les coups forcés et demande-toi ce que mon dernier coup a changé.' : 'Observe la position; je prépare ma réponse.';
     else if (id === 'problems' || id === 'theme') coachMessage = coachPlan().text;
+    else if (id === 'champions') coachMessage = 'Choisis un champion du monde : je te présente ses idées, tu les appliques sur des problèmes à ton niveau, puis dans une partie où je te les rappelle au bon moment.';
     else if (id === 'settings') coachMessage = 'Tu peux garder ma présence discrète, couper ma voix ou me désactiver complètement ici.';
     renderCoachDock();
   }
@@ -506,20 +514,23 @@
     $('terrain-name').textContent = `${TERRAIN_NAMES[currentTerrain]} · ${WEATHER_NAMES[currentWeather]}`;
     flipped = flip !== undefined ? flip : conf.mode !== 'local' && conf.playerColor === 'b';
     selected = -1; hint = null;
-    $('game-title').textContent = conf.mode === 'local' ? 'Deux joueurs' : conf.mode === 'coach' ? `Partie coachée · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`;
+    $('game-title').textContent = conf.mode === 'local' ? 'Deux joueurs' : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? `Comme ${champShort(champById(conf.champion))}` : 'Partie coachée'} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`;
     show('game');
     if (conf.mode === 'coach') {
       coachDockOpen = false;
       coachHintLevel = 0;
       const focus = cfg.coachTheme ? ` Objectif du jour: ${PZ[cfg.coachTheme].name.toLowerCase()}.` : '';
-      setCoachMessage(`Nous allons jouer une partie à ton niveau. Je commenterai les idées et te laisserai chercher les coups.${focus}`, 'happy');
+      const champ = conf.champion && champById(conf.champion);
+      setCoachMessage(champ ? `Partie comme ${champ.name}. Je te rappellerai ses principes quand la situation se présentera.` : `Nous allons jouer une partie à ton niveau. Je commenterai les idées et te laisserai chercher les coups.${focus}`, 'happy');
     }
     render();
     save();
     if (conf.mode !== 'local' && !uciMoves.length) {
       const side = conf.playerColor === 'w' ? 'Blancs' : 'Noirs';
       toast(`Tirage au sort : tu joues les ${side}`);
-      if (conf.mode === 'coach') setCoachMessage(`Tu joues les ${side}. Je serai ton adversaire et je t’aiderai à réfléchir sans te souffler les coups.`, 'happy', true);
+      const champ = conf.mode === 'coach' && conf.champion && champById(conf.champion);
+      if (champ) setCoachMessage(`Tu joues les ${side}. Aujourd'hui, joue comme ${champ.name} : ${champ.tagline.toLowerCase()}. ${championTip()}`.trim(), 'happy', true);
+      else if (conf.mode === 'coach') setCoachMessage(`Tu joues les ${side}. Je serai ton adversaire et je t’aiderai à réfléchir sans te souffler les coups.`, 'happy', true);
     }
     maybeAiMove();
   }
@@ -911,7 +922,7 @@
       setCoachMessage([...d.parts, verdict].filter(Boolean).join(' '), d.cls === 'mistake' || d.cls === 'blunder' ? 'worried' : 'happy', settings.voice);
       return;
     }
-    setCoachMessage([...d.parts, pick(['À toi de jouer.', 'Que réponds-tu ?', 'Regarde bien les menaces avant de répondre.'])].join(' '), '', settings.voice);
+    setCoachMessage([...d.parts, championTip() || pick(['À toi de jouer.', 'Que réponds-tu ?', 'Regarde bien les menaces avant de répondre.'])].join(' '), '', settings.voice);
   }
 
   function finish() {
@@ -1800,8 +1811,9 @@
   }
   function leavePuzzle() {
     hush();
+    const back = pz && pz.lesson && pz.lesson.champion ? 'champions' : 'problems';
     pz = null; marks = null; game = null;
-    show('problems');
+    show(back);
   }
   function setPzStatus(cls, text) {
     const st = $('pz-status');
@@ -1839,7 +1851,7 @@
     $('pz-hint').disabled = !task || pz.done || pz.locked;
     $('pz-solution').disabled = !task || pz.done || pz.locked;
     const lastStep = pz.kind === 'lesson' && pz.idx >= pz.steps.length - 1;
-    $('pz-next').innerHTML = `<span>→</span>${pz.kind === 'lesson' ? (lastStep ? (pz.lesson && pz.lesson.tip ? 'Terminer' : 'Aux problèmes') : 'Continuer') : 'Suivant'}`;
+    $('pz-next').innerHTML = `<span>→</span>${pz.kind === 'lesson' ? (lastStep ? (pz.lesson && (pz.lesson.tip || pz.lesson.champion) ? 'Terminer' : 'Aux problèmes') : 'Continuer') : 'Suivant'}`;
     $('pz-next').disabled = !pz.done;
   }
   const busyDelay = (min) => Math.max(min, (b3d && b3d.busyUntil ? b3d.busyUntil * 1000 - performance.now() : 0) + 250);
@@ -1987,7 +1999,7 @@
   }
   function loadLessonStep() {
     const st = pz.steps[pz.idx];
-    const it = { theme: pz.lesson.theme, level: 1, fen: st.fen, line: st.line, alts: st.alts };
+    const it = { theme: st.theme || pz.lesson.theme, level: 1, fen: st.fen, line: st.line, alts: st.alts };
     Object.assign(pz, { item: it, step: 0, failed: false, done: !st.line, locked: false });
     if (st.fen) setPosition(st.fen);
     else if (!game) setPosition('4k3/8/8/8/8/8/8/4K3 w - - 0 1');
@@ -2002,10 +2014,242 @@
   }
   function nextLessonStep() {
     if (pz.idx < pz.steps.length - 1) { pz.idx++; loadLessonStep(); return; }
+    if (pz.lesson.champion) return finishChampionLesson(pz.lesson.champion);
     if (pz.lesson.tip) { const d = store.get('tipsDone', {}); d[pz.lesson.tip] = pz.lesson.count; store.set('tipsDone', d); return leavePuzzle(); }
     const done = store.get('lessonsDone', {}); done[pz.lesson.theme] = Date.now(); store.set('lessonsDone', done);
     nextActivity();
   }
+  /* ---------- Comme un champion : idées et principes des champions du monde ---------- */
+  const CHAMPS = window.CHAMPIONS || [];
+  const STYLE_AXES = { attaque: 'attaque', tactique: 'tactique', positionnel: 'jeu positionnel', finale: 'finales', defense: 'défense' };
+  let championLevel = store.get('championLevel', 'same'); // « same » : ton niveau ; « above » : un cran au-dessus
+  const champById = (id) => CHAMPS.find((c) => c.id === id);
+  const champShort = (c) => c.name.split(' ').pop();
+  // Plus que six pièces (hors rois et pions) sur l'échiquier : on est en finale
+  const isEndgameBoard = (board) => board.filter((p) => p && !'kKpP'.includes(p)).length <= 6;
+
+  // Profil d'une partie contre l'ordinateur, de 0 à 1 sur chaque axe de style
+  function gameStyle(g) {
+    const G = new Game();
+    let moves = 0, checks = 0, captures = 0, quiet = 0, castled = 0, endgame = 0;
+    for (const u of g.moves) {
+      const mover = G.turn, r = G.playUci(u);
+      if (!r) break;
+      if (mover === g.color) {
+        moves++;
+        if (G.inCheck()) checks++;
+        if (r.move.captured) captures++;
+        else if (r.move.piece.toLowerCase() === 'p' || r.move.flag === 'castle') quiet++;
+        if (r.move.flag === 'castle') castled = 1;
+      }
+      if (!endgame && isEndgameBoard(G.state.board)) endgame = 1;
+    }
+    const won = g.result === (g.color === 'w' ? '1-0' : '0-1'), lost = g.result === (g.color === 'w' ? '0-1' : '1-0');
+    const m = Math.max(1, moves), unit = (x) => Math.max(0, Math.min(1, x));
+    return {
+      attaque: unit((checks / m) / 0.12 * 0.7 + (won && g.reason === 'mat' ? 0.6 : 0)),
+      tactique: unit((captures / m) / 0.3),
+      positionnel: unit((quiet / m) / 0.45 * 0.6 + castled * 0.4),
+      finale: endgame,
+      defense: unit((g.moves.length >= 50 && !lost ? 0.6 : 0) + castled * 0.4),
+    };
+  }
+  const styleGames = () => store.get('archive', []).filter((g) => g.color && g.moves && g.moves.length >= 12).slice(-20);
+  // Style du joueur : moyenne de ses dernières parties archivées
+  function playerStyle() {
+    const games = styleGames();
+    if (!games.length) return null;
+    const avg = { games: games.length };
+    const all = games.map(gameStyle);
+    for (const k of Object.keys(STYLE_AXES)) avg[k] = all.reduce((sum, v) => sum + v[k], 0) / all.length;
+    return avg;
+  }
+  // Nom d'un style ; une partie riche en fautes relevées par l'analyse est jugée impulsive
+  function styleLabel(v, errors) {
+    const impulsive = errors >= 2;
+    if (v.attaque >= 0.6) return impulsive ? 'Attaquant impulsif' : 'Joueur agressif';
+    if (v.tactique >= 0.6) return impulsive ? 'Chasseur de matériel' : 'Tacticien opportuniste';
+    if (v.finale >= 0.6 && v.positionnel >= 0.5) return 'Joueur positionnel patient';
+    if (v.positionnel >= 0.6) return impulsive ? 'Bâtisseur pressé' : 'Stratège solide';
+    if (v.defense >= 0.6) return 'Défenseur tenace';
+    if (v.finale >= 0.6) return 'Finisseur méthodique';
+    return impulsive ? 'Joueur spontané' : 'Joueur polyvalent';
+  }
+  // Style qui revient le plus souvent dans les parties jouées contre l'ordinateur (à égalité, le plus récent)
+  function dominantStyle() {
+    const games = styleGames();
+    if (!games.length) return null;
+    const mistakes = store.get('mistakes', []);
+    const count = new Map();
+    games.forEach((g, i) => {
+      const label = styleLabel(gameStyle(g), mistakes.filter((m) => m.date === g.id).length);
+      const row = count.get(label) || { n: 0, last: 0 };
+      row.n++; row.last = i; count.set(label, row);
+    });
+    const [label, row] = [...count].sort((a, b) => b[1].n - a[1].n || b[1].last - a[1].last)[0];
+    return { label, n: row.n, games: games.length };
+  }
+  // Proximité (en %) entre le style du joueur et celui d'un champion
+  function styleMatch(champ, style) {
+    if (!style) return null;
+    const keys = Object.keys(STYLE_AXES);
+    return Math.round((1 - keys.reduce((s, k) => s + Math.abs(champ.style[k] - style[k]), 0) / keys.length) * 100);
+  }
+  function championOrder() {
+    const style = playerStyle();
+    const list = CHAMPS.map((c, i) => ({ c, i, match: styleMatch(c, style) }))
+      .sort((a, b) => (b.match ?? 0) - (a.match ?? 0) || a.i - b.i);
+    return { style, list };
+  }
+  // Niveau de l'ordinateur le plus proche de ton Elo estimé, ou le niveau suivant
+  function championGameLevel() {
+    const target = estimatedElo();
+    let level = 1;
+    for (let l = 2; l <= unlocked(); l++) if (Math.abs(LEVEL_ELO[l] - target) < Math.abs(LEVEL_ELO[level] - target)) level = l;
+    return championLevel === 'above' ? Math.min(MAX_GAME_LEVEL, level + 1) : level;
+  }
+  // Problème du thème, choisi à ton niveau (échelle de difficulté 1 à 9 de la banque) ou juste au-dessus
+  function championPuzzle(theme, used) {
+    const base = Math.max(1, Math.min(9, Math.round((estimatedElo() - 400) / 200)));
+    const target = championLevel === 'above' ? base + 1 : base;
+    const done = store.get('pzdone', {});
+    const pool = BANK.filter((p) => p.theme === theme && !used.has(p.id));
+    if (!pool.length) return null;
+    const dist = (p) => Math.abs((p.rating || p.level * 2) - target) + (done[p.id] ? 1.5 : 0);
+    const best = Math.min(...pool.map(dist));
+    const near = pool.filter((p) => dist(p) <= best + 0.5);
+    return near[Math.floor(Math.random() * near.length)];
+  }
+  // Une situation de tes parties précédentes où l'idée du champion s'appliquait
+  function championPersonalStep(ch) {
+    const name = champShort(ch), themes = ch.principles.map((p) => p.theme);
+    const ms = store.get('mistakes', []).filter((m) => themes.includes(m.theme) && m.line && m.line.length);
+    const m = ms.filter((x) => !x.solved).pop() || ms.pop();
+    if (m) {
+      const pr = ch.principles.find((p) => p.theme === m.theme);
+      return {
+        text: `Retour sur ta partie du ${fmtDate(m.date)}. Au coup ${m.move}, tu as joué ${m.played}. Souviens-toi : ${pr.title.toLowerCase()}. Joue ce coup comme ${name} l'aurait joué.`,
+        fen: m.fen, line: m.line, alts: m.alts, mistake: m.id, theme: m.theme,
+        why: `Voilà le coup de ${name}. La prochaine fois que cette situation se présente, pense à : ${pr.title.toLowerCase()}.`,
+      };
+    }
+    // Sans faute sur ces thèmes : la position de ta dernière partie où la situation-clé du champion est apparue
+    const finaleChamp = ch.style.finale >= 0.8;
+    for (const g of store.get('archive', []).slice().reverse()) {
+      if (!g.color || !g.moves || g.moves.length < 16) continue;
+      const G = new Game();
+      for (let i = 0; i < g.moves.length; i++) {
+        if (!G.playUci(g.moves[i])) break;
+        if ((finaleChamp ? isEndgameBoard(G.state.board) : i >= 15) && G.turn === g.color) {
+          return { text: `Retour sur ta partie du ${fmtDate(g.id)}, au coup ${Math.floor(i / 2) + 1}. ${finaleChamp ? ch.tips.finale : ch.tips.milieu} Observe la position et cherche le plan de ${name}.`, fen: window.Chess.toFen(G.state) };
+        }
+      }
+    }
+    return null;
+  }
+  function startChampionLesson(id) {
+    const ch = champById(id);
+    if (!ch) return;
+    const name = champShort(ch), used = new Set();
+    const steps = [{ text: `Bonjour, je suis ${COACH}. Aujourd'hui, on apprend à jouer comme ${ch.name}, ${ch.reign.charAt(0).toLowerCase() + ch.reign.slice(1)}. ${ch.intro}` }];
+    ch.principles.forEach((p, i) => {
+      steps.push({ text: `Principe ${i + 1} : ${p.title}. ${p.text}` });
+      const it = championPuzzle(p.theme, used);
+      if (it) {
+        used.add(it.id);
+        steps.push({ text: `À toi, comme ${name} : ${p.task.charAt(0).toLowerCase() + p.task.slice(1)}`, fen: it.fen, line: it.line, alts: it.alts, theme: p.theme, why: `Bravo ! C'est exactement l'idée de ${name} : ${p.title.toLowerCase()}.` });
+      }
+    });
+    const mine = championPersonalStep(ch);
+    if (mine) steps.push(mine);
+    const level = championGameLevel();
+    steps.push({ text: `Tu connais maintenant les idées de ${name}. Pour les appliquer, joue une partie « comme ${name} » au niveau ${LEVEL_NAMES[level]} : je te rappellerai ses principes quand la situation se présentera.` });
+    pz = { kind: 'lesson', lesson: { title: `Comme ${name}`, theme: ch.principles[0].theme, champion: ch.id }, steps, idx: 0 };
+    enterPuzzleMode();
+    loadLessonStep();
+  }
+  function finishChampionLesson(id) {
+    const ch = champById(id);
+    const done = store.get('championsDone', {}); done[id] = Date.now(); store.set('championsDone', done);
+    leavePuzzle();
+    if (!ch) return;
+    const level = championGameLevel();
+    modal({
+      title: `Cours terminé : ${ch.name}`,
+      text: `Prêt à jouer comme ${champShort(ch)} ? Partie coachée au niveau ${LEVEL_NAMES[level]} (Elo ${LEVEL_ELO[level]}).`,
+      actions: [
+        { label: `Jouer comme ${champShort(ch)}`, primary: true, onClick: () => startChampionGame(id) },
+        { label: 'Plus tard', ghost: true },
+      ],
+    });
+  }
+  function startChampionGame(id) {
+    const ch = champById(id);
+    if (!ch) return;
+    const level = championGameLevel();
+    setup.mode = 'coach'; setup.level = level;
+    store.set('setup', setup);
+    startGame({ mode: 'coach', playerColor: randomColor(), level, champion: ch.id });
+  }
+  // Situations de partie qui appellent un principe du champion, et les thèmes de fautes passées qui s'y rattachent
+  const SITUATION_THEMES = { attaque: ['mat', 'tactique', 'fourchette'], defense: ['defense'], finale: ['finale'], milieu: ['prise', 'clouage', 'fourchette', 'tactique'], ouverture: [] };
+  function championSituation() {
+    const ply = game.history.length, told = cfg.champTold || (cfg.champTold = {});
+    const fresh = (k, gap) => told[k] === undefined || (gap && ply - told[k] >= gap);
+    const s = game.state;
+    if (isEndgameBoard(s.board) && fresh('finale')) return 'finale';
+    const last = game.lastMove();
+    if ((game.inCheck() || (last && last.captured)) && fresh('defense', 12)) return 'defense';
+    if (ply >= 8 && fresh('attaque', 12) && game.moves().some((m) => window.Chess.inCheck(window.Chess.makeMove(s, m)))) return 'attaque';
+    if (ply <= 6 && fresh('ouverture')) return 'ouverture';
+    if (ply >= 20 && fresh('milieu')) return 'milieu';
+    return null;
+  }
+  // Rappel du principe du champion choisi, avec la partie précédente où la même situation t'a coûté un coup
+  function championTip() {
+    const ch = cfg && cfg.champion && champById(cfg.champion);
+    if (!ch || !game) return '';
+    const k = championSituation();
+    if (!k) return '';
+    cfg.champTold[k] = game.history.length;
+    let text = ch.tips[k];
+    const recalled = cfg.champRecalled || (cfg.champRecalled = []);
+    const past = store.get('mistakes', []).filter((m) => SITUATION_THEMES[k].includes(m.theme) && !recalled.includes(m.id)).pop();
+    if (past) {
+      recalled.push(past.id);
+      text += ` Souviens-toi de ta partie du ${fmtDate(past.date)} : dans une situation semblable, au coup ${past.move}, tu avais joué ${past.played} et ce n'était pas le meilleur.`;
+    }
+    return text;
+  }
+  function renderChampions() {
+    const { style, list } = championOrder();
+    const done = store.get('championsDone', {});
+    const level = championGameLevel();
+    let html = '<div class="pz-summary">';
+    if (style) {
+      const top = Object.keys(STYLE_AXES).sort((a, b) => style[b] - style[a]).slice(0, 2).map((k) => STYLE_AXES[k]);
+      html += `Les champions sont classés du plus proche au plus éloigné de ton style, estimé sur tes <b>${style.games}</b> dernière${style.games > 1 ? 's' : ''} partie${style.games > 1 ? 's' : ''} : ton jeu penche vers <b>${top[0]}</b> et <b>${top[1]}</b>.`;
+    } else html += "Joue quelques parties contre l'ordinateur : j'analyserai ton style pour classer en premier les champions dont les idées te ressemblent. En attendant, ils sont dans l'ordre de l'histoire.";
+    html += '</div>';
+    html += `<label class="field-label">Niveau des cours</label><div class="segmented" id="champ-level">
+      <button data-lv="same" class="${championLevel === 'same' ? 'on' : ''}" aria-pressed="${championLevel === 'same'}">À mon niveau</button>
+      <button data-lv="above" class="${championLevel === 'above' ? 'on' : ''}" aria-pressed="${championLevel === 'above'}">Un cran au-dessus</button></div>
+      <p class="pz-cap">Problèmes choisis pour ton Elo estimé (${estimatedElo()}) · partie d'application au niveau ${LEVEL_NAMES[level]} (Elo ${LEVEL_ELO[level]}).</p>`;
+    html += list.map(({ c, match }, i) => `<article class="champ-card">
+      <div class="champ-head"><span class="ico">♚</span><div><b>${i + 1}. ${c.name}</b><small>${c.reign}</small></div>${match != null ? `<span class="chip ${match >= 75 ? 'ok' : match >= 60 ? 'warm' : 'free'}" title="Proximité avec ton style">${match} %</span>` : ''}</div>
+      <p class="champ-tag">${c.tagline}${done[c.id] ? ' · cours suivi ✓' : ''}</p>
+      <p class="pz-cap">${c.principles.map((p) => p.title).join(' · ')}</p>
+      <div class="champ-actions"><button class="btn primary" data-champ-lesson="${c.id}">Cours guidé</button><button class="btn ghost" data-champ-game="${c.id}">Partie comme ${champShort(c)}</button></div>
+    </article>`).join('');
+    const body = $('champions-body');
+    body.innerHTML = html;
+    body.querySelectorAll('[data-lv]').forEach((b) => (b.onclick = () => { championLevel = b.dataset.lv; store.set('championLevel', championLevel); renderChampions(); }));
+    body.querySelectorAll('[data-champ-lesson]').forEach((b) => (b.onclick = () => startChampionLesson(b.dataset.champLesson)));
+    body.querySelectorAll('[data-champ-game]').forEach((b) => (b.onclick = () => startChampionGame(b.dataset.champGame)));
+  }
+  // Garde-fou : une ancienne page en cache n'a pas encore ce bouton
+  if ($('btn-champions')) $('btn-champions').onclick = () => { returnTo = 'home'; show('champions'); };
+
   $('btn-problems').onclick = () => { returnTo = 'home'; show('problems'); };
   Object.defineProperty(window, 'cavalierPz', { get: () => pz }); // pour les tests
   try { $('coach-img').src = window.Characters.dataUrl('B'); } catch { /* pas de portrait */ }
@@ -2537,7 +2781,7 @@
 
   const savedGame = store.get('game', null);
   const savedScreen = store.get('lastScreen', null);
-  const restorableScreens = ['home', 'program', 'setup', 'game', 'settings', 'problems', 'stats', 'rules', 'about'];
+  const restorableScreens = ['home', 'program', 'champions', 'setup', 'game', 'settings', 'problems', 'stats', 'rules', 'about'];
   const initialScreen = restorableScreens.includes(savedScreen)
     ? savedScreen
     : savedGame && savedGame.cfg ? 'game' : 'home';

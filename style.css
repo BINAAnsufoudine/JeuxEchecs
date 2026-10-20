@@ -442,3 +442,14 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 
 .level-grid button small { display: block; font-size: 0.68rem; font-weight: 500; opacity: 0.75; }
 .data-actions { display: flex; flex-direction: column; gap: 10px; margin: 12px 0 24px; }
+
+/* Comme un champion */
+.champ-card { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
+.champ-head { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; }
+.champ-head .ico { width: 44px; height: 44px; border-radius: 12px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+.champ-head small { display: block; color: var(--muted); font-size: 0.8rem; }
+.champ-tag { margin: 10px 0 2px; font-weight: 600; }
+.champ-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.champ-actions .btn { flex: 1 1 140px; }
+.player-profile .player-style { color: var(--text); font-weight: 600; font-size: 0.85rem; margin-top: 2px; }
+.player-profile .player-style[hidden] { display: none; }

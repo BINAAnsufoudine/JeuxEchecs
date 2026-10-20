@@ -10,7 +10,7 @@
           <div class="brand-copy"><h1>Cavalier</h1><p class="tagline">Des échecs simples, sans pub, même hors ligne.</p></div>
         </div>
         <div class="player-profile" aria-live="polite">
-          <div><strong id="home-player-name">Joueur</strong><span id="home-player-elo">Elo estimé : 600</span><small id="home-player-progress">L’estimation s’affine avec les parties et les problèmes.</small></div>
+          <div><strong id="home-player-name">Joueur</strong><span id="home-player-elo">Elo estimé : 600</span><span id="home-player-style" class="player-style" hidden></span><small id="home-player-progress">L’estimation s’affine avec les parties et les problèmes.</small></div>
           <button id="btn-player-name" class="profile-edit" type="button">Modifier</button>
         </div>
       </div>
@@ -27,6 +27,7 @@
         <div id="progress-submenu" class="menu-submenu" hidden>
           <button id="btn-program" class="btn">Programme personnalisé</button>
           <button id="btn-problems" class="btn">Problèmes</button>
+          <button id="btn-champions" class="btn">Comme un champion</button>
         </div>
       </div>
       <div class="menu-group">
@@ -65,6 +66,11 @@
         <div class="coach-program-actions"><button id="program-continue" class="btn primary">Continuer mon entraînement</button><button id="program-game" class="btn ghost">Partie coachée</button></div>
       </section>
     </div>
+  </section>
+
+  <section id="champions" class="screen" aria-label="Comme un champion">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Comme un champion</h2></header>
+    <div class="panel" id="champions-body"></div>
   </section>
 
   <!-- S02 Nouvelle partie -->
@@ -294,6 +300,7 @@
   <script src="coach-core.js"></script>
   <script src="puzzles.js"></script>
   <script src="lessons.js"></script>
+  <script src="champions.js"></script>
   <script src="characters.js"></script>
   <script src="models3d.js"></script>
   <script src="board3d.js"></script>
