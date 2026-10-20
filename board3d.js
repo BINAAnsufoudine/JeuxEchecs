@@ -959,6 +959,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       } else if (kind === 'q' && u.piece === 'Q') {
         u.angel = this.makeWhiteAngel(); actor.holder.add(u.angel);
         u.angelBaseScale = this.formScaleMatchingActor(actor, u.angel);
+        u.floatH = new T.Box3().setFromObject(actor.parts.root).getSize(new T.Vector3()).y * 0.95; // flotte à hauteur des têtes
         u.angel.scale.setScalar(0.05); actor.parts.root.visible = false;
         u.hiddenEnemies = [...this.chars.values()].filter((piece) => piece.piece === piece.piece.toLowerCase()).map((piece) => [piece, piece.holder.visible]);
         u.energyShots = [];
@@ -1012,6 +1013,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       } else if (kind === 'q') {
         u.banshee = this.makeBlackBanshee(); actor.holder.add(u.banshee);
         u.bansheeBaseScale = this.formScaleMatchingActor(actor, u.banshee);
+        u.floatH = new T.Box3().setFromObject(actor.parts.root).getSize(new T.Vector3()).y * 0.95; // flotte à hauteur des têtes
         u.banshee.scale.setScalar(0.06); actor.parts.root.visible = false;
         const flameVictims = (u.flameSquares || [])
           .map((sq) => this.chars.get(sq))
@@ -1335,7 +1337,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           c.anim = null; c.holder.position.set(queenPos.x, 0, queenPos.z); c.parts.root.visible = false;
           const grow = smooth(e / 0.9);
           u.angel.scale.setScalar(0.05 + grow * u.angelBaseScale);
-          u.angel.position.y = Math.sin(t * 3.2) * 0.08;
+          u.angel.position.y = grow * u.floatH + Math.sin(t * 3.2) * 0.08;
           u.angel.userData.wings.forEach((wing, i) => { wing.rotation.z = (i ? -1 : 1) * (0.12 + Math.sin(t * 5.2 + i) * 0.25); });
           u.angel.userData.halo.rotation.y = t * 1.4;
           for (const shot of u.energyShots || []) {
@@ -1385,7 +1387,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           c.anim = null; c.holder.position.set(queenPos.x, 0, queenPos.z); c.parts.root.visible = false;
           const grow = smooth(e / 0.9);
           u.banshee.scale.setScalar(0.06 + grow * u.bansheeBaseScale);
-          u.banshee.position.y = Math.sin(t * 3.2) * 0.1;
+          u.banshee.position.y = grow * u.floatH + Math.sin(t * 3.2) * 0.1;
           u.banshee.rotation.y = Math.sin(t * 1.3) * 0.14;
           u.banshee.userData.wisps.forEach((w, i) => { w.rotation.z = (i % 2 ? -1 : 1) * (0.18 + Math.sin(t * 7 + i) * 0.22); });
           if (u.fireLight) u.fireLight.intensity = 1.1 + Math.abs(Math.sin(t * 8)) * 1.8;
