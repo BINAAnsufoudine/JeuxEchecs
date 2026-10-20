@@ -2280,11 +2280,14 @@
     return championLevel === 'above' ? Math.min(MAX_GAME_LEVEL, level + 1) : level;
   }
   // Problème du thème, choisi à ton niveau (échelle de difficulté 1 à 9 de la banque) ou juste au-dessus
-  function championPuzzle(theme, used) {
+  // Pièce qui joue le premier coup de la solution, pour coller au principe annoncé (cavalier, pion…)
+  const firstMover = (p) => { try { const g = new Game(p.fen); g.playUci(p.line[0]); const m = g.lastMove(); return m ? m.piece.toLowerCase() : ''; } catch { return ''; } };
+  function championPuzzle(theme, used, piece) {
     const base = Math.max(1, Math.min(9, Math.round((estimatedElo() - 400) / 200)));
     const target = championLevel === 'above' ? base + 1 : base;
     const done = store.get('pzdone', {});
-    const pool = BANK.filter((p) => p.theme === theme && !used.has(p.id));
+    let pool = BANK.filter((p) => p.theme === theme && !used.has(p.id));
+    if (piece) { const same = pool.filter((p) => firstMover(p) === piece); if (same.length) pool = same; }
     if (!pool.length) return null;
     const dist = (p) => Math.abs((p.rating || p.level * 2) - target) + (done[p.id] ? 1.5 : 0);
     const best = Math.min(...pool.map(dist));
@@ -2328,7 +2331,7 @@
     const steps = [{ text: L(`Bonjour, ${lc(ch.intro)} ${ch.origin} ${reign} Aujourd'hui, c'est moi qui te donne le cours : je vais t'apprendre à jouer comme moi.`, `Hello, ${ch.intro} ${ch.origin} ${reign} Today I am your teacher: I will teach you to play like me.`) }];
     ch.principles.forEach((p, i) => {
       steps.push({ text: L(`Principe ${i + 1} : ${p.title}. ${p.text}`, `Principle ${i + 1}: ${p.title}. ${p.text}`) });
-      const it = championPuzzle(p.theme, used);
+      const it = championPuzzle(p.theme, used, p.piece);
       if (it) {
         used.add(it.id);
         steps.push({ text: L(`À toi, joue comme moi : ${lc(p.task)}`, `Your turn, play like me: ${lc(p.task)}`), fen: it.fen, line: it.line, alts: it.alts, theme: p.theme, why: L(`Bravo ! C'est exactement mon idée : ${p.title.toLowerCase()}.`, `Well done! That's exactly my idea: ${p.title.toLowerCase()}.`) });

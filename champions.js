@@ -35,7 +35,7 @@ window.CHAMPIONS = [
     principles: [
       { title: 'Cherche un meilleur coup', theme: 'tactique', text: 'On me prête cette maxime : quand tu vois un bon coup, cherches-en un meilleur. Ne joue pas le premier coup qui te plaît.', task: 'Une combinaison gagne du matériel. Ne te contente pas du premier coup venu.' },
       { title: 'Ne lâche jamais', theme: 'defense', text: 'J\'ai sauvé des positions que tout le monde croyait perdues. Même menacé, il y a souvent une ressource.', task: "L'adversaire menace de mater : trouve la ressource." },
-      { title: 'Les cavaliers sortent tôt', theme: 'fourchette', text: 'Je conseillais de développer les cavaliers avant les fous. Un cavalier actif peut toucher deux cibles à la fois.', task: 'Une attaque double gagne du matériel. Trouve-la.' },
+      { title: 'Les cavaliers sortent tôt', theme: 'fourchette', piece: 'n', text: 'Je conseillais de développer les cavaliers avant les fous. Un cavalier actif peut toucher deux cibles à la fois.', task: 'Ton cavalier peut attaquer deux pièces à la fois. Trouve la fourchette.' },
     ],
     openings: ['e2e4 e7e5 g1f3 b8c6 f1b5 a7a6 b5a4 g8f6 e1g1 f8e7', 'd2d4 d7d5 c2c4 e7e6 b1c3 g8f6 c1g5 f8e7 e2e3 e8g8'],
     tips: {
@@ -55,8 +55,8 @@ window.CHAMPIONS = [
     intro: 'Je suis José Raúl Capablanca. Je jouais simplement, et je conseille d\'étudier les finales avant tout : quand on sait gagner une finale, on sait vers quoi diriger la partie.',
     principles: [
       { title: 'Simplifie quand tu es devant', theme: 'prise', text: 'Avec du matériel en plus, j\'échange les pièces : moins il en reste, plus l\'avantage compte.', task: 'Une pièce adverse est mal protégée : gagne-la simplement.' },
-      { title: 'Le roi est une pièce forte en finale', theme: 'finale', text: 'En finale, il n\'y a plus de danger de mat : le roi doit marcher au centre et soutenir ses pions.', task: "C'est une finale : trouve le coup gagnant." },
-      { title: 'Des coups simples et clairs', theme: 'clouage', text: 'Je préfère le coup clair au coup compliqué. Un clouage bien vu gagne du matériel sans risque.', task: 'Un alignement adverse se gagne. Trouve le coup simple.' },
+      { title: 'En finale, les pions décident', theme: 'finale', piece: 'p', text: 'En finale, il n\'y a plus de danger de mat : le roi marche au centre, et chaque pion qui avance peut devenir une dame.', task: "C'est une finale : trouve le coup de pion gagnant." },
+      { title: 'Des coups simples et clairs', theme: 'clouage', text: 'Je préfère le coup clair au coup compliqué. Un clouage ou une enfilade bien vus gagnent du matériel sans risque.', task: 'Un alignement adverse se gagne. Trouve le coup simple.' },
     ],
     openings: ['d2d4 d7d5 c2c4 e7e6 b1c3 g8f6 c1g5 f8e7 e2e3 e8g8', 'e2e4 e7e5 g1f3 b8c6 f1b5 a7a6 b5a4 g8f6 e1g1 f8e7'],
     tips: {
@@ -118,7 +118,7 @@ window.CHAMPIONS = [
     intro: 'Je suis Tigran Petrosian. Avant chaque coup, je me demande ce que veut jouer mon adversaire, et je l\'en empêche avant même que la menace n\'existe.',
     principles: [
       { title: 'Prophylaxie : que veut mon adversaire ?', theme: 'defense', text: 'Je regarde d\'abord le plan adverse. Une menace empêchée à temps ne coûte rien.', task: "L'adversaire menace de mater : trouve la parade." },
-      { title: "Neutralise avant d'attaquer", theme: 'clouage', text: 'J\'immobilise les pièces adverses avant de passer à l\'action. Une pièce clouée ne menace plus rien.', task: 'Un clouage gagne du matériel. Cherche les alignements.' },
+      { title: "Neutralise avant d'attaquer", theme: 'clouage', text: 'J\'immobilise les pièces adverses avant de passer à l\'action. Une pièce clouée ne menace plus rien.', task: 'Un clouage ou une enfilade gagne du matériel. Cherche les alignements.' },
       { title: 'La sécurité avant tout', theme: 'prise', text: 'Je ne laisse jamais une pièce sans protection, et je punis celles de l\'adversaire.', task: "Une pièce adverse est mal protégée. Gagne-la sans prendre de risque." },
     ],
     openings: ['d2d4 d7d5 c2c4 e7e6 b1c3 g8f6 c1g5 f8e7 e2e3 e8g8', 'e2e4 e7e6 d2d4 d7d5 b1c3 g8f6 c1g5 f8e7 e4e5 f6d7', 'e2e4 c7c6 d2d4 d7d5 b1c3 d5e4 c3e4 c8f5 e4g3 f5g6'],
@@ -201,7 +201,7 @@ window.CHAMPIONS = [
     style: { attaque: 0.5, tactique: 0.7, positionnel: 0.9, finale: 1, defense: 0.7 },
     intro: 'Je suis Magnus Carlsen. Je gagne des positions que d\'autres jugeraient égales : je joue longtemps, je pose des problèmes à chaque coup et je profite de la moindre imprécision, surtout en finale.',
     principles: [
-      { title: 'Garde la pression', theme: 'clouage', text: 'Je maintiens la tension et j\'attends la faute. Un clouage maintenu fait souffrir l\'adversaire.', task: 'Un clouage gagne du matériel. Cherche les alignements.' },
+      { title: 'Garde la pression', theme: 'clouage', text: 'Je maintiens la tension et j\'attends la faute. Un clouage maintenu fait souffrir l\'adversaire.', task: 'Un clouage ou une enfilade gagne du matériel. Cherche les alignements.' },
       { title: 'Les petites positions se gagnent en finale', theme: 'finale', text: 'Même avec un tout petit avantage, je vais en finale et je finis par l\'emporter.', task: "C'est une finale : trouve le coup gagnant." },
       { title: "Punis l'imprécision", theme: 'prise', text: 'Je ne laisse passer aucune erreur : une pièce mal protégée est aussitôt cueillie.', task: 'Une pièce adverse est mal protégée. Gagne-la.' },
     ],
@@ -240,7 +240,7 @@ window.CHAMPIONS = [
       principles: [
         ['Look for a better move', 'A saying often attributed to me: when you see a good move, look for a better one. Do not play the first move you like.', 'A combination wins material. Do not settle for the first move that comes to mind.'],
         ['Never give up', 'I saved positions everyone thought were lost. Even under threat, there is often a resource.', 'Your opponent threatens mate: find the resource.'],
-        ['Knights come out early', 'I advised developing knights before bishops. An active knight can hit two targets at once.', 'A double attack wins material. Find it.'],
+        ['Knights come out early', 'I advised developing knights before bishops. An active knight can hit two targets at once.', 'Your knight can attack two pieces at once. Find the fork.'],
       ],
       tips: tips('Lasker', ['bring out your knights before your bishops, and castle early.', 'you have a good move in mind? Check whether there is a better one before playing it.', 'before giving check, look at every forcing move and choose the strongest.', 'do not panic. There is almost always a defense, look for it calmly.', 'in the endgame every pawn counts. Play to the end, even when it is tight.']),
     },
@@ -250,8 +250,8 @@ window.CHAMPIONS = [
       intro: 'I am José Raúl Capablanca. I played simply, and I advise studying endgames above all: when you know how to win an endgame, you know where to steer the game.',
       principles: [
         ['Simplify when you are ahead', 'With extra material, I trade pieces: the fewer pieces left, the more the advantage counts.', 'An enemy piece is poorly protected: win it simply.'],
-        ['The king is a strong piece in the endgame', 'In the endgame there is no more mating danger: the king must march to the center and support its pawns.', 'It is an endgame: find the winning move.'],
-        ['Simple, clear moves', 'I prefer the clear move to the complicated one. A well-spotted pin wins material without risk.', 'An enemy alignment can be exploited. Find the simple move.'],
+        ['In the endgame, pawns decide', 'In the endgame there is no more mating danger: the king marches to the center, and every pawn that advances can become a queen.', 'It is an endgame: find the winning pawn move.'],
+        ['Simple, clear moves', 'I prefer the clear move to the complicated one. A well-spotted pin or skewer wins material without risk.', 'An enemy alignment can be exploited. Find the simple move.'],
       ],
       tips: tips('Capablanca', ['a simple, harmonious development, without useless pawn moves.', 'if you are ahead, look for trades that lead you to a winning endgame.', 'an attack is only useful if it wins something clear. Otherwise, simplify.', 'trade off the attacking pieces, and the threat disappears with them.', 'it is the endgame! Activate your king, centralise it and push your passed pawn.']),
     },
@@ -283,7 +283,7 @@ window.CHAMPIONS = [
       intro: 'I am Tigran Petrosian. Before each move, I ask myself what my opponent wants to play, and I prevent it before the threat even exists.',
       principles: [
         ['Prophylaxis: what does my opponent want?', 'I look at my opponent\'s plan first. A threat prevented in time costs nothing.', 'Your opponent threatens mate: find the defense.'],
-        ['Neutralise before attacking', 'I immobilise my opponent\'s pieces before taking action. A pinned piece no longer threatens anything.', 'A pin wins material. Look for pieces lined up.'],
+        ['Neutralise before attacking', 'I immobilise my opponent\'s pieces before taking action. A pinned piece no longer threatens anything.', 'A pin or skewer wins material. Look for pieces lined up.'],
         ['Safety first', 'I never leave a piece unprotected, and I punish my opponent\'s.', 'An enemy piece is poorly protected. Win it without taking risks.'],
       ],
       tips: tips('Petrosian', ['a solid position first. Castle and protect your pieces.', 'before moving, ask yourself what your opponent wants to do, and stop it.', 'a check is only useful if it improves your position. Check your own safety first.', 'reinforce the attacked point before the threat becomes real.', 'in the endgame, give no chance of counterplay. Blockade the enemy pawns.']),
@@ -326,7 +326,7 @@ window.CHAMPIONS = [
       reign: 'World champion from 2013 to 2023', tagline: 'Endless pressure',
       intro: 'I am Magnus Carlsen. I win positions others would call equal: I play long, pose problems with every move and take advantage of the slightest inaccuracy, especially in the endgame.',
       principles: [
-        ['Keep the pressure', 'I keep the tension and wait for the mistake. A pin that stays on makes my opponent suffer.', 'A pin wins material. Look for pieces lined up.'],
+        ['Keep the pressure', 'I keep the tension and wait for the mistake. A pin that stays on makes my opponent suffer.', 'A pin or skewer wins material. Look for pieces lined up.'],
         ['Small edges are won in the endgame', 'Even with a tiny advantage, I go into the endgame and end up winning.', 'It is an endgame: find the winning move.'],
         ['Punish inaccuracy', 'I let no mistake slip: a poorly protected piece is picked up at once.', 'An enemy piece is poorly protected. Win it.'],
       ],
