@@ -377,7 +377,6 @@
     (piece === t ? WARRIOR : NINJA)[t](ctx);
     if (t === 'p') kunai2d(ctx, white);
     if (t === 'n') katana2d(ctx, white ? '#e3e8ef' : '#9fdcff', '#c9a227');
-    if (t === 'q') { katana2d(ctx, '#cfd6df', white ? '#222' : '#c9a227', '#1d1d24', true); ctx.save(); ctx.translate(W, 0); ctx.scale(-1, 1); katana2d(ctx, '#cfd6df', white ? '#222' : '#c9a227', '#1d1d24', true); ctx.restore(); }
     if (t === 'r') { flames2d(ctx, 40, 300); flames2d(ctx, W - 40, 300); }
     cache.set(piece, c);
     return c;

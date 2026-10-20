@@ -602,7 +602,7 @@
       longHair(p, '#f48fb1');
       queenCoat(p, '#fbfbf7', '#d32f4f');
       headband(p.head, '#d32f4f');
-      p.blades = [katana(p.armL, { square: true, blade: '#cfd6df', guard: '#222' }, 0.65), katana(p.armR, { square: true, blade: '#cfd6df', guard: '#222' }, 0.65)]; p.weapon = 'dual';
+      p.weapon = 'brawl'; // plus d'épée : poings et pieds
       return p;
     },
     K() {
@@ -655,7 +655,7 @@
       longHair(p, '#171820');
       queenCoat(p, '#16161c', '#8b1e2d');
       aura(p, '#ff5a46', 2);
-      p.blades = [katana(p.armL, { square: true, blade: '#b9c0ca', guard: '#c9a227' }, 0.65), katana(p.armR, { square: true, blade: '#b9c0ca', guard: '#c9a227' }, 0.65)]; p.weapon = 'dual';
+      p.weapon = 'brawl'; // plus d'épée : poings et pieds
       return p;
     },
     k() {
@@ -833,18 +833,8 @@
         p.armL.rotation.set(-1.6 + 1.0 * e, 0, -0.2);
         p.torso.rotation.y = dir * -0.6 * swing; p.legL.rotation.x = -0.7 * swing; p.legR.rotation.x = 0.4 * swing;
       }
-    } else if (p.weapon === 'dual') {
-      // dame : deux sabres ninja
-      if (state === 'idle') { p.armL.rotation.set(-0.45, 0, -0.35); p.armR.rotation.set(-0.45, 0, 0.35); }
-      else if (state === 'select') { const s = Math.sin(t * 8); p.armL.rotation.set(-2.2 + s * 0.3, 0, -0.6); p.armR.rotation.set(-2.2 - s * 0.3, 0, 0.6); p.torso.rotation.y = s * 0.3; }
-      else if (state === 'run') { p.armL.rotation.set(0.7, 0, -0.5); p.armR.rotation.set(0.7, 0, 0.5); }
-      else if (state === 'punch') {
-        const a = hit % 2 ? 1 : -1; // taillades croisées alternées
-        p.armL.rotation.set(-2.6 + 2.4 * e, 0, -0.6 + 1.0 * e * (a > 0 ? 1 : 0.4)); p.armR.rotation.set(-2.6 + 2.4 * e, 0, 0.6 - 1.0 * e * (a < 0 ? 1 : 0.4));
-        p.torso.rotation.y = a * 0.35 * swing;
-      }
     } else if (p.weapon === 'brawl') {
-      // roi : combat à mains nues, enchaînement direct du gauche, crochet du droit, coup de pied de face, coup de pied circulaire
+      // roi et dame : combat à mains nues, enchaînement direct du gauche, crochet du droit, coup de pied de face, coup de pied circulaire
       if (state === 'idle') { p.armR.rotation.set(-1.0, 0, 0.35); p.armL.rotation.set(-1.15, 0, -0.35); }
       else if (state === 'select') { p.armR.rotation.set(-1.3, 0, 0.3); p.armL.rotation.set(-1.45, 0, -0.3); p.root.position.y = Math.abs(Math.sin(t * 4)) * 0.05; }
       else if (state === 'run') { p.armR.rotation.set(-0.9, 0, 0.3); p.armL.rotation.set(-0.9, 0, -0.3); }
