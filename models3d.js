@@ -402,12 +402,14 @@
     const key = text + bg + fg + vertical;
     if (!kanjiCache.has(key)) {
       const c = document.createElement('canvas');
-      c.width = vertical ? 128 : 256; c.height = vertical ? 256 : 128;
+      const n = [...text].length;
+      c.width = vertical ? 128 : 256; c.height = vertical ? 24 + n * 116 : 128;
       const ctx = c.getContext('2d');
       if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, c.width, c.height); }
       ctx.fillStyle = fg; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = 'bold 100px "Noto Sans CJK JP", "Yu Gothic", "MS Gothic", sans-serif';
-      if (vertical) [...text].forEach((ch, i) => ctx.fillText(ch, 64, 70 + i * 116));
+      // contour sombre pour rester lisible sur un manteau blanc comme sur un manteau noir
+      if (vertical) [...text].forEach((ch, i) => { ctx.lineWidth = 8; ctx.strokeStyle = 'rgba(20,10,10,0.55)'; ctx.strokeText(ch, 64, 70 + i * 116); ctx.fillText(ch, 64, 70 + i * 116); });
       else ctx.fillText(text, 128, 70);
       const tex = new T.CanvasTexture(c);
       if ('colorSpace' in tex) tex.colorSpace = T.SRGBColorSpace;
@@ -480,8 +482,10 @@
       const f = mesh(tongue, flames, Math.sin(a) * 0.307, -0.35 + (i % 2) * 0.02, Math.cos(a) * 0.307 - 0.01);
       f.scale.y = 0.8 + (i % 3) * 0.25; p.torso.add(f);
     }
-    const back = new T.Mesh(geo('kage-back', () => new T.PlaneGeometry(0.065, 0.13)), new T.MeshBasicMaterial({ map: kanjiTexture('火影', null, flame, true), transparent: true, depthWrite: false }));
-    back.position.set(0, 0.11, -0.245); back.rotation.set(-0.15, Math.PI, 0); // plus petit, entre les omoplates p.torso.add(back);
+    // « 火影様 » en rouge dans le dos, sur toute la hauteur du manteau (0,72), légèrement incliné comme le tissu
+    const back = new T.Mesh(geo('kage-back', () => new T.PlaneGeometry(0.2, 0.68)), new T.MeshBasicMaterial({ map: kanjiTexture('火影様', null, '#c8151b', true), transparent: true, depthWrite: false }));
+    back.position.set(0, -0.06, -0.268); back.rotation.set(-0.152, Math.PI, 0);
+    p.torso.add(back);
     for (const side of [-1, 1]) {
       const lapel = mesh(geo('kage-lapel', () => new T.BoxGeometry(0.035, 0.36, 0.02)), mat(cloth), side * 0.085, 0.1, 0.172);
       lapel.rotation.z = side * -0.12; p.torso.add(lapel);
