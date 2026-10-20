@@ -307,6 +307,32 @@
     }
     p.torso.add(mesh(geo('queen-collar', () => new T.TorusGeometry(0.15, 0.025, 8, 20, Math.PI * 1.4)), mat(cloth), 0, 0.3, 0)).children.at(-1).rotation.set(Math.PI / 2, 0, Math.PI * 0.8);
   }
+  // Grosse corde enroulée autour de la taille, nouée en papillon dans le dos (tours)
+  function ropeBelt(p, color, s) {
+    const m = mat(color, { roughness: 0.75 });
+    const bead = geo('rope-bead', () => new T.SphereGeometry(1, 10, 8));
+    const r = 0.163 * s + 0.03;
+    // brins torsadés : une suite de boules aplaties qui fait le tour de la taille
+    for (let i = 0; i < 26; i++) {
+      const a = (i / 26) * Math.PI * 2;
+      const b = mesh(bead, m, Math.sin(a) * r, 0.03 + Math.sin(a * 13) * 0.006, Math.cos(a) * r);
+      b.scale.set(0.034, 0.03, 0.034); b.rotation.y = a; p.torso.add(b);
+    }
+    const back = new T.Group(); back.position.set(0, 0.04, -r - 0.02); p.torso.add(back);
+    const coil = (pts, size) => {
+      const curve = new T.CatmullRomCurve3(pts.map(([x, y, z]) => new T.Vector3(x, y, z)), true);
+      const n = 18;
+      for (let i = 0; i < n; i++) { const q = curve.getPointAt(i / n); const b = mesh(bead, m, q.x, q.y, q.z); b.scale.setScalar(size); back.add(b); }
+    };
+    // deux boucles du papillon, un peu relevées
+    coil([[0, 0, 0], [0.09, 0.06, -0.02], [0.17, 0.05, -0.03], [0.16, -0.03, -0.02], [0.08, -0.02, -0.01]], 0.03);
+    coil([[0, 0, 0], [-0.09, 0.06, -0.02], [-0.17, 0.05, -0.03], [-0.16, -0.03, -0.02], [-0.08, -0.02, -0.01]], 0.03);
+    const knot = mesh(bead, m, 0, 0, -0.01); knot.scale.set(0.05, 0.045, 0.045); back.add(knot);
+    // deux pans qui pendent
+    for (const side of [-1, 1]) for (let i = 1; i <= 6; i++) {
+      const b = mesh(bead, m, side * (0.025 + i * 0.012), -i * 0.04, -0.015 - i * 0.004); b.scale.setScalar(0.028); back.add(b);
+    }
+  }
   // Katana rangé dans son fourreau, en travers du dos (poignée au-dessus de l'épaule droite)
   function backKatana(p, o = {}) {
     const g = new T.Group(); g.position.set(0, 0.16, -0.235); g.rotation.z = -0.75;
@@ -454,8 +480,8 @@
       const f = mesh(tongue, flames, Math.sin(a) * 0.307, -0.35 + (i % 2) * 0.02, Math.cos(a) * 0.307 - 0.01);
       f.scale.y = 0.8 + (i % 3) * 0.25; p.torso.add(f);
     }
-    const back = new T.Mesh(geo('kage-back', () => new T.PlaneGeometry(0.11, 0.22)), new T.MeshBasicMaterial({ map: kanjiTexture('火影', null, flame, true), transparent: true, depthWrite: false }));
-    back.position.set(0, 0.0, -0.275); back.rotation.set(-0.13, Math.PI, 0); p.torso.add(back);
+    const back = new T.Mesh(geo('kage-back', () => new T.PlaneGeometry(0.065, 0.13)), new T.MeshBasicMaterial({ map: kanjiTexture('火影', null, flame, true), transparent: true, depthWrite: false }));
+    back.position.set(0, 0.11, -0.245); back.rotation.set(-0.15, Math.PI, 0); // plus petit, entre les omoplates p.torso.add(back);
     for (const side of [-1, 1]) {
       const lapel = mesh(geo('kage-lapel', () => new T.BoxGeometry(0.035, 0.36, 0.02)), mat(cloth), side * 0.085, 0.1, 0.172);
       lapel.rotation.z = side * -0.12; p.torso.add(lapel);
@@ -562,6 +588,7 @@
     R() {
       const p = skeleton({ wide: 1.25, shirt: '#efede6', pants: '#d6d6d0', vest: '#c8ccd4', belt: '#2d3e70', face: { eye: '#2e6b3a', fierce: true } });
       spikes(p.head, '#8a3b22', { n: 12, len: 0.12 }); headband(p.head, '#2d3e70');
+      ropeBelt(p, '#8b6bb8', 1.25);
       fireHands(p); p.weapon = 'element';
       return p;
     },
@@ -614,6 +641,7 @@
       const p = skeleton({ wide: 1.3, shirt: '#22222b', pants: '#17171e', pads: '#c9a227', belt: '#c9a227', shoes: '#22222b', face: { eye: '#222', fierce: true, scar: true } });
       blackHair(p.head);
       aura(p, '#be78ff', 1.5);
+      ropeBelt(p, '#7b5aa8', 1.3);
       fireHands(p); p.weapon = 'element';
       return p;
     },

@@ -4,7 +4,8 @@
    tips : rappels donnés par l'entraîneur pendant une partie, selon la situation. */
 window.CHAMPIONS = [
   {
-    id: 'steinitz', name: 'Wilhelm Steinitz', reign: 'Champion du monde de 1886 à 1894',
+    id: 'steinitz', name: 'Wilhelm Steinitz', origin: 'Je suis né à Prague, en Bohême, dans l\'Empire d\'Autriche, et je suis devenu américain plus tard.', period: 'de 1886 à 1894', years: 8,
+    reign: 'Champion du monde de 1886 à 1894',
     tagline: 'Le père du jeu positionnel',
     style: { attaque: 0.2, tactique: 0.3, positionnel: 0.9, finale: 0.5, defense: 0.8 },
     intro: 'Je suis Wilhelm Steinitz, le premier champion du monde officiel. J\'ai montré qu\'on ne gagne pas une partie par une attaque folle, mais en accumulant de petits avantages : un pion de plus, une case forte, une pièce mieux placée.',
@@ -23,7 +24,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'lasker', name: 'Emanuel Lasker', reign: 'Champion du monde de 1894 à 1921',
+    id: 'lasker', name: 'Emanuel Lasker', origin: 'Je viens d\'Allemagne.', period: 'de 1894 à 1921', years: 27,
+    reign: 'Champion du monde de 1894 à 1921',
     tagline: 'Le combattant pragmatique',
     style: { attaque: 0.5, tactique: 0.7, positionnel: 0.6, finale: 0.7, defense: 0.8 },
     intro: 'Je suis Emanuel Lasker. J\'ai gardé mon titre 27 ans, un record. Je jouais l\'adversaire autant que la position, je défendais avec ténacité et je ne lâchais jamais une partie.',
@@ -42,7 +44,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'capablanca', name: 'José Raúl Capablanca', reign: 'Champion du monde de 1921 à 1927',
+    id: 'capablanca', name: 'José Raúl Capablanca', origin: 'Je viens de Cuba.', period: 'de 1921 à 1927', years: 6,
+    reign: 'Champion du monde de 1921 à 1927',
     tagline: 'La machine à finales',
     style: { attaque: 0.3, tactique: 0.5, positionnel: 0.9, finale: 1, defense: 0.6 },
     intro: 'Je suis José Raúl Capablanca. Je jouais simplement, et je conseille d\'étudier les finales avant tout : quand on sait gagner une finale, on sait vers quoi diriger la partie.',
@@ -61,7 +64,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'alekhine', name: 'Alexandre Alekhine', reign: 'Champion du monde de 1927 à 1935 et de 1937 à 1946',
+    id: 'alekhine', name: 'Alexandre Alekhine', origin: 'Je suis né en Russie, à Moscou, et je suis devenu français.', period: 'de 1927 à 1935, puis de 1937 à 1946', years: 17,
+    reign: 'Champion du monde de 1927 à 1935 et de 1937 à 1946',
     tagline: "L'attaquant inventif",
     style: { attaque: 0.9, tactique: 0.9, positionnel: 0.6, finale: 0.4, defense: 0.3 },
     intro: 'Je suis Alexandre Alekhine. Je préparais mes attaques avec soin, puis je déclenchais des combinaisons d\'une grande richesse. Je cherche l\'initiative dès l\'ouverture.',
@@ -80,7 +84,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'tal', name: 'Mikhaïl Tal', reign: 'Champion du monde de 1960 à 1961',
+    id: 'tal', name: 'Mikhaïl Tal', origin: 'Je viens de Lettonie, à Riga, du temps de l’Union soviétique.', period: 'de 1960 à 1961', years: 1,
+    reign: 'Champion du monde de 1960 à 1961',
     tagline: 'Le magicien de Riga',
     style: { attaque: 1, tactique: 1, positionnel: 0.3, finale: 0.2, defense: 0.2 },
     intro: 'Je suis Mikhaïl Tal, le magicien de Riga. Je sacrifie des pièces pour ouvrir le roi adverse et j\'entraîne mon adversaire dans une forêt sombre où ses calculs ne tombent plus juste.',
@@ -99,7 +104,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'petrosian', name: 'Tigran Petrosian', reign: 'Champion du monde de 1963 à 1969',
+    id: 'petrosian', name: 'Tigran Petrosian', origin: 'Je suis arménien, né à Tbilissi, en Géorgie, du temps de l’Union soviétique.', period: 'de 1963 à 1969', years: 6,
+    reign: 'Champion du monde de 1963 à 1969',
     tagline: 'Le maître de la prophylaxie',
     style: { attaque: 0.2, tactique: 0.4, positionnel: 0.9, finale: 0.6, defense: 1 },
     intro: 'Je suis Tigran Petrosian. Avant chaque coup, je me demande ce que veut jouer mon adversaire, et je l\'en empêche avant même que la menace n\'existe.',
@@ -118,7 +124,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'fischer', name: 'Bobby Fischer', reign: 'Champion du monde de 1972 à 1975',
+    id: 'fischer', name: 'Bobby Fischer', origin: 'Je viens des États-Unis.', period: 'de 1972 à 1975', years: 3,
+    reign: 'Champion du monde de 1972 à 1975',
     tagline: 'La clarté et la précision',
     style: { attaque: 0.7, tactique: 0.8, positionnel: 0.7, finale: 0.8, defense: 0.5 },
     intro: 'Je suis Bobby Fischer. Je joue des coups clairs et précis, et je me bats pour gagner chaque partie jusqu\'au dernier pion. Mes pièces, surtout mes fous, sont toujours actives.',
@@ -137,7 +144,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'karpov', name: 'Anatoly Karpov', reign: 'Champion du monde de 1975 à 1985',
+    id: 'karpov', name: 'Anatoly Karpov', origin: 'Je viens de Russie, du temps de l’Union soviétique.', period: 'de 1975 à 1985', years: 10,
+    reign: 'Champion du monde de 1975 à 1985',
     tagline: 'Le boa constricteur',
     style: { attaque: 0.3, tactique: 0.5, positionnel: 1, finale: 0.8, defense: 0.7 },
     intro: 'Je suis Anatoly Karpov. J\'étouffe mes adversaires : je retire une à une les bonnes cases de leurs pièces, jusqu\'à ce qu\'elles n\'aient plus aucun coup utile.',
@@ -156,7 +164,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'kasparov', name: 'Garry Kasparov', reign: 'Champion du monde de 1985 à 2000',
+    id: 'kasparov', name: 'Garry Kasparov', origin: 'Je suis né à Bakou, en Azerbaïdjan, du temps de l’Union soviétique, et j’ai défendu les couleurs de la Russie.', period: 'de 1985 à 2000', years: 15,
+    reign: 'Champion du monde de 1985 à 2000',
     tagline: "L'énergie et l'initiative",
     style: { attaque: 0.9, tactique: 0.9, positionnel: 0.7, finale: 0.5, defense: 0.4 },
     intro: 'Je suis Garry Kasparov. J\'allie une préparation immense à un jeu plein d\'énergie. Pour moi, l\'initiative et l\'activité des pièces valent souvent plus qu\'un pion.',
@@ -175,7 +184,8 @@ window.CHAMPIONS = [
     },
   },
   {
-    id: 'carlsen', name: 'Magnus Carlsen', reign: 'Champion du monde de 2013 à 2023',
+    id: 'carlsen', name: 'Magnus Carlsen', origin: 'Je viens de Norvège.', period: 'de 2013 à 2023', years: 10,
+    reign: 'Champion du monde de 2013 à 2023',
     tagline: 'La pression sans fin',
     style: { attaque: 0.5, tactique: 0.7, positionnel: 0.9, finale: 1, defense: 0.7 },
     intro: 'Je suis Magnus Carlsen. Je gagne des positions que d\'autres jugeraient égales : je joue longtemps, je pose des problèmes à chaque coup et je profite de la moindre imprécision, surtout en finale.',
@@ -202,6 +212,7 @@ window.CHAMPIONS = [
   const tips = (n, o) => ({ ouverture: up(o[0]), milieu: up(o[1]), attaque: up(o[2]), defense: up(o[3]), finale: up(o[4]) });
   const EN = {
     steinitz: {
+      origin: 'I was born in Prague, in Bohemia, then part of the Austrian Empire, and later became American.', period: 'from 1886 to 1894',
       reign: 'World champion from 1886 to 1894', tagline: 'The father of positional play',
       intro: 'I am Wilhelm Steinitz, the first official world champion. I showed that a game is not won by a wild attack but by piling up small advantages: an extra pawn, a strong square, a better-placed piece.',
       principles: [
@@ -212,6 +223,7 @@ window.CHAMPIONS = [
       tips: tips('Steinitz', ['no adventures. Develop your pieces and keep a healthy pawn structure.', 'look for the small concrete advantage, a poorly defended piece or a weak square, before launching anything.', 'you have checks available, but only attack if your position is better. Otherwise, strengthen it first.', 'being attacked? Stay calm and look for the simplest defense.', 'in the endgame, your accumulated small advantages become decisive. Keep them.']),
     },
     lasker: {
+      origin: 'I come from Germany.', period: 'from 1894 to 1921',
       reign: 'World champion from 1894 to 1921', tagline: 'The pragmatic fighter',
       intro: 'I am Emanuel Lasker. I kept my title for 27 years, a record. I played the opponent as much as the position, defended stubbornly and never gave up a game.',
       principles: [
@@ -222,6 +234,7 @@ window.CHAMPIONS = [
       tips: tips('Lasker', ['bring out your knights before your bishops, and castle early.', 'you have a good move in mind? Check whether there is a better one before playing it.', 'before giving check, look at every forcing move and choose the strongest.', 'do not panic. There is almost always a defense, look for it calmly.', 'in the endgame every pawn counts. Play to the end, even when it is tight.']),
     },
     capablanca: {
+      origin: 'I come from Cuba.', period: 'from 1921 to 1927',
       reign: 'World champion from 1921 to 1927', tagline: 'The endgame machine',
       intro: 'I am José Raúl Capablanca. I played simply, and I advise studying endgames above all: when you know how to win an endgame, you know where to steer the game.',
       principles: [
@@ -232,6 +245,7 @@ window.CHAMPIONS = [
       tips: tips('Capablanca', ['a simple, harmonious development, without useless pawn moves.', 'if you are ahead, look for trades that lead you to a winning endgame.', 'an attack is only useful if it wins something clear. Otherwise, simplify.', 'trade off the attacking pieces, and the threat disappears with them.', 'it is the endgame! Activate your king, centralise it and push your passed pawn.']),
     },
     alekhine: {
+      origin: 'I was born in Russia, in Moscow, and became French.', period: 'from 1927 to 1935, then from 1937 to 1946',
       reign: 'World champion from 1927 to 1935 and from 1937 to 1946', tagline: 'The inventive attacker',
       intro: 'I am Alexander Alekhine. I prepared my attacks carefully, then unleashed rich combinations. I seek the initiative right from the opening.',
       principles: [
@@ -242,6 +256,7 @@ window.CHAMPIONS = [
       tips: tips('Alekhine', ['seek the initiative from the opening, provoke the enemy pawns and aim at the center.', 'bring your pieces closer to the enemy king before attacking.', 'you can give check. Work out the forcing moves: a combination may be hiding there.', 'the best defense is often a counter-attack. Look for your own threat.', 'even in the endgame, keep your pieces active and create threats.']),
     },
     tal: {
+      origin: 'I come from Latvia, from Riga, in Soviet times.', period: 'from 1960 to 1961',
       reign: 'World champion from 1960 to 1961', tagline: 'The magician from Riga',
       intro: 'I am Mikhail Tal, the magician from Riga. I sacrifice pieces to open up the enemy king and lead my opponent into a dark forest where calculations no longer add up.',
       principles: [
@@ -252,6 +267,7 @@ window.CHAMPIONS = [
       tips: tips('Tal', ['develop fast and open the game, complications will come.', 'look at sacrifices around the enemy king. If it lacks defenders, dare.', 'you have checks! Calculate the sacrifices that open the enemy king.', 'hit back with a threat stronger than your opponent’s.', 'even in the endgame, active pieces are worth more than passive material.']),
     },
     petrosian: {
+      origin: 'I am Armenian, born in Tbilisi, Georgia, in Soviet times.', period: 'from 1963 to 1969',
       reign: 'World champion from 1963 to 1969', tagline: 'The master of prophylaxis',
       intro: 'I am Tigran Petrosian. Before each move, I ask myself what my opponent wants to play, and I prevent it before the threat even exists.',
       principles: [
@@ -262,6 +278,7 @@ window.CHAMPIONS = [
       tips: tips('Petrosian', ['a solid position first. Castle and protect your pieces.', 'before moving, ask yourself what your opponent wants to do, and stop it.', 'a check is only useful if it improves your position. Check your own safety first.', 'reinforce the attacked point before the threat becomes real.', 'in the endgame, give no chance of counterplay. Blockade the enemy pawns.']),
     },
     fischer: {
+      origin: 'I come from the United States.', period: 'from 1972 to 1975',
       reign: 'World champion from 1972 to 1975', tagline: 'Clarity and precision',
       intro: 'I am Bobby Fischer. I play clear, precise moves and fight to win every game down to the last pawn. My pieces, especially my bishops, are always active.',
       principles: [
@@ -272,6 +289,7 @@ window.CHAMPIONS = [
       tips: tips('Fischer', ['develop fast, castle, and put your bishops on the long diagonals.', 'find your least active piece and give it a job.', 'be precise. Calculate to the end before launching the attack.', 'defend with active moves, not by retreating.', 'the endgame is won with precision. Activate your king and your rooks.']),
     },
     karpov: {
+      origin: 'I come from Russia, in Soviet times.', period: 'from 1975 to 1985',
       reign: 'World champion from 1975 to 1985', tagline: 'The boa constrictor',
       intro: 'I am Anatoly Karpov. I smother my opponents: one by one I take away the good squares of their pieces, until they have no useful move left.',
       principles: [
@@ -282,6 +300,7 @@ window.CHAMPIONS = [
       tips: tips('Karpov', ['a solid development, and pawns that gain space.', 'which enemy piece lacks squares? Restrict it even more.', 'no need to force. If the check wins nothing, improve a piece instead.', 'cut the lines of attack and trade off the dangerous pieces.', 'advance step by step, and give your opponent no counterplay.']),
     },
     kasparov: {
+      origin: 'I was born in Baku, Azerbaijan, in Soviet times, and played for Russia.', period: 'from 1985 to 2000',
       reign: 'World champion from 1985 to 2000', tagline: 'Energy and initiative',
       intro: 'I am Garry Kasparov. I combine immense preparation with energetic play. For me, initiative and piece activity are often worth more than a pawn.',
       principles: [
@@ -292,6 +311,7 @@ window.CHAMPIONS = [
       tips: tips('Kasparov', ['play the opening with energy, take the center and develop everything.', 'keep the initiative, every move must ask your opponent a question.', 'you can give check! Calculate the forcing moves, all your pieces must take part.', 'look for active counterplay rather than passive defense.', 'in the endgame too, piece activity decides.']),
     },
     carlsen: {
+      origin: 'I come from Norway.', period: 'from 2013 to 2023',
       reign: 'World champion from 2013 to 2023', tagline: 'Endless pressure',
       intro: 'I am Magnus Carlsen. I win positions others would call equal: I play long, pose problems with every move and take advantage of the slightest inaccuracy, especially in the endgame.',
       principles: [
@@ -305,7 +325,7 @@ window.CHAMPIONS = [
   for (const c of window.CHAMPIONS) {
     const e = EN[c.id];
     if (!e) continue;
-    Object.assign(c, { reign: e.reign, tagline: e.tagline, intro: e.intro, tips: e.tips });
+    Object.assign(c, { origin: e.origin, period: e.period, reign: e.reign, tagline: e.tagline, intro: e.intro, tips: e.tips });
     c.principles.forEach((p, i) => { [p.title, p.text, p.task] = e.principles[i]; });
   }
 })();

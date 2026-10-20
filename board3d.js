@@ -669,6 +669,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             const duration = style === 'tunnel-eat' ? 2.8 : style === 'tunnel-impact' ? 2.45 : style === 'eagle-release' ? 3.65 : 3.85;
             knightAttack = { style, start: now, from: a, target: b, duration, victim: v, hitCount: 0 };
             die({ t0: now + duration, knightAttack });
+          } else if (kind === 'r' && white) {
+            // Tour blanche : elle devient une boule de feu qui roule jusqu'à sa cible en laissant des flammes derrière elle
+            const run = 0.18 + len * 0.045;
+            knightAttack = { style: 'fireroll', start: now, from: a, target: b, run, duration: 0.5 + run + 1.7, victim: v, dir: { x: ux, z: uz }, len, fx: [] };
+            die({ t0: now + knightAttack.duration, knightAttack });
           } else if (kind === 'b' && white) {
             // Fou blanc : boule d'énergie blanche en main, il court frapper sa cible et la projette au loin
             const run = 0.2 + len * 0.06;
@@ -2349,6 +2354,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     tickKnightAttack(c, a, el, t, M) {
       if (a.style === 'chidori') { this.tickChidori(c, a, el, t, M); return; }
       if (a.style === 'orb') { this.tickOrb(c, a, el, t, M); return; }
+      if (a.style === 'fireroll') { this.tickFireroll(c, a, el, t, M); return; }
       const T = this.THREE, white = a.style.startsWith('tunnel') || a.style.startsWith('spin');
       const from = new T.Vector3(a.from.x, 0, a.from.z), target = new T.Vector3(a.target.x, 0, a.target.z);
       const travelEnd = white ? 0.88 : 1.08;
@@ -2694,6 +2700,95 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (u >= 1) c.holder.visible = false;
       return el < a.duration;
     }
+    // Tour blanche : transformation en boule de feu, roulade éclair avec traînée de flammes, percussion
+    makeFirerollFx(a) {
+      const T = this.THREE;
+      const add = (o) => { this.scene.add(o); a.fx.push(o); return o; };
+      const glow = (color, opacity) => new T.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, toneMapped: false });
+      a.ball = add(new T.Group());
+      a.ball.add(new T.Mesh(new T.SphereGeometry(0.34, 20, 16), glow(0xff8a1c, 0.95)));
+      a.ball.add(new T.Mesh(new T.SphereGeometry(0.2, 16, 12), glow(0xffe08a, 1)));
+      a.spikes = [];
+      for (let i = 0; i < 16; i++) {
+        const f = new T.Mesh(new T.ConeGeometry(0.09, 0.32, 6), glow(i % 2 ? 0xff4a12 : 0xffb52a, 0.85));
+        const th = i * 2.399, ph = Math.acos(1 - 2 * (i + 0.5) / 16);
+        const dir = new T.Vector3(Math.sin(ph) * Math.cos(th), Math.cos(ph), Math.sin(ph) * Math.sin(th));
+        f.position.copy(dir).multiplyScalar(0.36); f.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), dir);
+        a.ball.add(f); a.spikes.push(f);
+      }
+      a.ball.visible = false;
+      // traînée : des flammes posées le long du chemin, qui s'allument au passage de la boule
+      a.trail = [];
+      const n = Math.max(6, Math.round(a.len * 5));
+      for (let i = 0; i < n; i++) {
+        const g = new T.Group(), f = i / n;
+        g.position.set(a.from.x + (a.target.x - a.from.x) * f, 0.02, a.from.z + (a.target.z - a.from.z) * f);
+        for (let k = 0; k < 3; k++) {
+          const fl = new T.Mesh(new T.ConeGeometry(0.06 + k * 0.02, 0.22 + k * 0.08, 6), glow(k === 1 ? 0xffc14b : 0xff5a12, 0.85));
+          fl.position.set((k - 1) * 0.07, 0.1 + k * 0.03, ((i + k) % 2 ? 0.05 : -0.05)); fl.userData.phase = i * 1.3 + k; g.add(fl);
+        }
+        const scorch = new T.Mesh(new T.CircleGeometry(0.14, 16), new T.MeshBasicMaterial({ color: 0x24160d, transparent: true, opacity: 0.6, depthWrite: false }));
+        scorch.rotation.x = -Math.PI / 2; scorch.position.y = -0.01; g.add(scorch);
+        g.visible = false; g.userData.f = f; add(g); a.trail.push(g);
+      }
+      a.light = add(new T.PointLight(0xff7a1a, 0, 6, 2));
+    }
+    tickFireroll(c, a, el, t, M) {
+      if (!a.ball) this.makeFirerollFx(a);
+      const clamp = (x) => Math.max(0, Math.min(1, x));
+      const from = a.from, to = a.target, dir = a.dir;
+      const hitAt = 0.5 + a.run, stop = { x: to.x - dir.x * 0.38, z: to.z - dir.z * 0.38 };
+      c.holder.rotation.y = Math.atan2(dir.x, dir.z);
+      const grow = clamp(el / 0.35), back = clamp((el - hitAt - 0.55) / 0.3);
+      // le personnage disparaît dans la boule, puis réapparaît après le choc
+      c.parts.root.visible = el < 0.25 || back >= 1;
+      if (el < 0.5) { M.animate(c.parts, t, 'cast', clamp(el / 0.3)); c.holder.position.set(from.x, 0, from.z); }
+      let bx = from.x, bz = from.z;
+      if (el >= 0.5 && el < hitAt) {
+        const u = (el - 0.5) / a.run;
+        bx = from.x + (stop.x - from.x) * u; bz = from.z + (stop.z - from.z) * u;
+      } else if (el >= hitAt) { bx = stop.x; bz = stop.z; }
+      if (back >= 1) {
+        M.animate(c.parts, t, 'run');
+        const u = clamp((el - hitAt - 0.85) / 0.4);
+        c.holder.position.set(stop.x + (to.x - stop.x) * u, 0, stop.z + (to.z - stop.z) * u);
+      } else if (el >= 0.5) c.holder.position.set(bx, 0, bz);
+      a.ball.visible = el > 0.15 && back < 1;
+      a.ball.position.set(bx, 0.36, bz);
+      a.ball.scale.setScalar(Math.max(0.01, grow * (1 - back) * (el >= hitAt && el < hitAt + 0.15 ? 1.25 : 1)));
+      // roule dans le sens du déplacement
+      a.ball.rotation.set(0, 0, 0);
+      a.ball.rotateOnWorldAxis(new this.THREE.Vector3(dir.z, 0, -dir.x), el * 22);
+      a.spikes.forEach((f, i) => { f.scale.y = 0.75 + Math.abs(Math.sin(t * 17 + i)) * 0.6; });
+      const f = el < 0.5 ? 0 : clamp((el - 0.5) / a.run) * (1 - 0.38 / Math.max(0.4, a.len));
+      a.trail.forEach((g) => {
+        g.visible = el >= 0.5 && g.userData.f <= f + 0.02;
+        const fade = 1 - clamp((el - (a.duration - 0.5)) / 0.5);
+        g.children.forEach((fl) => {
+          if (!fl.userData.phase && fl.userData.phase !== 0) { fl.material.opacity = 0.6 * fade; return; }
+          fl.scale.y = (0.7 + Math.abs(Math.sin(t * 14 + fl.userData.phase)) * 0.5) * fade;
+          fl.material.opacity = 0.85 * fade;
+        });
+      });
+      a.light.position.set(bx, 0.6, bz);
+      a.light.intensity = a.ball.visible ? 3 + Math.random() * 1.5 : 0;
+      if (el >= hitAt && el < hitAt + 0.2) { this.shakeUntil = t + 0.05; this.shakeAmp = 0.12; }
+      if (el >= a.duration) { c.parts.root.visible = true; this.endShot(a); }
+    }
+    // Cible de la boule de feu : elle s'embrase au choc puis est éjectée au loin en brûlant
+    tickFirerollVictim(d, a, c, el, t, M) {
+      const hitAt = 0.5 + a.run, p = a.target;
+      c.holder.rotation.y = Math.atan2(-a.dir.x, -a.dir.z);
+      if (el < hitAt) { c.holder.position.set(p.x, 0, p.z); M.animate(c.parts, t, 'guard', 1); return true; }
+      this.burn(d, t);
+      M.animate(c.parts, t, 'ko', 1);
+      const u = Math.max(0, Math.min(1, (el - hitAt - 0.15) / (a.duration - hitAt - 0.3)));
+      c.holder.position.set(p.x + a.dir.x * u * 7, Math.sin(Math.PI * u) * 2.3, p.z + a.dir.z * u * 7);
+      c.parts.root.rotation.set(-u * 9, u * 5, u * 4);
+      c.parts.root.scale.setScalar(d.base * (1 - u * 0.5));
+      if (u >= 1 || el >= a.duration) { this.endBurn(d); return false; }
+      return true;
+    }
     // Cible du fou noir : électrocutée, elle tombe à genoux puis disparaît
     tickChidoriVictim(d, a, c, el, t, M) {
       const runEnd = 0.7 + a.run, p = a.target;
@@ -2722,6 +2817,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const a = d.knightAttack, c = d.c, el = t - a.start;
       if (a.style === 'chidori') return this.tickChidoriVictim(d, a, c, el, t, M);
       if (a.style === 'orb') return this.tickOrbVictim(d, a, c, el, t, M);
+      if (a.style === 'fireroll') return this.tickFirerollVictim(d, a, c, el, t, M);
       if (a.style === 'tunnel-eat') {
         if (el < 1.55) { c.holder.position.set(a.target.x, 0, a.target.z); return true; }
         M.animate(c.parts, t, 'ko');

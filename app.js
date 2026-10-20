@@ -276,6 +276,7 @@
     toastTimer = setTimeout(() => (t.hidden = true), 2200);
   }
   function modal({ title, text = '', body = null, actions = [] }) {
+    $('modal').querySelector('.sheet').classList.remove('light-sheet');
     $('modal-title').textContent = title;
     $('modal-text').textContent = text;
     $('modal-text').hidden = !text;
@@ -918,6 +919,8 @@
       body.appendChild(b);
     }
     modal({ title: L('Promotion', 'Promotion'), text: L('Choisissez la nouvelle pièce', 'Choose the new piece'), body, actions: [{ label: L('Annuler', 'Cancel'), ghost: true, onClick: () => { if (!chosen) { selected = -1; renderBoard(); } } }] });
+    // Pièces noires : fenêtre blanche pour bien les distinguer
+    $('modal').querySelector('.sheet').classList.toggle('light-sheet', color === 'b');
   }
 
   function commit(from, to, promo) {
@@ -2304,7 +2307,9 @@
     if (!ch) return;
     const name = champShort(ch), used = new Set();
     const lc = (t) => t.charAt(0).toLowerCase() + t.slice(1);
-    const steps = [{ text: L(`Bonjour, ${lc(ch.intro)} Aujourd'hui, c'est moi qui te donne le cours : je vais t'apprendre à jouer comme moi.`, `Hello, ${ch.intro} Today I am your teacher: I will teach you to play like me.`) }];
+    // Présentation : qui je suis, d'où je viens, quand et combien de temps j'ai régné
+    const reign = L(`J'ai été champion du monde ${ch.period}, soit ${ch.years} an${ch.years > 1 ? 's' : ''} de règne.`, `I was world champion ${ch.period}, a reign of ${ch.years} year${ch.years === 1 ? '' : 's'}.`);
+    const steps = [{ text: L(`Bonjour, ${lc(ch.intro)} ${ch.origin} ${reign} Aujourd'hui, c'est moi qui te donne le cours : je vais t'apprendre à jouer comme moi.`, `Hello, ${ch.intro} ${ch.origin} ${reign} Today I am your teacher: I will teach you to play like me.`) }];
     ch.principles.forEach((p, i) => {
       steps.push({ text: L(`Principe ${i + 1} : ${p.title}. ${p.text}`, `Principle ${i + 1}: ${p.title}. ${p.text}`) });
       const it = championPuzzle(p.theme, used);

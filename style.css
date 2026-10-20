@@ -457,3 +457,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .minimap.user-placed { right: auto; }
 .minimap.dragging, .minimap.dragging button { cursor: grabbing; }
 .minimap.dragging { box-shadow: 0 8px 22px rgba(0,0,0,0.55); }
+/* Promotion d'un pion noir : fenêtre blanche pour bien voir les pièces noires */
+.sheet.light-sheet { background: #ffffff; color: #1b1b1f; }
+.sheet.light-sheet .promo-choices button { background: #f1f1ee !important; box-shadow: inset 0 0 0 1px #d8d8d2; }
+.sheet.light-sheet .btn.ghost { color: #1b1b1f; border-color: #c9c9c4; }
