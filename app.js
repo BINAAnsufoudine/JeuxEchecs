@@ -632,7 +632,7 @@
       minimapMove = moveCandidate;
       moveCandidate = null;
       minimapTap = null;
-      minimap.setPointerCapture(e.pointerId);
+      try { minimap.setPointerCapture(e.pointerId); } catch { /* pointeur déjà relâché */ }
       minimap.classList.add('dragging');
       e.preventDefault();
       applyMinimapMove(e, minimapMove);
@@ -642,7 +642,7 @@
     minimapResize = resizeCandidate;
     resizeCandidate = null;
     minimapTap = null;
-    minimap.setPointerCapture(e.pointerId);
+    try { minimap.setPointerCapture(e.pointerId); } catch { /* pointeur déjà relâché */ }
     e.preventDefault();
     applyMinimapResize(e, minimapResize);
   });

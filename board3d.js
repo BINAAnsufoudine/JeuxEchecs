@@ -342,6 +342,9 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.lightningLight.intensity = flash;
       this.sun.intensity = this.weather.sun + flash * 0.23;
       this.hemi.intensity = this.weather.hemi + flash * 0.08;
+      // Ciel assombri par une technique (éclairs du fou noir) : les éclairs n'en brillent que plus
+      const dim = this.skyDim || 0;
+      if (dim > 0) { this.sun.intensity *= 1 - 0.85 * dim; this.hemi.intensity *= 1 - 0.75 * dim; }
     }
 
     buildTerrain(terrain) {
@@ -674,6 +677,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             shot.runStart = shot.impact + 0.9;
             const fireball = kind === 'q';
             die({ t0: now + EXR + shot.impact, hit: true, burn: fireball, burnAt: now + EXR + shot.impact, swept: kind === 'r', counter: { start: now, end: now + EXR, at: a } });
+          } else if (far && kind === 'b' && !white) {
+            // Fou noir : la main chargée d'éclairs, il fonce transpercer sa cible sous un ciel assombri.
+            const run = 0.25 + len * 0.055, pierce = 0.7 + run;
+            knightAttack = { style: 'chidori', start: now, from: a, target: b, run, pierce, duration: pierce + 2.75, victim: v, dir: { x: ux, z: uz }, fx: [] };
+            die({ t0: now + knightAttack.duration, knightAttack });
           } else if (far && kind === 'b') {
             // Le fou fait surgir une rangée de pics du sol jusqu'à sa cible.
             toss = { victim: v, target: b, windup: 0.4, flight: 0.25 + len * 0.07 };
@@ -2310,6 +2318,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
 
     tickKnightAttack(c, a, el, t, M) {
+      if (a.style === 'chidori') { this.tickChidori(c, a, el, t, M); return; }
       const T = this.THREE, white = a.style.startsWith('tunnel') || a.style.startsWith('spin');
       const from = new T.Vector3(a.from.x, 0, a.from.z), target = new T.Vector3(a.target.x, 0, a.target.z);
       const travelEnd = white ? 0.88 : 1.08;
@@ -2440,8 +2449,160 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       });
     }
 
+    // Éclair en zigzag entre deux points (géométrie réutilisée, points retirés à chaque image)
+    zigzag(line, p0, p1, jitter) {
+      const pos = line.geometry.attributes.position, n = pos.count;
+      for (let i = 0; i < n; i++) {
+        const f = i / (n - 1), j = i === 0 || i === n - 1 ? 0 : jitter;
+        pos.setXYZ(i, p0.x + (p1.x - p0.x) * f + (Math.random() - 0.5) * j, p0.y + (p1.y - p0.y) * f + (Math.random() - 0.5) * j, p0.z + (p1.z - p0.z) * f + (Math.random() - 0.5) * j);
+      }
+      pos.needsUpdate = true;
+    }
+    makeChidoriFx(a) {
+      const T = this.THREE;
+      const add = (o) => { this.scene.add(o); a.fx.push(o); return o; };
+      const bolt = (color, n) => add(new T.Line(
+        new T.BufferGeometry().setAttribute('position', new T.BufferAttribute(new Float32Array(n * 3), 3)),
+        new T.LineBasicMaterial({ color, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }),
+      ));
+      a.ball = add(new T.Mesh(new T.SphereGeometry(0.1, 16, 12), new T.MeshBasicMaterial({ color: 0xdff6ff, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false })));
+      a.glow = new T.Mesh(new T.SphereGeometry(0.2, 16, 12), new T.MeshBasicMaterial({ color: 0x4fb4ff, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }));
+      a.ball.add(a.glow);
+      a.handBolts = Array.from({ length: 6 }, (_, i) => bolt(i % 2 ? 0xffffff : 0x7fd0ff, 5));
+      a.trailBolts = Array.from({ length: 3 }, () => bolt(0x9fdcff, 9));
+      a.victimBolts = Array.from({ length: 7 }, (_, i) => bolt(i % 3 ? 0x8fd8ff : 0xffffff, 7));
+      a.skyBolts = Array.from({ length: 2 }, () => bolt(0xe6f6ff, 11));
+      a.light = add(new T.PointLight(0x7fc8ff, 0, 6, 2));
+      a.sky = {
+        background: this.scene.background && this.scene.background.isColor ? this.scene.background.clone() : null,
+        fog: this.scene.fog && this.scene.fog.color ? this.scene.fog.color.clone() : null,
+        sun: this.sun.intensity, hemi: this.hemi.intensity, exposure: this.renderer.toneMappingExposure,
+      };
+      a.hand = new T.Vector3(); a.tmp = new T.Vector3(); a.tmp2 = new T.Vector3();
+    }
+    restoreSky(a) {
+      if (a.sky.background && this.scene.background && this.scene.background.isColor) this.scene.background.copy(a.sky.background);
+      if (a.sky.fog && this.scene.fog && this.scene.fog.color) this.scene.fog.color.copy(a.sky.fog);
+      if (!this.weather) { this.sun.intensity = a.sky.sun; this.hemi.intensity = a.sky.hemi; }
+      this.renderer.toneMappingExposure = a.sky.exposure;
+      a.sky = null; this.skyDim = 0;
+    }
+    // Fou noir : charge d'éclairs, course, transpercement ; le ciel s'assombrit pendant toute l'attaque
+    tickChidori(c, a, el, t, M) {
+      const T = this.THREE;
+      if (!a.ball) this.makeChidoriFx(a);
+      const clamp = (x) => Math.max(0, Math.min(1, x));
+      const from = a.from, to = a.target, dir = a.dir;
+      const stop = { x: to.x - dir.x * 0.32, z: to.z - dir.z * 0.32 };
+      const runEnd = 0.7 + a.run, release = a.pierce + 1.35;
+      c.holder.rotation.y = Math.atan2(dir.x, dir.z);
+      // Le ciel s'assombrit dès la charge et revient à la fin
+      const dim = clamp(el / 0.45) * (1 - clamp((el - (a.duration - 0.55)) / 0.5));
+      if (a.sky) {
+        this.skyDim = dim;
+        const night = new T.Color(0x05070d);
+        if (a.sky.background && this.scene.background && this.scene.background.isColor) this.scene.background.copy(a.sky.background).lerp(night, dim * 0.9);
+        if (a.sky.fog && this.scene.fog && this.scene.fog.color) this.scene.fog.color.copy(a.sky.fog).lerp(night, dim * 0.85);
+        // Sans météo, l'éclairage n'est pas recalculé à chaque image : on l'assombrit ici
+        if (!this.weather) { this.sun.intensity = a.sky.sun * (1 - 0.85 * dim); this.hemi.intensity = a.sky.hemi * (1 - 0.75 * dim); }
+        this.renderer.toneMappingExposure = a.sky.exposure * (1 - 0.5 * dim);
+      }
+      if (el < 0.7) {
+        // Charge : la main droite crépite d'éclairs
+        M.animate(c.parts, t, 'cast', clamp(el / 0.3));
+        c.parts.armR.rotation.set(-0.6, 0, 0.9);
+        c.holder.position.set(from.x, 0, from.z);
+      } else if (el < runEnd) {
+        const u = (el - 0.7) / a.run;
+        M.animate(c.parts, t, 'run');
+        c.parts.armR.rotation.set(0.9, 0, 0.35); // main chargée tenue en arrière pendant la course
+        c.parts.torso.rotation.x = 0.35;
+        c.holder.position.set(from.x + (stop.x - from.x) * u, 0, from.z + (stop.z - from.z) * u);
+        this.trail(c, true, t);
+      } else if (el < a.duration - 0.35) {
+        // Transpercement : bras tendu dans la cible, puis il retire sa main
+        M.animate(c.parts, t, 'idle');
+        const hold = el < release;
+        c.parts.armR.rotation.set(hold ? -1.55 : -0.5, 0, hold ? 0.05 : 0.3);
+        c.parts.torso.rotation.x = hold ? 0.22 : 0;
+        c.holder.position.set(stop.x, 0, stop.z);
+      } else {
+        // Il prend la case de la victime disparue
+        const u = clamp((el - (a.duration - 0.35)) / 0.35);
+        M.animate(c.parts, t, 'run');
+        c.holder.position.set(stop.x + (to.x - stop.x) * u, 0, stop.z + (to.z - stop.z) * u);
+      }
+      c.parts.armR.updateMatrixWorld(true);
+      a.hand.set(0, -0.24, 0); c.parts.armR.localToWorld(a.hand);
+      const pulse = 0.8 + Math.abs(Math.sin(t * 37)) * 0.4;
+      const grow = clamp(el / 0.5) * (el < release ? 1 : 1 - clamp((el - release) / 0.3));
+      a.ball.position.copy(a.hand);
+      a.ball.scale.setScalar(Math.max(0.01, grow * pulse * (el > runEnd ? 1.3 : 1)));
+      a.ball.material.opacity = grow * 0.95; a.glow.material.opacity = grow * 0.45;
+      const tmp = a.tmp, tmp2 = a.tmp2;
+      for (const line of a.handBolts) {
+        line.material.opacity = grow > 0.05 && Math.random() < 0.8 ? grow : 0;
+        const ang = Math.random() * Math.PI * 2, reach = 0.25 + Math.random() * 0.2;
+        tmp.set(a.hand.x + Math.cos(ang) * reach, a.hand.y + (Math.random() - 0.3) * 0.5, a.hand.z + Math.sin(ang) * reach);
+        this.zigzag(line, a.hand, tmp, 0.09);
+      }
+      // Traînée d'éclairs pendant la course
+      a.trailBolts.forEach((line, i) => {
+        const on = el >= 0.7 && el < runEnd + 0.15;
+        line.material.opacity = on ? 0.85 : 0;
+        if (!on) return;
+        tmp2.set(c.holder.position.x, 0.45 + i * 0.1, c.holder.position.z);
+        tmp.set(from.x, 0.35 + i * 0.12, from.z).lerp(tmp2, 0.55);
+        this.zigzag(line, tmp, tmp2, 0.12);
+      });
+      // Électrocution de la cible, et la foudre qui tombe du ciel sombre
+      const shock = el >= runEnd && el < a.pierce + 1.4;
+      for (const line of a.victimBolts) {
+        line.material.opacity = shock && Math.random() < 0.85 ? 0.95 : 0;
+        if (!line.material.opacity) continue;
+        const ang = Math.random() * Math.PI * 2;
+        tmp2.set(to.x + (Math.random() - 0.5) * 0.2, 0.2 + Math.random(), to.z + (Math.random() - 0.5) * 0.2);
+        tmp.set(to.x + Math.cos(ang) * 0.5, 0.75 + (Math.random() - 0.5) * 1.1, to.z + Math.sin(ang) * 0.5);
+        this.zigzag(line, tmp2, tmp, 0.12);
+      }
+      a.skyBolts.forEach((line, i) => {
+        const beat = (el - runEnd - i * 0.17) % 0.42;
+        const on = shock && beat >= 0 && beat < 0.09;
+        line.material.opacity = on ? 1 : 0;
+        if (on) this.zigzag(line, tmp.set(to.x + (i - 0.5) * 0.8, 9, to.z - 0.5), tmp2.set(to.x, 0.9, to.z), 0.7);
+      });
+      if (shock) a.light.position.set(to.x, 1.1, to.z); else a.light.position.copy(a.hand);
+      a.light.intensity = shock ? 4 + Math.random() * 6 : grow * (1.5 + Math.random() * 1.5);
+      if (shock && Math.random() < 0.3) { this.shakeUntil = t + 0.04; this.shakeAmp = 0.04; }
+      if (el >= a.duration) this.endShot(a);
+    }
+    // Cible du fou noir : électrocutée, elle tombe à genoux puis disparaît
+    tickChidoriVictim(d, a, c, el, t, M) {
+      const runEnd = 0.7 + a.run, p = a.target;
+      const shockEnd = a.pierce + 1.4, kneelEnd = shockEnd + 0.55;
+      c.holder.position.set(p.x, 0, p.z);
+      c.holder.rotation.y = Math.atan2(-a.dir.x, -a.dir.z);
+      if (el < runEnd) { M.animate(c.parts, t, 'guard', 1); return true; }
+      if (el < shockEnd) {
+        // Secousses électriques
+        M.animate(c.parts, t, 'ko', 1);
+        c.parts.root.position.set((Math.random() - 0.5) * 0.06, 0.04 + Math.random() * 0.05, (Math.random() - 0.5) * 0.06);
+        c.parts.root.rotation.set(-0.25 + (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.3);
+        return true;
+      }
+      c.parts.root.rotation.set(0, 0, 0);
+      M.animate(c.parts, t, 'kneel', Math.min(1, (el - shockEnd) / 0.5));
+      if (el >= kneelEnd) {
+        const fade = Math.max(0, Math.min(1, (el - kneelEnd) / (a.duration - 0.4 - kneelEnd)));
+        c.parts.root.scale.set(d.base * (1 - fade * 0.3), d.base * Math.max(0.001, 1 - fade), d.base * (1 - fade * 0.3));
+        if (fade >= 1) { c.holder.visible = false; return el < a.duration; }
+      }
+      return el < a.duration;
+    }
+
     tickKnightVictim(d, t, M) {
       const a = d.knightAttack, c = d.c, el = t - a.start;
+      if (a.style === 'chidori') return this.tickChidoriVictim(d, a, c, el, t, M);
       if (a.style === 'tunnel-eat') {
         if (el < 1.55) { c.holder.position.set(a.target.x, 0, a.target.z); return true; }
         M.animate(c.parts, t, 'ko');
@@ -2650,6 +2811,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     endShot(c) {
       const s = c && c.fx ? c : c && c.anim && c.anim.shot;
       if (!s) return;
+      if (s.sky) this.restoreSky(s);
       for (const o of s.fx || []) {
         this.scene.remove(o);
         o.traverse((x) => { if (x.geometry) x.geometry.dispose(); if (x.material) x.material.dispose(); });
