@@ -764,7 +764,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           ...o.mateUltimate, actor, king: next.get(o.mateUltimate.to),
           start: now + (actor.anim ? actor.anim.dur : 0.35) + 0.15,
           fromPos: { ...this.sqToPos(o.mateUltimate.attackerTo) }, target: this.sqToPos(o.mateUltimate.to),
-          duration: o.mateUltimate.piece === 'k' ? 9.6 : o.mateUltimate.piece === 'K' ? 7.8 : o.mateUltimate.piece.toLowerCase() === 'q' ? 6.8 : o.mateUltimate.piece.toLowerCase() === 'p' ? 3.6 : o.mateUltimate.piece === 'N' ? 4.8 : o.mateUltimate.piece === 'n' ? 5.4 : o.mateUltimate.piece === 'b' ? 5.8 : 3.4,
+          duration: o.mateUltimate.piece === 'k' ? 9.6 : o.mateUltimate.piece === 'K' ? 7.8 : o.mateUltimate.piece.toLowerCase() === 'q' ? 6.8 : o.mateUltimate.piece.toLowerCase() === 'p' ? 3.6 : o.mateUltimate.piece === 'N' ? 4.8 : o.mateUltimate.piece === 'n' ? 5.4 : o.mateUltimate.piece === 'b' ? 5.8 : o.mateUltimate.piece === 'R' ? 6.0 : o.mateUltimate.piece === 'r' ? 7.0 : 3.4,
         } : null;
         if (this.mateUltimate) {
           this.makeMateUltimateFx(this.mateUltimate);
@@ -920,6 +920,103 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           shred.visible = false; shred.userData.seed = i; u.fx.add(shred); u.shreds.push(shred);
         }
         u.fireLight = new T.PointLight(0xdcecff, 0, 4, 2); this.scene.add(u.fireLight);
+      } else if (u.piece === 'R') {
+        // Tour blanche : tornade de flammes blanches qui avance jusqu'au roi et l'emporte en le brûlant
+        const glow = (color, opacity) => new T.MeshBasicMaterial({ color, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide });
+        u.tornado = new T.Group(); u.tornado.visible = false; u.fx.add(u.tornado);
+        u.tornadoFlames = [];
+        for (let layer = 0; layer < 9; layer++) {
+          const ring = new T.Group(); ring.position.y = 0.12 + layer * 0.26; ring.userData.layer = layer; u.tornado.add(ring);
+          const r = 0.16 + layer * 0.075;
+          for (let k = 0; k < 8; k++) {
+            const a = k * Math.PI / 4 + layer * 0.45;
+            const fl = new T.Mesh(new T.ConeGeometry(0.07 + layer * 0.012, 0.34 + layer * 0.03, 6, 1, true), glow(k % 3 === 0 ? 0xffffff : k % 3 === 1 ? 0xe6f6ff : 0xc4e4ff, 0.8));
+            fl.position.set(Math.cos(a) * r, 0, Math.sin(a) * r); fl.rotation.set(0, -a, 0.5); fl.userData.phase = layer * 1.1 + k;
+            ring.add(fl); u.tornadoFlames.push(fl);
+          }
+        }
+        u.tornadoCore = new T.Mesh(new T.CylinderGeometry(0.8, 0.14, 2.4, 20, 1, true), glow(0xf4fbff, 0.28));
+        u.tornadoCore.position.y = 1.2; u.tornado.add(u.tornadoCore);
+        // traînée de flammes blanches sur le chemin
+        u.trail = [];
+        const dx = u.target.x - u.fromPos.x, dz = u.target.z - u.fromPos.z, n = Math.max(5, Math.round(Math.hypot(dx, dz) * 4));
+        for (let i = 1; i <= n; i++) {
+          const g = new T.Group(), f = i / n;
+          g.position.set(u.fromPos.x + dx * f, 0.02, u.fromPos.z + dz * f);
+          for (let k = 0; k < 3; k++) {
+            const fl = new T.Mesh(new T.ConeGeometry(0.06 + k * 0.02, 0.24 + k * 0.08, 6, 1, true), glow(k === 1 ? 0xffffff : 0xd8eeff, 0.85));
+            fl.position.set((k - 1) * 0.08, 0.12 + k * 0.03, (i + k) % 2 ? 0.05 : -0.05); fl.userData.phase = i * 1.3 + k; g.add(fl);
+          }
+          const scorch = new T.Mesh(new T.CircleGeometry(0.16, 16), new T.MeshBasicMaterial({ color: 0x3a3a40, transparent: true, opacity: 0.5, depthWrite: false }));
+          scorch.rotation.x = -Math.PI / 2; scorch.position.y = -0.012; g.add(scorch);
+          g.visible = false; g.userData.f = f; u.fx.add(g); u.trail.push(g);
+        }
+        u.ashes = [];
+        for (let i = 0; i < 26; i++) {
+          const ash = new T.Mesh(new T.IcosahedronGeometry(0.03 + Math.random() * 0.04, 0), new T.MeshBasicMaterial({ color: i % 3 ? 0xd9d6d0 : 0x8f8b86, transparent: true, opacity: 0 }));
+          u.fx.add(ash); u.ashes.push(ash);
+        }
+        u.fireLight = new T.PointLight(0xeef7ff, 0, 7, 2); this.scene.add(u.fireLight);
+      } else if (u.piece === 'r') {
+        // Tour noire : golem de feu noir, double coup de poings, puis boule de feu noire tombée du ciel
+        // feu noir : flammes opaques très sombres, avec quelques braises rouge sombre qui luisent
+        const dark = (k) => k % 4 === 3
+          ? new T.MeshBasicMaterial({ color: 0x9a1430, transparent: true, opacity: 0.55, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide })
+          : new T.MeshBasicMaterial({ color: k % 2 ? 0x050307 : 0x10060e, side: T.DoubleSide });
+        u.golemFlames = new T.Group(); u.golemFlames.visible = false; u.fx.add(u.golemFlames);
+        for (let i = 0; i < 16; i++) {
+          const a = i * 2.399, h = 0.3 + (i % 4) * 0.12;
+          const fl = new T.Mesh(new T.ConeGeometry(0.09 + (i % 3) * 0.03, h, 7, 1, true), dark(i));
+          fl.position.set(Math.cos(a) * 0.32, 0.2 + (i % 6) * 0.26, Math.sin(a) * 0.32); fl.userData = { phase: i * 1.3, y: fl.position.y };
+          u.golemFlames.add(fl);
+        }
+        u.ball = new T.Group(); u.ball.visible = false; u.fx.add(u.ball);
+        u.ball.add(new T.Mesh(new T.SphereGeometry(0.55, 20, 16), new T.MeshBasicMaterial({ color: 0x07040a })));
+        u.ball.add(new T.Mesh(new T.SphereGeometry(0.66, 20, 16), new T.MeshBasicMaterial({ color: 0x6a1a3a, transparent: true, opacity: 0.35, blending: T.AdditiveBlending, depthWrite: false })));
+        u.ballSpikes = [];
+        for (let i = 0; i < 18; i++) {
+          const th = i * 2.399, ph = Math.acos(1 - 2 * (i + 0.5) / 18);
+          const dir = new T.Vector3(Math.sin(ph) * Math.cos(th), Math.cos(ph), Math.sin(ph) * Math.sin(th));
+          const f = new T.Mesh(new T.ConeGeometry(0.14, 0.5, 6, 1, true), dark(i));
+          f.position.copy(dir).multiplyScalar(0.6); f.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), dir);
+          u.ball.add(f); u.ballSpikes.push(f);
+        }
+        // Le trou laissé par l'impact, les fissures du plateau et les flammes noires qui y brûlent
+        u.crater = new T.Group(); u.crater.position.set(u.target.x, 0, u.target.z); u.crater.visible = false; u.fx.add(u.crater);
+        const hole = new T.Mesh(new T.CircleGeometry(0.62, 28), new T.MeshBasicMaterial({ color: 0x020102 }));
+        hole.rotation.x = -Math.PI / 2; hole.position.y = 0.035; u.crater.add(hole);
+        const rim = new T.Mesh(new T.RingGeometry(0.6, 0.86, 28), new T.MeshBasicMaterial({ color: 0x2a1d16, transparent: true, opacity: 0.9, depthWrite: false }));
+        rim.rotation.x = -Math.PI / 2; rim.position.y = 0.033; u.crater.add(rim);
+        u.cracks = [];
+        for (let c = 0; c < 11; c++) {
+          let a = c * Math.PI * 2 / 11 + Math.random() * 0.3, x = Math.cos(a) * 0.7, z = Math.sin(a) * 0.7;
+          const len = 1.6 + Math.random() * 1.9, steps = 6;
+          for (let s = 0; s < steps; s++) {
+            a += (Math.random() - 0.5) * 0.7;
+            const l = len / steps, nx = x + Math.cos(a) * l, nz = z + Math.sin(a) * l;
+            // les fissures s'arrêtent au bord du plateau
+            if (Math.abs(u.target.x + nx) > 3.95 || Math.abs(u.target.z + nz) > 3.95) break;
+            const seg = new T.Mesh(new T.BoxGeometry(l + 0.02, 0.012, 0.05 - s * 0.006), new T.MeshBasicMaterial({ color: s % 2 ? 0x0a0608 : 0x160a12 }));
+            seg.position.set((x + nx) / 2, 0.034, (z + nz) / 2); seg.rotation.y = -Math.atan2(nz - z, nx - x);
+            seg.userData.order = s; seg.visible = false; u.crater.add(seg); u.cracks.push(seg);
+            x = nx; z = nz;
+          }
+        }
+        u.craterFlames = [];
+        for (let i = 0; i < 10; i++) {
+          const a = i * Math.PI * 2 / 10, h = 0.5 + (i % 3) * 0.25;
+          const fl = new T.Mesh(new T.ConeGeometry(0.12, h, 7, 1, true), dark(i));
+          fl.position.set(Math.cos(a) * 0.45, h / 2, Math.sin(a) * 0.45); fl.userData = { phase: i * 1.7 };
+          u.crater.add(fl); u.craterFlames.push(fl);
+        }
+        u.shock = new T.Mesh(new T.RingGeometry(0.5, 0.75, 40), new T.MeshBasicMaterial({ color: 0x3a1a2a, transparent: true, opacity: 0, side: T.DoubleSide, depthWrite: false }));
+        u.shock.rotation.x = -Math.PI / 2; u.shock.position.set(u.target.x, 0.06, u.target.z); u.fx.add(u.shock);
+        u.smoke = [];
+        for (let i = 0; i < 12; i++) {
+          const puff = new T.Mesh(new T.SphereGeometry(0.22 + (i % 3) * 0.08, 10, 8), new T.MeshBasicMaterial({ color: 0x1a1418, transparent: true, opacity: 0, depthWrite: false }));
+          u.fx.add(puff); u.smoke.push(puff);
+        }
+        u.fireLight = new T.PointLight(0x9a2a4a, 0, 7, 2); this.scene.add(u.fireLight);
       } else if (u.piece === 'b') {
         // Fou noir : des nuages d'orage noirs, d'où descend en spirale un dragon de foudre violette.
         const glow = (color, opacity) => new T.MeshBasicMaterial({ color, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false });
@@ -1572,6 +1669,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         return true;
       }
       if (u.piece === 'b') return this.tickBlackDragon(u, c, e, t, M, clamp, smooth);
+      if (u.piece === 'R') return this.tickFireTornado(u, c, e, t, M, clamp, smooth);
+      if (u.piece === 'r') return this.tickFireGolem(u, c, e, t, M, clamp, smooth);
       if (kind === 'n') {
         const dx = target.x - u.fromPos.x, dz = target.z - u.fromPos.z, len = Math.hypot(dx, dz) || 1;
         if (u.piece === 'N') {
@@ -1794,6 +1893,164 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       return true;
     }
 
+    // Remplace les matériaux d'un personnage par des copies teintées (rendues par resetMateUltimate)
+    tintCharacter(u, c, color, amount) {
+      if (!u.swaps) u.swaps = [];
+      const T = this.THREE, list = [];
+      c.parts.root.traverse((o) => {
+        if (!o.isMesh || !o.material || Array.isArray(o.material) || !o.material.color || o.material.blending === T.AdditiveBlending) return;
+        u.swaps.push([o, o.material]);
+        o.material = o.material.clone(); o.material.userData.baseColor = o.material.color.clone(); list.push(o.material);
+        if (amount) o.material.color.lerp(new T.Color(color), amount);
+      });
+      return list;
+    }
+    untint(u, c) {
+      if (!u.swaps) return;
+      u.swaps = u.swaps.filter(([o, m]) => {
+        let mine = false; c.parts.root.traverse((x) => { if (x === o) mine = true; });
+        if (!mine) return true;
+        o.material.dispose(); o.material = m; return false;
+      });
+    }
+    // Tour blanche : tornade de feu blanc, avance jusqu'au roi, l'aspire et le réduit en cendres en tournant
+    tickFireTornado(u, c, e, t, M, clamp, smooth) {
+      const target = u.target, from = u.fromPos, actor = u.actor, king = u.king;
+      const travelStart = 0.7, arrive = 2.4, end = u.duration;
+      if (c === actor) {
+        c.anim = null; c.holder.position.set(from.x, 0, from.z);
+        c.holder.rotation.y = Math.atan2(target.x - from.x, target.z - from.z);
+        // la tour tourne sur elle-même de plus en plus vite et disparaît dans la tornade, puis revient à la fin
+        const back = e > end - 0.6;
+        c.parts.root.visible = e < 0.6 || back;
+        if (e < 0.6) { M.animate(c.parts, t, 'cast', 1); c.parts.root.rotation.set(0, e * e * 40, 0); }
+        else if (back) { M.animate(c.parts, t, 'idle', 1); c.parts.root.rotation.set(0, 0, 0); }
+        const grow = smooth(e / 0.7) * (1 - smooth((e - (end - 1.0)) / 0.6));
+        const go = smooth((e - travelStart) / (arrive - travelStart));
+        const tw = u.tornado;
+        tw.visible = grow > 0.01;
+        tw.position.set(from.x + (target.x - from.x) * go + Math.sin(t * 5) * 0.06, 0, from.z + (target.z - from.z) * go + Math.cos(t * 4) * 0.06);
+        tw.scale.set(Math.max(0.01, grow), Math.max(0.01, grow), Math.max(0.01, grow));
+        tw.rotation.y = t * 11;
+        tw.children.forEach((ring) => { if (ring.userData.layer !== undefined) ring.rotation.y = t * (2 + ring.userData.layer * 0.4); });
+        u.tornadoFlames.forEach((fl) => { fl.scale.y = 0.7 + Math.abs(Math.sin(t * 15 + fl.userData.phase)) * 0.6; });
+        u.tornadoCore.material.opacity = 0.22 + Math.abs(Math.sin(t * 9)) * 0.12;
+        const fade = 1 - clamp((e - (end - 0.8)) / 0.8);
+        u.trail.forEach((g) => {
+          g.visible = e > travelStart && g.userData.f <= go + 0.02 && fade > 0;
+          g.children.forEach((fl) => {
+            if (fl.userData.phase === undefined) { fl.material.opacity = 0.5 * fade; return; }
+            fl.scale.y = (0.7 + Math.abs(Math.sin(t * 14 + fl.userData.phase)) * 0.5) * fade; fl.material.opacity = 0.85 * fade;
+          });
+        });
+        u.fireLight.position.set(tw.position.x, 1.2, tw.position.z);
+        u.fireLight.intensity = grow * (4 + Math.random() * 1.5);
+        if (e > arrive && e < arrive + 0.2) { this.shakeUntil = t + 0.05; this.shakeAmp = 0.08; }
+      } else if (c === king) {
+        c.anim = null; c.holder.position.set(target.x, 0, target.z);
+        if (e < arrive) { M.animate(c.parts, t, 'guard', 1); return true; }
+        M.animate(c.parts, t, 'ko', 1);
+        // aspiré dans la tornade : il monte, tourne et blanchit en brûlant, puis tombe en cendres
+        if (!u.kingTint) u.kingTint = this.tintCharacter(u, c, 0xffffff, 0);
+        const lift = smooth((e - arrive) / 0.8), burn = smooth((e - arrive - 0.9) / 1.6);
+        const white = new this.THREE.Color(0xf4f4f4), w = smooth((e - arrive) / 1.4);
+        u.kingTint.forEach((m) => m.color.copy(m.userData.baseColor).lerp(white, w));
+        c.parts.root.position.set(Math.sin(t * 9) * 0.12 * lift, lift * 1.1 + Math.sin(t * 6) * 0.08, Math.cos(t * 9) * 0.12 * lift);
+        c.parts.root.rotation.set(Math.sin(t * 7) * 0.4 * lift, (e - arrive) * (6 + (e - arrive) * 6), 0);
+        const s = Math.max(0.005, 1 - burn);
+        c.parts.root.scale.set(u.kingBase.scale.x * s, u.kingBase.scale.y * s, u.kingBase.scale.z * s);
+        u.ashes.forEach((ash, i) => {
+          const age = Math.max(0, e - (arrive + 1.0 + (i % 9) * 0.12)), a = i * 2.399 + age * 6, r = 0.25 + age * 0.25;
+          ash.position.set(target.x + Math.cos(a) * r, 0.4 + age * (0.9 + (i % 3) * 0.2), target.z + Math.sin(a) * r);
+          ash.material.opacity = age > 0 ? Math.max(0, 0.85 - age * 0.35) : 0;
+          ash.scale.setScalar(age > 0 ? 0.6 + Math.min(1, age * 0.4) : 0.001);
+        });
+        if (burn >= 1) c.holder.visible = false;
+      }
+      return true;
+    }
+    // Tour noire : golem de feu noir, écrase le roi de ses deux poings, bondit dans le ciel et retombe en boule de feu noire
+    tickFireGolem(u, c, e, t, M, clamp, smooth) {
+      const T = this.THREE, target = u.target, from = u.fromPos, actor = u.actor, king = u.king;
+      const dx = target.x - from.x, dz = target.z - from.z, len = Math.hypot(dx, dz) || 1;
+      const stand = { x: target.x - dx / len * 0.75, z: target.z - dz / len * 0.75 };
+      const runStart = 0.9, runEnd = 1.9, slam = 2.4, leap = 2.8, apex = 3.6, impact = 4.3, reform = 4.9;
+      if (c === actor) {
+        c.anim = null; c.holder.rotation.y = Math.atan2(dx, dz);
+        const grow = smooth(e / 0.8);
+        if (!u.golemTint) u.golemTint = this.tintCharacter(u, c, 0x120a0e, 0);
+        const coal = new T.Color(0x140a10);
+        if (e < reform) u.golemTint.forEach((m) => m.color.copy(m.userData.baseColor).lerp(coal, 0.85 * grow));
+        else if (u.golemTint.length) { this.untint(u, c); u.golemTint = []; }
+        const big = e < reform ? 1 + 0.9 * grow : 1;
+        c.parts.root.scale.copy(u.actorBase.scale).multiplyScalar(big);
+        c.parts.root.visible = e < leap + 0.35 || e >= reform;
+        let pos = { x: from.x, y: 0, z: from.z };
+        if (e < runStart) M.animate(c.parts, t, 'guard', 1);
+        else if (e < runEnd) {
+          M.animate(c.parts, t, 'run');
+          const p = smooth((e - runStart) / (runEnd - runStart));
+          pos = { x: from.x + (stand.x - from.x) * p, y: Math.abs(Math.sin(p * Math.PI * 3)) * 0.12, z: from.z + (stand.z - from.z) * p };
+        } else if (e < leap) {
+          M.animate(c.parts, t, 'guard', 1);
+          pos = { x: stand.x, y: 0, z: stand.z };
+          // les deux mains liées se lèvent au-dessus de la tête puis s'abattent sur le roi
+          const raise = smooth((e - runEnd) / (slam - 0.15 - runEnd)), down = smooth((e - (slam - 0.15)) / 0.15);
+          const ax = -0.4 - raise * 2.6 + down * 2.4;
+          c.parts.armL.rotation.set(ax, 0, -0.25); c.parts.armR.rotation.set(ax, 0, 0.25);
+          c.parts.torso.rotation.x = -0.2 * raise + 0.55 * down;
+        } else if (e < reform) {
+          // bond très haut au-dessus du roi, puis chute en boule de feu noire
+          const up = smooth((e - leap) / (apex - leap)), fall = clamp((e - apex) / (impact - apex));
+          pos = e < apex ? { x: stand.x + (target.x - stand.x) * up, y: up * 7, z: stand.z + (target.z - stand.z) * up } : { x: target.x, y: Math.max(0.5, 7 - fall * fall * 6.5), z: target.z };
+          M.animate(c.parts, t, 'run');
+        } else { M.animate(c.parts, t, 'idle', 1); pos = { x: target.x, y: 0, z: target.z }; }
+        c.holder.position.set(pos.x, pos.y, pos.z);
+        // flammes noires sur le golem
+        u.golemFlames.visible = grow > 0.05 && e < leap + 0.35;
+        u.golemFlames.position.set(pos.x, pos.y, pos.z);
+        u.golemFlames.scale.setScalar(Math.max(0.01, grow * big * 0.8));
+        u.golemFlames.children.forEach((fl) => { fl.scale.y = 0.7 + Math.abs(Math.sin(t * 13 + fl.userData.phase)) * 0.6; fl.position.y = fl.userData.y + Math.sin(t * 5 + fl.userData.phase) * 0.04; });
+        // boule de feu noire
+        const ballOn = e > leap + 0.3 && e < impact;
+        u.ball.visible = ballOn;
+        u.ball.position.set(pos.x, pos.y + 0.6, pos.z);
+        u.ball.scale.setScalar(Math.max(0.01, smooth((e - leap - 0.3) / 0.3)));
+        u.ball.rotation.set(t * 4, t * 3, 0);
+        u.ballSpikes.forEach((f, i) => { f.scale.y = 0.7 + Math.abs(Math.sin(t * 17 + i)) * 0.6; });
+        // impact : onde de choc, trou, fissures, fumée et flammes noires
+        const after = e - impact;
+        u.crater.visible = after > 0;
+        u.crater.children[0].scale.setScalar(Math.max(0.01, smooth(after / 0.25)));
+        u.crater.children[1].scale.setScalar(Math.max(0.01, smooth(after / 0.25)));
+        u.cracks.forEach((seg) => { seg.visible = after > seg.userData.order * 0.06; });
+        u.craterFlames.forEach((fl) => { fl.scale.y = 0.6 + Math.abs(Math.sin(t * 12 + fl.userData.phase)) * 0.6; fl.visible = after > 0.05; });
+        u.shock.material.opacity = after > 0 && after < 0.7 ? 0.8 * (1 - after / 0.7) : 0;
+        u.shock.scale.setScalar(1 + clamp(after / 0.7) * 5);
+        u.smoke.forEach((puff, i) => {
+          const age = after - (i % 6) * 0.15;
+          puff.material.opacity = age > 0 ? Math.max(0, 0.6 - age * 0.25) : 0;
+          const a = i * 2.399;
+          puff.position.set(target.x + Math.cos(a) * (0.3 + age * 0.3), 0.3 + age * 0.7, target.z + Math.sin(a) * (0.3 + age * 0.3));
+          puff.scale.setScalar(1 + Math.max(0, age) * 0.8);
+        });
+        u.fireLight.position.set(pos.x, pos.y + 1, pos.z);
+        u.fireLight.intensity = (after > 0 ? 6 * Math.max(0.25, 1 - after) : grow * 2.5) + Math.random() * 0.6;
+        if (e >= slam && e < slam + 0.2) { this.shakeUntil = t + 0.05; this.shakeAmp = 0.14; }
+        if (after >= 0 && after < 0.45) { this.shakeUntil = t + 0.05; this.shakeAmp = 0.35 * (1 - after / 0.45); }
+      } else if (c === king) {
+        c.anim = null; c.holder.position.set(target.x, 0, target.z);
+        if (e < slam) { M.animate(c.parts, t, 'guard', 1); return true; }
+        // écrasé au sol par les poings du golem, puis englouti par l'impact
+        M.animate(c.parts, t, 'ko', 1);
+        c.parts.root.rotation.set(-Math.PI / 2, 0, 0);
+        c.parts.root.position.y = 0.04;
+        c.parts.root.scale.set(u.kingBase.scale.x * 1.1, u.kingBase.scale.y * 0.45, u.kingBase.scale.z * 1.1);
+        if (e >= impact) c.holder.visible = false;
+      }
+      return true;
+    }
+
     // Dragon de foudre noire : orage, appel de la foudre, descente en spirale, enroulement autour du roi
     tickBlackDragon(u, c, e, t, M, clamp, smooth) {
       const T = this.THREE, target = u.target, actor = u.actor, king = u.king;
@@ -1935,6 +2192,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (u.fireLight) this.scene.remove(u.fireLight);
       if (u.flashLight) this.scene.remove(u.flashLight);
       if (u.sky) this.restoreSky(u);
+      if (u.swaps) { u.swaps.forEach(([o, m]) => { o.material.dispose(); o.material = m; }); u.swaps = null; }
+      if (u.actorRoot) u.actorRoot.visible = true;
       if (u.actorLight) this.scene.remove(u.actorLight);
       if (u.columnLight) this.scene.remove(u.columnLight);
       if (u.energyLight) this.scene.remove(u.energyLight);
