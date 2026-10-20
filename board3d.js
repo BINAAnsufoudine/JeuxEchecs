@@ -669,6 +669,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             const duration = style === 'tunnel-eat' ? 2.8 : style === 'tunnel-impact' ? 2.45 : style === 'eagle-release' ? 3.65 : 3.85;
             knightAttack = { style, start: now, from: a, target: b, duration, victim: v, hitCount: 0 };
             die({ t0: now + duration, knightAttack });
+          } else if (kind === 'b' && white) {
+            // Fou blanc : boule d'énergie blanche en main, il court frapper sa cible et la projette au loin
+            const run = 0.2 + len * 0.06;
+            knightAttack = { style: 'orb', start: now, from: a, target: b, run, duration: 0.5 + run + 1.9, victim: v, dir: { x: ux, z: uz }, fx: [] };
+            die({ t0: now + knightAttack.duration, knightAttack });
           } else if ((far && (kind === 'q' || kind === 'r')) || (kind === 'r' && !white)) {
             // Technique à distance lancée depuis sa case : boule de feu (dame), dragon d'eau (tour blanche)
             // ou dragon de feu (tour noire, même au contact) qui réduit sa cible en cendres
@@ -684,12 +689,6 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             const run = 0.25 + len * 0.055, pierce = 0.7 + run;
             knightAttack = { style: 'chidori', start: now, from: a, target: b, run, pierce, duration: pierce + 2.75, victim: v, dir: { x: ux, z: uz }, fx: [] };
             die({ t0: now + knightAttack.duration, knightAttack });
-          } else if (far && kind === 'b') {
-            // Le fou fait surgir une rangée de pics du sol jusqu'à sa cible.
-            toss = { victim: v, target: b, windup: 0.4, flight: 0.25 + len * 0.07 };
-            toss.impact = toss.windup + toss.flight;
-            toss.runStart = toss.impact + 0.45;
-            die({ t0: now + EXR + toss.impact + 0.2, hit: true, impaled: true, spikes: toss, counter: { start: now, end: now + EXR, at: a } });
           } else {
             // Corps à corps : l'attaquant s'arrête face à sa cible, puis la technique propre à chaque pièce
             const gap = Math.min(0.62, len);
@@ -2321,6 +2320,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
     tickKnightAttack(c, a, el, t, M) {
       if (a.style === 'chidori') { this.tickChidori(c, a, el, t, M); return; }
+      if (a.style === 'orb') { this.tickOrb(c, a, el, t, M); return; }
       const T = this.THREE, white = a.style.startsWith('tunnel') || a.style.startsWith('spin');
       const from = new T.Vector3(a.from.x, 0, a.from.z), target = new T.Vector3(a.target.x, 0, a.target.z);
       const travelEnd = white ? 0.88 : 1.08;
@@ -2578,6 +2578,94 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (shock && Math.random() < 0.3) { this.shakeUntil = t + 0.04; this.shakeAmp = 0.04; }
       if (el >= a.duration) this.endShot(a);
     }
+    // Fou blanc : boule d'énergie blanche tenue en main, course, frappe, la boule grossit et projette la cible
+    makeOrbFx(a) {
+      const T = this.THREE;
+      const add = (o) => { this.scene.add(o); a.fx.push(o); return o; };
+      const glow = (color, opacity) => new T.MeshBasicMaterial({ color, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false });
+      a.orb = add(new T.Group());
+      a.orb.add(new T.Mesh(new T.SphereGeometry(1, 20, 14), glow(0xffffff, 0.95)));
+      a.orb.add(new T.Mesh(new T.SphereGeometry(1.45, 20, 14), glow(0xbfe4ff, 0.35)));
+      a.rings = [0, 1, 2].map((i) => {
+        const ring = new T.Mesh(new T.TorusGeometry(1.15, 0.07, 6, 32), glow(i === 1 ? 0xdff2ff : 0xffffff, 0.7));
+        ring.rotation.set(i * 1.1, i * 0.7, 0); a.orb.add(ring); return ring;
+      });
+      a.blast = add(new T.Mesh(new T.RingGeometry(0.3, 0.45, 40), glow(0xe8f6ff, 0)));
+      a.blast.rotation.x = -Math.PI / 2;
+      a.light = add(new T.PointLight(0xdcefff, 0, 5, 2));
+      a.hand = new T.Vector3();
+    }
+    tickOrb(c, a, el, t, M) {
+      if (!a.orb) this.makeOrbFx(a);
+      const clamp = (x) => Math.max(0, Math.min(1, x));
+      const from = a.from, to = a.target, dir = a.dir;
+      const stop = { x: to.x - dir.x * 0.42, z: to.z - dir.z * 0.42 };
+      const runEnd = 0.5 + a.run, hit = runEnd, burst = hit + 0.5;
+      c.holder.rotation.y = Math.atan2(dir.x, dir.z);
+      if (el < 0.5) {
+        // La boule se forme dans la main droite
+        M.animate(c.parts, t, 'cast', clamp(el / 0.3));
+        c.parts.armR.rotation.set(-1.2, 0, 0.5);
+        c.holder.position.set(from.x, 0, from.z);
+      } else if (el < runEnd) {
+        M.animate(c.parts, t, 'run');
+        c.parts.armR.rotation.set(-1.0, 0, 0.6); // boule tenue sur le côté pendant la course
+        const u = (el - 0.5) / a.run;
+        c.holder.position.set(from.x + (stop.x - from.x) * u, 0, from.z + (stop.z - from.z) * u);
+        if (c.parts.fast) this.trail(c, true, t);
+      } else if (el < a.duration - 0.35) {
+        // Frappe bras tendu, puis le bras reste en avant pendant l'explosion
+        M.animate(c.parts, t, 'idle');
+        c.parts.armR.rotation.set(-1.6, 0, 0.05);
+        c.parts.torso.rotation.x = 0.2;
+        c.holder.position.set(stop.x, 0, stop.z);
+      } else {
+        const u = clamp((el - (a.duration - 0.35)) / 0.35);
+        M.animate(c.parts, t, 'run');
+        c.holder.position.set(stop.x + (to.x - stop.x) * u, 0, stop.z + (to.z - stop.z) * u);
+      }
+      c.parts.armR.updateMatrixWorld(true);
+      a.hand.set(0, -0.26, 0); c.parts.armR.localToWorld(a.hand);
+      // Taille : petite en main, elle grossit au contact puis éclate
+      const form = clamp(el / 0.45), grow = clamp((el - hit) / 0.45), pop = clamp((el - burst) / 0.3);
+      const size = (0.09 + form * 0.05 + grow * 0.32) * (1 + pop * 0.8);
+      a.orb.visible = pop < 1;
+      a.orb.position.copy(a.hand);
+      if (el >= hit) a.orb.position.lerp({ x: to.x - dir.x * 0.05, y: 0.75, z: to.z - dir.z * 0.05 }, grow * 0.6);
+      a.orb.scale.setScalar(Math.max(0.001, size));
+      a.orb.children[0].material.opacity = 0.95 * (1 - pop);
+      a.orb.children[1].material.opacity = (0.3 + Math.abs(Math.sin(t * 25)) * 0.15) * (1 - pop);
+      a.rings.forEach((ring, i) => { ring.rotation.x += 0.35 + i * 0.1; ring.rotation.y += 0.27 - i * 0.05; ring.material.opacity = 0.7 * (1 - pop); });
+      a.blast.position.set(to.x, 0.04, to.z);
+      a.blast.material.opacity = el >= burst ? 0.85 * (1 - clamp((el - burst) / 0.6)) : 0;
+      a.blast.scale.setScalar(1 + clamp((el - burst) / 0.6) * 7);
+      a.light.position.copy(a.orb.position);
+      a.light.intensity = (el >= burst ? 7 * (1 - pop) : 1 + form + grow * 4) * (pop >= 1 ? 0 : 1);
+      if (el >= burst && el < burst + 0.25) { this.shakeUntil = t + 0.05; this.shakeAmp = 0.1; }
+      if (el >= a.duration) this.endShot(a);
+    }
+    // Cible du fou blanc : encaisse la boule, puis projetée loin derrière elle, dans l'axe de l'attaque
+    tickOrbVictim(d, a, c, el, t, M) {
+      const hit = 0.5 + a.run, launch = hit + 0.45;
+      const p = a.target;
+      c.holder.rotation.y = Math.atan2(-a.dir.x, -a.dir.z);
+      if (el < hit) { c.holder.position.set(p.x, 0, p.z); M.animate(c.parts, t, 'guard', 1); return true; }
+      if (el < launch) {
+        // Repoussée par la boule qui grossit contre elle
+        M.animate(c.parts, t, 'ko', 1);
+        const push = (el - hit) / (launch - hit);
+        c.holder.position.set(p.x + a.dir.x * push * 0.25, 0, p.z + a.dir.z * push * 0.25);
+        c.parts.root.rotation.set(-0.5 * push, 0, Math.sin(t * 40) * 0.08);
+        return true;
+      }
+      const u = Math.max(0, Math.min(1, (el - launch) / (a.duration - 0.35 - launch)));
+      M.animate(c.parts, t, 'ko', 1);
+      c.holder.position.set(p.x + a.dir.x * (0.25 + u * 7.5), Math.sin(Math.PI * u) * 2.2, p.z + a.dir.z * (0.25 + u * 7.5));
+      c.parts.root.rotation.set(-0.5 - u * 9, u * 4, u * 6);
+      c.parts.root.scale.setScalar(d.base * (1 - u * 0.6));
+      if (u >= 1) c.holder.visible = false;
+      return el < a.duration;
+    }
     // Cible du fou noir : électrocutée, elle tombe à genoux puis disparaît
     tickChidoriVictim(d, a, c, el, t, M) {
       const runEnd = 0.7 + a.run, p = a.target;
@@ -2605,6 +2693,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     tickKnightVictim(d, t, M) {
       const a = d.knightAttack, c = d.c, el = t - a.start;
       if (a.style === 'chidori') return this.tickChidoriVictim(d, a, c, el, t, M);
+      if (a.style === 'orb') return this.tickOrbVictim(d, a, c, el, t, M);
       if (a.style === 'tunnel-eat') {
         if (el < 1.55) { c.holder.position.set(a.target.x, 0, a.target.z); return true; }
         M.animate(c.parts, t, 'ko');
