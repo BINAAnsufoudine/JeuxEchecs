@@ -453,3 +453,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .champ-actions .btn { flex: 1 1 140px; }
 .player-profile .player-style { color: var(--text); font-weight: 600; font-size: 0.85rem; margin-top: 2px; }
 .player-profile .player-style[hidden] { display: none; }
+/* Aperçu 2D déplacé par le joueur */
+.minimap.user-placed { right: auto; }
+.minimap.dragging, .minimap.dragging button { cursor: grabbing; }
+.minimap.dragging { box-shadow: 0 8px 22px rgba(0,0,0,0.55); }

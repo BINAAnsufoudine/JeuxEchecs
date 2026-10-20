@@ -582,19 +582,60 @@
   }
   const minimap = $('minimap');
   let minimapResize = null, resizeCandidate = null, suppressMinimapClick = false, minimapTap = null;
+  let minimapMove = null, moveCandidate = null;
+  // Position et taille choisies par le joueur, gardées d'une partie à l'autre (position en fraction de la place libre)
+  const minimapPrefs = Object.assign({ size: 0, fx: null, fy: null }, store.get('minimap', {}));
+  function placeMinimap() {
+    if (minimapPrefs.size) { minimap.style.setProperty('--minimap-size', `${minimapPrefs.size}px`); minimap.classList.add('user-sized'); }
+    if (minimapPrefs.fx === null) return;
+    const wrap = $('board-wrap').getBoundingClientRect();
+    if (!wrap.width) return;
+    const size = minimap.getBoundingClientRect().width || minimapPrefs.size || 150;
+    const free = (n) => Math.max(0, n - size - 16);
+    minimap.style.left = `${8 + minimapPrefs.fx * free(wrap.width)}px`;
+    minimap.style.top = `${8 + minimapPrefs.fy * free(wrap.height)}px`;
+    minimap.classList.add('user-placed');
+  }
+  // Mémorise la position actuelle (en px dans l'échiquier) sous forme de fractions
+  function rememberMinimapPlace(left, top) {
+    const wrap = $('board-wrap').getBoundingClientRect(), size = minimap.getBoundingClientRect().width;
+    const frac = (v, n) => { const free = n - size - 16; return free > 0 ? Math.max(0, Math.min(1, (v - 8) / free)) : 0; };
+    minimapPrefs.fx = frac(left, wrap.width); minimapPrefs.fy = frac(top, wrap.height);
+    store.set('minimap', minimapPrefs);
+  }
+  window.addEventListener('resize', placeMinimap);
   minimap.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
-    const rect = minimap.getBoundingClientRect();
+    const rect = minimap.getBoundingClientRect(), wrap = $('board-wrap').getBoundingClientRect();
     const left = e.clientX - rect.left <= 12;
     const bottom = rect.bottom - e.clientY <= 12;
-    if (!left && !bottom) return;
+    // Ailleurs que sur les bords : un glissement déplace l'aperçu
+    if (!left && !bottom) {
+      moveCandidate = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, left: rect.left - wrap.left, top: rect.top - wrap.top };
+      return;
+    }
     // Attendre un vrai glissement avant de redimensionner : un simple appui
     // près du bord doit toujours pouvoir sélectionner ou jouer un coup.
-    resizeCandidate = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, size: rect.width, edge: left && bottom ? 'corner' : left ? 'left' : 'bottom' };
+    resizeCandidate = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, size: rect.width, left: rect.left - wrap.left, top: rect.top - wrap.top, edge: left && bottom ? 'corner' : left ? 'left' : 'bottom' };
   });
-  minimap.addEventListener('pointermove', (e) => {
+  // Suivi au niveau de la fenêtre : un glissement rapide peut quitter l'aperçu avant la capture du pointeur
+  window.addEventListener('pointermove', (e) => {
     if (minimapResize && e.pointerId === minimapResize.pointerId) {
       applyMinimapResize(e, minimapResize);
+      return;
+    }
+    if (minimapMove && e.pointerId === minimapMove.pointerId) {
+      applyMinimapMove(e, minimapMove);
+      return;
+    }
+    if (moveCandidate && e.pointerId === moveCandidate.pointerId && Math.hypot(e.clientX - moveCandidate.x, e.clientY - moveCandidate.y) >= 7) {
+      minimapMove = moveCandidate;
+      moveCandidate = null;
+      minimapTap = null;
+      minimap.setPointerCapture(e.pointerId);
+      minimap.classList.add('dragging');
+      e.preventDefault();
+      applyMinimapMove(e, minimapMove);
       return;
     }
     if (!resizeCandidate || e.pointerId !== resizeCandidate.pointerId || Math.hypot(e.clientX - resizeCandidate.x, e.clientY - resizeCandidate.y) < 7) return;
@@ -605,6 +646,15 @@
     e.preventDefault();
     applyMinimapResize(e, minimapResize);
   });
+  function applyMinimapMove(e, drag) {
+    const wrap = $('board-wrap').getBoundingClientRect(), size = minimap.getBoundingClientRect().width;
+    const left = Math.max(0, Math.min(wrap.width - size, drag.left + e.clientX - drag.x));
+    const top = Math.max(0, Math.min(wrap.height - size, drag.top + e.clientY - drag.y));
+    minimap.style.left = `${left}px`; minimap.style.top = `${top}px`;
+    minimap.classList.add('user-placed');
+    drag.last = { left, top };
+    suppressMinimapClick = true;
+  }
   function applyMinimapResize(e, drag) {
     const dx = drag.x - e.clientX, dy = e.clientY - drag.y;
     const delta = drag.edge === 'left' ? dx : drag.edge === 'bottom' ? dy : (Math.abs(dx) >= Math.abs(dy) ? dx : dy);
@@ -612,17 +662,36 @@
     const size = Math.max(120, Math.min(420, bounds.width - 16, bounds.height - 16, drag.size + delta));
     minimap.style.setProperty('--minimap-size', `${size}px`);
     minimap.classList.add('user-sized');
+    // Aperçu déplacé : il s'agrandit vers la gauche en gardant son bord droit, sans sortir de l'échiquier
+    if (minimap.classList.contains('user-placed')) {
+      const left = Math.max(0, Math.min(bounds.width - size, drag.left + drag.size - size));
+      const top = Math.max(0, Math.min(bounds.height - size, drag.top));
+      minimap.style.left = `${left}px`; minimap.style.top = `${top}px`;
+      drag.last = { left, top };
+    }
+    drag.lastSize = size;
     suppressMinimapClick = true;
   }
   const endMinimapResize = (e) => {
     if (resizeCandidate && e.pointerId === resizeCandidate.pointerId) resizeCandidate = null;
+    if (moveCandidate && e.pointerId === moveCandidate.pointerId) moveCandidate = null;
+    if (minimapMove && e.pointerId === minimapMove.pointerId) {
+      if (minimap.hasPointerCapture(e.pointerId)) minimap.releasePointerCapture(e.pointerId);
+      if (e.type === 'pointercancel' || !minimap.contains(e.target)) suppressMinimapClick = false;
+      minimap.classList.remove('dragging');
+      if (minimapMove.last) rememberMinimapPlace(minimapMove.last.left, minimapMove.last.top);
+      minimapMove = null;
+      return;
+    }
     if (!minimapResize || e.pointerId !== minimapResize.pointerId) return;
     if (minimap.hasPointerCapture(e.pointerId)) minimap.releasePointerCapture(e.pointerId);
-    if (e.type === 'pointercancel') suppressMinimapClick = false;
+    if (e.type === 'pointercancel' || !minimap.contains(e.target)) suppressMinimapClick = false;
+    if (minimapResize.lastSize) { minimapPrefs.size = minimapResize.lastSize; store.set('minimap', minimapPrefs); }
+    if (minimapResize.last) rememberMinimapPlace(minimapResize.last.left, minimapResize.last.top);
     minimapResize = null;
   };
-  minimap.addEventListener('pointerup', endMinimapResize);
-  minimap.addEventListener('pointercancel', endMinimapResize);
+  window.addEventListener('pointerup', endMinimapResize);
+  window.addEventListener('pointercancel', endMinimapResize);
   minimap.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
     const cell = e.target.closest('button[data-sq]');
@@ -647,6 +716,7 @@
   });
   function renderBoard() {
     const el = $('board');
+    if (!minimapMove && !minimapResize) placeMinimap();
     const s = game.state;
     const last = game.lastMove();
     const targets = marks ? marks.map((to) => ({ to })) : selected >= 0 ? game.movesFrom(selected) : [];
