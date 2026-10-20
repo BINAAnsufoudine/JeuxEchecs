@@ -287,6 +287,26 @@
     const hole = mesh(geo('shuhole', () => new T.CylinderGeometry(0.025, 0.025, 0.045, 10)), mat('#111')); hole.rotation.x = Math.PI / 2; star.add(hole);
     return star;
   }
+  // Longs cheveux qui tombent dans le dos jusqu'aux fesses
+  function longHair(p, color) {
+    // repère du buste (la tête est réduite de moitié) : du haut du crâne jusqu'aux fesses, par-dessus le manteau
+    const m = mat(color, { double: true, roughness: 0.6 });
+    const hair = mesh(geo('long-back-hair', () => new T.CylinderGeometry(0.115, 0.27, 0.47, 18, 1, true, Math.PI * 0.55, Math.PI * 0.9)), m, 0, 0.235, -0.02);
+    p.torso.add(hair); p.hair = hair;
+    const tip = mesh(geo('long-hair-tip', () => new T.ConeGeometry(0.27, 0.07, 18, 1, true, Math.PI * 0.55, Math.PI * 0.9)), m, 0, -0.035, -0.02);
+    tip.rotation.x = Math.PI; p.torso.add(tip);
+  }
+  // Manteau long de la dame, ouvert devant, col et bordure de couleur
+  function queenCoat(p, cloth, trim) {
+    const coat = mesh(geo('queen-coat', () => new T.CylinderGeometry(0.19, 0.29, 0.66, 24, 1, true, 0.5, Math.PI * 2 - 1.0)), mat(cloth, { double: true, roughness: 0.8 }), 0, -0.04, -0.005);
+    p.torso.add(coat); p.cloak = coat;
+    p.torso.add(mesh(geo('queen-coat-hem', () => new T.CylinderGeometry(0.292, 0.292, 0.03, 24, 1, true, 0.5, Math.PI * 2 - 1.0)), mat(trim, { double: true }), 0, -0.36, -0.005));
+    for (const side of [-1, 1]) {
+      const lapel = mesh(geo('queen-lapel', () => new T.BoxGeometry(0.03, 0.4, 0.02)), mat(trim), side * 0.1, 0.06, 0.17);
+      lapel.rotation.z = side * -0.15; p.torso.add(lapel);
+    }
+    p.torso.add(mesh(geo('queen-collar', () => new T.TorusGeometry(0.15, 0.025, 8, 20, Math.PI * 1.4)), mat(cloth), 0, 0.3, 0)).children.at(-1).rotation.set(Math.PI / 2, 0, Math.PI * 0.8);
+  }
   // Katana rangé dans son fourreau, en travers du dos (poignée au-dessus de l'épaule droite)
   function backKatana(p, o = {}) {
     const g = new T.Group(); g.position.set(0, 0.16, -0.235); g.rotation.z = -0.75;
@@ -446,9 +466,9 @@
   // groupe animé que le personnage afin de conserver les déplacements du plateau.
   function mountedNinja(black) {
     const rider = skeleton({
-      shirt: black ? '#2a4fa8' : '#30384f', pants: black ? '#202b45' : '#40455a',
-      belt: black ? '#c9a227' : '#c0392b', sleeve: black ? '#203a7a' : '#40455a',
-      shoes: black ? '#c9a227' : '#30384f', face: { eye: black ? '#222' : '#2f7fe0', fierce: true, mask: true },
+      shirt: black ? '#1d1d26' : '#eceef2', pants: black ? '#15151c' : '#d6d9df',
+      belt: black ? '#c9a227' : '#2d3e70', sleeve: black ? '#1d1d26' : '#eceef2',
+      shoes: black ? '#c9a227' : '#d6d9df', face: { eye: black ? '#222' : '#2f7fe0', fierce: true, mask: true },
     });
     const riderRoot = rider.root;
     rider.riderRoot = riderRoot;
@@ -527,36 +547,36 @@
     N() {
       // Ninja masqué sur un grand chien blanc.
       const p = mountedNinja(false);
-      spikes(p.head, '#dfe3ea', { n: 12, len: 0.17 }); headband(p.head, '#c0392b');
-      samuraiArmor(p, '#9aa3b5', '#c0392b');
+      spikes(p.head, '#dfe3ea', { n: 12, len: 0.17 }); headband(p.head, '#2d3e70');
+      samuraiArmor(p, '#e6e9ee', '#2d3e70');
       p.blade = katana(p.armR, { blade: '#e3e8ef', guard: '#c9a227' }, 0.7); p.weapon = 'katana'; p.fast = true;
       return p;
     },
     B() {
-      const p = skeleton({ shirt: '#3f8f5a', pants: '#2d5e3f', vest: '#c0392b', belt: '#2d5e3f', shoes: '#5b3b22', face: { eye: '#3a2a1a', grin: true, marks: true } });
-      spikes(p.head, '#f4f4f4', { n: 12 }); headband(p.head, '#3f8f5a');
+      const p = skeleton({ shirt: '#f2f2ee', pants: '#dcdcd6', vest: '#c9d0da', belt: '#2d3e70', shoes: '#cfd2d8', face: { eye: '#3a2a1a', grin: true, marks: true } });
+      spikes(p.head, '#f4f4f4', { n: 12 }); headband(p.head, '#2d3e70');
       const hair = mesh(geo('longhair', () => new T.CylinderGeometry(0.1, 0.16, 0.42, 12)), mat('#f4f4f4'), 0, 0.02, -0.14); p.head.add(hair);
       shuriken(p, { metal: '#8c96a8', hub: '#555b66' }); p.weapon = 'fist';
       return p;
     },
     R() {
-      const p = skeleton({ wide: 1.25, shirt: '#6b4a2f', pants: '#3d3a46', vest: '#7c8a4a', belt: '#3d3a46', face: { eye: '#2e6b3a', fierce: true } });
-      spikes(p.head, '#8a3b22', { n: 12, len: 0.12 }); headband(p.head, '#3d3a46');
+      const p = skeleton({ wide: 1.25, shirt: '#efede6', pants: '#d6d6d0', vest: '#c8ccd4', belt: '#2d3e70', face: { eye: '#2e6b3a', fierce: true } });
+      spikes(p.head, '#8a3b22', { n: 12, len: 0.12 }); headband(p.head, '#2d3e70');
       fireHands(p); p.weapon = 'element';
       return p;
     },
     Q() {
-      const p = skeleton({ shirt: '#d32f4f', pants: '#2b2b38', hand: '#3a2f45', belt: '#f48fb1', emblem: '#d32f4f', face: { eye: '#2fa86b' } });
+      const p = skeleton({ shirt: '#f5f3ee', pants: '#e1e1dc', hand: '#3a2f45', belt: '#d32f4f', emblem: '#f5f3ee', face: { eye: '#2fa86b' } });
       const cap = mesh(geo('qcap', () => new T.SphereGeometry(0.205, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.45)), mat('#f48fb1'), 0, 0.18, 0); p.head.add(cap);
-      const hair = mesh(geo('qhair', () => new T.CylinderGeometry(0.19, 0.21, 0.36, 16, 1, true, Math.PI * 0.35, Math.PI * 1.3)), mat('#f48fb1', { double: true }), 0, 0.06, 0);
-      p.head.add(hair); p.hair = hair;
+      longHair(p, '#f48fb1');
+      queenCoat(p, '#fbfbf7', '#d32f4f');
       headband(p.head, '#d32f4f');
       p.blades = [katana(p.armL, { square: true, blade: '#cfd6df', guard: '#222' }, 0.65), katana(p.armR, { square: true, blade: '#cfd6df', guard: '#222' }, 0.65)]; p.weapon = 'dual';
       return p;
     },
     K() {
       // Roi blanc en Hokage : manteau blanc à flammes rouges et chapeau de Kage
-      const p = skeleton({ wide: 1.15, shirt: '#2d5a3d', pants: '#2d3e70', belt: '#e8452c', face: { eye: '#2f7fe0', grin: true } });
+      const p = skeleton({ wide: 1.15, shirt: '#f0f0ea', pants: '#e1e1dc', belt: '#e8452c', face: { eye: '#2f7fe0', grin: true } });
       hokageRobe(p, '#fbfbf6', '#e8452c');
       hokageHat(p.head, { top: '#9e1217', rim: '#f7f7f2', panel: '#f7f7f2', text: '#b51f24', veil: '#f4f4f0' });
       aura(p, '#ffd23a', 3);
@@ -576,13 +596,13 @@
       // Ninja guerrier porté par un aigle qui vole, armure bleu nuit et lame d'énergie.
       const p = mountedNinja(true);
       blackHair(p.head, 1);
-      samuraiArmor(p, '#203a7a', '#c9a227');
+      samuraiArmor(p, '#1c1c24', '#c9a227');
       aura(p, '#6fb7ff', 1);
       p.blade = katana(p.armR, { blade: '#9fdcff', guard: '#c9a227' }, 0.8); p.weapon = 'katana'; p.fast = true;
       return p;
     },
     b() {
-      const p = skeleton({ shirt: '#e8742a', pants: '#e8742a', belt: '#2a4fa8', sleeve: '#2a4fa8', shoes: '#2a4fa8', emblem: '#e8742a', face: { eye: '#222' } });
+      const p = skeleton({ shirt: '#1d1d26', pants: '#17171e', belt: '#c9a227', sleeve: '#2b2b36', shoes: '#2b2b36', emblem: '#1d1d26', face: { eye: '#222' } });
       blackHair(p.head, 2);
       for (let i = 0; i < 6; i++) p.head.add(mesh(geo('dot', () => new T.SphereGeometry(0.012, 6, 4)), mat('#b8735a'), (i % 3 - 1) * 0.04, 0.33 + (i < 3 ? 0 : 0.03), 0.08 - (i < 3 ? 0 : 0.03)));
       shuriken(p, { metal: '#f2c230', hub: '#2a4fa8' }); p.weapon = 'fist';
@@ -591,15 +611,17 @@
       return p;
     },
     r() {
-      const p = skeleton({ wide: 1.3, shirt: '#3b3346', pants: '#1f1b26', pads: '#c9a227', belt: '#c9a227', shoes: '#c9a227', face: { eye: '#222', fierce: true, scar: true } });
+      const p = skeleton({ wide: 1.3, shirt: '#22222b', pants: '#17171e', pads: '#c9a227', belt: '#c9a227', shoes: '#22222b', face: { eye: '#222', fierce: true, scar: true } });
       blackHair(p.head);
       aura(p, '#be78ff', 1.5);
       fireHands(p); p.weapon = 'element';
       return p;
     },
     q() {
-      const p = skeleton({ shirt: '#8b1e2d', pants: '#1f1b26', pads: '#e9e2c9', belt: '#e9e2c9', shoes: '#e9e2c9', face: { eye: '#222', fierce: true } });
+      const p = skeleton({ shirt: '#18181f', pants: '#121218', pads: '#8b1e2d', belt: '#8b1e2d', shoes: '#18181f', face: { eye: '#222', fierce: true } });
       blackHair(p.head, 1);
+      longHair(p, '#171820');
+      queenCoat(p, '#16161c', '#8b1e2d');
       aura(p, '#ff5a46', 2);
       p.blades = [katana(p.armL, { square: true, blade: '#b9c0ca', guard: '#c9a227' }, 0.65), katana(p.armR, { square: true, blade: '#b9c0ca', guard: '#c9a227' }, 0.65)]; p.weapon = 'dual';
       return p;

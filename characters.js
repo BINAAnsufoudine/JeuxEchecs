@@ -195,7 +195,7 @@
     // jambes pliées autour de la selle, puis tenue de ninja
     poly(ctx, [[cx - 30, 207], [cx - 3, 211], [cx - 28, 260], [cx - 72, 254]], black ? '#202b45' : '#40455a');
     poly(ctx, [[cx + 30, 207], [cx + 3, 211], [cx + 30, 260], [cx + 72, 254]], black ? '#202b45' : '#40455a');
-    body(ctx, { top: 151, h: 100, w: 78, shirt: black ? '#2a4fa8' : '#30384f', pants: black ? '#202b45' : '#40455a', belt: '#c9a227', sleeve: black ? '#203a7a' : '#40455a' });
+    body(ctx, { top: 151, h: 100, w: 78, shirt: black ? '#1d1d26' : '#eceef2', pants: black ? '#15151c' : '#d6d9df', belt: black ? '#c9a227' : '#2d3e70', sleeve: black ? '#1d1d26' : '#eceef2' });
     spikes(ctx, cx, cy - 4, r * 0.88, 8, 31, Math.PI * 0.9, Math.PI * 2.1, black ? '#171820' : '#dfe3ea');
     face(ctx, cx, cy, r * 0.88, { eye: black ? '#222' : '#2f7fe0', fierce: true });
     // Masque couvrant le bas du visage et bandeau
@@ -222,7 +222,7 @@
     // Fou : ermite aux longs cheveux blancs, rouleau sur le dos
     b(ctx) {
       poly(ctx, [[W / 2 + 30, 180], [W / 2 + 70, 170], [W / 2 + 90, 300], [W / 2 + 50, 310]], '#c0392b');
-      body(ctx, { shirt: '#3f8f5a', pants: '#2d5e3f', vest: '#c0392b', belt: '#2d5e3f', shoes: '#5b3b22' });
+      body(ctx, { shirt: '#f2f2ee', pants: '#dcdcd6', vest: '#c9d0da', belt: '#2d3e70', shoes: '#cfd2d8' });
       const { cx, cy, r } = HEAD;
       poly(ctx, [[cx - r * 0.9, cy - r * 0.2], [cx - r * 1.3, cy + r * 2.0], [cx - r * 0.6, cy + r * 1.5]], '#f4f4f4');
       spikes(ctx, cx, cy - 4, r, 8, 30, Math.PI * 0.9, Math.PI * 2.1, '#f4f4f4');
@@ -238,7 +238,7 @@
       for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); poly(ctx, [[0, -12], [96, -6], [20, 12]], '#8c96a8'); }
       ellipse(ctx, 0, 0, 14, 14, '#555b66');
       ctx.restore();
-      body(ctx, { w: 118, h: 120, top: 190, shirt: '#6b4a2f', pants: '#3d3a46', vest: '#7c8a4a', belt: '#3d3a46' });
+      body(ctx, { w: 118, h: 120, top: 190, shirt: '#efede6', pants: '#d6d6d0', vest: '#c8ccd4', belt: '#2d3e70' });
       const { cy, r } = HEAD;
       spikes(ctx, cx, cy + 4, r * 0.92, 6, 22, Math.PI, Math.PI * 2, '#8a3b22');
       face(ctx, cx, cy + 6, r * 0.92, { eye: '#2e6b3a', fierce: true });
@@ -247,8 +247,10 @@
     // Dame : kunoichi aux cheveux roses, gants de combat
     q(ctx) {
       const { cx, cy, r } = HEAD;
-      poly(ctx, [[cx - r * 1.05, cy - r * 0.3], [cx + r * 1.05, cy - r * 0.3], [cx + r * 1.1, cy + r * 1.45], [cx - r * 1.1, cy + r * 1.45]], '#f48fb1');
-      body(ctx, { w: 84, shirt: '#d32f4f', pants: '#2b2b38', hand: '#3a2f45', belt: '#f48fb1', emblem: '#d32f4f', emblemChar: '桜' });
+      // cheveux roses jusqu'aux fesses, manteau blanc
+      poly(ctx, [[cx - r * 1.05, cy - r * 0.3], [cx + r * 1.05, cy - r * 0.3], [cx + r * 1.25, cy + r * 3.3], [cx, cy + r * 3.6], [cx - r * 1.25, cy + r * 3.3]], '#f48fb1');
+      poly(ctx, [[cx - 50, 196], [cx + 50, 196], [cx + 70, 330], [cx - 70, 330]], '#fbfbf7');
+      body(ctx, { w: 84, shirt: '#f5f3ee', pants: '#e1e1dc', hand: '#3a2f45', belt: '#d32f4f', emblem: '#d32f4f', emblemChar: '桜' });
       ellipse(ctx, cx, cy - r * 0.15, r * 1.05, r * 0.9, '#f48fb1');
       face(ctx, cx, cy + 6, r * 0.9, { eye: '#2fa86b' });
       headband(ctx, cx, cy + 4, r * 0.95, '#d32f4f');
@@ -261,7 +263,7 @@
       const cx = W / 2;
       poly(ctx, [[cx - 60, 196], [cx + 60, 196], [cx + 82, 352], [cx - 82, 352]], '#fdfdfd');
       for (let i = 0; i < 7; i++) poly(ctx, [[cx - 82 + i * 23.4, 352], [cx - 70 + i * 23.4, 318], [cx - 58 + i * 23.4, 352]], '#e8452c', LINE, 3);
-      body(ctx, { shirt: '#fdfdfd', pants: '#2d3e70', belt: '#e8452c', sleeve: '#fdfdfd', emblem: '#e8452c', emblemChar: '火' });
+      body(ctx, { shirt: '#fdfdfd', pants: '#e1e1dc', belt: '#e8452c', sleeve: '#fdfdfd', emblem: '#e8452c', emblemChar: '火' });
       const { cy, r } = HEAD;
       spikes(ctx, cx, cy, r, 9, 24, Math.PI * 0.95, Math.PI * 2.05, '#f7cf3b');
       face(ctx, cx, cy + 4, r, { eye: '#2f7fe0', grin: true });
@@ -289,7 +291,7 @@
     // Fou : moine combattant au crâne rasé
     b(ctx) {
       aura(ctx, W / 2, 210, 110, 160, 'rgba(255,255,255,0.45)', 'rgba(200,220,255,0.2)');
-      body(ctx, { shirt: '#e8742a', pants: '#e8742a', belt: '#2a4fa8', sleeve: '#2a4fa8', shoes: '#2a4fa8', emblem: '#e8742a', emblemChar: '亀' });
+      body(ctx, { shirt: '#1d1d26', pants: '#17171e', belt: '#c9a227', sleeve: '#2b2b36', shoes: '#2b2b36', emblem: '#c9a227', emblemChar: '亀' });
       const { cx, cy, r } = HEAD;
       face(ctx, cx, cy, r * 0.92, { eye: '#222' });
       for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) ellipse(ctx, cx - 14 + i * 14, cy - r * 0.62 + j * 12, 3, 3, '#b8735a', null);
@@ -297,7 +299,7 @@
     // Tour : colosse à crête, armure lourde, aura violette
     r(ctx) {
       aura(ctx, W / 2, 210, 128, 175, 'rgba(190,120,255,0.55)', 'rgba(120,60,200,0.25)');
-      body(ctx, { w: 124, h: 124, top: 188, shirt: '#3b3346', pants: '#1f1b26', pads: '#c9a227', belt: '#c9a227', shoes: '#c9a227' });
+      body(ctx, { w: 124, h: 124, top: 188, shirt: '#22222b', pants: '#17171e', pads: '#c9a227', belt: '#c9a227', shoes: '#22222b' });
       const { cx, cy, r } = HEAD;
       face(ctx, cx, cy + 8, r * 0.95, { eye: '#222', fierce: true });
       poly(ctx, [[cx - 18, cy - r * 0.7], [cx, cy - r * 1.6], [cx + 18, cy - r * 0.7]], '#1b1b1f');
@@ -307,8 +309,10 @@
     q(ctx) {
       aura(ctx, W / 2, 206, 130, 185, 'rgba(255,110,90,0.65)', 'rgba(220,40,40,0.3)');
       const { cx, cy, r } = HEAD;
-      poly(ctx, [[cx + r * 0.5, cy - r * 0.7], [cx + r * 1.5, cy + r * 0.3], [cx + r * 1.2, cy + r * 1.6], [cx + r * 0.8, cy + r * 0.2]], '#1b1b1f');
-      body(ctx, { w: 84, shirt: '#8b1e2d', pants: '#1f1b26', pads: '#e9e2c9', belt: '#e9e2c9', shoes: '#e9e2c9' });
+      // cheveux noirs jusqu'aux fesses, manteau noir
+      poly(ctx, [[cx - r * 1.05, cy - r * 0.3], [cx + r * 1.05, cy - r * 0.3], [cx + r * 1.25, cy + r * 3.3], [cx, cy + r * 3.6], [cx - r * 1.25, cy + r * 3.3]], '#1b1b1f');
+      poly(ctx, [[cx - 50, 196], [cx + 50, 196], [cx + 70, 330], [cx - 70, 330]], '#16161c');
+      body(ctx, { w: 84, shirt: '#18181f', pants: '#121218', pads: '#8b1e2d', belt: '#8b1e2d', shoes: '#18181f' });
       spikes(ctx, cx, cy - 6, r, 7, 26, Math.PI * 0.95, Math.PI * 2.05, '#1b1b1f', 0.1);
       face(ctx, cx, cy, r * 0.95, { eye: '#222', fierce: true });
     },
