@@ -187,12 +187,22 @@
       head.add(s);
     }
   }
-  function headband(head, cloth) {
-    head.add(mesh(geo('band', () => new T.CylinderGeometry(0.197, 0.197, 0.055, 24, 1, true)), mat(cloth, { double: true }), 0, 0.25, 0));
-    const plate = mesh(geo('plate', () => new T.BoxGeometry(0.12, 0.055, 0.02)), mat('#c9d2dc'), 0, 0.25, 0.19);
+  function headband(head, cloth, r = 0.197) {
+    head.add(mesh(geo('band' + r, () => new T.CylinderGeometry(r, r, 0.055, 24, 1, true)), mat(cloth, { double: true }), 0, 0.25, 0));
+    const plate = mesh(geo('plate', () => new T.BoxGeometry(0.12, 0.055, 0.02)), mat('#c9d2dc'), 0, 0.25, r - 0.007);
     head.add(plate);
-    const tail = mesh(geo('bandtail', () => new T.BoxGeometry(0.03, 0.14, 0.012)), mat(cloth), 0.06, 0.2, -0.2);
+    const tail = mesh(geo('bandtail', () => new T.BoxGeometry(0.03, 0.14, 0.012)), mat(cloth), 0.06, 0.2, -r - 0.003);
     tail.rotation.z = 0.5; head.add(tail);
+  }
+  // Cagoule de ninja : couvre toute la tête et le cou, une fente laisse voir les yeux
+  function hood(head, cloth) {
+    const m = mat(cloth, { double: true, roughness: 0.9 });
+    const R = 0.212, slitTop = 1.25, slitBottom = 1.56, slitHalf = 0.56;
+    head.add(mesh(geo('hood-top', () => new T.SphereGeometry(R, 28, 12, 0, Math.PI * 2, 0, slitTop)), m, 0, 0.17, 0));
+    head.add(mesh(geo('hood-band', () => new T.SphereGeometry(R, 28, 4, Math.PI / 2 + slitHalf, Math.PI * 2 - slitHalf * 2, slitTop, slitBottom - slitTop)), m, 0, 0.17, 0));
+    head.add(mesh(geo('hood-low', () => new T.SphereGeometry(R, 28, 10, 0, Math.PI * 2, slitBottom, 1.2)), m, 0, 0.17, 0));
+    // pan du cou qui descend sur les épaules
+    head.add(mesh(geo('hood-neck', () => new T.CylinderGeometry(0.1, 0.16, 0.12, 20, 1, true)), m, 0, 0.0, 0));
   }
   // Coiffure noire en mèches arrondies, sans pointes coniques.
   function blackHair(head, style = 0) {
@@ -464,8 +474,9 @@
   const BUILD = {
     // Blancs
     P() {
-      const p = skeleton({ shirt: '#ff8a2a', pants: '#ff8a2a', belt: '#2d3e70', shoes: '#2d3e70', emblem: '#ff8a2a', face: { eye: '#2f7fe0', grin: true } });
-      spikes(p.head, '#f7cf3b', { n: 14 }); headband(p.head, '#2d3e70');
+      // Ninja blanc cagoulé, bandeau frontal
+      const p = skeleton({ shirt: '#f3f3ef', pants: '#e6e6e1', belt: '#2d3e70', shoes: '#2d3e70', emblem: '#f3f3ef', face: { eye: '#2f7fe0' } });
+      hood(p.head, '#f7f7f3'); headband(p.head, '#2d3e70', 0.216);
       p.blade = kunai(p.armR, { metal: '#3a3f48', wrap: '#2d3e70' }); earthWall(p); p.weapon = 'karate';
       return p;
     },
@@ -511,9 +522,9 @@
     },
     // Noirs
     p() {
-      const p = skeleton({ shirt: '#2f2f3a', pants: '#2f2f3a', pads: '#e9e2c9', belt: '#c9a227', shoes: '#e9e2c9', face: { eye: '#222', fierce: true } });
-      blackHair(p.head);
-      p.head.add(mesh(geo('visor', () => new T.BoxGeometry(0.1, 0.07, 0.02)), mat('#2ecc71', { basic: true, opacity: 0.7 }), 0.07, 0.19, 0.19));
+      // Ninja noir cagoulé, bandeau frontal
+      const p = skeleton({ shirt: '#18181e', pants: '#18181e', pads: '#2c2c35', belt: '#c9a227', shoes: '#18181e', face: { eye: '#222', fierce: true } });
+      hood(p.head, '#141418'); headband(p.head, '#8b1e2d', 0.216);
       p.blade = kunai(p.armR, { metal: '#9aa3b5', wrap: '#c9a227' }); earthWall(p); p.weapon = 'karate';
       return p;
     },

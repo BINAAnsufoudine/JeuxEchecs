@@ -106,6 +106,15 @@
     if (o.emblem) { ellipse(ctx, cx, top + 34, 15, 15, '#fff', LINE, 3); ctx.fillStyle = o.emblem; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(o.emblemChar || '武', cx, top + 35); }
   }
 
+  // Cagoule : tissu sur toute la tête, sauf une fente horizontale à hauteur des yeux
+  function hood2d(ctx, cx, cy, r, cloth) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r * 1.04, 0, Math.PI * 2);
+    ctx.rect(cx + r * 0.78, cy - r * 0.2, -r * 1.56, r * 0.42); // fente des yeux (tracé inversé = trou)
+    ctx.fillStyle = cloth; ctx.fill('evenodd');
+    ctx.strokeStyle = LINE; ctx.lineWidth = 3; ctx.stroke();
+    ctx.restore();
+  }
   function headband(ctx, cx, cy, r, cloth) {
     poly(ctx, [[cx - r * 1.02, cy - r * 0.42], [cx + r * 1.02, cy - r * 0.42], [cx + r * 0.98, cy - r * 0.18], [cx - r * 0.98, cy - r * 0.18]], cloth, LINE, 3);
     poly(ctx, [[cx - r * 0.42, cy - r * 0.48], [cx + r * 0.42, cy - r * 0.48], [cx + r * 0.42, cy - r * 0.12], [cx - r * 0.42, cy - r * 0.12]], '#c9d2dc', LINE, 3);
@@ -180,12 +189,12 @@
 
   /* ---------- Blancs : le clan des ninjas ---------- */
   const NINJA = {
-    // Pion : jeune ninja, cheveux en bataille, combinaison orange
+    // Pion : ninja blanc cagoulé, bandeau frontal
     p(ctx) {
-      body(ctx, { shirt: '#ff8a2a', pants: '#ff8a2a', vest: null, belt: '#2d3e70', shoes: '#2d3e70', emblem: '#ff8a2a', emblemChar: '忍' });
+      body(ctx, { shirt: '#f3f3ef', pants: '#e6e6e1', vest: null, belt: '#2d3e70', shoes: '#2d3e70', emblem: '#f3f3ef', emblemChar: '忍' });
       const { cx, cy, r } = HEAD;
-      spikes(ctx, cx, cy - 6, r, 9, 34, Math.PI * 0.95, Math.PI * 2.05, '#f7cf3b');
-      face(ctx, cx, cy, r, { eye: '#2f7fe0', grin: true });
+      face(ctx, cx, cy, r, { eye: '#2f7fe0' });
+      hood2d(ctx, cx, cy, r, '#f7f7f3');
       headband(ctx, cx, cy, r, '#2d3e70');
     },
     // Cavalier : ninja masqué chevauchant un grand chien blanc
@@ -250,13 +259,13 @@
 
   /* ---------- Noirs : les guerriers à aura, de plus en plus puissants ---------- */
   const WARRIOR = {
-    // Pion : soldat en armure avec visière de détection
+    // Pion : ninja noir cagoulé, bandeau frontal
     p(ctx) {
-      body(ctx, { shirt: '#2f2f3a', pants: '#2f2f3a', pads: '#e9e2c9', belt: '#c9a227', shoes: '#e9e2c9' });
+      body(ctx, { shirt: '#18181e', pants: '#18181e', pads: '#2c2c35', belt: '#c9a227', shoes: '#18181e' });
       const { cx, cy, r } = HEAD;
-      spikes(ctx, cx, cy - 4, r * 0.95, 7, 20, Math.PI, Math.PI * 2, '#1b1b1f');
       face(ctx, cx, cy, r * 0.95, { eye: '#222', fierce: true });
-      poly(ctx, [[cx + r * 0.1, cy - r * 0.15], [cx + r * 0.75, cy - r * 0.15], [cx + r * 0.75, cy + r * 0.25], [cx + r * 0.1, cy + r * 0.25]], 'rgba(46,204,113,0.75)', LINE, 3);
+      hood2d(ctx, cx, cy, r * 0.95, '#141418');
+      headband(ctx, cx, cy, r * 0.95, '#8b1e2d');
     },
     // Cavalier : ninja guerrier chevauchant un aigle en plein vol
     n(ctx) {
@@ -369,8 +378,8 @@
   // Taille relative selon le rang (le roi domine le plateau)
   const SIZE = { p: 0.78, n: 0.88, b: 0.9, r: 0.95, q: 1.0, k: 1.06 };
   const NAMES = {
-    w: { p: 'Ninja apprenti', n: 'Ninja sur chien blanc', b: 'Ermite', r: 'Colosse', q: 'Kunoichi', k: 'Chef du village' },
-    b: { p: 'Soldat', n: 'Ninja sur aigle', b: 'Moine', r: 'Brute', q: 'Guerrière', k: 'Hokage doré' },
+    w: { p: 'Ninja blanc', n: 'Ninja sur chien blanc', b: 'Ermite', r: 'Colosse', q: 'Kunoichi', k: 'Chef du village' },
+    b: { p: 'Ninja noir', n: 'Ninja sur aigle', b: 'Moine', r: 'Brute', q: 'Guerrière', k: 'Hokage doré' },
   };
 
   root.Characters = { canvasFor, dataUrl, SIZE, NAMES, W, H };

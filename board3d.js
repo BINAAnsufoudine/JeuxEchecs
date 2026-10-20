@@ -669,14 +669,16 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             const duration = style === 'tunnel-eat' ? 2.8 : style === 'tunnel-impact' ? 2.45 : style === 'eagle-release' ? 3.65 : 3.85;
             knightAttack = { style, start: now, from: a, target: b, duration, victim: v, hitCount: 0 };
             die({ t0: now + duration, knightAttack });
-          } else if (far && (kind === 'q' || kind === 'r')) {
-            // Technique à distance lancée depuis sa case : boule de feu (dame) ou dragon d'eau (tour)
-            shot = { tech: kind === 'q' ? 'fire' : 'water', victim: v, target: b, fire: kind === 'q' ? 0.8 : 0.9 };
+          } else if ((far && (kind === 'q' || kind === 'r')) || (kind === 'r' && !white)) {
+            // Technique à distance lancée depuis sa case : boule de feu (dame), dragon d'eau (tour blanche)
+            // ou dragon de feu (tour noire, même au contact) qui réduit sa cible en cendres
+            const fireDragon = kind === 'r' && !white;
+            shot = { tech: kind === 'q' ? 'fire' : 'water', fireDragon, victim: v, target: b, fire: kind === 'q' ? 0.8 : 0.9 };
             shot.flight = kind === 'q' ? 0.25 + len * 0.06 : 0.45 + len * 0.09;
             shot.impact = shot.fire + shot.flight;
             shot.runStart = shot.impact + 0.9;
             const fireball = kind === 'q';
-            die({ t0: now + EXR + shot.impact, hit: true, burn: fireball, burnAt: now + EXR + shot.impact, swept: kind === 'r', counter: { start: now, end: now + EXR, at: a } });
+            die({ t0: now + EXR + shot.impact, hit: true, burn: fireball || fireDragon, burnAt: now + EXR + shot.impact, swept: kind === 'r' && !fireDragon, counter: { start: now, end: now + EXR, at: a } });
           } else if (far && kind === 'b' && !white) {
             // Fou noir : la main chargée d'éclairs, il fonce transpercer sa cible sous un ciel assombri.
             const run = 0.25 + len * 0.055, pierce = 0.7 + run;
@@ -2733,9 +2735,20 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (el >= s.fire && !s.dragon && !s.splashDone) {
         s.start = this.handsOf(c);
         const g = new T.Group();
-        const water = new T.MeshToonMaterial({ color: 0x3fa9f5, transparent: true, opacity: 0.85 });
-        const foam = new T.MeshBasicMaterial({ color: 0xe6f7ff });
-        for (let i = 0; i < N; i++) g.add(new T.Mesh(new T.SphereGeometry(0.24 * (1 - i / N * 0.65), 12, 8), water));
+        const water = s.fireDragon
+          ? new T.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: 0.92 })
+          : new T.MeshToonMaterial({ color: 0x3fa9f5, transparent: true, opacity: 0.85 });
+        const foam = new T.MeshBasicMaterial({ color: s.fireDragon ? 0x3a1608 : 0xe6f7ff });
+        for (let i = 0; i < N; i++) {
+          // Dragon de feu : corps du jaune (tête) au rouge sombre (queue), avec des flammes le long du dos
+          const segMat = s.fireDragon ? new T.MeshBasicMaterial({ color: new T.Color(0xffb020).lerp(new T.Color(0xc41a06), Math.min(1, i / N * 1.6)), transparent: true, opacity: 0.95, toneMapped: false }) : water;
+          const seg = new T.Mesh(new T.SphereGeometry(0.24 * (1 - i / N * 0.65), 12, 8), segMat);
+          if (s.fireDragon && i % 2 === 0) {
+            const flame = new T.Mesh(new T.ConeGeometry(0.07 * (1 - i / N * 0.6), 0.26, 6), new T.MeshBasicMaterial({ color: i % 4 ? 0xff4a12 : 0xffb52a, transparent: true, opacity: 0.85, blending: T.AdditiveBlending, depthWrite: false }));
+            flame.position.y = 0.2 * (1 - i / N * 0.6); seg.add(flame);
+          }
+          g.add(seg);
+        }
         // tête : gueule, cornes, yeux
         const head = g.children[0];
         head.scale.set(1.25, 1.05, 1.7);
@@ -2768,7 +2781,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
       if (el >= s.impact && !s.boom && !s.splashed) {
         s.splashed = true;
-        this.explode(s, end, el, t, [0xd6f2ff, 0x3fa9f5, 0x9fdcff], [0x3fa9f5, 0xe6f7ff], true);
+        if (s.fireDragon) this.explode(s, end, el, t, [0xfff1a8, 0xff6a1a, 0xffb347], [0xff4500, 0x2a1a12], false);
+        else this.explode(s, end, el, t, [0xd6f2ff, 0x3fa9f5, 0x9fdcff], [0x3fa9f5, 0xe6f7ff], true);
       }
       this.boomStep(s, el);
     }
