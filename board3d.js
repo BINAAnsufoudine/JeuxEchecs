@@ -1126,6 +1126,13 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
       this.chars = next;
       if (capture && capture.victim) this.startCaptureCamera(capture.from, capture.to, capture.victim, now);
+      // Pièce liée au moment de prendre : sa technique est plus puissante (onde d'énergie, éclat, tremblement renforcé)
+      if (capture && capture.victim && o.last && (this.ropes || []).some(([a, b]) => a === o.last.from || b === o.last.from)) {
+        const d = this.dying.find((x) => x.c === capture.victim);
+        const at = d ? (d.knightAttack ? now + Math.max(0.6, d.knightAttack.duration * 0.55) : d.t0) : now + 0.8;
+        this.addPowerBurst(capture.to, o.last.piece === o.last.piece.toUpperCase(), at);
+        this.powerUntil = Math.max(this.powerUntil || 0, (this.busyUntil || now) + 0.2);
+      }
       if (o.mateUltimate && o.animate && o.mateUltimate.id !== this.mateUltimateKey) {
         const actor = next.get(o.mateUltimate.attackerTo);
         this.mateUltimateKey = o.mateUltimate.id;
@@ -1145,6 +1152,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (!this.outcome) for (const c of this.chars.values()) { c.endPose = null; c.endPoseAt = null; c.drawTo = null; }
       if (this.outcome === '1/2-1/2') this.planDrawFormation(now);
       this.ropes = this.findRopes(o.board);
+      this.ropesPrev = this.ropes;
       this.setArrows(o.arrows || []);
     }
 
@@ -2689,19 +2697,23 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
 
     // Deux tours du même camp, alignées sans rien entre elles, sont reliées par un fil de feu
+    // Deux pièces identiques du même camp sont liées quand elles se protègent l'une l'autre
+    // (ligne libre pour les tours, les dames et les fous, saut pour les cavaliers) ou quand elles se touchent
     findRopes(board) {
       const pairs = [];
-      for (const rook of ['R', 'r']) {
-        const sqs = [];
-        for (let i = 0; i < 64; i++) if (board[i] === rook) sqs.push(i);
+      const lineClear = (a, b, step) => { for (let s = a + step; s !== b; s += step) if (board[s]) return false; return true; };
+      for (const piece of ['R', 'r', 'Q', 'q', 'B', 'b', 'N', 'n']) {
+        const kind = piece.toLowerCase(), sqs = [];
+        for (let i = 0; i < 64; i++) if (board[i] === piece) sqs.push(i);
         for (let i = 0; i < sqs.length; i++) for (let j = i + 1; j < sqs.length; j++) {
-          const a = sqs[i], b = sqs[j];
-          let step = 0;
-          if (a >> 3 === b >> 3) step = 1; else if ((a & 7) === (b & 7)) step = 8;
-          if (!step) continue;
-          let clear = true;
-          for (let s = a + step; s < b; s += step) if (board[s]) { clear = false; break; }
-          if (clear) pairs.push([a, b]);
+          const a = sqs[i], b = sqs[j], dr = (b >> 3) - (a >> 3), df = (b & 7) - (a & 7);
+          const adjacent = Math.max(Math.abs(dr), Math.abs(df)) === 1;
+          let linked = adjacent;
+          if (!linked && kind === 'n') linked = (Math.abs(dr) === 1 && Math.abs(df) === 2) || (Math.abs(dr) === 2 && Math.abs(df) === 1);
+          const straight = dr === 0 || df === 0, diagonal = Math.abs(dr) === Math.abs(df);
+          if (!linked && (kind === 'r' || kind === 'q') && straight) linked = lineClear(a, b, dr === 0 ? Math.sign(df) : 8 * Math.sign(dr));
+          if (!linked && (kind === 'b' || kind === 'q') && diagonal) linked = lineClear(a, b, 8 * Math.sign(dr) + Math.sign(df));
+          if (linked) pairs.push([a, b]);
         }
       }
       return pairs;
@@ -2715,12 +2727,28 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         this.ropeCore = new T.MeshBasicMaterial({ color: 0xfff1a8 });
         this.ropeFire = new T.MeshBasicMaterial({ color: 0xff6a1a, transparent: true, opacity: 0.6, blending: T.AdditiveBlending, depthWrite: false });
       }
-      for (const m of this.ropeGroup.children) m.geometry.dispose();
+      for (const m of this.ropeGroup.children) if (!m.userData.shared) m.geometry.dispose();
       this.ropeGroup.clear();
       this.ropeFire.opacity = 0.45 + Math.random() * 0.25;
+      if (!this.auraMat) {
+        this.auraMat = { w: new T.MeshBasicMaterial({ color: 0xffd36a, transparent: true, opacity: 0.3, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false }),
+          b: new T.MeshBasicMaterial({ color: 0xb36bff, transparent: true, opacity: 0.3, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false }) };
+        this.auraGeo = new T.CylinderGeometry(0.36, 0.44, 1.5, 24, 1, true);
+        this.auraRing = new T.RingGeometry(0.34, 0.46, 32);
+      }
+      const pulse = 0.22 + Math.abs(Math.sin(t * 3)) * 0.18;
+      this.auraMat.w.opacity = pulse; this.auraMat.b.opacity = pulse;
+      const glowing = new Set();
       for (const [a, b] of this.ropes || []) {
         const ca = this.chars.get(a), cb = this.chars.get(b);
         if (!ca || !cb || ca.anim || cb.anim) continue; // le fil se rallume une fois arrivées
+        for (const c of [ca, cb]) {
+          if (glowing.has(c)) continue;
+          glowing.add(c);
+          const m = c.piece === c.piece.toUpperCase() ? this.auraMat.w : this.auraMat.b, p = c.holder.position;
+          const shell = new T.Mesh(this.auraGeo, m); shell.position.set(p.x, 0.75, p.z); shell.rotation.y = t; shell.userData.shared = true; this.ropeGroup.add(shell);
+          const ring = new T.Mesh(this.auraRing, m); ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.03, p.z); ring.scale.setScalar(1 + Math.sin(t * 4 + a) * 0.08); ring.userData.shared = true; this.ropeGroup.add(ring);
+        }
         const pb0 = cb.holder.position, pa0 = ca.holder.position, h = 0.62;
         const len = Math.hypot(pb0.x - pa0.x, pb0.z - pa0.z);
         // le fil part de la main de chaque géant, côté de l'autre
@@ -3033,7 +3061,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.tickCaptureCamera(t);
       this.tickMateCamera(t);
       // tremblement de l'image au lancer et à l'impact
-      if (this.shakeUntil > t) { const a = this.shakeAmp || 0.05; this.scene.position.set((Math.random() - 0.5) * a, (Math.random() - 0.5) * a, (Math.random() - 0.5) * a); }
+      if (this.shakeUntil > t) { const a = (this.shakeAmp || 0.05) * (this.powerUntil > t ? 1.7 : 1); this.scene.position.set((Math.random() - 0.5) * a, (Math.random() - 0.5) * a, (Math.random() - 0.5) * a); }
       else this.scene.position.set(0, 0, 0);
       // la nuit et le coucher de soleil assombrissent l'image (sans toucher aux réglages des techniques)
       const ex = this.renderer.toneMappingExposure, nt = this.night || 0;
@@ -3242,6 +3270,25 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (a.boom) this.boomStep(a, el);
     }
 
+    // Onde de puissance d'une pièce liée : colonne d'énergie, double anneau et éclat de lumière sur la cible
+    addPowerBurst(at, white, start) {
+      const T = this.THREE, g = new T.Group(); g.position.set(at.x, 0, at.z); g.visible = false; this.scene.add(g);
+      const color = white ? 0xffd36a : 0xb36bff;
+      const glow = (c, o) => new T.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false });
+      const rings = [0, 1].map((i) => { const r = new T.Mesh(new T.RingGeometry(0.4, 0.62, 48), glow(i ? 0xffffff : color, 0)); r.rotation.x = -Math.PI / 2; r.position.y = 0.05 + i * 0.02; g.add(r); return r; });
+      const pillar = new T.Mesh(new T.CylinderGeometry(0.25, 0.5, 4, 24, 1, true), glow(color, 0)); pillar.position.y = 2; g.add(pillar);
+      const ball = new T.Mesh(new T.SphereGeometry(0.5, 20, 14), glow(0xffffff, 0)); ball.position.y = 0.7; g.add(ball);
+      const light = new T.PointLight(color, 0, 8, 2); light.position.y = 1.2; g.add(light);
+      this.addEffect({ start, dur: 1.4, tick: (e, t) => {
+        g.visible = true;
+        const k = Math.min(1, e / 1.4), f = 1 - k;
+        rings.forEach((r, i) => { const w = Math.min(1, (e - i * 0.15) / 0.9); r.scale.setScalar(1 + Math.max(0, w) * (6 + i * 2)); r.material.opacity = w > 0 ? 0.8 * (1 - w) : 0; });
+        pillar.material.opacity = 0.45 * f; pillar.scale.set(1 + k, 1, 1 + k);
+        ball.material.opacity = e < 0.4 ? 0.8 * (1 - e / 0.4) : 0; ball.scale.setScalar(1 + e * 3);
+        light.intensity = 8 * f;
+        if (e < 0.25) { this.shakeUntil = t + 0.05; this.shakeAmp = Math.max(this.shakeAmp || 0, 0.12); }
+      }, end: () => this.disposeGroup(g) });
+    }
     // Effets passagers posés dans la scène : { start, dur, tick(e, t), end() }
     addEffect(fx) { (this.effects = this.effects || []).push(fx); return fx; }
     tickEffects(t) {
