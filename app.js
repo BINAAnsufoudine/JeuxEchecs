@@ -1399,7 +1399,11 @@
     player.rating = Math.round(Math.max(100, Math.min(3000, current + k * (score - expected))) / 10) * 10;
     player[kind] = (player[kind] || 0) + 1;
     store.set('player', player);
+    // le même Elo est visible des autres joueurs, quel que soit le mode où il a changé
+    if (window.Online && window.Online.user) window.Online.setElo(estimatedElo());
   }
+  // Les problèmes et leçons ne changent plus l'Elo : il ne dépend que des parties jouées
+  function countPuzzle() { const p = playerProfile(); p.puzzles = (p.puzzles || 0) + 1; store.set('player', p); }
   function recordStat(level, outcome) {
     const stats = store.get('stats', {});
     const row = stats[level] || { win: 0, loss: 0, draw: 0 };
@@ -2169,7 +2173,7 @@
     if (pz.kind === 'lesson') {
       const st = pz.steps[pz.idx];
       const lessonLevel = themeRow(loadCoach(), pz.lesson.theme).level;
-      if (!pz.lesson.noRating) updatePlayerRating(400 + lessonLevel * 250, clean ? 1 : 0, 8, 'puzzles');
+      if (!pz.lesson.noRating) countPuzzle();
       say(`${st.why || L('Exactement ! Tu as trouvé.', 'Exactly! You found it.')} ${lessonCue()}`, 'happy');
       if (st.mistake) touchMistake(st.mistake, clean);
     } else {
@@ -2190,7 +2194,7 @@
       if (!row.pending && ++row.ok >= LEVEL_SET) { row.pending = true; validated = true; }
     } else row.failed++;
     const challengeElo = 400 + Math.max(1, it.rating || it.level * 3 - 1) * 200;
-    updatePlayerRating(challengeElo, clean ? 1 : 0, 12, 'puzzles');
+    countPuzzle();
     store.set('coach', c);
     if (it.personal) touchMistake(it.personal.id, clean);
     if (it.id) { const st = store.get('pzdone', {}); if (clean && st[it.id] !== 's') { reward(5, 10, L('Problème résolu', 'Puzzle solved')); questEvent('puzzle'); } st[it.id] = clean ? 's' : 'f'; store.set('pzdone', st); }
@@ -3284,6 +3288,7 @@
         body.innerHTML = profileHtml(s, { name: p.name || L('Joueur', 'Player'), photo: p.photo });
         body.insertAdjacentHTML('afterbegin', `<button class="btn primary profile-shop" type="button">🌾 ${L('Boutique et quêtes', 'Shop and quests')}</button>`);
         body.querySelector('.profile-shop').onclick = openShop;
+        try { h2hGames = await ON.myGames(); body.insertAdjacentHTML('beforeend', opponentsHtml(h2hGames, ON.user.uid)); } catch { /* hors ligne */ }
         // résumé public pour que les autres joueurs voient ce profil
         ON.publishSummary({ ...s, badges: BADGES.filter((b) => b.ok(s)).map((b) => b.id) });
       } else body.insertAdjacentHTML('beforeend', `<p class="level-help">${L('Connecte-toi pour ajouter tes parties en ligne et tes tournois, et pour que les autres joueurs voient ton profil.', 'Sign in to add your online games and tournaments, and so other players can see your profile.')}</p>`);
@@ -3295,8 +3300,50 @@
       if (!u) { body.innerHTML = `<p class="level-help">${L('Profil introuvable.', 'Profile not found.')}</p>`; return; }
       const s = u.summary || { ai: { win: 0, draw: 0, loss: 0, best: 0 }, online: { win: 0, draw: 0, loss: 0, opponents: 0 }, tour: { played: 0, wins: 0, second: 0, third: 0 }, pz: 0, mates: 0, ends: 0, openings: 0, dailyBest: 0, elo: u.elo || 600 };
       body.innerHTML = profileHtml({ ...s, elo: u.elo || s.elo }, { name: u.pseudo, photo: u.photo }) + (u.summary ? '' : `<p class="level-help">${L('Ce joueur n\'a pas encore publié ses statistiques.', 'This player has not published their statistics yet.')}</p>`);
+      if (ON.user) {
+        const me = ON.user.uid;
+        h2hGames = (await ON.myGames()).filter((g) => g.players.includes(uid) && g.white !== g.black);
+        const head = body.querySelector('.profile-head');
+        head.insertAdjacentHTML('afterend', h2hHtml(h2hGames, me, u.pseudo));
+      }
     } catch (err) { body.innerHTML = `<p class="level-help">${ON.explain(err)}</p>`; }
   }
+  // Face-à-face : toutes les parties contre un joueur, tous modes confondus (amicales et tournois)
+  const h2hScore = (g, me) => (g.status !== 'over' ? null : g.result === '1/2-1/2' ? 0.5 : (g.result === '1-0') === (g.white === me) ? 1 : 0);
+  function h2hHtml(games, me, oppName) {
+    const over = games.filter((g) => g.status === 'over');
+    const w = over.filter((g) => h2hScore(g, me) === 1).length, d = over.filter((g) => h2hScore(g, me) === 0.5).length, l = over.length - w - d;
+    let html = `<h3 class="train-h">${L(`Face à face contre ${escHtml(oppName)}`, `Head to head against ${escHtml(oppName)}`)}</h3>`;
+    if (!games.length) return html + `<p class="level-help">${L('Vous n\'avez encore jamais joué ensemble.', 'You have never played each other yet.')}</p>`;
+    html += `<div class="h2h-total"><span class="win">${w} ${L('victoire', 'win')}${w > 1 ? 's' : ''}</span><span>${d} ${L('nulle', 'draw')}${d > 1 ? 's' : ''}</span><span class="loss">${l} ${L('défaite', 'loss')}${l > 1 ? 's' : ''}</span></div>`;
+    html += `<table class="tour-table h2h-table"><tr><th>${L('Date', 'Date')}</th><th>${L('Partie', 'Game')}</th><th>${L('Cadence', 'Time')}</th><th>${L('Couleur', 'Colour')}</th><th>${L('Résultat', 'Result')}</th><th></th></tr>${games.sort((a, b) => b.createdAt - a.createdAt).map((g) => {
+      const sc = h2hScore(g, me);
+      const res = sc === null ? L('en cours', 'in progress') : sc === 1 ? L('Victoire', 'Win') : sc === 0 ? L('Défaite', 'Loss') : L('Nulle', 'Draw');
+      const kind = g.tournamentId ? `🏆 ${escHtml(g.tournamentName || L('Tournoi', 'Tournament'))}${g.round ? ` · ${L('r.', 'r.')}${g.round}` : ''}` : L('Amicale', 'Friendly');
+      return `<tr><td>${new Date(g.createdAt).toLocaleDateString(LOCALE)}</td><td>${kind}</td><td>${TC_LABELS[g.tc] || ''}</td><td>${g.white === me ? '♔' : '♚'}</td><td class="${sc === 1 ? 'win' : sc === 0 ? 'loss' : ''}">${res}</td><td>${g.moves && g.moves.length ? `<button class="mini" data-h2h-replay="${g.id}">${L('Revoir', 'Replay')}</button>` : ''}</td></tr>`;
+    }).join('')}</table>`;
+    return html;
+  }
+  // Mon profil : bilan contre chaque adversaire
+  function opponentsHtml(games, me) {
+    const by = {};
+    for (const g of games) {
+      const opp = g.white === me ? g.black : g.white, name = g.white === me ? g.blackName : g.whiteName;
+      const row = by[opp] || (by[opp] = { name, w: 0, d: 0, l: 0, n: 0 });
+      const sc = h2hScore(g, me); row.n++;
+      if (sc === 1) row.w++; else if (sc === 0.5) row.d++; else if (sc === 0) row.l++;
+    }
+    const rows = Object.entries(by).sort((a, b) => b[1].n - a[1].n);
+    if (!rows.length) return '';
+    return `<h3 class="train-h">${L('Mes adversaires', 'My opponents')}</h3><table class="tour-table h2h-table"><tr><th>${L('Joueur', 'Player')}</th><th>${L('Parties', 'Games')}</th><th>+</th><th>=</th><th>−</th></tr>${rows.map(([uid, r]) => `<tr><td><a href="#" data-profile="${uid}">${escHtml(r.name)}</a></td><td>${r.n}</td><td class="win">${r.w}</td><td>${r.d}</td><td class="loss">${r.l}</td></tr>`).join('')}</table><p class="level-help">${L('Clique sur un joueur pour voir le détail de vos parties.', 'Click a player to see the details of your games.')}</p>`;
+  }
+  let h2hGames = [];
+  $('profile-body').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-h2h-replay]'); if (!b) return;
+    const g = h2hGames.find((x) => x.id === b.dataset.h2hReplay); if (!g) return;
+    const back = returnTo;
+    startReplay({ moves: g.moves, result: g.result || '*', title: g.tournamentId ? `${g.tournamentName} · ${L('ronde', 'round')} ${g.round}` : L('Partie amicale', 'Friendly game'), white: `${g.whiteName} (${g.whiteElo})`, black: `${g.blackName} (${g.blackElo})` }, () => { show('profile'); returnTo = back; });
+  });
   $('btn-profile').onclick = () => openProfile();
   // clic sur un joueur (tournois) : son profil
   document.addEventListener('click', (e) => { const el = e.target.closest('[data-profile]'); if (el) { e.preventDefault(); openProfile(el.dataset.profile); } });

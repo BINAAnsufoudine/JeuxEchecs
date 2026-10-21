@@ -604,3 +604,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .chat-form { display: flex; gap: 6px; }
 .chat-form input { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(0,0,0,0.25); color: inherit; font: inherit; }
 .chat-form .btn { min-height: 0; padding: 6px 14px; }
+
+/* Face-à-face */
+.h2h-total { display: flex; gap: 14px; font-weight: 700; margin: 4px 0 8px; }
+.h2h-table td.win, .h2h-total .win { color: #4cd07d; }
+.h2h-table td.loss, .h2h-total .loss { color: #e8705f; }
+.h2h-table .mini { padding: 3px 8px; }

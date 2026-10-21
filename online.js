@@ -151,6 +151,12 @@ window.Online = (function () {
     const snap = await f.getDocs(f.query(f.collection(f.db, 'tournaments'), f.where('members', 'array-contains', uid || user.uid)));
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   }
+  // Toutes mes parties en ligne (amicales et de tournoi)
+  async function myGames() {
+    const f = await load();
+    const snap = await f.getDocs(f.query(f.collection(f.db, 'games'), f.where('players', 'array-contains', user.uid)));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
   async function setElo(elo) {
     if (!user) return;
     const f = await load();
@@ -501,7 +507,7 @@ window.Online = (function () {
     TIME_CONTROLS, load, onUser, explain,
     get user() { return user; }, get profile() { return profile; },
     signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos, publishSummary, getProfile, myTournaments,
-    presence, listPlayers, setMuted, sendChat,
+    presence, listPlayers, setMuted, sendChat, myGames,
     saveProgress, loadProgress, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
     createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,
   };
