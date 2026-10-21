@@ -415,7 +415,7 @@
       return;
     }
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([text], { type: filename.endsWith('.json') ? 'application/json' : 'application/x-chess-pgn' }));
+    a.href = URL.createObjectURL(new Blob([text], { type: filename.endsWith('.json') ? 'application/json' : filename.endsWith('.txt') ? 'text/plain' : 'application/x-chess-pgn' }));
     a.download = filename; document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
@@ -4078,9 +4078,30 @@
     });
     return Object.entries(tags).map(([k, v]) => `[${k} "${String(v).replace(/"/g, "'")}"]`).join('\n') + '\n\n' + (body + res).replace(/(.{1,78})(\s|$)/g, '$1\n').trim() + '\n';
   }
+  // Export PGN d'une partie : fichier texte ou copie dans le presse-papiers
+  function exportPgn(entry) {
+    const text = pgnFor(entry);
+    const pre = document.createElement('pre'); pre.className = 'pgn-preview'; pre.textContent = text;
+    modal({ title: L('Exporter la partie (PGN)', 'Export the game (PGN)'), body: pre, actions: [
+      { label: L('📋 Copier', '📋 Copy'), primary: true, onClick: async () => {
+        try { await navigator.clipboard.writeText(text); toast(L('PGN copié dans le presse-papiers', 'PGN copied to the clipboard')); }
+        catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast(L('PGN copié dans le presse-papiers', 'PGN copied to the clipboard')); } catch { toast(L('Copie impossible ici.', 'Copy not possible here.')); } ta.remove(); }
+      } },
+      { label: L('⬇ Fichier .txt', '⬇ .txt file'), onClick: () => saveFile(`cavalier-partie-${stamp()}.pgn.txt`, text) },
+      { label: L('Fermer', 'Close'), ghost: true },
+    ] });
+  }
+  // partie en cours, quel que soit le mode
+  function currentGameEntry() {
+    const g = onlineGame;
+    const names = cfg.mode === 'online' && g ? { white: `${g.whiteName} (${g.whiteElo})`, black: `${g.blackName} (${g.blackElo})`, event: g.tournamentName ? `${g.tournamentName} · ${L('ronde', 'round')} ${g.round}` : L('Partie en ligne', 'Online game') }
+      : cfg.mode === 'local' ? { white: L('Blancs', 'White'), black: L('Noirs', 'Black') } : sideNames(cfg);
+    return { moves: game.uciList(), fen: cfg.fen, result: result ? result.result : '*', ...names };
+  }
+  $('btn-pgn').onclick = () => { if (game && cfg) exportPgn(currentGameEntry()); };
   $('rp-pgn').onclick = () => {
     if (!replay) return;
-    saveFile(`cavalier-partie-${stamp()}.pgn`, pgnFor({ ...replay, opening: replay.review && replay.review.opening }));
+    exportPgn({ ...replay, opening: replay.review && replay.review.opening });
   };
 
   const toB64 = (obj) => {
@@ -4161,7 +4182,7 @@
       title: L('Bilan de Maître Sissa', 'Master Sissa’s review'), body,
       actions: [
         { label: L("Revoir avec l'analyse", 'Review with analysis'), primary: true, onClick: () => startReplay({ moves: snap.moves, result: snap.result, title: L('Ma dernière partie', 'My last game'), ...names, flipped: !local && me === 'b' }, () => show('home')) },
-        { label: L('Exporter en PGN', 'Export as PGN'), onClick: () => saveFile(`cavalier-partie-${stamp()}.pgn`, pgnFor({ moves: snap.moves, result: snap.result, opening: r.opening, ...names })) },
+        { label: L('Exporter en PGN', 'Export as PGN'), onClick: () => exportPgn({ moves: snap.moves, result: snap.result, opening: r.opening, ...names }) },
         { label: L('Fermer', 'Close'), ghost: true },
       ],
     });
