@@ -2726,7 +2726,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       return pairs;
     }
 
-    // Fil de feu entre deux tours liées : cœur jaune, gaine orange qui ondule et scintille
+    // Pièces liées : un halo lumineux à leurs pieds
     drawRopes(t) {
       const T = this.THREE;
       if (!this.ropeGroup) {
@@ -2736,39 +2736,41 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
       for (const m of this.ropeGroup.children) if (!m.userData.shared) m.geometry.dispose();
       this.ropeGroup.clear();
-      this.ropeFire.opacity = 0.45 + Math.random() * 0.25;
       if (!this.auraMat) {
-        this.auraMat = { w: new T.MeshBasicMaterial({ color: 0xffd36a, transparent: true, opacity: 0.3, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false }),
-          b: new T.MeshBasicMaterial({ color: 0xb36bff, transparent: true, opacity: 0.3, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false }) };
-        this.auraGeo = new T.CylinderGeometry(0.36, 0.44, 1.5, 24, 1, true);
-        this.auraRing = new T.RingGeometry(0.34, 0.46, 32);
+        // halo lumineux posé au sol : anneau doux qui s'estompe vers l'extérieur
+        const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+        const cx = cv.getContext('2d'), g = cx.createRadialGradient(64, 64, 0, 64, 64, 64);
+        g.addColorStop(0, 'rgba(255,255,255,0.35)'); g.addColorStop(0.45, 'rgba(255,255,255,0.55)'); g.addColorStop(0.62, 'rgba(255,255,255,1)');
+        g.addColorStop(0.72, 'rgba(255,255,255,0.5)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+        cx.fillStyle = g; cx.fillRect(0, 0, 128, 128);
+        const tex = new T.CanvasTexture(cv);
+        const haloMat = (color) => new T.MeshBasicMaterial({ color, map: tex, transparent: true, opacity: 0.8, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false });
+        this.auraMat = { w: haloMat(0xffd36a), b: haloMat(0xb36bff),
+          rw: new T.MeshBasicMaterial({ color: 0xfff0b8, transparent: true, opacity: 0.7, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false }),
+          rb: new T.MeshBasicMaterial({ color: 0xd9b3ff, transparent: true, opacity: 0.7, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false }) };
+        this.haloGeo = new T.PlaneGeometry(1.15, 1.15);
+        this.auraRing = new T.RingGeometry(0.4, 0.43, 48);
       }
-      const pulse = 0.22 + Math.abs(Math.sin(t * 3)) * 0.18;
+      const pulse = 0.6 + Math.abs(Math.sin(t * 2.6)) * 0.4;
       this.auraMat.w.opacity = pulse; this.auraMat.b.opacity = pulse;
+      this.auraMat.rw.opacity = this.auraMat.rb.opacity = 0.35 + Math.abs(Math.sin(t * 2.6)) * 0.45;
+      // pièces liées : un halo de puissance à leurs pieds (une fois arrivées sur leur case)
       const glowing = new Set();
       for (const [a, b] of this.ropes || []) {
         const ca = this.chars.get(a), cb = this.chars.get(b);
-        if (!ca || !cb || ca.anim || cb.anim) continue; // le fil se rallume une fois arrivées
-        for (const c of [ca, cb]) {
+        if (!ca || !cb || ca.anim || cb.anim) continue;
+        for (const [c, sq] of [[ca, a], [cb, b]]) {
           if (glowing.has(c)) continue;
           glowing.add(c);
-          const m = c.piece === c.piece.toUpperCase() ? this.auraMat.w : this.auraMat.b, p = c.holder.position;
-          const shell = new T.Mesh(this.auraGeo, m); shell.position.set(p.x, 0.75, p.z); shell.rotation.y = t; shell.userData.shared = true; this.ropeGroup.add(shell);
-          const ring = new T.Mesh(this.auraRing, m); ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.03, p.z); ring.scale.setScalar(1 + Math.sin(t * 4 + a) * 0.08); ring.userData.shared = true; this.ropeGroup.add(ring);
+          const white = c.piece === c.piece.toUpperCase(), p = c.holder.position;
+          const halo = new T.Mesh(this.haloGeo, white ? this.auraMat.w : this.auraMat.b);
+          halo.rotation.x = -Math.PI / 2; halo.position.set(p.x, 0.022, p.z); halo.scale.setScalar(1 + Math.sin(t * 2.6 + sq) * 0.06); halo.userData.shared = true;
+          this.ropeGroup.add(halo);
+          const ring = new T.Mesh(this.auraRing, white ? this.auraMat.rw : this.auraMat.rb);
+          ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.026, p.z);
+          ring.scale.setScalar(0.8 + ((t * 0.6 + sq * 0.13) % 1) * 0.6); ring.userData.shared = true; // onde qui s'élargit
+          this.ropeGroup.add(ring);
         }
-        const pb0 = cb.holder.position, pa0 = ca.holder.position, h = 0.62;
-        const len = Math.hypot(pb0.x - pa0.x, pb0.z - pa0.z);
-        // le fil part de la main de chaque géant, côté de l'autre
-        const ux = (pb0.x - pa0.x) / len, uz = (pb0.z - pa0.z) / len;
-        const pa = { x: pa0.x + ux * 0.3, z: pa0.z + uz * 0.3 }, pb = { x: pb0.x - ux * 0.3, z: pb0.z - uz * 0.3 };
-        const pts = [];
-        for (let i = 0; i <= 16; i++) {
-          const u = i / 16, w = Math.sin(u * Math.PI) * (0.05 * Math.sin(t * 9 + u * 14 + a));
-          pts.push(new T.Vector3(pa.x + (pb.x - pa.x) * u - uz * w, h + Math.sin(u * Math.PI) * 0.06 + w, pa.z + (pb.z - pa.z) * u + ux * w));
-        }
-        const curve = new T.CatmullRomCurve3(pts);
-        this.ropeGroup.add(new T.Mesh(new T.TubeGeometry(curve, 32, 0.018, 6, false), this.ropeCore));
-        this.ropeGroup.add(new T.Mesh(new T.TubeGeometry(curve, 32, 0.055 + Math.random() * 0.012, 8, false), this.ropeFire));
       }
     }
 
