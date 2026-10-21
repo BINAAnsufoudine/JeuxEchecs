@@ -14,7 +14,7 @@ window.Online = (function () {
   const SDK = 'https://www.gstatic.com/firebasejs/13.0.0/';
   // Cadences : durée totale par joueur (minutes) ou délai par coup (jours) ; « unlim » : sans limite
   const TIME_CONTROLS = {
-    unlim: { ms: 0 }, '3d': { perMove: 3 * 86400000 }, '1d': { perMove: 86400000 },
+    unlim: { ms: 0 }, '3d': { perMove: 3 * 86400000 }, '1d': { perMove: 86400000 }, pm60: { perMove: 60000 }, pm30: { perMove: 30000 },
     '10m': { ms: 600000 }, '5m': { ms: 300000 }, '2m': { ms: 120000 }, '1m': { ms: 60000 },
   };
   let fb = null, loading = null, user = null, profile = null;
@@ -74,6 +74,7 @@ window.Online = (function () {
       'team-full': L('L\'équipe est complète.', 'The team is full.'),
       'not-owner': L('Seul l\'organisateur peut lancer le tournoi.', 'Only the organiser can start the tournament.'),
       'too-few': L('Il faut au moins deux participants.', 'At least two participants are needed.'),
+      'deadline-passed': L('Les inscriptions à ce tournoi sont closes.', 'Registration for this tournament is closed.'),
     };
     return map[code] || (e && e.message) || L('Erreur inconnue.', 'Unknown error.');
   }
@@ -239,6 +240,8 @@ window.Online = (function () {
       name: String(opts.name || '').trim().slice(0, 40) || 'Tournoi', type: opts.type === 'team' ? 'team' : 'solo', format: opts.format === 'rr' ? 'rr' : 'swiss',
       tc: opts.tc || '10m', rounds: Math.max(1, Math.min(11, opts.rounds | 0 || 5)), teamSize: Math.max(2, Math.min(4, opts.teamSize | 0 || 4)),
       code: code6(), owner: me, ownerName: profile.pseudo, status: 'open', createdAt: now,
+      // date limite d'inscription : le tournoi démarre tout seul à ce moment-là
+      deadline: Number(opts.deadline) > now ? Number(opts.deadline) : now + 86400000,
       members: [me], names: { [me]: profile.pseudo }, elos: { [me]: profile.elo || 600 },
       players: [], teams: [], round: 0, pairings: {}, scores: {}, met: {},
     };
@@ -269,6 +272,7 @@ window.Online = (function () {
   function joinTournament(id) {
     return editTournament(id, (t) => {
       if (t.status !== 'open') fail('tournament-started');
+      if (t.deadline && Date.now() > t.deadline) fail('deadline-passed');
       if (t.type !== 'solo') fail('tournament-team');
       if (t.players.includes(user.uid)) return null;
       return { players: [...t.players, user.uid], members: [...new Set([...t.members, user.uid])], ...meInfo() };
@@ -350,11 +354,13 @@ window.Online = (function () {
     return games;
   }
   const totalRounds = (t) => (t.format === 'rr' ? Math.max(1, participants(t).length - (participants(t).length % 2 ? 0 : 1)) : t.rounds);
-  function startTournament(id) {
+  // Lancé par l'organisateur, ou automatiquement par un inscrit une fois la date limite passée
+  function startTournament(id, auto) {
     return editTournament(id, (t, tx, f) => {
-      if (t.owner !== user.uid) fail('not-owner');
       if (t.status !== 'open') return null;
-      if (participants(t).length < 2) fail('too-few');
+      const late = t.deadline && Date.now() > t.deadline;
+      if (t.owner !== user.uid && !(auto && late && t.members.includes(user.uid))) fail('not-owner');
+      if (participants(t).length < 2) { if (auto && late) return { status: 'cancelled' }; fail('too-few'); }
       const pairs = pairRound(t, 1);
       return { status: 'running', round: 1, totalRounds: totalRounds(t), startedAt: Date.now(), [`pairings.r1`]: roundGames(t, 1, pairs, tx, f) };
     });

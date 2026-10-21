@@ -2721,8 +2721,8 @@
   $('btn-editor').onclick = () => openEditor(store.get('editorFen', null));
   /* ---------- En ligne : compte, progression sauvegardée, invitations et parties à distance ---------- */
   const ON = window.Online;
-  const TC_LABELS = L({ unlim: 'Temps illimité', '3d': '3 jours par coup', '1d': '1 jour par coup', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' },
-    { unlim: 'Unlimited time', '3d': '3 days per move', '1d': '1 day per move', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' });
+  const TC_LABELS = L({ unlim: 'Temps illimité', '3d': '3 jours par coup', '1d': '1 jour par coup', pm60: '1 minute par coup', pm30: '30 secondes par coup', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' },
+    { unlim: 'Unlimited time', '3d': '3 days per move', '1d': '1 day per move', pm60: '1 minute per move', pm30: '30 seconds per move', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' });
   const announced = new Set();
   let justSignedUp = false, progressDirty = false, inviteStop = null, gamesStop = null, onlineInvites = { in: [], out: [] }, onlineGames = [];
   const SKIP_SYNC = new Set(['lastScreen', 'onlineSession', 'onlineSynced']);
@@ -2914,8 +2914,13 @@
   let tourList = { open: [], mine: [] }, tourListStop = null, tourId = null, tourDoc = null, tourStop = null;
   const FORMAT_LABELS = L({ swiss: 'Système suisse', rr: 'Toutes rondes' }, { swiss: 'Swiss system', rr: 'Round robin' });
   const TYPE_LABELS = L({ solo: 'Individuel', team: 'Par équipe' }, { solo: 'Individual', team: 'Team' });
-  const STATUS_LABELS = L({ open: 'inscriptions ouvertes', running: 'en cours', over: 'terminé' }, { open: 'registration open', running: 'in progress', over: 'finished' });
-  let tourForm = { type: 'solo', format: 'swiss', tc: '10m', rounds: 5, teamSize: 4 };
+  const STATUS_LABELS = L({ open: 'inscriptions ouvertes', running: 'en cours', over: 'terminé', cancelled: 'annulé (pas assez d\'inscrits)' }, { open: 'registration open', running: 'in progress', over: 'finished', cancelled: 'cancelled (not enough players)' });
+  // cadence : pendule (temps total) ou temps par coup
+  const TC_GROUPS = { clock: ['10m', '5m', '2m', '1m'], move: ['pm30', 'pm60', '1d', '3d'], unlim: ['unlim'] };
+  let tourForm = { type: 'solo', format: 'swiss', tcKind: 'clock', tc: '10m', rounds: 5, teamSize: 4 };
+  const fmtDeadline = (ms) => new Date(ms).toLocaleString(LOCALE, { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  const localInput = (ms) => { const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
+  const autoStarted = new Set();
   const pName = (t, id) => (t.type === 'team' ? (t.teams.find((x) => x.id === id) || {}).name || '?' : t.names[id] || '?');
   function standings(t) {
     const ids = ON.participants(t);
@@ -2930,7 +2935,7 @@
     if (tourDoc) { renderTournamentDetail(); return; }
     const seg = (name, opts) => `<div class="ed-seg" data-tour="${name}">${opts.map(([v, label]) => `<button type="button" data-value="${v}" class="${String(tourForm[name]) === String(v) ? 'on' : ''}">${label}</button>`).join('')}</div>`;
     const tcOpts = Object.keys(TC_LABELS).map((k) => `<option value="${k}"${k === tourForm.tc ? ' selected' : ''}>${TC_LABELS[k]}</option>`).join('');
-    const card = (t) => `<button class="btn replay-item" data-tour-open="${t.id}"><strong>${escHtml(t.name)}</strong><span>${TYPE_LABELS[t.type]} · ${FORMAT_LABELS[t.format]} · ${TC_LABELS[t.tc] || ''} · ${ON.participants(t).length} ${t.type === 'team' ? L('équipe(s)', 'team(s)') : L('joueur(s)', 'player(s)')} · ${STATUS_LABELS[t.status]}</span></button>`;
+    const card = (t) => `<button class="btn replay-item" data-tour-open="${t.id}"><strong>${escHtml(t.name)}</strong><span>${TYPE_LABELS[t.type]} · ${FORMAT_LABELS[t.format]} · ${TC_LABELS[t.tc] || ''} · ${ON.participants(t).length} ${t.type === 'team' ? L('équipe(s)', 'team(s)') : L('joueur(s)', 'player(s)')} · ${t.status === 'open' && t.deadline ? (Date.now() < t.deadline ? L(`inscriptions jusqu'au ${fmtDeadline(t.deadline)}`, `registration until ${fmtDeadline(t.deadline)}`) : L('inscriptions closes', 'registration closed')) : STATUS_LABELS[t.status]}</span></button>`;
     const mine = tourList.mine.slice().sort((a, b) => b.createdAt - a.createdAt), open = tourList.open.filter((t) => !t.members.includes(u.uid));
     body.innerHTML = `
       <h3 class="train-h">${L('Mes tournois', 'My tournaments')}</h3>${mine.length ? `<div class="replay-items">${mine.map(card).join('')}</div>` : `<p class="level-help">${L('Aucun pour le moment.', 'None for now.')}</p>`}
@@ -2939,12 +2944,13 @@
       <button id="tour-join-code" class="btn wide" type="button">${L('Rejoindre', 'Join')}</button>
       <h3 class="train-h">${L('Tournois ouverts', 'Open tournaments')}</h3>${open.length ? `<div class="replay-items">${open.map(card).join('')}</div>` : `<p class="level-help">${L('Aucun tournoi ouvert pour le moment.', 'No open tournament for now.')}</p>`}
       <h3 class="train-h">${L('Créer un tournoi', 'Create a tournament')}</h3>
-      ${seg('type', [['solo', TYPE_LABELS.solo], ['team', TYPE_LABELS.team]])}
-      ${field('tour-name', L('Nom du tournoi', 'Tournament name'), 'text', '', 'maxlength="40"')}
+      ${field('tour-name', L('Nom du tournoi', 'Tournament name'), 'text', tourForm.name || '', 'maxlength="40"')}
+      ${field('tour-deadline', L('Date limite d\'inscription (le tournoi démarre à ce moment-là)', 'Registration deadline (the tournament starts then)'), 'datetime-local', localInput(tourForm.deadline || Date.now() + 86400000))}
       <label class="field-label">${L('Format', 'Format')}</label>${seg('format', [['swiss', FORMAT_LABELS.swiss], ['rr', FORMAT_LABELS.rr]])}
       ${tourForm.format === 'swiss' ? `<label class="field-label">${L('Nombre de rondes', 'Number of rounds')}</label>${seg('rounds', [[3, '3'], [4, '4'], [5, '5'], [7, '7']])}` : ''}
       ${tourForm.type === 'team' ? `<label class="field-label">${L('Joueurs par équipe', 'Players per team')}</label>${seg('teamSize', [[2, '2'], [3, '3'], [4, '4']])}` : ''}
-      <label class="field-label" for="tour-tc">${L('Cadence', 'Time control')}</label><select id="tour-tc" class="profile-name-input">${tcOpts}</select>
+      <label class="field-label">${L('Cadence', 'Time control')}</label>${seg('tcKind', [['clock', L('Pendule', 'Clock')], ['move', L('Temps par coup', 'Time per move')], ['unlim', L('Illimité', 'Unlimited')]])}
+      ${tourForm.tcKind !== 'unlim' ? `<div style="margin-top:8px">${seg('tc', TC_GROUPS[tourForm.tcKind].map((k) => [k, TC_LABELS[k]]))}</div>` : ''}
       <button id="tour-create" class="btn primary wide" type="button">${L('Créer le tournoi', 'Create the tournament')}</button>
       <p id="tour-msg" class="ed-error" role="status"></p>`;
   }
@@ -2955,7 +2961,10 @@
     let html = `<button id="tour-back" class="btn ghost" type="button">‹ ${L('Tous les tournois', 'All tournaments')}</button>
       <p class="level-help">${TYPE_LABELS[t.type]} · ${FORMAT_LABELS[t.format]}${t.format === 'swiss' ? ` · ${t.rounds} ${L('rondes', 'rounds')}` : ''} · ${TC_LABELS[t.tc] || ''}${t.type === 'team' ? ` · ${t.teamSize} ${L('joueurs par équipe', 'players per team')}` : ''}<br>
       ${L('Organisé par', 'Organised by')} <b>${escHtml(t.ownerName)}</b> · ${STATUS_LABELS[t.status]}${t.status === 'running' ? ` · ${L('ronde', 'round')} ${t.round}/${t.totalRounds || t.rounds}` : ''}<br>
+      ${t.status === 'open' && t.deadline ? `${L('Inscriptions jusqu\'au', 'Registration until')} <b>${fmtDeadline(t.deadline)}</b><br>` : ''}
       ${L('Code à partager', 'Code to share')} : <b class="tour-code">${t.code}</b></p>`;
+    // date limite passée : le premier inscrit qui ouvre le tournoi le lance
+    if (t.status === 'open' && t.deadline && Date.now() > t.deadline && t.members.includes(me) && !autoStarted.has(t.id)) { autoStarted.add(t.id); ON.startTournament(t.id, true).catch(() => {}); }
     if (t.status === 'open') {
       if (t.type === 'solo') {
         html += `<h3 class="train-h">${L('Joueurs inscrits', 'Registered players')} (${t.players.length})</h3><div class="replay-items">${t.players.map((p) => `<div class="btn replay-item"><strong>${escHtml(t.names[p] || '?')} (${t.elos[p] || 600})</strong></div>`).join('')}</div>`;
@@ -2996,11 +3005,23 @@
     const msg = (x, ok) => { const m = $('tour-msg'); if (m) { m.textContent = x; m.style.color = ok ? 'var(--accent, #e9b949)' : ''; } };
     const run = async (fn, ok) => { msg(L('Un instant…', 'One moment…'), true); try { await fn(); msg(ok || '', true); } catch (err) { msg(ON.explain(err)); } };
     const seg = t.closest('[data-tour]');
-    if (seg && t.dataset.value) { const k = seg.dataset.tour; tourForm[k] = /^\d+$/.test(t.dataset.value) ? Number(t.dataset.value) : t.dataset.value; renderTournaments(); return; }
+    if (seg && t.dataset.value) {
+      const k = seg.dataset.tour;
+      if ($('tour-deadline')) tourForm.deadline = new Date($('tour-deadline').value).getTime() || tourForm.deadline;
+      if ($('tour-name')) tourForm.name = $('tour-name').value;
+      tourForm[k] = /^\d+$/.test(t.dataset.value) ? Number(t.dataset.value) : t.dataset.value;
+      if (k === 'tcKind') tourForm.tc = TC_GROUPS[t.dataset.value][0];
+      renderTournaments(); return;
+    }
     if (t.id === 'tour-login') return openAccount();
     if (t.id === 'tour-back') return closeTournament();
     if (t.dataset.tourOpen) return openTournament(t.dataset.tourOpen);
-    if (t.id === 'tour-create') return run(async () => { tourForm.tc = $('tour-tc').value; const tt = await ON.createTournament({ ...tourForm, name: $('tour-name').value }); openTournament(tt.id); });
+    if (t.id === 'tour-create') return run(async () => {
+      const deadline = new Date($('tour-deadline').value).getTime();
+      if (!(deadline > Date.now())) throw Object.assign(new Error(L('Choisis une date limite dans le futur.', 'Choose a deadline in the future.')), { code: 'deadline' });
+      const tt = await ON.createTournament({ ...tourForm, type: 'solo', name: $('tour-name').value, deadline });
+      openTournament(tt.id);
+    });
     if (t.id === 'tour-join-code') return run(async () => { const tt = await ON.findTournament($('tour-code').value); openTournament(tt.id); });
     if (t.id === 'tour-join') return run(() => ON.joinTournament(tourId), L('Inscription enregistrée.', 'Registration saved.'));
     if (t.id === 'tour-leave') return run(() => ON.leaveTournament(tourId));
@@ -3017,7 +3038,11 @@
     show('tournaments'); renderTournaments();
     if (!ON) return;
     ON.load().then(() => {
-      if (ON.user && !tourListStop) tourListStop = ON.watchTournaments((all) => { tourList = all; if (document.body.dataset.screen === 'tournaments' && !tourDoc) renderTournaments(); });
+      if (ON.user && !tourListStop) tourListStop = ON.watchTournaments((all) => {
+        tourList = all;
+        for (const t of all.mine) if (t.status === 'open' && t.deadline && Date.now() > t.deadline && !autoStarted.has(t.id)) { autoStarted.add(t.id); ON.startTournament(t.id, true).catch(() => {}); }
+        if (document.body.dataset.screen === 'tournaments' && !tourDoc) renderTournaments();
+      });
       renderTournaments();
     }).catch(() => {});
   };
