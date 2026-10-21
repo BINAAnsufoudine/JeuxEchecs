@@ -2903,7 +2903,7 @@
         <button id="acc-logout" class="btn ghost wide" type="button">${L('Se déconnecter', 'Sign out')}</button>
         <p id="acc-msg" class="ed-error" role="status"></p>
         <details class="danger-zone"><summary>${L('Supprimer mon compte', 'Delete my account')}</summary>
-          <p class="level-help">${L('Ton profil, ton pseudo, ta progression en ligne et tes invitations seront effacés définitivement. Les parties déjà jouées restent dans l’historique de tes adversaires. La progression enregistrée sur cet appareil est conservée. Un compte inutilisé pendant un an est supprimé automatiquement, après trois e-mails d’avertissement.', 'Your profile, nickname, online progress and invitations will be erased for good. Games already played stay in your opponents’ history. Progress saved on this device is kept. An account unused for a year is deleted automatically, after three warning e-mails.')}</p>
+          <p class="level-help">${L('Ton profil, ton pseudo, ta progression en ligne et tes invitations seront effacés définitivement. Les parties déjà jouées restent dans l’historique de tes adversaires. La progression enregistrée sur cet appareil est conservée.', 'Your profile, nickname, online progress and invitations will be erased for good. Games already played stay in your opponents’ history. Progress saved on this device is kept.')}</p>
           ${field('acc-del-pw', L('Mot de passe, pour confirmer', 'Password, to confirm'), 'password', '', 'autocomplete="current-password"')}
           <button id="acc-delete" class="btn danger wide" type="button">${L('Supprimer définitivement mon compte', 'Delete my account permanently')}</button>
         </details>`;
@@ -4001,7 +4001,7 @@
   });
   $('btn-welcome').onclick = () => show('welcome');
   /* ---------- Administration : compte réservé au développeur, sans jeu ---------- */
-  let adminSection = null, adminCache = null, adminQuery = '';
+  let adminSection = null, adminCache = null, adminQuery = '', adminSort = 'recent';
   const DAYMS = 86400000;
   function setAdminMode(on) {
     document.body.classList.toggle('admin-mode', on);
@@ -4054,9 +4054,10 @@
     }
     if (adminSection === 'users') {
       const q = adminQuery.trim().toLowerCase();
-      const list = players.filter((x) => !q || String(x.pseudo || '').toLowerCase().includes(q)).sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
-      html += `<div class="players-tools"><input id="admin-search" class="profile-name-input" type="search" placeholder="${L('Chercher un pseudo', 'Search a nickname')}" value="${escHtml(adminQuery)}"></div><p id="admin-msg" class="ed-error" role="status"></p>
-        <table class="tour-table admin-table"><tr><th>${L('Pseudo', 'Nickname')}</th><th>Elo</th><th>${L('Créé', 'Created')}</th><th>${L('Vu', 'Seen')}</th><th>${L('Parties', 'Games')}</th><th></th></tr>${list.map((x) => `<tr${x.banned ? ' class="banned"' : ''}><td><a href="#" data-profile="${x.id}">${escHtml(x.pseudo || '?')}</a>${x.banned ? ` <small>(${L('suspendu', 'suspended')})</small>` : ''}</td><td>${x.elo || 600}</td><td>${x.createdAt ? new Date(x.createdAt).toLocaleDateString(LOCALE) : '–'}</td><td>${x.lastSeen ? new Date(x.lastSeen).toLocaleDateString(LOCALE) : '–'}</td><td>${games.filter((g) => (g.players || []).includes(x.id)).length}</td><td class="admin-actions"><button class="mini" data-admin-ban="${x.id}">${x.banned ? L('Réactiver', 'Reinstate') : L('Suspendre', 'Suspend')}</button><button class="mini danger" data-admin-del="${x.id}">${L('Supprimer', 'Delete')}</button></td></tr>`).join('')}</table>`;
+      const idle = (x) => Math.floor((now - (x.lastSeen || x.createdAt || now)) / DAYMS);
+      const list = players.filter((x) => !q || String(x.pseudo || '').toLowerCase().includes(q)).sort(adminSort === 'idle' ? (a, b) => idle(b) - idle(a) : (a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+      html += `<div class="players-tools"><input id="admin-search" class="profile-name-input" type="search" placeholder="${L('Chercher un pseudo', 'Search a nickname')}" value="${escHtml(adminQuery)}"></div><div class="ed-seg" style="margin-top:8px">${[['recent', L('Vus récemment', 'Recently seen')], ['idle', L('Plus inactifs d’abord', 'Most inactive first')]].map(([k, lab]) => `<button type="button" data-admin-sort="${k}" class="${adminSort === k ? 'on' : ''}">${lab}</button>`).join('')}</div><p id="admin-msg" class="ed-error" role="status"></p>
+        <table class="tour-table admin-table"><tr><th>${L('Pseudo', 'Nickname')}</th><th>Elo</th><th>${L('Créé', 'Created')}</th><th>${L('Vu', 'Seen')}</th><th>${L('Inactif', 'Idle')}</th><th>${L('Parties', 'Games')}</th><th></th></tr>${list.map((x) => `<tr${x.banned ? ' class="banned"' : ''}><td><a href="#" data-profile="${x.id}">${escHtml(x.pseudo || '?')}</a>${x.banned ? ` <small>(${L('suspendu', 'suspended')})</small>` : ''}</td><td>${x.elo || 600}</td><td>${x.createdAt ? new Date(x.createdAt).toLocaleDateString(LOCALE) : '–'}</td><td>${x.lastSeen ? new Date(x.lastSeen).toLocaleDateString(LOCALE) : '–'}</td><td class="${idle(x) >= 365 ? 'loss' : ''}">${idle(x)} ${L('j', 'd')}</td><td>${games.filter((g) => (g.players || []).includes(x.id)).length}</td><td class="admin-actions"><button class="mini" data-admin-ban="${x.id}">${x.banned ? L('Réactiver', 'Reinstate') : L('Suspendre', 'Suspend')}</button><button class="mini danger" data-admin-del="${x.id}">${L('Supprimer', 'Delete')}</button></td></tr>`).join('')}</table>`;
     }
     if (adminSection === 'tours') {
       html += `<p id="admin-msg" class="ed-error" role="status"></p><table class="tour-table admin-table"><tr><th>${L('Nom', 'Name')}</th><th>${L('État', 'Status')}</th><th>${L('Inscrits', 'Entrants')}</th><th>${L('Créé', 'Created')}</th><th></th></tr>${tournaments.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map((t) => `<tr><td>${escHtml(t.name || '?')}</td><td>${STATUS_LABELS[t.status] || t.status}</td><td>${(t.members || []).length}</td><td>${t.createdAt ? new Date(t.createdAt).toLocaleDateString(LOCALE) : '–'}</td><td><button class="mini danger" data-admin-deltour="${t.id}">${L('Supprimer', 'Delete')}</button></td></tr>`).join('')}</table>`;
@@ -4068,6 +4069,7 @@
     const b = e.target.closest('button'); if (!b) return;
     const msg = (t, ok) => { const m = $('admin-msg'); if (m) { m.textContent = t; m.style.color = ok ? 'var(--accent, #e9b949)' : ''; } };
     if (b.dataset.adminSection != null) { adminSection = b.dataset.adminSection || null; renderAdmin(); return; }
+    if (b.dataset.adminSort) { adminSort = b.dataset.adminSort; renderAdmin(); return; }
     if (b.dataset.admin === 'reload') { adminCache = null; loadAdmin(); return; }
     if (b.dataset.admin === 'verify') { try { await ON.sendVerification(); msg(L('E-mail envoyé : clique sur le lien qu’il contient, puis sur « J’ai cliqué sur le lien ».', 'E-mail sent: click its link, then “I clicked the link”.'), true); } catch (err) { msg(ON.explain(err)); } return; }
     if (b.dataset.admin === 'checked') { try { const ok = await ON.refreshVerification(); if (ok) { renderAdmin(); } else msg(L('Adresse pas encore vérifiée.', 'Address not verified yet.')); } catch (err) { msg(ON.explain(err)); } return; }
