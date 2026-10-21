@@ -3947,9 +3947,9 @@
     const q = questState(), qd = q.ids.filter((id) => q.claimed[id]).length;
     if (qd < 3) card('🎯', L('Quêtes du jour', 'Daily quests'), L(`${qd}/3 accomplies · 30 🌾 chacune`, `${qd}/3 done · 30 🌾 each`), 'quests');
     $('welcome-title').textContent = p.name ? L(`Bon retour, ${p.name} !`, `Welcome back, ${p.name}!`) : L('Bienvenue !', 'Welcome!');
-    $('welcome-body').innerHTML = `<p class="level-help">${L('Voici tout ce que tu as en cours. Choisis ce que tu veux continuer.', 'Here is everything you have in progress. Choose what to continue.')}</p>
-      <div class="welcome-list">${items.join('')}</div>
-      <div class="welcome-actions"><button class="btn primary" type="button" data-resume="new">${L('Nouvelle partie', 'New game')}</button><button class="btn ghost" type="button" data-resume="home">${L('Menu principal', 'Main menu')}</button></div>`;
+    $('welcome-body').innerHTML = `<div class="welcome-actions"><button class="btn primary" type="button" data-resume="new">${L('Nouvelle partie', 'New game')}</button><button class="btn ghost" type="button" data-resume="home">${L('Menu principal', 'Main menu')}</button></div>
+      <p class="level-help">${L('Voici tout ce que tu as en cours. Choisis ce que tu veux continuer.', 'Here is everything you have in progress. Choose what to continue.')}</p>
+      <div class="welcome-list">${items.join('')}</div>`;
   }
   $('welcome-body').addEventListener('click', (e) => {
     const b = e.target.closest('[data-resume]'); if (!b) return;

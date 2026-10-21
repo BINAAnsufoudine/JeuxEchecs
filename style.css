@@ -633,5 +633,5 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .welcome-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .welcome-text small { color: var(--muted); font-weight: 500; }
 .welcome-go { color: var(--accent, #e9b949); font-weight: 700; white-space: nowrap; }
-.welcome-actions { display: flex; gap: 8px; margin-top: 14px; }
+.welcome-actions { display: flex; gap: 8px; margin: 4px 0 10px; }
 .welcome-actions .btn { flex: 1; }
