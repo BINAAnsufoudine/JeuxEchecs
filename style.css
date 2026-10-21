@@ -610,3 +610,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .h2h-table td.win, .h2h-total .win { color: #4cd07d; }
 .h2h-table td.loss, .h2h-total .loss { color: #e8705f; }
 .h2h-table .mini { padding: 3px 8px; }
+
+/* Tournois : menu par rubrique */
+.tour-menu { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.tour-menu-btn { display: flex; align-items: center; gap: 10px; padding: 16px 14px; text-align: left; }
+.tour-menu-btn b { flex: 1; }
+.tour-menu-icon { font-size: 1.4rem; }
+.tour-menu-count { background: var(--accent, #e9b949); color: #1b1b1b; border-radius: 999px; padding: 1px 9px; font-weight: 750; font-size: 0.85rem; }

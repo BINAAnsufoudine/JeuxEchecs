@@ -2972,7 +2972,7 @@
     if (t.dataset.game) { const g = onlineGames.find((x) => x.id === t.dataset.game); if (g) openOnlineGame(g); }
   });
   /* ---------- Tournois en ligne : individuels ou par équipe ---------- */
-  let tourList = { open: [], mine: [] }, tourListStop = null, tourId = null, tourDoc = null, tourStop = null;
+  let tourSection = null, tourList = { open: [], mine: [] }, tourListStop = null, tourId = null, tourDoc = null, tourStop = null;
   const FORMAT_LABELS = L({ swiss: 'Système suisse', rr: 'Toutes rondes' }, { swiss: 'Swiss system', rr: 'Round robin' });
   const TYPE_LABELS = L({ solo: 'Individuel', team: 'Par équipe' }, { solo: 'Individual', team: 'Team' });
   const STATUS_LABELS = L({ open: 'inscriptions ouvertes', running: 'en cours', over: 'terminé', cancelled: 'annulé (pas assez d\'inscrits)' }, { open: 'registration open', running: 'in progress', over: 'finished', cancelled: 'cancelled (not enough players)' });
@@ -3001,15 +3001,29 @@
     const pub = tourList.public || [];
     const running = pub.filter((t) => t.status === 'running').sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
     const history = pub.filter((t) => t.status === 'over').sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0)).slice(0, 30);
-    body.innerHTML = `
-      <h3 class="train-h">${L('Mes tournois', 'My tournaments')}</h3>${mine.length ? `<div class="replay-items">${mine.map(card).join('')}</div>` : `<p class="level-help">${L('Aucun pour le moment.', 'None for now.')}</p>`}
-      <h3 class="train-h">${L('Rejoindre avec un code', 'Join with a code')}</h3>
-      ${field('tour-code', L('Code du tournoi', 'Tournament code'), 'text', '', 'maxlength="6" style="text-transform:uppercase"')}
-      <button id="tour-join-code" class="btn wide" type="button">${L('Rejoindre', 'Join')}</button>
-      <h3 class="train-h">${L('Tournois ouverts', 'Open tournaments')}</h3>${open.length ? `<div class="replay-items">${open.map(card).join('')}</div>` : `<p class="level-help">${L('Aucun tournoi ouvert pour le moment.', 'No open tournament for now.')}</p>`}
-      <h3 class="train-h">${L('En cours : à regarder en direct', 'In progress: watch live')}</h3>${running.length ? `<div class="replay-items">${running.map(card).join('')}</div>` : `<p class="level-help">${L('Aucun tournoi en cours.', 'No tournament in progress.')}</p>`}
-      <h3 class="train-h">${L('Historique des tournois', 'Tournament history')}</h3>${history.length ? `<div class="replay-items">${history.map(card).join('')}</div>` : `<p class="level-help">${L('Aucun tournoi terminé pour le moment.', 'No finished tournament yet.')}</p>`}
-      <h3 class="train-h">${L('Créer un tournoi', 'Create a tournament')}</h3>
+    const list = (arr, empty) => (arr.length ? `<div class="replay-items">${arr.map(card).join('')}</div>` : `<p class="level-help">${empty}</p>`);
+    // menu : un bouton par rubrique, puis la rubrique choisie
+    const SECTIONS = [
+      ['mine', '🎟️', L('Mes tournois', 'My tournaments'), mine.length],
+      ['code', '🔑', L('Rejoindre avec un code', 'Join with a code'), null],
+      ['open', '📝', L('Tournois ouverts', 'Open tournaments'), open.length],
+      ['live', '🔴', L('En direct', 'Live'), running.length],
+      ['history', '📜', L('Historique', 'History'), history.length],
+      ['create', '➕', L('Créer un tournoi', 'Create a tournament'), null],
+    ];
+    if (!tourSection) {
+      body.innerHTML = `<div class="tour-menu">${SECTIONS.map(([id, icon, label, n]) => `<button class="btn tour-menu-btn" type="button" data-tour-section="${id}"><span class="tour-menu-icon">${icon}</span><b>${label}</b>${n != null ? `<span class="tour-menu-count">${n}</span>` : ''}</button>`).join('')}</div>`;
+      return;
+    }
+    const sec = SECTIONS.find((x) => x[0] === tourSection);
+    let html = `<button class="btn ghost" type="button" data-tour-section="">‹ ${L('Tournois', 'Tournaments')}</button><h3 class="train-h">${sec[1]} ${sec[2]}</h3>`;
+    if (tourSection === 'mine') html += list(mine, L('Aucun pour le moment.', 'None for now.'));
+    if (tourSection === 'code') html += `${field('tour-code', L('Code du tournoi', 'Tournament code'), 'text', '', 'maxlength="6" style="text-transform:uppercase"')}<button id="tour-join-code" class="btn primary wide" type="button">${L('Rejoindre', 'Join')}</button><p id="tour-msg" class="ed-error" role="status"></p>`;
+    if (tourSection === 'open') html += list(open, L('Aucun tournoi ouvert pour le moment.', 'No open tournament for now.'));
+    if (tourSection === 'live') html += `<p class="level-help">${L('Tournois en cours : ouvre-en un pour regarder les parties en direct.', 'Tournaments in progress: open one to watch the games live.')}</p>` + list(running, L('Aucun tournoi en cours.', 'No tournament in progress.'));
+    if (tourSection === 'history') html += list(history, L('Aucun tournoi terminé pour le moment.', 'No finished tournament yet.'));
+    if (tourSection !== 'create') { body.innerHTML = html; return; }
+    body.innerHTML = html + `
       ${seg('type', [['solo', TYPE_LABELS.solo], ['team', TYPE_LABELS.team]])}
       ${tourForm.type === 'team' ? `<label class="field-label">${L('Formation des équipes', 'How teams are formed')}</label>${seg('teamMode', [['auto', L('Équilibrées par niveau', 'Balanced by level')], ['made', L('Équipes déjà faites', 'Ready-made teams')]])}<p class="level-help">${tourForm.teamMode === 'auto' ? L('Chacun s\'inscrit seul ; au départ, les équipes sont formées automatiquement pour que leur niveau moyen soit le plus proche possible.', 'Everyone registers alone; at the start, teams are formed automatically so their average levels are as close as possible.') : L('Un capitaine crée son équipe et y ajoute ses coéquipiers par leur pseudo.', 'A captain creates the team and adds teammates by nickname.')}</p>` : ''}
       ${field('tour-name', L('Nom du tournoi', 'Tournament name'), 'text', tourForm.name || '', 'maxlength="40"')}
@@ -3148,6 +3162,7 @@
   }
   $('tour-body').addEventListener('click', async (e) => {
     const t = e.target.closest('button'); if (!t) return;
+    if (t.dataset.tourSection != null) { tourSection = t.dataset.tourSection || null; renderTournaments(); $('tour-body').scrollTop = 0; return; }
     if (t.dataset.watch) return openSpectate(t.dataset.watch);
     const msg = (x, ok) => { const m = $('tour-msg'); if (m) { m.textContent = x; m.style.color = ok ? 'var(--accent, #e9b949)' : ''; } };
     const run = async (fn, ok) => { msg(L('Un instant…', 'One moment…'), true); try { await fn(); msg(ok || '', true); } catch (err) { msg(ON.explain(err)); } };
@@ -3181,7 +3196,7 @@
     }
   });
   $('btn-tournaments').onclick = () => {
-    returnTo = 'home';
+    returnTo = 'home'; tourSection = null;
     show('tournaments'); renderTournaments();
     if (!ON) return;
     ON.load().then(() => {
