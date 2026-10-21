@@ -18,7 +18,7 @@
 
   // Textes fixes de la page d'accueil et des écrans (index.html)
   const PAGE = {
-    'Cavalier · Échecs': 'Cavalier · Chess',
+    'Ata Wawé · Échecs': 'Ata Wawé · Chess',
     'Elo estimé : 600': 'Estimated Elo: 600',
     'Modifier': 'Edit',
     'Programme personnalisé': 'Personal training plan',
@@ -140,7 +140,7 @@
     'Sortez cavaliers et fous avant de jouer la dame.': 'Develop knights and bishops before moving the queen.',
     "Roquez tôt pour mettre votre roi à l'abri.": 'Castle early to keep your king safe.',
     "Avant chaque coup, demandez-vous ce que menace l'adversaire.": 'Before each move, ask yourself what your opponent is threatening.',
-    'Cavalier rend les échecs accessibles à tous.': 'Cavalier makes chess accessible to everyone.',
+    'Ata Wawé rend les échecs accessibles à tous.': 'Ata Wawé makes chess accessible to everyone.',
     'Jouez contre l’ordinateur ou à deux, et rejouez les niveaux débloqués.': 'Play against the computer or with a friend, and replay unlocked levels.',
     'Entraînez-vous avec des problèmes et les conseils de Maître Sissa.': "Train with puzzles and Master Sissa's advice.",
     'Créateur : Ansufoudine BINA': 'Creator: Ansufoudine BINA',

@@ -387,7 +387,7 @@
       for (const u of g.moves) { const r = G.playUci(u); if (!r) break; san.push(r.san); }
       const st = G.status(), res = g.result && g.result !== '*' ? g.result : st.over ? st.result : '*';
       const d = new Date(g.id), me = L('Joueur', 'Player'), ai = `${L('Ordinateur', 'Computer')} ${LEVEL_NAMES[g.level] || ''} (Elo ${LEVEL_ELO[g.level] || '?'})`;
-      const tags = { Event: L('Partie Cavalier', 'Cavalier game'), Site: 'Cavalier', Date: `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`,
+      const tags = { Event: L('Partie Ata Wawé', 'Ata Wawé game'), Site: 'Ata Wawé', Date: `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`,
         White: g.color === 'w' ? me : ai, Black: g.color === 'w' ? ai : me, Result: res,
         [g.color === 'w' ? 'BlackElo' : 'WhiteElo']: String(LEVEL_ELO[g.level] || '') };
       let body = '';
@@ -515,7 +515,7 @@
     if (/\.pgn(?:\.txt)?$/i.test(f.name) || /^\s*\[Event\s+/m.test(text)) return loadPgn(text);
     let j = null;
     try { j = JSON.parse(text); } catch { /* pas du JSON */ }
-    if (!j || j.format !== 'cavalier-progression' || !validImportData(j.data)) return toast(L("Ce fichier n'est pas une progression Cavalier valide.", 'This file is not a valid Cavalier progress file.'));
+    if (!j || j.format !== 'cavalier-progression' || !validImportData(j.data)) return toast(L("Ce fichier n'est pas une progression Ata Wawé valide.", 'This file is not a valid Ata Wawé progress file.'));
     modal({
       title: L('Importer la progression ?', 'Import this progress?'),
       text: L(`Niveau débloqué : ${(j.summary && j.summary.unlockedLevelName) || '?'} · ${(j.data.archive || []).length} parties.\nTa progression actuelle sur cet appareil sera remplacée.`, `Unlocked level: ${(j.summary && j.summary.unlockedLevelName) || '?'} · ${(j.data.archive || []).length} games.\nYour current progress on this device will be replaced.`),
@@ -4277,7 +4277,7 @@
     const fen = entry.fen || window.Chess.START_FEN, G = new Game(fen), san = [];
     for (const u of entry.moves || []) { const r = G.playUci(u); if (!r) break; san.push(r.san); }
     const st = G.status(), res = entry.result && entry.result !== '*' ? entry.result : st.over ? st.result : '*';
-    const tags = { Event: entry.event || L('Partie Cavalier', 'Cavalier game'), Site: 'Cavalier', Date: entry.date || pgnDate(Date.now()), White: entry.white || L('Blancs', 'White'), Black: entry.black || L('Noirs', 'Black'), Result: res };
+    const tags = { Event: entry.event || L('Partie Ata Wawé', 'Ata Wawé game'), Site: 'Ata Wawé', Date: entry.date || pgnDate(Date.now()), White: entry.white || L('Blancs', 'White'), Black: entry.black || L('Noirs', 'Black'), Result: res };
     if (entry.opening) tags.Opening = entry.opening;
     if (fen !== window.Chess.START_FEN) { tags.SetUp = '1'; tags.FEN = fen; }
     const start = new Game(fen).state;
