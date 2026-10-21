@@ -12,10 +12,10 @@ window.Online = (function () {
     appId: '1:1015125085871:web:908d4ed6761c5858338e5a',
   };
   const SDK = 'https://www.gstatic.com/firebasejs/13.0.0/';
-  // Cadences : durée totale par joueur (minutes) ou délai par coup. Toute partie a une limite pour avoir une fin :
-  // les anciennes parties « illimitées » (unlim) ont désormais 7 jours par coup.
+  // Cadences : durée totale par joueur (minutes) ou délai par coup, 3 jours au plus. Toute partie a une limite
+  // pour avoir une fin : les anciennes cadences « illimité » (unlim) et « 7 jours » valent désormais 3 jours par coup.
   const TIME_CONTROLS = {
-    unlim: { perMove: 7 * 86400000 }, '7d': { perMove: 7 * 86400000 }, '3d': { perMove: 3 * 86400000 }, '1d': { perMove: 86400000 }, pm60: { perMove: 60000 }, pm30: { perMove: 30000 },
+    unlim: { perMove: 3 * 86400000 }, '7d': { perMove: 3 * 86400000 }, '3d': { perMove: 3 * 86400000 }, '1d': { perMove: 86400000 }, pm60: { perMove: 60000 }, pm30: { perMove: 30000 },
     '10m': { ms: 600000 }, '5m': { ms: 300000 }, '2m': { ms: 120000 }, '1m': { ms: 60000 },
   };
   let fb = null, loading = null, user = null, profile = null;
@@ -297,7 +297,7 @@ window.Online = (function () {
     const fromWhite = Math.random() < 0.5;
     const w = fromWhite ? { uid: inv.from, name: inv.fromName, elo: inv.fromElo } : { uid: inv.to, name: inv.toName, elo: inv.toElo };
     const b = fromWhite ? { uid: inv.to, name: inv.toName, elo: inv.toElo } : { uid: inv.from, name: inv.fromName, elo: inv.fromElo };
-    const tc = TIME_CONTROLS[inv.tc] || TIME_CONTROLS['7d'], now = Date.now();
+    const tc = TIME_CONTROLS[inv.tc] || TIME_CONTROLS['3d'], now = Date.now();
     const game = await f.addDoc(f.collection(f.db, 'games'), {
       players: [w.uid, b.uid], white: w.uid, black: b.uid, whiteName: w.name, blackName: b.name, whiteElo: w.elo, blackElo: b.elo,
       tc: inv.tc, clock: tc.ms ? { w: tc.ms, b: tc.ms } : null, moves: [], lastMoveAt: now, status: 'active', result: null, reason: null,
@@ -451,7 +451,7 @@ window.Online = (function () {
   // Crée les parties d'une ronde (une par échiquier en tournoi par équipe)
   // Une partie de tournoi (leg 1 ou 2 : chaque appariement se joue en aller-retour, une fois avec chaque couleur)
   function makeGame(t, r, w, bl, board, leg, tx, f) {
-    const tc = TIME_CONTROLS[t.tc] || TIME_CONTROLS['7d'], now = Date.now();
+    const tc = TIME_CONTROLS[t.tc] || TIME_CONTROLS['3d'], now = Date.now();
     const ref = f.doc(f.collection(f.db, 'games'));
     tx.set(ref, {
       players: [w, bl], white: w, black: bl, whiteName: t.names[w] || '?', blackName: t.names[bl] || '?', whiteElo: t.elos[w] || 600, blackElo: t.elos[bl] || 600,

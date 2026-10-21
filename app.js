@@ -2797,8 +2797,8 @@
   $('btn-editor').onclick = () => openEditor(store.get('editorFen', null));
   /* ---------- En ligne : compte, progression sauvegardée, invitations et parties à distance ---------- */
   const ON = window.Online;
-  const TC_LABELS = L({ unlim: '7 jours par coup', '7d': '7 jours par coup', '3d': '3 jours par coup', '1d': '1 jour par coup', pm60: '1 minute par coup', pm30: '30 secondes par coup', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' },
-    { unlim: '7 days per move', '7d': '7 days per move', '3d': '3 days per move', '1d': '1 day per move', pm60: '1 minute per move', pm30: '30 seconds per move', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' });
+  const TC_LABELS = L({ unlim: '3 jours par coup', '7d': '3 jours par coup', '3d': '3 jours par coup', '1d': '1 jour par coup', pm60: '1 minute par coup', pm30: '30 secondes par coup', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' },
+    { unlim: '3 days per move', '7d': '3 days per move', '3d': '3 days per move', '1d': '1 day per move', pm60: '1 minute per move', pm30: '30 seconds per move', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' });
   const announced = new Set();
   let justSignedUp = false, progressDirty = false, inviteStop = null, gamesStop = null, onlineInvites = { in: [], out: [] }, onlineGames = [];
   const SKIP_SYNC = new Set(['lastScreen', 'onlineSession', 'onlineSynced']);
@@ -3025,7 +3025,7 @@
     }
     const me = u.uid, myName = (ON.profile && ON.profile.pseudo) || '';
     // plus de partie sans limite : chaque partie doit pouvoir se terminer
-    const tcOptions = Object.keys(TC_LABELS).filter((k) => k !== 'unlim').map((k) => `<option value="${k}"${k === store.get('onlineTc', '10m') ? ' selected' : ''}>${TC_LABELS[k]}</option>`).join('');
+    const tcOptions = Object.keys(TC_LABELS).filter((k) => k !== 'unlim' && k !== '7d').map((k) => `<option value="${k}"${k === store.get('onlineTc', '10m') ? ' selected' : ''}>${TC_LABELS[k]}</option>`).join('');
     const inv = onlineInvites.in, out = onlineInvites.out;
     const active = onlineGames.filter((g) => g.status === 'active').sort((a, b) => b.lastMoveAt - a.lastMoveAt);
     const myTurn = active.filter((g) => (g.moves.length % 2 === 0) === (g.white === me)).length;
@@ -3090,7 +3090,7 @@
   const TYPE_LABELS = L({ solo: 'Individuel', team: 'Par équipe' }, { solo: 'Individual', team: 'Team' });
   const STATUS_LABELS = L({ open: 'inscriptions ouvertes', running: 'en cours', over: 'terminé', cancelled: 'annulé (pas assez d\'inscrits)' }, { open: 'registration open', running: 'in progress', over: 'finished', cancelled: 'cancelled (not enough players)' });
   // cadence : pendule (temps total) ou temps par coup
-  const TC_GROUPS = { clock: ['10m', '5m', '2m', '1m'], move: ['pm30', 'pm60', '1d', '3d', '7d'] };
+  const TC_GROUPS = { clock: ['10m', '5m', '2m', '1m'], move: ['pm30', 'pm60', '1d', '3d'] };
   let tourForm = { type: 'solo', teamMode: 'auto', format: 'swiss', tcKind: 'clock', tc: '10m', rounds: 5, teamSize: 4 };
   const fmtDeadline = (ms) => new Date(ms).toLocaleString(LOCALE, { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
   const localInput = (ms) => { const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
