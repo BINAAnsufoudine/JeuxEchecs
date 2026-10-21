@@ -3020,7 +3020,7 @@
     if (t.format === 'rr') {
       // grille croisée : résultats des deux parties (Blancs puis Noirs) du joueur de la ligne contre celui de la colonne
       html += `<tr><th>#</th><th>${L('Joueur', 'Player')}</th>${order.map((_, i) => `<th class="c">${i + 1}</th>`).join('')}<th>${L('Pts', 'Pts')}</th><th>${L('Départ.', 'Tiebr.')}</th></tr>`;
-      html += order.map((id, i) => `<tr${id === me ? ' class="me"' : ''}><td>${i + 1}</td><td>${escHtml(t.names[id] || '?')}</td>${order.map((o) => {
+      html += order.map((id, i) => `<tr${id === me ? ' class="me"' : ''}><td>${i + 1}</td><td><a href="#" data-profile="${id}">${escHtml(t.names[id] || '?')}</a></td>${order.map((o) => {
         if (o === id) return '<td class="c x">■</td>';
         const games = all(id).filter((x) => x.opp === o).sort((x, y) => (x.color === 'w' ? -1 : 1) - (y.color === 'w' ? -1 : 1));
         return `<td class="c">${games.map((x) => fmt(x.pts)).join(' ')}</td>`;
@@ -3028,7 +3028,7 @@
     } else {
       // suisse : pour chaque ronde, rang de l'adversaire et points marqués sur les deux parties
       html += `<tr><th>#</th><th>${L('Joueur', 'Player')}</th><th>Elo</th>${rounds.map((r) => `<th class="c">R${r}</th>`).join('')}<th>${L('Pts', 'Pts')}</th><th>${L('Départ.', 'Tiebr.')}</th></tr>`;
-      html += order.map((id, i) => `<tr${id === me ? ' class="me"' : ''}><td>${i + 1}</td><td>${escHtml(t.names[id] || '?')}</td><td>${t.elos[id] || 600}</td>${rounds.map((r) => {
+      html += order.map((id, i) => `<tr${id === me ? ' class="me"' : ''}><td>${i + 1}</td><td><a href="#" data-profile="${id}">${escHtml(t.names[id] || '?')}</a></td><td>${t.elos[id] || 600}</td>${rounds.map((r) => {
         const list = per[id][r];
         if (!list) return '<td class="c"></td>';
         if (list[0].bye) return `<td class="c">${L('exempt', 'bye')} 2</td>`;
@@ -3053,7 +3053,7 @@
     if (t.status === 'open') {
       if (t.type === 'solo' || t.teamMode === 'auto') {
         if (t.type === 'team') html += `<p class="level-help">${L(`Équipes de ${t.teamSize} formées automatiquement au départ, de niveau moyen équivalent.`, `Teams of ${t.teamSize} formed automatically at the start, with equivalent average levels.`)}</p>`;
-        html += `<h3 class="train-h">${L('Joueurs inscrits', 'Registered players')} (${t.players.length})</h3><div class="replay-items">${t.players.map((p) => `<div class="btn replay-item"><strong>${escHtml(t.names[p] || '?')} (${t.elos[p] || 600})</strong></div>`).join('')}</div>`;
+        html += `<h3 class="train-h">${L('Joueurs inscrits', 'Registered players')} (${t.players.length})</h3><div class="replay-items">${t.players.map((p) => `<button type="button" class="btn replay-item" data-profile="${p}"><strong>${escHtml(t.names[p] || '?')} (${t.elos[p] || 600})</strong><span>${L('voir le profil', 'see profile')}</span></button>`).join('')}</div>`;
         html += inIt ? `<button id="tour-leave" class="btn ghost wide" type="button">${L('Me désinscrire', 'Withdraw')}</button>` : `<button id="tour-join" class="btn primary wide" type="button">${L('M\'inscrire', 'Register')}</button>`;
       } else {
         html += `<h3 class="train-h">${L('Équipes', 'Teams')} (${t.teams.length})</h3>` + (t.teams.length ? `<div class="replay-items">${t.teams.map((tm) => `<div class="btn replay-item"><strong>${escHtml(tm.name)} (${tm.members.length}/${t.teamSize})</strong><span>${tm.members.map((m, i) => `${i + 1}. ${escHtml(t.names[m] || '?')}${m === tm.captain ? L(' (capitaine)', ' (captain)') : ''}`).join(' · ')}</span></div>`).join('')}</div>` : `<p class="level-help">${L('Aucune équipe pour le moment.', 'No team yet.')}</p>`);
@@ -3163,6 +3163,108 @@
       renderTournaments();
     }).catch(() => {});
   };
+  /* ---------- Profil : statistiques (ordinateur, joueurs, tournois, apprentissage) et grades ---------- */
+  // Rang d'un participant à la fin d'un tournoi (points, puis départage)
+  function tournamentPlace(t, uid) {
+    if (t.status !== 'over') return null;
+    const ids = ON.participants(t);
+    const buch = (id) => ((t.met || {})[id] || []).reduce((s, o) => s + ((t.scores || {})[o] || 0), 0);
+    const order = ids.slice().sort((a, b) => ((t.scores || {})[b] || 0) - ((t.scores || {})[a] || 0) || buch(b) - buch(a));
+    const me = t.type === 'team' ? (t.teams.find((tm) => tm.members.includes(uid)) || {}).id : uid;
+    const i = order.indexOf(me);
+    return i < 0 ? null : i + 1;
+  }
+  function localSummary(tours) {
+    const stats = store.get('stats', {});
+    const ai = { win: 0, draw: 0, loss: 0, best: 0 };
+    for (const [lvl, s] of Object.entries(stats)) { ai.win += s.win; ai.draw += s.draw; ai.loss += s.loss; if (s.win) ai.best = Math.max(ai.best, Number(lvl)); }
+    const on = { win: 0, draw: 0, loss: 0, opponents: new Set() };
+    for (const g of store.get('onlineArchive', [])) {
+      const mine = g.color === 'w' ? '1-0' : '0-1';
+      if (g.result === mine) on.win++; else if (g.result === '1/2-1/2') on.draw++; else on.loss++;
+      on.opponents.add(g.color === 'w' ? g.black : g.white);
+    }
+    const pz = Object.values(store.get('pzdone', {})).filter((v) => v === 's').length;
+    const done = store.get('trainDone', {});
+    const mates = Object.keys(done).filter((k) => k.startsWith('mate:')).length;
+    const ends = Object.keys(done).filter((k) => k.startsWith('end:')).length;
+    const sr = store.get('openingsSR', {});
+    const openings = Object.values(sr).filter((r) => r.stage >= 3).length;
+    const daily = store.get('daily', {});
+    const tour = { played: 0, wins: 0, second: 0, third: 0 };
+    for (const t of tours || []) {
+      const place = ON && ON.user ? tournamentPlace(t, ON.user.uid) : null;
+      if (t.status === 'over' && place) { tour.played++; if (place === 1) tour.wins++; else if (place === 2) tour.second++; else if (place === 3) tour.third++; }
+    }
+    return { ai, online: { win: on.win, draw: on.draw, loss: on.loss, opponents: on.opponents.size }, tour, pz, mates, ends, openings, dailyBest: daily.best || 0, unlocked: unlocked(), elo: estimatedElo() };
+  }
+  // Grades gagnés par les exploits : étoiles (ordinateur), médailles et coupes (tournois), et plus
+  const BADGES = [
+    { id: 'ai1', icon: '⭐', name: L('Première victoire', 'First win'), desc: L('Battre l\'ordinateur une fois', 'Beat the computer once'), ok: (s) => s.ai.win >= 1 },
+    { id: 'ai10', icon: '⭐⭐', name: L('Dix victoires', 'Ten wins'), desc: L('10 victoires contre l\'ordinateur', '10 wins against the computer'), ok: (s) => s.ai.win >= 10 },
+    { id: 'ai50', icon: '⭐⭐⭐', name: L('Cinquante victoires', 'Fifty wins'), desc: L('50 victoires contre l\'ordinateur', '50 wins against the computer'), ok: (s) => s.ai.win >= 50 },
+    { id: 'lvl-exp', icon: '🎖️', name: L('Expert', 'Expert'), desc: L('Battre un niveau Expert', 'Beat an Expert level'), ok: (s) => s.ai.best >= 13 },
+    { id: 'lvl-gm', icon: '🎖️🎖️', name: L('Grand maître', 'Grandmaster'), desc: L('Battre un niveau Grand maître', 'Beat a Grandmaster level'), ok: (s) => s.ai.best >= 19 },
+    { id: 'lvl-ch', icon: '👑', name: L('Champion', 'Champion'), desc: L('Battre le niveau Champion', 'Beat the Champion level'), ok: (s) => s.ai.best >= 22 },
+    { id: 'on1', icon: '♟️', name: L('Premier duel gagné', 'First duel won'), desc: L('Gagner une partie en ligne', 'Win an online game'), ok: (s) => s.online.win >= 1 },
+    { id: 'on10', icon: '⚔️', name: L('Duelliste', 'Duellist'), desc: L('10 victoires en ligne', '10 online wins'), ok: (s) => s.online.win >= 10 },
+    { id: 'friends', icon: '🤝', name: L('Sociable', 'Sociable'), desc: L('Jouer contre 5 joueurs différents', 'Play 5 different players'), ok: (s) => s.online.opponents >= 5 },
+    { id: 'tour1', icon: '🎟️', name: L('Compétiteur', 'Competitor'), desc: L('Finir un tournoi', 'Finish a tournament'), ok: (s) => s.tour.played >= 1 },
+    { id: 'bronze', icon: '🥉', name: L('Médaille de bronze', 'Bronze medal'), desc: L('Finir 3e d\'un tournoi', 'Finish 3rd in a tournament'), ok: (s) => s.tour.third >= 1 },
+    { id: 'silver', icon: '🥈', name: L('Médaille d\'argent', 'Silver medal'), desc: L('Finir 2e d\'un tournoi', 'Finish 2nd in a tournament'), ok: (s) => s.tour.second >= 1 },
+    { id: 'gold', icon: '🥇', name: L('Médaille d\'or', 'Gold medal'), desc: L('Gagner un tournoi', 'Win a tournament'), ok: (s) => s.tour.wins >= 1 },
+    { id: 'cup', icon: '🏆', name: L('Coupe des champions', 'Champions cup'), desc: L('Gagner 3 tournois', 'Win 3 tournaments'), ok: (s) => s.tour.wins >= 3 },
+    { id: 'pz50', icon: '🧩', name: L('Résolveur', 'Solver'), desc: L('Résoudre 50 problèmes', 'Solve 50 puzzles'), ok: (s) => s.pz >= 50 },
+    { id: 'mates', icon: '🧠', name: L('Maître des mats', 'Master of mates'), desc: L('Apprendre les 13 mats', 'Learn all 13 mates'), ok: (s) => s.mates >= 13 },
+    { id: 'ends', icon: '🏁', name: L('Finaliste', 'Endgame expert'), desc: L('Réussir les 5 finales de base', 'Pass the 5 basic endgames'), ok: (s) => s.ends >= 5 },
+    { id: 'open', icon: '📖', name: L('Théoricien', 'Theorist'), desc: L('Maîtriser 5 ouvertures', 'Master 5 openings'), ok: (s) => s.openings >= 5 },
+    { id: 'streak', icon: '🔥', name: L('Assidu', 'Dedicated'), desc: L('Série de 7 jours au défi du jour', '7-day daily challenge streak'), ok: (s) => s.dailyBest >= 7 },
+  ];
+  function profileHtml(s, who) {
+    const n = (x) => NUM(x, x % 1 ? 1 : 0);
+    const won = BADGES.filter((b) => b.ok(s));
+    const pct = (w, d, l) => { const t = w + d + l; return t ? `${Math.round((100 * (w + d / 2)) / t)} %` : '–'; };
+    let html = `<div class="profile-head">${who.photo ? `<img class="profile-photo big" src="${who.photo}" alt="">` : '<span class="profile-photo big placeholder">♞</span>'}<div><b>${escHtml(who.name)}</b><span>Elo ${L('estimé', 'est.')} ${s.elo}</span>${won.length ? `<span class="profile-badges-line">${won.slice(-6).map((b) => b.icon).join(' ')}</span>` : ''}</div></div>`;
+    html += `<h3 class="train-h">${L('Grades', 'Ranks')} (${won.length}/${BADGES.length})</h3><div class="badge-grid">${BADGES.map((b) => `<div class="badge${b.ok(s) ? ' on' : ''}" title="${escHtml(b.desc)}"><span class="badge-icon">${b.icon}</span><b>${escHtml(b.name)}</b><small>${escHtml(b.desc)}</small></div>`).join('')}</div>`;
+    const card = (title, rows) => `<div class="stat-card"><h4>${title}</h4>${rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>`;
+    html += `<h3 class="train-h">${L('Statistiques', 'Statistics')}</h3><div class="stat-cards">
+      ${card(L('Contre l\'ordinateur', 'Against the computer'), [[L('Victoires', 'Wins'), s.ai.win], [L('Nulles', 'Draws'), s.ai.draw], [L('Défaites', 'Losses'), s.ai.loss], [L('Score', 'Score'), pct(s.ai.win, s.ai.draw, s.ai.loss)], [L('Meilleur niveau battu', 'Best level beaten'), s.ai.best ? LEVEL_NAMES[s.ai.best] : '–']])}
+      ${card(L('Contre les joueurs', 'Against players'), [[L('Victoires', 'Wins'), s.online.win], [L('Nulles', 'Draws'), s.online.draw], [L('Défaites', 'Losses'), s.online.loss], [L('Score', 'Score'), pct(s.online.win, s.online.draw, s.online.loss)], [L('Adversaires différents', 'Different opponents'), s.online.opponents]])}
+      ${card(L('Tournois', 'Tournaments'), [[L('Terminés', 'Finished'), s.tour.played], ['🥇', s.tour.wins], ['🥈', s.tour.second], ['🥉', s.tour.third]])}
+      ${card(L('Apprentissage', 'Learning'), [[L('Problèmes résolus', 'Puzzles solved'), s.pz], [L('Mats appris', 'Mates learned'), `${s.mates}/13`], [L('Finales réussies', 'Endgames passed'), `${s.ends}/5`], [L('Ouvertures maîtrisées', 'Openings mastered'), s.openings], [L('Meilleure série du défi', 'Best daily streak'), n(s.dailyBest)]])}
+    </div>`;
+    return html;
+  }
+  async function openProfile(uid) {
+    returnTo = document.body.dataset.screen && document.body.dataset.screen !== 'profile' ? document.body.dataset.screen : 'home';
+    const mine = !uid || (ON && ON.user && uid === ON.user.uid);
+    $('profile-title').textContent = mine ? L('Mon profil', 'My profile') : L('Profil', 'Profile');
+    show('profile');
+    const body = $('profile-body');
+    if (mine) {
+      const p = playerProfile();
+      let tours = [];
+      body.innerHTML = profileHtml(localSummary([]), { name: p.name || L('Joueur', 'Player'), photo: p.photo });
+      if (ON && ON.user) {
+        try { tours = await ON.myTournaments(); } catch { tours = []; }
+        const s = localSummary(tours);
+        body.innerHTML = profileHtml(s, { name: p.name || L('Joueur', 'Player'), photo: p.photo });
+        // résumé public pour que les autres joueurs voient ce profil
+        ON.publishSummary({ ...s, badges: BADGES.filter((b) => b.ok(s)).map((b) => b.id) });
+      } else body.insertAdjacentHTML('beforeend', `<p class="level-help">${L('Connecte-toi pour ajouter tes parties en ligne et tes tournois, et pour que les autres joueurs voient ton profil.', 'Sign in to add your online games and tournaments, and so other players can see your profile.')}</p>`);
+      return;
+    }
+    body.innerHTML = `<p class="level-help">${L('Chargement…', 'Loading…')}</p>`;
+    try {
+      const u = await ON.getProfile(uid);
+      if (!u) { body.innerHTML = `<p class="level-help">${L('Profil introuvable.', 'Profile not found.')}</p>`; return; }
+      const s = u.summary || { ai: { win: 0, draw: 0, loss: 0, best: 0 }, online: { win: 0, draw: 0, loss: 0, opponents: 0 }, tour: { played: 0, wins: 0, second: 0, third: 0 }, pz: 0, mates: 0, ends: 0, openings: 0, dailyBest: 0, elo: u.elo || 600 };
+      body.innerHTML = profileHtml({ ...s, elo: u.elo || s.elo }, { name: u.pseudo, photo: u.photo }) + (u.summary ? '' : `<p class="level-help">${L('Ce joueur n\'a pas encore publié ses statistiques.', 'This player has not published their statistics yet.')}</p>`);
+    } catch (err) { body.innerHTML = `<p class="level-help">${ON.explain(err)}</p>`; }
+  }
+  $('btn-profile').onclick = () => openProfile();
+  // clic sur un joueur (tournois) : son profil
+  document.addEventListener('click', (e) => { const el = e.target.closest('[data-profile]'); if (el) { e.preventDefault(); openProfile(el.dataset.profile); } });
   $('btn-online').onclick = () => {
     returnTo = 'home';
     // sans pseudo, on le demande avant de jouer

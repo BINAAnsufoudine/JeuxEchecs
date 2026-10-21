@@ -14,6 +14,7 @@
           <div><strong id="home-player-name">Joueur</strong><span id="home-player-elo">Elo estimé : 600</span><span id="home-player-style" class="player-style" hidden></span><small id="home-player-progress">L’estimation s’affine avec les parties et les problèmes.</small></div>
           <button id="btn-player-name" class="profile-edit" type="button">Modifier</button>
           <button id="btn-account" class="profile-edit" type="button">Se connecter</button>
+          <button id="btn-profile" class="profile-edit" type="button">Mon profil</button>
         </div>
       </div>
       <section id="coach-program" class="coach-program" aria-labelledby="coach-program-title" hidden>
@@ -220,6 +221,12 @@
   <section id="problems" class="screen" aria-label="Problèmes">
     <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Problèmes</h2></header>
     <div class="panel" id="problems-body"></div>
+  </section>
+
+  <!-- Profil du joueur : statistiques et grades -->
+  <section id="profile" class="screen" aria-label="Profil">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2 id="profile-title">Mon profil</h2></header>
+    <div class="panel" id="profile-body"></div>
   </section>
 
   <!-- Compte en ligne -->

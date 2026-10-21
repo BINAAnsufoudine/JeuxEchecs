@@ -42,6 +42,7 @@
     'En ligne': 'Online',
     'Mon compte': 'My account',
     'Tournois': 'Tournaments',
+    'Mon profil': 'My profile',
     'Apprendre': 'Learn',
     'Défi du jour': 'Daily challenge',
     'Les mats': 'Checkmates',

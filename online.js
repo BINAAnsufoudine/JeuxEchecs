@@ -135,6 +135,22 @@ window.Online = (function () {
     await Promise.all(uids.map(async (u) => { try { const s = await f.getDoc(f.doc(f.db, 'users', u)); out[u] = s.exists() ? s.data().photo || null : null; } catch { out[u] = null; } }));
     return out;
   }
+  // Profil public : résumé des statistiques et grades, visible des autres joueurs
+  async function publishSummary(summary) {
+    if (!user) return;
+    const f = await load();
+    try { await f.updateDoc(f.doc(f.db, 'users', user.uid), { summary, summaryAt: Date.now() }); } catch { /* hors ligne */ }
+  }
+  async function getProfile(uid) {
+    const f = await load();
+    const s = await f.getDoc(f.doc(f.db, 'users', uid));
+    return s.exists() ? { uid, ...s.data() } : null;
+  }
+  async function myTournaments(uid) {
+    const f = await load();
+    const snap = await f.getDocs(f.query(f.collection(f.db, 'tournaments'), f.where('members', 'array-contains', uid || user.uid)));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
   async function setElo(elo) {
     if (!user) return;
     const f = await load();
@@ -460,7 +476,7 @@ window.Online = (function () {
   return {
     TIME_CONTROLS, load, onUser, explain,
     get user() { return user; }, get profile() { return profile; },
-    signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos,
+    signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos, publishSummary, getProfile, myTournaments,
     saveProgress, loadProgress, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
     createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,
   };
