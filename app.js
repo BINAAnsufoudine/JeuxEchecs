@@ -538,7 +538,7 @@
     flipped = flip !== undefined ? flip : conf.mode !== 'local' && conf.playerColor === 'b';
     selected = -1; hint = null;
     const drillOf = conf.drill && window.TRAINER && window.TRAINER.ENDGAMES.find((x) => x.id === conf.drill);
-    $('game-title').textContent = conf.mode === 'online' ? `${L('En ligne', 'Online')} · ${TC_LABELS[conf.online.tc] || ''}` : (drillOf ? `${drillOf.name} · ` : conf.fen ? L('Position libre · ', 'Custom position · ') : '') + (conf.mode === 'local' ? L('Deux joueurs', 'Two players') : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`);
+    $('game-title').textContent = conf.mode === 'online' ? (conf.online.tournament ? `${conf.online.tournament} · ${L('ronde', 'round')} ${conf.online.round}` : `${L('En ligne', 'Online')} · ${TC_LABELS[conf.online.tc] || ''}`) : (drillOf ? `${drillOf.name} · ` : conf.fen ? L('Position libre · ', 'Custom position · ') : '') + (conf.mode === 'local' ? L('Deux joueurs', 'Two players') : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`);
     show('game');
     if (conf.mode === 'coach') {
       coachDockOpen = false;
@@ -1051,6 +1051,7 @@
     }
     let opened = 0;
     if (cfg.mode === 'online') {
+      if (onlineGame && onlineGame.tournamentId) ON.reportResult(onlineGame.tournamentId, onlineGame.id, result.result).catch(() => {});
       const g = onlineGame || {}, oppElo = cfg.playerColor === 'w' ? g.blackElo : g.whiteElo;
       updatePlayerRating(oppElo || 600, outcome === 'win' ? 1 : outcome === 'draw' ? 0.5 : 0, 32, 'games');
       ON.setElo(estimatedElo());
@@ -1088,7 +1089,8 @@
         text: (drill ? (drillOk ? L(`Exercice réussi : ${drill.name}. `, `Exercise passed: ${drill.name}. `) : L(`Exercice raté : ${drill.name}. Relis la méthode et réessaie. `, `Exercise failed: ${drill.name}. Reread the method and try again. `)) : '') + REASONS[result.reason] + L(` · ${Math.ceil(game.history.length / 2)} coups`, ` · ${Math.ceil(game.history.length / 2)} moves`) + (opened ? L(`\nNiveau débloqué : ${LEVEL_NAMES[opened]} !`, `\nLevel unlocked: ${LEVEL_NAMES[opened]}!`) : ''),
         actions: [
           ...(opened ? [{ label: L(`Jouer ${LEVEL_NAMES[opened]}`, `Play ${LEVEL_NAMES[opened]}`), primary: true, onClick: () => startGame({ ...cfg, level: opened, playerColor: randomColor() }) }] : []),
-          ...(cfg.mode === 'online' ? [{ label: L('Jouer en ligne', 'Play online'), primary: true, onClick: () => { stopOnline(); renderOnline(); returnTo = 'home'; show('online'); } }] : [{ label: L('Rejouer', 'Play again'), primary: true, onClick: () => startGame({ ...cfg, playerColor: cfg.fen ? cfg.playerColor : randomColor() }) }]),
+          ...(cfg.mode === 'online' && onlineGame && onlineGame.tournamentId ? [{ label: L('Retour au tournoi', 'Back to the tournament'), primary: true, onClick: () => { const tid = onlineGame.tournamentId; stopOnline(); show('tournaments'); openTournament(tid); } }]
+            : cfg.mode === 'online' ? [{ label: L('Jouer en ligne', 'Play online'), primary: true, onClick: () => { stopOnline(); renderOnline(); returnTo = 'home'; show('online'); } }] : [{ label: L('Rejouer', 'Play again'), primary: true, onClick: () => startGame({ ...cfg, playerColor: cfg.fen ? cfg.playerColor : randomColor() }) }]),
           ...(cfg.fen ? [{ label: L('Modifier la position', 'Edit the position'), onClick: () => openEditor(cfg.fen) }] : []),
           ...(cfg.mode !== 'local' && cfg.mode !== 'online' ? [{ label: L('Choisir un niveau', 'Choose a level'), onClick: () => { renderSetup(); returnTo = 'home'; show('setup'); } }] : []),
           ...(snap.moves.length >= 8 ? [{ label: L('Bilan de Maître Sissa', 'Master Sissa’s review'), onClick: () => showBilan(snap) }] : []),
@@ -2721,6 +2723,7 @@
   const ON = window.Online;
   const TC_LABELS = L({ unlim: 'Temps illimité', '3d': '3 jours par coup', '1d': '1 jour par coup', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' },
     { unlim: 'Unlimited time', '3d': '3 days per move', '1d': '1 day per move', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' });
+  const announced = new Set();
   let justSignedUp = false, progressDirty = false, inviteStop = null, gamesStop = null, onlineInvites = { in: [], out: [] }, onlineGames = [];
   const SKIP_SYNC = new Set(['lastScreen', 'onlineSession', 'onlineSynced']);
   // toute modification de la progression sera envoyée au compte
@@ -2797,7 +2800,11 @@
         updateOnlineBadge();
         if (document.body.dataset.screen === 'online') renderOnline();
         // une invitation que j'ai envoyée vient d'être acceptée : la partie s'ouvre
-        const fresh = games.find((g) => g.status === 'active' && !g.moves.length && g.createdAt > Date.now() - 20000 && !(cfg && cfg.online && cfg.online.id === g.id));
+        const fresh = games.find((g) => !g.tournamentId && g.status === 'active' && !g.moves.length && g.createdAt > Date.now() - 20000 && !(cfg && cfg.online && cfg.online.id === g.id));
+        for (const g of games) if (g.tournamentId && g.status === 'active' && !g.moves.length && g.createdAt > Date.now() - 20000 && !announced.has(g.id)) {
+          announced.add(g.id);
+          toast(L(`${g.tournamentName} : ta partie de la ronde ${g.round} est prête.`, `${g.tournamentName}: your round ${g.round} game is ready.`));
+        }
         if (fresh && document.body.dataset.screen === 'online') openOnlineGame(fresh);
       });
     } else { onlineInvites = { in: [], out: [] }; onlineGames = []; updateOnlineBadge(); }
@@ -2903,6 +2910,117 @@
     if (t.dataset.decline || t.dataset.cancel) { try { await ON.answerInvite(find(t.dataset.decline || t.dataset.cancel), false); } catch (err) { toast(ON.explain(err)); } }
     if (t.dataset.game) { const g = onlineGames.find((x) => x.id === t.dataset.game); if (g) openOnlineGame(g); }
   });
+  /* ---------- Tournois en ligne : individuels ou par équipe ---------- */
+  let tourList = { open: [], mine: [] }, tourListStop = null, tourId = null, tourDoc = null, tourStop = null;
+  const FORMAT_LABELS = L({ swiss: 'Système suisse', rr: 'Toutes rondes' }, { swiss: 'Swiss system', rr: 'Round robin' });
+  const TYPE_LABELS = L({ solo: 'Individuel', team: 'Par équipe' }, { solo: 'Individual', team: 'Team' });
+  const STATUS_LABELS = L({ open: 'inscriptions ouvertes', running: 'en cours', over: 'terminé' }, { open: 'registration open', running: 'in progress', over: 'finished' });
+  let tourForm = { type: 'solo', format: 'swiss', tc: '10m', rounds: 5, teamSize: 4 };
+  const pName = (t, id) => (t.type === 'team' ? (t.teams.find((x) => x.id === id) || {}).name || '?' : t.names[id] || '?');
+  function standings(t) {
+    const ids = ON.participants(t);
+    // départage : somme des points des adversaires rencontrés (Buchholz)
+    const buch = (id) => (t.met[id] || []).reduce((s, o) => s + (t.scores[o] || 0), 0);
+    return ids.map((id) => ({ id, pts: t.scores[id] || 0, buch: buch(id) })).sort((a, b) => b.pts - a.pts || b.buch - a.buch);
+  }
+  function renderTournaments() {
+    const body = $('tour-body'), u = ON && ON.user;
+    $('tour-title').textContent = tourDoc ? tourDoc.name : L('Tournois', 'Tournaments');
+    if (!u) { body.innerHTML = `<p class="level-help">${L('Les tournois se jouent en ligne : connecte-toi ou crée un compte.', 'Tournaments are played online: sign in or create an account.')}</p><button id="tour-login" class="btn primary wide" type="button">${L('Se connecter', 'Sign in')}</button>`; return; }
+    if (tourDoc) { renderTournamentDetail(); return; }
+    const seg = (name, opts) => `<div class="ed-seg" data-tour="${name}">${opts.map(([v, label]) => `<button type="button" data-value="${v}" class="${String(tourForm[name]) === String(v) ? 'on' : ''}">${label}</button>`).join('')}</div>`;
+    const tcOpts = Object.keys(TC_LABELS).map((k) => `<option value="${k}"${k === tourForm.tc ? ' selected' : ''}>${TC_LABELS[k]}</option>`).join('');
+    const card = (t) => `<button class="btn replay-item" data-tour-open="${t.id}"><strong>${escHtml(t.name)}</strong><span>${TYPE_LABELS[t.type]} · ${FORMAT_LABELS[t.format]} · ${TC_LABELS[t.tc] || ''} · ${ON.participants(t).length} ${t.type === 'team' ? L('équipe(s)', 'team(s)') : L('joueur(s)', 'player(s)')} · ${STATUS_LABELS[t.status]}</span></button>`;
+    const mine = tourList.mine.slice().sort((a, b) => b.createdAt - a.createdAt), open = tourList.open.filter((t) => !t.members.includes(u.uid));
+    body.innerHTML = `
+      <h3 class="train-h">${L('Mes tournois', 'My tournaments')}</h3>${mine.length ? `<div class="replay-items">${mine.map(card).join('')}</div>` : `<p class="level-help">${L('Aucun pour le moment.', 'None for now.')}</p>`}
+      <h3 class="train-h">${L('Rejoindre avec un code', 'Join with a code')}</h3>
+      ${field('tour-code', L('Code du tournoi', 'Tournament code'), 'text', '', 'maxlength="6" style="text-transform:uppercase"')}
+      <button id="tour-join-code" class="btn wide" type="button">${L('Rejoindre', 'Join')}</button>
+      <h3 class="train-h">${L('Tournois ouverts', 'Open tournaments')}</h3>${open.length ? `<div class="replay-items">${open.map(card).join('')}</div>` : `<p class="level-help">${L('Aucun tournoi ouvert pour le moment.', 'No open tournament for now.')}</p>`}
+      <h3 class="train-h">${L('Créer un tournoi', 'Create a tournament')}</h3>
+      ${seg('type', [['solo', TYPE_LABELS.solo], ['team', TYPE_LABELS.team]])}
+      ${field('tour-name', L('Nom du tournoi', 'Tournament name'), 'text', '', 'maxlength="40"')}
+      <label class="field-label">${L('Format', 'Format')}</label>${seg('format', [['swiss', FORMAT_LABELS.swiss], ['rr', FORMAT_LABELS.rr]])}
+      ${tourForm.format === 'swiss' ? `<label class="field-label">${L('Nombre de rondes', 'Number of rounds')}</label>${seg('rounds', [[3, '3'], [4, '4'], [5, '5'], [7, '7']])}` : ''}
+      ${tourForm.type === 'team' ? `<label class="field-label">${L('Joueurs par équipe', 'Players per team')}</label>${seg('teamSize', [[2, '2'], [3, '3'], [4, '4']])}` : ''}
+      <label class="field-label" for="tour-tc">${L('Cadence', 'Time control')}</label><select id="tour-tc" class="profile-name-input">${tcOpts}</select>
+      <button id="tour-create" class="btn primary wide" type="button">${L('Créer le tournoi', 'Create the tournament')}</button>
+      <p id="tour-msg" class="ed-error" role="status"></p>`;
+  }
+  function renderTournamentDetail() {
+    const t = tourDoc, me = ON.user.uid, body = $('tour-body');
+    const isOwner = t.owner === me, myTeam = t.type === 'team' ? t.teams.find((x) => x.members.includes(me)) : null;
+    const inIt = t.type === 'team' ? !!myTeam : t.players.includes(me);
+    let html = `<button id="tour-back" class="btn ghost" type="button">‹ ${L('Tous les tournois', 'All tournaments')}</button>
+      <p class="level-help">${TYPE_LABELS[t.type]} · ${FORMAT_LABELS[t.format]}${t.format === 'swiss' ? ` · ${t.rounds} ${L('rondes', 'rounds')}` : ''} · ${TC_LABELS[t.tc] || ''}${t.type === 'team' ? ` · ${t.teamSize} ${L('joueurs par équipe', 'players per team')}` : ''}<br>
+      ${L('Organisé par', 'Organised by')} <b>${escHtml(t.ownerName)}</b> · ${STATUS_LABELS[t.status]}${t.status === 'running' ? ` · ${L('ronde', 'round')} ${t.round}/${t.totalRounds || t.rounds}` : ''}<br>
+      ${L('Code à partager', 'Code to share')} : <b class="tour-code">${t.code}</b></p>`;
+    if (t.status === 'open') {
+      if (t.type === 'solo') {
+        html += `<h3 class="train-h">${L('Joueurs inscrits', 'Registered players')} (${t.players.length})</h3><div class="replay-items">${t.players.map((p) => `<div class="btn replay-item"><strong>${escHtml(t.names[p] || '?')} (${t.elos[p] || 600})</strong></div>`).join('')}</div>`;
+        html += inIt ? `<button id="tour-leave" class="btn ghost wide" type="button">${L('Me désinscrire', 'Withdraw')}</button>` : `<button id="tour-join" class="btn primary wide" type="button">${L('M\'inscrire', 'Register')}</button>`;
+      } else {
+        html += `<h3 class="train-h">${L('Équipes', 'Teams')} (${t.teams.length})</h3>` + (t.teams.length ? `<div class="replay-items">${t.teams.map((tm) => `<div class="btn replay-item"><strong>${escHtml(tm.name)} (${tm.members.length}/${t.teamSize})</strong><span>${tm.members.map((m, i) => `${i + 1}. ${escHtml(t.names[m] || '?')}${m === tm.captain ? L(' (capitaine)', ' (captain)') : ''}`).join(' · ')}</span></div>`).join('')}</div>` : `<p class="level-help">${L('Aucune équipe pour le moment.', 'No team yet.')}</p>`);
+        if (myTeam && myTeam.captain === me && myTeam.members.length < t.teamSize) html += `${field('tour-mate', L('Ajouter un coéquipier (pseudo)', 'Add a teammate (nickname)'), 'text', '', 'maxlength="24"')}<button id="tour-add-mate" class="btn wide" type="button">${L('Ajouter à mon équipe', 'Add to my team')}</button>`;
+        if (!myTeam) html += `${field('tour-team', L('Nom de ton équipe', 'Your team name'), 'text', '', 'maxlength="30"')}<button id="tour-create-team" class="btn primary wide" type="button">${L('Créer mon équipe (j\'en serai le capitaine)', 'Create my team (I will be captain)')}</button>`;
+        else if (myTeam.captain !== me) html += `<button id="tour-leave" class="btn ghost wide" type="button">${L('Quitter mon équipe', 'Leave my team')}</button>`;
+      }
+      if (isOwner) html += `<button id="tour-start" class="btn primary wide" type="button">${L('Lancer le tournoi', 'Start the tournament')}</button>`;
+    } else {
+      // ronde en cours : mes parties, puis tous les appariements
+      const round = t.pairings[`r${t.round}`] || [];
+      const myGames = [];
+      round.forEach((m) => m.games.forEach((g) => { if ((g.white === me || g.black === me) && !g.result) myGames.push(g); }));
+      if (t.status === 'running' && myGames.length) html += myGames.map((g) => `<button class="btn primary wide" data-tour-game="${g.id}">${L(`Jouer ma partie de la ronde ${t.round}`, `Play my round ${t.round} game`)} : ${escHtml(t.names[g.white])} – ${escHtml(t.names[g.black])}</button>`).join('');
+      const res = (r) => (r ? r.replace('1/2-1/2', '½-½') : '…');
+      html += `<h3 class="train-h">${t.status === 'over' ? L('Dernière ronde', 'Last round') : L(`Ronde ${t.round}`, `Round ${t.round}`)}</h3><div class="replay-items">${round.map((m) => m.bye
+        ? `<div class="btn replay-item"><strong>${escHtml(pName(t, m.a))}</strong><span>${L('exempt (gagne le point)', 'bye (wins the point)')}</span></div>`
+        : `<div class="btn replay-item"><strong>${escHtml(pName(t, m.a))} – ${escHtml(pName(t, m.b))}</strong><span>${m.games.map((g) => `${t.type === 'team' ? `${L('éch.', 'bd')} ${m.games.indexOf(g) + 1} : ` : ''}${escHtml(t.names[g.white])} – ${escHtml(t.names[g.black])} ${res(g.result)}`).join(' · ')}</span></div>`).join('')}</div>`;
+    }
+    if (t.status !== 'open') {
+      html += `<h3 class="train-h">${t.status === 'over' ? L('Classement final', 'Final standings') : L('Classement', 'Standings')}</h3><table class="tour-table"><tr><th>#</th><th>${t.type === 'team' ? L('Équipe', 'Team') : L('Joueur', 'Player')}</th><th>${L('Pts', 'Pts')}</th><th>${L('Départ.', 'Tiebr.')}</th></tr>${standings(t).map((r, i) => `<tr${(t.type === 'team' ? myTeam && myTeam.id === r.id : r.id === me) ? ' class="me"' : ''}><td>${i + 1}</td><td>${escHtml(pName(t, r.id))}</td><td>${NUM(r.pts, r.pts % 1 ? 1 : 0)}</td><td>${NUM(r.buch, r.buch % 1 ? 1 : 0)}</td></tr>`).join('')}</table>`;
+    }
+    html += `<p id="tour-msg" class="ed-error" role="status"></p>`;
+    body.innerHTML = html;
+  }
+  function openTournament(id) {
+    if (tourStop) tourStop();
+    tourId = id; tourDoc = (tourList.mine.concat(tourList.open)).find((x) => x.id === id) || null;
+    tourStop = ON.watchTournament(id, (t) => { tourDoc = t; if (document.body.dataset.screen === 'tournaments' && tourId === t.id) renderTournaments(); });
+    renderTournaments();
+  }
+  function closeTournament() { if (tourStop) tourStop(); tourStop = null; tourId = null; tourDoc = null; renderTournaments(); }
+  $('tour-body').addEventListener('click', async (e) => {
+    const t = e.target.closest('button'); if (!t) return;
+    const msg = (x, ok) => { const m = $('tour-msg'); if (m) { m.textContent = x; m.style.color = ok ? 'var(--accent, #e9b949)' : ''; } };
+    const run = async (fn, ok) => { msg(L('Un instant…', 'One moment…'), true); try { await fn(); msg(ok || '', true); } catch (err) { msg(ON.explain(err)); } };
+    const seg = t.closest('[data-tour]');
+    if (seg && t.dataset.value) { const k = seg.dataset.tour; tourForm[k] = /^\d+$/.test(t.dataset.value) ? Number(t.dataset.value) : t.dataset.value; renderTournaments(); return; }
+    if (t.id === 'tour-login') return openAccount();
+    if (t.id === 'tour-back') return closeTournament();
+    if (t.dataset.tourOpen) return openTournament(t.dataset.tourOpen);
+    if (t.id === 'tour-create') return run(async () => { tourForm.tc = $('tour-tc').value; const tt = await ON.createTournament({ ...tourForm, name: $('tour-name').value }); openTournament(tt.id); });
+    if (t.id === 'tour-join-code') return run(async () => { const tt = await ON.findTournament($('tour-code').value); openTournament(tt.id); });
+    if (t.id === 'tour-join') return run(() => ON.joinTournament(tourId), L('Inscription enregistrée.', 'Registration saved.'));
+    if (t.id === 'tour-leave') return run(() => ON.leaveTournament(tourId));
+    if (t.id === 'tour-create-team') return run(() => ON.createTeam(tourId, $('tour-team').value), L('Équipe créée : ajoute maintenant tes coéquipiers.', 'Team created: now add your teammates.'));
+    if (t.id === 'tour-add-mate') return run(() => ON.addTeammate(tourId, tourDoc.teams.find((x) => x.members.includes(ON.user.uid)).id, $('tour-mate').value), L('Coéquipier ajouté.', 'Teammate added.'));
+    if (t.id === 'tour-start') return run(() => ON.startTournament(tourId), L('Le tournoi commence : bonne chance à tous !', 'The tournament begins: good luck everyone!'));
+    if (t.dataset.tourGame) {
+      const g = onlineGames.find((x) => x.id === t.dataset.tourGame);
+      if (g) openOnlineGame(g); else toast(L('La partie se prépare, réessaie dans un instant.', 'The game is being prepared, try again in a moment.'));
+    }
+  });
+  $('btn-tournaments').onclick = () => {
+    returnTo = 'home';
+    show('tournaments'); renderTournaments();
+    if (!ON) return;
+    ON.load().then(() => {
+      if (ON.user && !tourListStop) tourListStop = ON.watchTournaments((all) => { tourList = all; if (document.body.dataset.screen === 'tournaments' && !tourDoc) renderTournaments(); });
+      renderTournaments();
+    }).catch(() => {});
+  };
   $('btn-online').onclick = () => {
     returnTo = 'home';
     // sans pseudo, on le demande avant de jouer
@@ -2917,7 +3035,7 @@
     stopOnline();
     const me = ON.user.uid, color = g.white === me ? 'w' : 'b';
     onlineGame = g;
-    startGame({ mode: 'online', playerColor: color, level: 1, online: { id: g.id, tc: g.tc } }, g.moves, null, color === 'b');
+    startGame({ mode: 'online', playerColor: color, level: 1, online: { id: g.id, tc: g.tc, tournament: g.tournamentName || null, round: g.round || null } }, g.moves, null, color === 'b');
     onlineStop = ON.watchGame(g.id, onOnlineUpdate);
     onlineTimer = setInterval(onlineTick, 1000);
     ON.heartbeat(g.id);

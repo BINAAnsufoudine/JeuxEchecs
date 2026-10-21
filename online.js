@@ -66,6 +66,14 @@ window.Online = (function () {
       'pseudo-empty': L('Choisis un pseudo.', 'Choose a nickname.'),
       'player-unknown': L('Aucun joueur avec ce pseudo.', 'No player with this nickname.'),
       'self-invite': L('Tu ne peux pas t\'inviter toi-même.', 'You cannot invite yourself.'),
+      'tournament-unknown': L('Aucun tournoi avec ce code.', 'No tournament with this code.'),
+      'tournament-started': L('Ce tournoi a déjà commencé.', 'This tournament has already started.'),
+      'tournament-team': L('C\'est un tournoi par équipe : crée une équipe ou demande à un capitaine de t\'ajouter.', 'This is a team tournament: create a team or ask a captain to add you.'),
+      'already-in-team': L('Ce joueur fait déjà partie d\'une équipe.', 'This player is already in a team.'),
+      'not-captain': L('Seul le capitaine peut ajouter des coéquipiers.', 'Only the captain can add teammates.'),
+      'team-full': L('L\'équipe est complète.', 'The team is full.'),
+      'not-owner': L('Seul l\'organisateur peut lancer le tournoi.', 'Only the organiser can start the tournament.'),
+      'too-few': L('Il faut au moins deux participants.', 'At least two participants are needed.'),
     };
     return map[code] || (e && e.message) || L('Erreur inconnue.', 'Unknown error.');
   }
@@ -220,10 +228,185 @@ window.Online = (function () {
     try { await f.updateDoc(f.doc(f.db, 'games', id), { [`seen.${user.uid}`]: Date.now() }); } catch { /* hors ligne */ }
   }
 
+
+  /* ----- Tournois : individuels ou par équipe, système suisse ou toutes rondes ----- */
+  // Un participant est un joueur (tournoi individuel) ou une équipe (tournoi par équipe).
+  const code6 = () => Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
+  async function createTournament(opts) {
+    const f = await load();
+    const me = user.uid, now = Date.now();
+    const t = {
+      name: String(opts.name || '').trim().slice(0, 40) || 'Tournoi', type: opts.type === 'team' ? 'team' : 'solo', format: opts.format === 'rr' ? 'rr' : 'swiss',
+      tc: opts.tc || '10m', rounds: Math.max(1, Math.min(11, opts.rounds | 0 || 5)), teamSize: Math.max(2, Math.min(4, opts.teamSize | 0 || 4)),
+      code: code6(), owner: me, ownerName: profile.pseudo, status: 'open', createdAt: now,
+      members: [me], names: { [me]: profile.pseudo }, elos: { [me]: profile.elo || 600 },
+      players: [], teams: [], round: 0, pairings: {}, scores: {}, met: {},
+    };
+    if (t.type === 'solo') t.players = [me];
+    const ref = await f.addDoc(f.collection(f.db, 'tournaments'), t);
+    return { id: ref.id, ...t };
+  }
+  async function findTournament(code) {
+    const f = await load();
+    const snap = await f.getDocs(f.query(f.collection(f.db, 'tournaments'), f.where('code', '==', String(code || '').trim().toUpperCase())));
+    if (snap.empty) fail('tournament-unknown');
+    const d = snap.docs[0];
+    return { id: d.id, ...d.data() };
+  }
+  // Modification sûre d'un tournoi : relit le document et applique la fonction dans une transaction
+  async function editTournament(id, fn) {
+    const f = await load();
+    return f.runTransaction(f.db, async (tx) => {
+      const ref = f.doc(f.db, 'tournaments', id), s = await tx.get(ref);
+      if (!s.exists()) fail('tournament-unknown');
+      const t = { id, ...s.data() };
+      const upd = await fn(t, tx, f);
+      if (upd) tx.update(ref, upd);
+      return { ...t, ...(upd || {}) };
+    });
+  }
+  const meInfo = () => ({ [`names.${user.uid}`]: profile.pseudo, [`elos.${user.uid}`]: profile.elo || 600 });
+  function joinTournament(id) {
+    return editTournament(id, (t) => {
+      if (t.status !== 'open') fail('tournament-started');
+      if (t.type !== 'solo') fail('tournament-team');
+      if (t.players.includes(user.uid)) return null;
+      return { players: [...t.players, user.uid], members: [...new Set([...t.members, user.uid])], ...meInfo() };
+    });
+  }
+  function leaveTournament(id) {
+    return editTournament(id, (t) => {
+      if (t.status !== 'open') fail('tournament-started');
+      const teams = t.teams.map((tm) => ({ ...tm, members: tm.members.filter((u) => u !== user.uid) })).filter((tm) => tm.members.length && tm.captain !== user.uid);
+      return { players: t.players.filter((u) => u !== user.uid), members: t.members.filter((u) => u !== user.uid || u === t.owner), teams };
+    });
+  }
+  // Équipe : le capitaine la crée, puis ajoute ses coéquipiers par leur pseudo
+  function createTeam(id, name) {
+    return editTournament(id, (t) => {
+      if (t.status !== 'open') fail('tournament-started');
+      if (t.teams.some((tm) => tm.members.includes(user.uid))) fail('already-in-team');
+      const team = { id: code6(), name: String(name || '').trim().slice(0, 30) || profile.pseudo, captain: user.uid, members: [user.uid] };
+      return { teams: [...t.teams, team], members: [...new Set([...t.members, user.uid])], ...meInfo() };
+    });
+  }
+  async function addTeammate(id, teamId, pseudo) {
+    const other = await findPlayer(pseudo);
+    return editTournament(id, (t) => {
+      if (t.status !== 'open') fail('tournament-started');
+      const team = t.teams.find((tm) => tm.id === teamId);
+      if (!team || team.captain !== user.uid) fail('not-captain');
+      if (team.members.length >= t.teamSize) fail('team-full');
+      if (t.teams.some((tm) => tm.members.includes(other.uid))) fail('already-in-team');
+      const teams = t.teams.map((tm) => (tm.id === teamId ? { ...tm, members: [...tm.members, other.uid] } : tm));
+      return { teams, members: [...new Set([...t.members, other.uid])], [`names.${other.uid}`]: other.pseudo, [`elos.${other.uid}`]: other.elo || 600 };
+    });
+  }
+  // Participants et appariements d'une ronde
+  const participants = (t) => (t.type === 'team' ? t.teams.map((tm) => tm.id) : t.players);
+  function pairRound(t, r) {
+    const ids = participants(t);
+    if (t.format === 'rr') {
+      // toutes rondes : méthode du cercle
+      const list = ids.length % 2 ? [...ids, null] : [...ids], n = list.length, out = [];
+      const rest = list.slice(1), k = (r - 1) % Math.max(1, n - 1);
+      const rot = [list[0], ...rest.slice(k), ...rest.slice(0, k)];
+      for (let i = 0; i < n / 2; i++) { const a = rot[i], b = rot[n - 1 - i]; out.push(r % 2 ? [a, b] : [b, a]); }
+      return out;
+    }
+    // suisse : par points (puis Elo), sans rejouer le même adversaire ; le dernier sans adversaire est exempt
+    const score = (x) => t.scores[x] || 0;
+    const rating = (x) => (t.type === 'team' ? 0 : t.elos[x] || 600);
+    const order = [...ids].sort((a, b) => score(b) - score(a) || rating(b) - rating(a));
+    const out = [], used = new Set();
+    for (const a of order) {
+      if (used.has(a)) continue;
+      used.add(a);
+      const b = order.find((x) => !used.has(x) && !(t.met[a] || []).includes(x)) || order.find((x) => !used.has(x));
+      if (b) { used.add(b); out.push(r % 2 ? [a, b] : [b, a]); } else out.push([a, null]);
+    }
+    return out;
+  }
+  // Crée les parties d'une ronde (une par échiquier en tournoi par équipe)
+  function roundGames(t, r, pairs, tx, f) {
+    const tc = TIME_CONTROLS[t.tc] || TIME_CONTROLS.unlim, now = Date.now();
+    const games = [];
+    pairs.forEach(([a, b], k) => {
+      if (!a || !b) { games.push({ a: a || b, b: null, bye: true, games: [] }); return; }
+      const boards = t.type === 'team'
+        ? (() => { const ta = t.teams.find((x) => x.id === a), tb = t.teams.find((x) => x.id === b); const n = Math.min(ta.members.length, tb.members.length); return Array.from({ length: n }, (_, i) => (i % 2 ? [tb.members[i], ta.members[i]] : [ta.members[i], tb.members[i]])); })()
+        : [[a, b]];
+      const ids = boards.map(([w, bl], i) => {
+        const ref = f.doc(f.collection(f.db, 'games'));
+        tx.set(ref, {
+          players: [w, bl], white: w, black: bl, whiteName: t.names[w] || '?', blackName: t.names[bl] || '?', whiteElo: t.elos[w] || 600, blackElo: t.elos[bl] || 600,
+          tc: t.tc, clock: tc.ms ? { w: tc.ms, b: tc.ms } : null, moves: [], lastMoveAt: now, status: 'active', result: null, reason: null,
+          seen: { [w]: now, [bl]: now }, createdAt: now, tournamentId: t.id, tournamentName: t.name, round: r, board: i + 1,
+        });
+        return { id: ref.id, white: w, black: bl, result: null };
+      });
+      games.push({ a, b, games: ids });
+    });
+    return games;
+  }
+  const totalRounds = (t) => (t.format === 'rr' ? Math.max(1, participants(t).length - (participants(t).length % 2 ? 0 : 1)) : t.rounds);
+  function startTournament(id) {
+    return editTournament(id, (t, tx, f) => {
+      if (t.owner !== user.uid) fail('not-owner');
+      if (t.status !== 'open') return null;
+      if (participants(t).length < 2) fail('too-few');
+      const pairs = pairRound(t, 1);
+      return { status: 'running', round: 1, totalRounds: totalRounds(t), startedAt: Date.now(), [`pairings.r1`]: roundGames(t, 1, pairs, tx, f) };
+    });
+  }
+  // Résultat d'une partie de tournoi : enregistré par les joueurs, puis ronde suivante quand tout est fini
+  function reportResult(tid, gameId, result) {
+    return editTournament(tid, (t, tx, f) => {
+      if (t.status !== 'running') return null;
+      const key = `r${t.round}`, round = (t.pairings[key] || []).map((m) => ({ ...m, games: m.games.map((g) => (g.id === gameId && !g.result ? { ...g, result } : g)) }));
+      const upd = { [`pairings.${key}`]: round };
+      const done = round.every((m) => m.bye || m.games.every((g) => g.result));
+      if (!done) return upd;
+      // fin de ronde : points (1, ½, 0 par partie ; 1 point pour l'exempt) et adversaires rencontrés
+      const scores = { ...t.scores }, met = { ...t.met };
+      for (const m of round) {
+        if (m.bye) { scores[m.a] = (scores[m.a] || 0) + (t.type === 'team' ? Math.max(1, t.teamSize / 2) : 1); continue; }
+        let pa = 0, pb = 0;
+        for (const g of m.games) {
+          const aWhite = t.type === 'team' ? (t.teams.find((x) => x.id === m.a) || { members: [] }).members.includes(g.white) : g.white === m.a;
+          const wp = g.result === '1-0' ? 1 : g.result === '0-1' ? 0 : 0.5;
+          pa += aWhite ? wp : 1 - wp; pb += aWhite ? 1 - wp : wp;
+        }
+        scores[m.a] = (scores[m.a] || 0) + pa; scores[m.b] = (scores[m.b] || 0) + pb;
+        met[m.a] = [...(met[m.a] || []), m.b]; met[m.b] = [...(met[m.b] || []), m.a];
+      }
+      Object.assign(upd, { scores, met });
+      if (t.round >= (t.totalRounds || t.rounds)) return { ...upd, status: 'over', endedAt: Date.now() };
+      const next = t.round + 1, pairs = pairRound({ ...t, scores, met }, next);
+      return { ...upd, round: next, [`pairings.r${next}`]: roundGames({ ...t, scores, met }, next, pairs, tx, f) };
+    });
+  }
+  function watchTournaments(cb) {
+    let stop = [];
+    load().then((f) => {
+      const all = { open: [], mine: [] };
+      const sub = (q, key) => f.onSnapshot(q, (snap) => { all[key] = snap.docs.map((d) => ({ id: d.id, ...d.data() })); cb(all); }, () => cb(all));
+      stop = [sub(f.query(f.collection(f.db, 'tournaments'), f.where('status', '==', 'open')), 'open'),
+        sub(f.query(f.collection(f.db, 'tournaments'), f.where('members', 'array-contains', user.uid)), 'mine')];
+    });
+    return () => stop.forEach((s) => s());
+  }
+  function watchTournament(id, cb) {
+    let stop = () => {};
+    load().then((f) => { stop = f.onSnapshot(f.doc(f.db, 'tournaments', id), (s) => { if (s.exists()) cb({ id: s.id, ...s.data() }); }); });
+    return () => stop();
+  }
+
   return {
     TIME_CONTROLS, load, onUser, explain,
     get user() { return user; }, get profile() { return profile; },
     signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo,
     saveProgress, loadProgress, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
+    createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,
   };
 })();

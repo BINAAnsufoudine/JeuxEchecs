@@ -512,3 +512,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 #online-body .replay-row .replay-item { flex: 1; }
 .player-profile .profile-edit + .profile-edit { margin-top: 6px; }
 .legend-figure img.wide { width: 100%; height: auto; max-height: none; object-fit: contain; }
+
+/* Tournois */
+.tour-code { letter-spacing: 0.15em; font-size: 1.1rem; color: var(--accent, #e9b949); }
+.tour-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 0.92rem; }
+.tour-table th, .tour-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.tour-table th { color: var(--muted); font-weight: 600; }
+.tour-table tr.me td { color: var(--accent, #e9b949); font-weight: 700; }
