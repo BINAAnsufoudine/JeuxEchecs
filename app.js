@@ -1694,6 +1694,7 @@
     const it = pickPuzzle(act.theme, row.level);
     if (!it) { toast(L('Aucun problème disponible pour ce thème.', 'No puzzle available for this theme.')); return leavePuzzle(); }
     pz = { kind: 'path', idx: 0, item: it };
+    store.set('openLesson', { key: 'program', title: L(`Problème : ${PZ[act.theme] ? PZ[act.theme].name : ''}`, `Puzzle: ${PZ[act.theme] ? PZ[act.theme].name : ''}`), idx: 0, total: 1, at: Date.now() });
     enterPuzzleMode();
     loadItem(it);
   }
@@ -2193,6 +2194,7 @@
   }
   // Un problème réussi du premier coup compte pour valider le niveau ; le niveau ne monte qu'après confirmation en partie
   function recordPuzzle(it, clean) {
+    if (pz && pz.kind === 'path') clearOpenLesson();
     const c = loadCoach(), row = themeRow(c, it.theme);
     let validated = false;
     if (clean) {
@@ -2271,11 +2273,32 @@
     const mine = store.get('mistakes', []).filter((m) => m.theme === k).pop();
     if (mine) steps.push({ text: L(`Maintenant, ta propre partie du ${fmtDate(mine.date)}. Au coup ${mine.move}, tu as joué ${mine.played}. Avec ce que tu viens de voir, trouve le bon coup.`, `Now, your own game of ${fmtDate(mine.date)}. On move ${mine.move}, you played ${mine.played}. With what you have just seen, find the right move.`), fen: mine.fen, line: mine.line, alts: mine.alts, mistake: mine.id, why: L('Voilà le coup que tu cherchais. La prochaine fois, tu le verras pendant la partie.', "That's the move you were looking for. Next time, you'll see it during the game.") });
     steps.push({ text: L(`${PZ[k].tip} Passons aux problèmes : à chaque réussite, le niveau monte.`, `${PZ[k].tip} On to the puzzles: each success raises the level.`) });
-    pz = { kind: 'lesson', lesson, steps, idx: 0 };
+    pz = { kind: 'lesson', lesson: { ...lesson, resume: `lesson:${k}` }, steps, idx: 0 };
     enterPuzzleMode();
     loadLessonStep();
   }
+  // Leçon ou problème ouvert : retenu pour l'écran « Reprendre » jusqu'à ce qu'il soit terminé
+  function trackOpenLesson() {
+    if (!pz || !pz.lesson || !pz.lesson.resume) return;
+    store.set('openLesson', { key: pz.lesson.resume, title: pz.lesson.title, idx: pz.idx, total: pz.steps.length, at: Date.now() });
+  }
+  const clearOpenLesson = () => { if (store.get('openLesson', null)) store.set('openLesson', null); };
+  function resumeOpenLesson() {
+    const ol = store.get('openLesson', null); if (!ol) return;
+    const [kind, id] = ol.key.split(':');
+    if (kind === 'program') { show('problems'); nextActivity(); return; }
+    if (kind === 'mate') startMateLesson(TR.MATES.find((x) => x.id === id));
+    else if (kind === 'end') startEndgame(TR.ENDGAMES.find((x) => x.id === id));
+    else if (kind === 'open') startOpening(TR.OPENINGS.find((x) => x.id === id));
+    else if (kind === 'famous') startFamous(TR.FAMOUS.find((x) => x.id === id));
+    else if (kind === 'daily') startDaily(Number(id) || 0);
+    else if (kind === 'lesson') startLesson(id);
+    else return;
+    // reprise à l'étape où l'on s'était arrêté
+    if (pz && pz.steps && ol.idx > 0 && ol.idx < pz.steps.length) { pz.idx = ol.idx; loadLessonStep(); }
+  }
   function loadLessonStep() {
+    trackOpenLesson();
     const st = pz.steps[pz.idx];
     const it = { theme: st.theme || pz.lesson.theme, level: 1, fen: st.fen, line: st.line, alts: st.alts };
     Object.assign(pz, { item: it, step: 0, failed: false, done: !st.line, locked: false });
@@ -2292,6 +2315,7 @@
   }
   function nextLessonStep() {
     if (pz.idx < pz.steps.length - 1) { pz.idx++; loadLessonStep(); return; }
+    if (pz.lesson.resume) clearOpenLesson();
     if (pz.lesson.onDone) return pz.lesson.onDone();
     if (pz.lesson.champion) return finishChampionLesson(pz.lesson.champion);
     if (pz.lesson.tip) { const d = store.get('tipsDone', {}); d[pz.lesson.tip] = pz.lesson.count; store.set('tipsDone', d); return leavePuzzle(); }
@@ -3820,14 +3844,14 @@
         wrong: L('Ce coup ne mate pas. Regarde toutes les cases où le roi pourrait fuir.', 'That move does not mate. Look at every square the king could escape to.') });
     });
     steps.push({ text: m.tip || L(`Bravo, tu connais maintenant ${m.name.toLowerCase()}. Cherche ce motif dans tes parties : il revient souvent.`, `Well done, you now know the ${m.name.toLowerCase()}. Look for this pattern in your games: it comes up often.`) });
-    startTrainer({ title: m.name, theme: 'mat' }, steps, () => { lessonReward(`mate:${m.id}`); markTrain(`mate:${m.id}`); leavePuzzle(); });
+    startTrainer({ title: m.name, theme: 'mat', resume: `mate:${m.id}` }, steps, () => { lessonReward(`mate:${m.id}`); markTrain(`mate:${m.id}`); leavePuzzle(); });
   }
   function startEndgame(e) {
     const steps = e.steps.map((text) => ({ text, fen: e.fen }));
     steps.push({ text: e.goal === 'draw'
       ? L(`À toi : tu joues les ${sideName(e.color)} contre l'ordinateur au plus haut niveau. Obtiens la nulle. Appuie sur « Terminer » pour commencer.`, `Your turn: you play ${sideName(e.color)} against the computer at its highest level. Get the draw. Press "Finish" to start.`)
       : L(`À toi : tu joues les ${sideName(e.color)} contre l'ordinateur au plus haut niveau. Donne le mat. Appuie sur « Terminer » pour commencer.`, `Your turn: you play ${sideName(e.color)} against the computer at its highest level. Deliver mate. Press "Finish" to start.`), fen: e.fen });
-    startTrainer({ title: e.name, theme: 'finale' }, steps, () => startGame({ mode: 'ai', playerColor: e.color, level: MAX_GAME_LEVEL, fen: e.fen, drill: e.id }, [], null, e.color === 'b'));
+    startTrainer({ title: e.name, theme: 'finale', resume: `end:${e.id}` }, steps, () => startGame({ mode: 'ai', playerColor: e.color, level: MAX_GAME_LEVEL, fen: e.fen, drill: e.id }, [], null, e.color === 'b'));
   }
   // Ouvertures : révision espacée (1, 3, 7, 14 puis 30 jours) ; une erreur la fait revenir vite
   const OPEN_GAPS = [1, 3, 7, 14, 30];
@@ -3844,7 +3868,7 @@
         why: L('Ouverture rejouée en entier !', 'Opening replayed in full!'),
         wrong: L(`Ce n'est pas le coup de la ${o.name.toLowerCase()}. Réessaie, ou demande un indice.`, `That is not the ${o.name} move. Try again, or ask for a hint.`) },
     ];
-    startTrainer({ title: o.name, theme: 'tactique' }, steps, () => {
+    startTrainer({ title: o.name, theme: 'tactique', resume: `open:${o.id}` }, steps, () => {
       const sr = openingsSR(), row = sr[o.id] || { stage: 0 };
       const clean = !pz.failed && !pz.misses;
       row.stage = clean ? Math.min(OPEN_GAPS.length, row.stage + 1) : 0;
@@ -3868,7 +3892,7 @@
         why: L(`Partie terminée ! C'est ainsi que ${who} l'a jouée.`, `Game over! That is how ${who} played it.`),
         wrong: L(`Ce n'est pas le coup joué par ${who}. Réessaie, ou demande un indice.`, `That is not the move ${who} played. Try again, or ask for a hint.`) },
     ];
-    startTrainer({ title: f.name, theme: 'tactique' }, steps, () => {
+    startTrainer({ title: f.name, theme: 'tactique', resume: `famous:${f.id}` }, steps, () => {
       const found = Math.max(0, total - (pz.misses || 0));
       const best = Math.max(found, trainDone()[`famous:${f.id}`] || 0);
       markTrain(`famous:${f.id}`, best);
@@ -3905,7 +3929,7 @@
         `Daily challenge, puzzle ${i + 1} of 3${again ? ', second chance' : ''}. You play ${sideName(side)}. ${PZ[p.theme] ? PZ[p.theme].name : ''}: find the best move at the first try.`),
       fen: p.fen, line: p.line, alts: p.alts, theme: p.theme,
     }];
-    startTrainer({ title: L(`Défi du jour · ${i + 1}/3`, `Daily challenge · ${i + 1}/3`), theme: p.theme }, steps, () => {
+    startTrainer({ title: L(`Défi du jour · ${i + 1}/3`, `Daily challenge · ${i + 1}/3`), theme: p.theme, resume: `daily:${i}` }, steps, () => {
       const clean = !pz.failed && !pz.misses;
       const st = dailyState();
       if (st.res[i] !== 'ok') st.res[i] = clean ? 'ok' : 'retry';
@@ -3985,7 +4009,7 @@
     const card = (icon, title, sub, key, hot) => items.push(`<button class="btn welcome-card${hot ? ' hot' : ''}" type="button" data-resume="${key}"><span class="welcome-icon">${icon}</span><span class="welcome-text"><strong>${title}</strong><small>${sub}</small></span><span class="welcome-go">${L('Continuer', 'Continue')} ›</span></button>`);
     // partie sur cet appareil (ordinateur, deux joueurs, Maître Sissa, position libre)
     const saved = store.get('game', null);
-    if (saved && saved.cfg && !saved.result && saved.cfg.mode !== 'online') {
+    if (saved && saved.cfg && !saved.result && saved.cfg.mode !== 'online' && (saved.moves || []).length) {
       const c = saved.cfg, n = Math.ceil((saved.moves || []).length / 2);
       const who = c.mode === 'local' ? L('Partie à deux joueurs', 'Two-player game') : c.mode === 'coach' ? L('Partie avec Maître Sissa', 'Game with Master Sissa') : `${L('Contre', 'Against')} ${sideNames(c)[c.playerColor === 'w' ? 'black' : 'white']}`;
       card('♟️', who, `${c.fen ? L('Position libre · ', 'Custom position · ') : ''}${n} ${L('coup', 'move')}${n > 1 ? 's' : ''} ${L('joués', 'played')}`, 'game', true);
@@ -3997,29 +4021,16 @@
         const white = g.white === me, opp = white ? g.blackName : g.whiteName, mine = (g.moves.length % 2 === 0) === white;
         card(g.tournamentId ? '🏆' : '🌐', `${L('Contre', 'Against')} ${escHtml(opp)}${mine ? L(' · à toi de jouer', ' · your move') : ''}`, `${g.tournamentId ? `${escHtml(g.tournamentName || '')} · ${L('ronde', 'round')} ${g.round} · ` : L('En ligne · ', 'Online · ')}${TC_LABELS[g.tc] || ''} · ${Math.ceil(g.moves.length / 2)} ${L('coups', 'moves')}`, `online:${g.id}`, mine);
       });
-      const inv = onlineInvites.in.length;
-      if (inv) card('📥', L(`${inv} invitation${inv > 1 ? 's' : ''} à une partie`, `${inv} game invitation${inv > 1 ? 's' : ''}`), onlineInvites.in.map((i) => escHtml(i.fromName)).join(', '), 'invites', true);
     }
-    // défi du jour
+    // défi du jour commencé mais pas fini
     const d = dailyState(), okN = [0, 1, 2].filter((k) => d.res[k] === 'ok').length;
-    if (!d.finished) card('📅', L('Défi du jour', 'Daily challenge'), L(`${okN} sur 3 trouvés · série : ${d.streak || 0} jour${(d.streak || 0) > 1 ? 's' : ''}`, `${okN} of 3 found · streak: ${d.streak || 0} day${(d.streak || 0) === 1 ? '' : 's'}`), 'daily', true);
-    // programme de Maître Sissa (problèmes et leçons choisis selon tes erreurs)
-    if (settings.coachEnabled) { const plan = coachPlan(); card('🎓', L('Programme de Maître Sissa', 'Master Sissa\u2019s programme'), escHtml(plan.focus || plan.text), 'program'); }
-    // ouvertures à réviser
-    const sr = openingsSR(), now = Date.now(), due = TR.OPENINGS.filter((o) => sr[o.id] && sr[o.id].due <= now);
-    if (due.length) card('📖', L(`${due.length} ouverture${due.length > 1 ? 's' : ''} à réviser`, `${due.length} opening${due.length > 1 ? 's' : ''} to review`), due.map((o) => o.name).slice(0, 3).join(', '), `open:${due[0].id}`);
-    // leçons pas encore terminées
-    const done = trainDone();
-    const mate = TR.MATES.find((m) => !done[`mate:${m.id}`]);
-    if (mate) card('🧠', L('Les mats', 'Mates'), L(`Prochaine leçon : ${mate.name} (${TR.MATES.filter((m) => done[`mate:${m.id}`]).length}/${TR.MATES.length} apprises)`, `Next lesson: ${mate.name} (${TR.MATES.filter((m) => done[`mate:${m.id}`]).length}/${TR.MATES.length} learned)`), `mate:${mate.id}`);
-    const end = TR.ENDGAMES.find((e) => !done[`end:${e.id}`]);
-    if (end) card('🏁', L('Finales', 'Endgames'), L(`Prochaine finale : ${end.name}`, `Next endgame: ${end.name}`), `end:${end.id}`);
-    // quêtes du jour
-    const q = questState(), qd = q.ids.filter((id) => q.claimed[id]).length;
-    if (qd < 3) card('🎯', L('Quêtes du jour', 'Daily quests'), L(`${qd}/3 accomplies · 30 🌾 chacune`, `${qd}/3 done · 30 🌾 each`), 'quests');
+    if (!d.finished && Object.keys(d.res || {}).length) card('📅', L('Défi du jour', 'Daily challenge'), L(`${okN} sur 3 trouvés`, `${okN} of 3 found`), 'daily', true);
+    // leçon ou problème ouvert puis quitté avant la fin
+    const ol = store.get('openLesson', null);
+    if (ol && ol.key) card(ol.key === 'program' ? '🧩' : '📘', escHtml(ol.title), ol.key === 'program' ? L('Problème ouvert, pas encore résolu', 'Puzzle opened, not solved yet') : L(`Arrêté à l’étape ${ol.idx + 1} sur ${ol.total}`, `Stopped at step ${ol.idx + 1} of ${ol.total}`), 'resume', true);
     $('welcome-title').textContent = p.name ? L(`Bon retour, ${p.name} !`, `Welcome back, ${p.name}!`) : L('Bienvenue !', 'Welcome!');
     $('welcome-body').innerHTML = `<div class="welcome-actions"><button class="btn primary" type="button" data-resume="new">${L('Nouvelle partie', 'New game')}</button><button class="btn ghost" type="button" data-resume="home">${L('Menu principal', 'Main menu')}</button></div>
-      <p class="level-help">${L('Voici tout ce que tu as en cours. Choisis ce que tu veux continuer.', 'Here is everything you have in progress. Choose what to continue.')}</p>
+      <p class="level-help">${items.length ? L('Voici ce que tu as commencé sans le terminer. Choisis ce que tu veux continuer.', 'Here is what you started without finishing. Choose what to continue.') : L('Rien en cours pour le moment : lance une nouvelle partie ou ouvre le menu principal.', 'Nothing in progress right now: start a new game or open the main menu.')}</p>
       <div class="welcome-list">${items.join('')}</div>`;
   }
   $('welcome-body').addEventListener('click', (e) => {
@@ -4037,6 +4048,7 @@
     if (kind === 'mate') return startMateLesson(TR.MATES.find((x) => x.id === id));
     if (kind === 'end') return startEndgame(TR.ENDGAMES.find((x) => x.id === id));
     if (kind === 'quests') return openShop();
+    if (kind === 'resume') return resumeOpenLesson();
   });
   $('btn-welcome').onclick = () => show('welcome');
   /* ---------- Administration : compte réservé au développeur, sans jeu ---------- */
