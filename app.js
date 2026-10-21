@@ -189,7 +189,7 @@
     $('coach-dock-message').textContent = coachMessage || coachPlan().text;
     const champ = activeChampion();
     dock.querySelector('.coach-dock-head strong').textContent = coachName();
-    showCoachFace($('coach-dock-img'), true);
+    showCoachFace($('coach-dock-img'));
     const role = champ ? champ.reign : L('Coach d’échecs', 'Chess coach');
     $('coach-dock-status').textContent = coachMood || (settings.voice ? `${role} · ${L('voix active', 'voice on')}` : role);
     $('coach-dock-voice').textContent = settings.voice ? '🔊' : '🔇';
@@ -1072,7 +1072,7 @@
           { label: L('Rejouer', 'Play again'), primary: true, onClick: () => startGame({ ...cfg, playerColor: cfg.fen ? cfg.playerColor : randomColor() }) },
           ...(cfg.fen ? [{ label: L('Modifier la position', 'Edit the position'), onClick: () => openEditor(cfg.fen) }] : []),
           ...(cfg.mode !== 'local' ? [{ label: L('Choisir un niveau', 'Choose a level'), onClick: () => { renderSetup(); returnTo = 'home'; show('setup'); } }] : []),
-          ...(snap.moves.length >= 8 ? [{ label: L('Bilan de Maître Hiro', 'Master Hiro’s review'), onClick: () => showBilan(snap) }] : []),
+          ...(snap.moves.length >= 8 ? [{ label: L('Bilan de Maître Sissa', 'Master Sissa’s review'), onClick: () => showBilan(snap) }] : []),
           { label: L('Voir le plateau', 'View the board'), ghost: true },
           { label: L('Accueil', 'Home'), ghost: true, onClick: () => show('home') },
         ],
@@ -1890,26 +1890,28 @@
   const personalItem = (m) => ({ personal: m, fen: m.fen, line: m.line, alts: m.alts, theme: m.theme, level: m.level || 1 });
 
   /* L'entraîneur */
-  const COACH = L('Maître Hiro', 'Master Hiro');
+  const COACH = L('Maître Sissa', 'Master Sissa');
   // Pendant son cours ou sa partie, c'est le champion choisi qui parle et qui joue
   function activeChampion() {
     const id = pz ? pz.lesson && pz.lesson.champion : !replay && cfg && cfg.mode === 'coach' && cfg.champion;
     return id ? champById(id) || null : null;
   }
   const coachName = () => { const c = activeChampion(); return c ? c.name : COACH; };
-  // Portrait affiché pour celui qui parle : photo du champion, sinon le personnage de Maître Hiro
-  let hiroFace = '';
-  function showCoachFace(img, emptyWhenHiro) {
+  // Portrait affiché pour celui qui parle : photo du champion, sinon le personnage de Maître Sissa
+  const hiroFace = 'sissa/sissa-face.jpg';
+  function showCoachFace(img) {
     const c = activeChampion();
-    if (!hiroFace) { try { hiroFace = window.Characters.dataUrl('B'); } catch { hiroFace = ''; } }
-    const src = c && c.photo ? c.photo.src : emptyWhenHiro ? '' : hiroFace;
-    img.classList.toggle('photo', !!(c && c.photo));
+    const src = c && c.photo ? c.photo.src : hiroFace;
+    img.classList.toggle('photo', true);
+    // le lien vers la légende n'apparaît que pour Maître Sissa
+    document.querySelectorAll('[data-legend]').forEach((b) => { b.hidden = !!c; });
+    img.style.cursor = c ? '' : 'pointer';
     img.hidden = !src;
     if (src && img.getAttribute('src') !== src) img.src = src;
     img.alt = c ? c.name : '';
     img.title = c && c.photo ? L(`Photo : ${c.photo.author} (${c.photo.license}, Wikimedia Commons)`, `Photo: ${c.photo.author} (${c.photo.license}, Wikimedia Commons)`) : '';
   }
-  // Voix de Maître Hiro : synthèse vocale du navigateur, dans la langue de l'interface
+  // Voix de Maître Sissa : synthèse vocale du navigateur, dans la langue de l'interface
   const tts = window.speechSynthesis;
   let frVoice = null;
   function pickVoice() {
@@ -2462,7 +2464,66 @@
 
   $('btn-problems').onclick = () => { returnTo = 'home'; show('problems'); };
   Object.defineProperty(window, 'cavalierPz', { get: () => pz }); // pour les tests
-  try { $('coach-img').src = window.Characters.dataUrl('B'); } catch { /* pas de portrait */ }
+  $('coach-img').src = 'sissa/sissa-face.jpg'; $('coach-img').classList.add('photo');
+  /* ---------- La légende de Sissa : le maître raconte lui-même, en slides ---------- */
+  const LEGEND = L([
+    { img: 'sissa/sissa.jpg', text: 'Approche, mon élève. Je suis Sissa, et je vais te raconter comment est né le jeu auquel tu joues. Appuie sur « Continuer » pour écouter mon histoire.' },
+    { img: 'sissa/sissa.jpg', text: 'Il y a bien longtemps, en Inde, je vivais à la cour d\'un roi puissant. Le roi s\'ennuyait : la guerre l\'avait lassé, et plus rien ne l\'amusait. Appuie sur « Continuer ».' },
+    { img: 'sissa/sissa.jpg', text: 'Alors j\'ai inventé pour lui un jeu : un champ de bataille de soixante-quatre cases, avec des soldats, des cavaliers, des éléphants, un général et un roi. Pour gagner, il fallait réfléchir, pas seulement être fort. Appuie sur « Continuer ».' },
+    { img: 'sissa/sissa.jpg', text: 'Le roi fut émerveillé. « Demande-moi ce que tu veux, Sissa : de l\'or, des palais, des terres ! » Je lui ai souri et j\'ai demandé… du riz. Appuie sur « Continuer ».' },
+    { board: 8, text: 'Un grain de riz sur la première case de l\'échiquier, deux sur la deuxième, quatre sur la troisième, et ainsi de suite : à chaque case, deux fois plus que sur la précédente. Appuie sur « Continuer ».' },
+    { board: 64, text: 'Le roi a ri de ma demande si modeste. Mais ses savants ont commencé à compter : 1, 2, 4, 8, 16… À la vingt-et-unième case, il fallait déjà plus d\'un million de grains. Appuie sur « Continuer ».' },
+    { board: 64, text: 'Pour la dernière case, il aurait fallu plus de neuf milliards de milliards de grains, et pour tout l\'échiquier 18 446 744 073 709 551 615 grains : bien plus que tout le riz récolté dans le monde entier. Appuie sur « Continuer ».' },
+    { img: 'sissa/sissa.jpg', text: 'Le roi a compris la leçon : une petite chose qui double, encore et encore, devient immense. Aux échecs, c\'est pareil : un petit avantage, patiemment accumulé, finit par tout emporter. Appuie sur « Terminer » pour revenir à ton entraînement.' },
+  ], [
+    { img: 'sissa/sissa.jpg', text: 'Come closer, my student. I am Sissa, and I will tell you how the game you play was born. Press "Continue" to hear my story.' },
+    { img: 'sissa/sissa.jpg', text: 'Long ago, in India, I lived at the court of a powerful king. The king was bored: war had wearied him, and nothing amused him any more. Press "Continue".' },
+    { img: 'sissa/sissa.jpg', text: 'So I invented a game for him: a battlefield of sixty-four squares, with soldiers, horsemen, elephants, a general and a king. To win, you had to think, not just be strong. Press "Continue".' },
+    { img: 'sissa/sissa.jpg', text: 'The king was amazed. "Ask me for anything, Sissa: gold, palaces, lands!" I smiled and asked him for… rice. Press "Continue".' },
+    { board: 8, text: 'One grain of rice on the first square of the board, two on the second, four on the third, and so on: on each square, twice as much as on the one before. Press "Continue".' },
+    { board: 64, text: 'The king laughed at such a modest request. But his scholars began to count: 1, 2, 4, 8, 16… By the twenty-first square, more than a million grains were already needed. Press "Continue".' },
+    { board: 64, text: 'The last square alone would have needed more than nine billion billion grains, and the whole board 18,446,744,073,709,551,615 grains: far more than all the rice ever harvested in the world. Press "Continue".' },
+    { img: 'sissa/sissa.jpg', text: 'The king understood the lesson: a small thing that doubles, again and again, becomes immense. Chess is the same: a small advantage, patiently built up, ends up carrying everything. Press "Finish" to go back to your training.' },
+  ]);
+  let legendIdx = 0, legendBack = 'home';
+  // échiquier des grains : 1, 2, 4… sur les premières cases (en notation courte pour les grands nombres)
+  const grains = (n) => { const v = Number(2n ** BigInt(n)); return v < 100000 ? v.toLocaleString(LOCALE) : v < 1e6 ? `${Math.round(v / 1000)} k` : v < 1e9 ? `${Math.round(v / 1e6)} M` : v < 1e12 ? `${Math.round(v / 1e9)} ${L('Md', 'B')}` : `2^${n}`; };
+  function renderLegend() {
+    const s = LEGEND[legendIdx];
+    $('legend-img').hidden = !s.img;
+    if (s.img) $('legend-img').src = s.img;
+    const b = $('legend-board');
+    b.hidden = !s.board;
+    if (s.board) {
+      let html = '';
+      for (let i = 0; i < 64; i++) {
+        const r = 7 - (i >> 3), f = i & 7, n = r * 8 + f, dark = (r + f) % 2 === 0;
+        html += `<span class="${dark ? 'd' : 'l'}">${n < s.board ? grains(n) : ''}</span>`;
+      }
+      b.innerHTML = html;
+    }
+    $('legend-text').textContent = s.text;
+    say_legend(s.text);
+    $('legend-count').textContent = `${legendIdx + 1} / ${LEGEND.length}`;
+    $('legend-next').textContent = legendIdx >= LEGEND.length - 1 ? L('Terminer', 'Finish') : L('Continuer', 'Continue');
+  }
+  function say_legend(text) { try { if (settings.voice) speak(text); } catch { /* pas de voix */ } }
+  function openLegend() {
+    if (activeChampion()) return;
+    legendBack = document.body.dataset.screen || 'home'; returnTo = legendBack === 'legend' ? 'home' : legendBack;
+    legendIdx = 0;
+    renderLegend();
+    show('legend');
+  }
+  $('legend-next').onclick = () => {
+    if (legendIdx < LEGEND.length - 1) { legendIdx++; renderLegend(); return; }
+    try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch { /* rien */ }
+    show(legendBack === 'legend' ? 'home' : legendBack);
+  };
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-legend]') || (e.target.closest('#coach-img, #coach-dock-img') && !activeChampion())) { e.preventDefault(); openLegend(); }
+  });
+
 
   /* ---------- Accueil ---------- */
   const randomColor = () => (Math.random() < 0.5 ? 'w' : 'b');
@@ -2771,13 +2832,13 @@
     { daily: 'Daily challenge', mates: 'Checkmates', endgames: 'Basic endgames', openings: 'Openings', famous: 'Guess the move' });
   const TRAIN_HELP = L({
     daily: 'Trois problèmes par jour. Ceux que tu ne trouves pas du premier coup te sont reproposés dans la journée. Réussis les trois pour prolonger ta série.',
-    mates: 'Choisis le mat que tu veux apprendre : Maître Hiro te le montre, puis tu le trouves toi-même.',
+    mates: 'Choisis le mat que tu veux apprendre : Maître Sissa te le montre, puis tu le trouves toi-même.',
     endgames: 'Apprends la méthode, puis joue la position contre l\'ordinateur au plus haut niveau.',
     openings: 'Découvre les coups d\'une ouverture, puis rejoue-les de mémoire. Elles reviennent à réviser au bon moment.',
     famous: 'Prends la place d\'un champion dans sa partie la plus célèbre et devine ses coups.',
   }, {
     daily: 'Three puzzles a day. The ones you miss at the first try come back later the same day. Solve all three to extend your streak.',
-    mates: 'Choose the mate you want to learn: Master Hiro shows it to you, then you find it yourself.',
+    mates: 'Choose the mate you want to learn: Master Sissa shows it to you, then you find it yourself.',
     endgames: 'Learn the method, then play the position against the computer at its highest level.',
     openings: 'Discover the moves of an opening, then replay them from memory. They come back for review at the right time.',
     famous: 'Take a champion\'s place in their most famous game and guess their moves.',
@@ -2975,7 +3036,7 @@
   const sideNames = (c) => {
     if (c.mode === 'local') return { white: L('Joueur 1', 'Player 1'), black: L('Joueur 2', 'Player 2') };
     const champ = c.champion && champById(c.champion);
-    const ai = champ ? champ.name : c.mode === 'coach' ? L('Maître Hiro', 'Master Hiro') : `${L('Ordinateur', 'Computer')} ${LEVEL_NAMES[c.level] || ''}`.trim();
+    const ai = champ ? champ.name : c.mode === 'coach' ? L('Maître Sissa', 'Master Sissa') : `${L('Ordinateur', 'Computer')} ${LEVEL_NAMES[c.level] || ''}`.trim();
     const me = L('Joueur', 'Player');
     return c.playerColor === 'w' ? { white: me, black: ai } : { white: ai, black: me };
   };
@@ -3027,7 +3088,7 @@
     } catch { replay = null; toast(L('Lien de partage invalide.', 'Invalid share link.')); }
   }
 
-  // Bilan de Maître Hiro à la fin d'une partie
+  // Bilan de Maître Sissa à la fin d'une partie
   const PHASE_ADVICE = L({
     ouverture: "Ouverture : développe tes pièces, prends le centre et roque tôt avant de lancer des attaques.",
     milieu: "Milieu de partie : avant chaque coup, cherche les menaces adverses (échecs, prises, pièces non défendues), puis tes propres tactiques.",
@@ -3041,7 +3102,7 @@
   let bilanId = 0;
   function showBilan(snap) {
     const my = ++bilanId;
-    modal({ title: L('Bilan de Maître Hiro', 'Master Hiro’s review'), text: L('Analyse de la partie…', 'Analysing the game…'), actions: [{ label: L('Fermer', 'Close'), ghost: true, onClick: () => { bilanId++; } }] });
+    modal({ title: L('Bilan de Maître Sissa', 'Master Sissa’s review'), text: L('Analyse de la partie…', 'Analysing the game…'), actions: [{ label: L('Fermer', 'Close'), ghost: true, onClick: () => { bilanId++; } }] });
     requestReview(snap.cfg.fen || window.Chess.START_FEN, snap.moves, (done, total) => {
       if (my === bilanId && !$('modal').hidden) $('modal-text').textContent = L(`Analyse de la partie… ${done} / ${total} coups`, `Analysing the game… ${done} / ${total} moves`);
     }).then((r) => { if (my === bilanId && !$('modal').hidden) renderBilan(snap, r); })
@@ -3075,7 +3136,7 @@
     body.innerHTML = html;
     const names = sideNames(snap.cfg);
     modal({
-      title: L('Bilan de Maître Hiro', 'Master Hiro’s review'), body,
+      title: L('Bilan de Maître Sissa', 'Master Sissa’s review'), body,
       actions: [
         { label: L("Revoir avec l'analyse", 'Review with analysis'), primary: true, onClick: () => startReplay({ moves: snap.moves, result: snap.result, title: L('Ma dernière partie', 'My last game'), ...names, flipped: !local && me === 'b' }, () => show('home')) },
         { label: L('Exporter en PGN', 'Export as PGN'), onClick: () => saveFile(`cavalier-partie-${stamp()}.pgn`, pgnFor({ moves: snap.moves, result: snap.result, opening: r.opening, ...names })) },
@@ -3206,7 +3267,7 @@
     } else {
       body.innerHTML = '<div class="replay-items">' + source.map((g, i) => [g, i]).reverse().map(([g, i]) => {
         const gm = mode === 'free' ? g.mode || 'ai' : mode;
-        const who = (mode === 'free' ? ` · ${MODE_LABELS[gm]}` : '') + (gm === 'local' ? '' : ` · ${g.champion && champById(g.champion) ? champById(g.champion).name : mode === 'coach' ? L('Maître Hiro', 'Master Hiro') : LEVEL_NAMES[g.level] || ''} · ${L('vous', 'you')}: ${g.color === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black')}`);
+        const who = (mode === 'free' ? ` · ${MODE_LABELS[gm]}` : '') + (gm === 'local' ? '' : ` · ${g.champion && champById(g.champion) ? champById(g.champion).name : mode === 'coach' ? L('Maître Sissa', 'Master Sissa') : LEVEL_NAMES[g.level] || ''} · ${L('vous', 'you')}: ${g.color === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black')}`);
         return `<button type="button" class="btn replay-item" data-i="${i}"><strong>${escHtml(fmtDateTime(g.id))}</strong><span>${Math.ceil(g.moves.length / 2)} ${L('coups', 'moves')}${escHtml(who)} · ${RESULT_LABELS[g.result] || RESULT_LABELS['*']}</span></button>`;
       }).join('') + '</div>';
     }

@@ -493,3 +493,14 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 
 /* Apprendre */
 .train-h { font-size: 1rem; margin: 22px 0 6px; }
+
+/* Maître Sissa et sa légende */
+.coach img.photo, .coach-dock-img { object-position: 50% 12%; }
+.legend-link { background: none; border: 0; padding: 0; color: var(--accent, #e9b949); font: inherit; font-size: 0.8rem; text-decoration: underline; cursor: pointer; }
+.legend-figure { margin: 0 0 12px; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+.legend-figure img { display: block; width: 100%; max-height: 52vh; object-fit: cover; object-position: 50% 20%; }
+.legend-board { display: grid; grid-template-columns: repeat(8, 1fr); aspect-ratio: 1; width: min(100%, 52vh); margin: 0 auto; }
+.legend-board span { display: flex; align-items: center; justify-content: center; font-size: clamp(8px, 2vw, 13px); font-weight: 700; color: #3a2a14; }
+.legend-board .l { background: #f1dfb4; }
+.legend-board .d { background: #b8874f; color: #fff6e0; }
+.legend-coach .bubble p { margin: 4px 0 0; }

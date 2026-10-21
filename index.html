@@ -15,7 +15,7 @@
         </div>
       </div>
       <section id="coach-program" class="coach-program" aria-labelledby="coach-program-title" hidden>
-        <div class="coach-program-head"><div><span class="coach-kicker">Programme personnalisé</span><h2 id="coach-program-title">Avec Maître Hiro</h2></div><span id="coach-program-badge" class="coach-program-badge"></span></div>
+        <div class="coach-program-head"><div><span class="coach-kicker">Programme personnalisé</span><h2 id="coach-program-title">Avec Maître Sissa</h2></div><span id="coach-program-badge" class="coach-program-badge"></span></div>
         <p id="coach-program-text"></p>
         <p id="coach-program-focus" class="coach-program-focus"></p>
         <div class="coach-program-actions"><button id="btn-coach-program" class="btn primary">Continuer le programme</button><button id="btn-coach-game" class="btn ghost">Partie coachée</button></div>
@@ -72,7 +72,7 @@
     <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Programme personnalisé</h2></header>
     <div class="program-view">
       <section class="coach-program" aria-labelledby="program-title">
-        <div class="coach-program-head"><div><span class="coach-kicker">Programme personnalisé</span><h2 id="program-title">Avec Maître Hiro</h2></div><span id="program-badge" class="coach-program-badge"></span></div>
+        <div class="coach-program-head"><div><span class="coach-kicker">Programme personnalisé</span><h2 id="program-title">Avec Maître Sissa</h2></div><span id="program-badge" class="coach-program-badge"></span></div>
         <p id="program-text"></p>
         <p id="program-focus" class="coach-program-focus"></p>
         <div class="coach-program-actions"><button id="program-continue" class="btn primary">Continuer mon entraînement</button><button id="program-game" class="btn ghost">Partie coachée</button></div>
@@ -198,7 +198,7 @@
       <label class="switch"><input type="checkbox" id="opt-sound"><span>Sons</span></label>
       <label class="switch"><input type="checkbox" id="opt-autoq"><span>Promotion automatique en dame</span></label>
       <label class="switch"><input type="checkbox" id="opt-voice"><span>Voix de l'entraîneur</span></label>
-      <label class="switch"><input type="checkbox" id="opt-coach"><span>Afficher Maître Hiro sur tous les écrans</span></label>
+      <label class="switch"><input type="checkbox" id="opt-coach"><span>Afficher Maître Sissa sur tous les écrans</span></label>
       <label class="switch"><input type="checkbox" id="opt-lite"><span>Mode léger (3D allégé : sans ombres, 30 images/s)</span></label>
       <label class="field-label">Ma progression</label>
       <p class="level-help">Sauvegarde ta progression (niveaux, statistiques, entraînement, parties) dans un fichier, pour la réimporter ici ou dans une autre application. Les parties sont aussi au format PGN, lisible par la plupart des applications d'échecs.</p>
@@ -234,7 +234,7 @@
     <header class="bar"><button class="icon-btn" id="btn-puzzle-back" aria-label="Retour">‹</button><h2 id="puzzle-title"></h2><span class="pz-count" id="pz-count"></span></header>
     <div class="game-layout">
       <div class="board-col">
-        <div class="coach" id="coach"><img id="coach-img" alt=""><div class="bubble"><b>Maître Hiro</b><button class="voice-btn" id="pz-voice" aria-label="Couper la voix">🔊</button><p id="pz-prompt"></p></div></div>
+        <div class="coach" id="coach"><img id="coach-img" alt=""><div class="bubble"><b>Maître Sissa</b> <button type="button" class="legend-link" data-legend>(La légende de Sissa)</button><button class="voice-btn" id="pz-voice" aria-label="Couper la voix">🔊</button><p id="pz-prompt"></p></div></div>
         <div id="puzzle-slot"></div>
         <div id="pz-status" class="status" aria-live="polite"></div>
       </div>
@@ -288,20 +288,31 @@
   </section>
 
   <!-- À propos -->
+  <!-- La légende de Sissa, racontée par le maître lui-même -->
+  <section id="legend" class="screen" aria-label="La légende de Sissa">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>La légende de Sissa</h2></header>
+    <div class="panel legend">
+      <figure class="legend-figure"><img id="legend-img" alt=""><div id="legend-board" class="legend-board" hidden></div></figure>
+      <div class="coach legend-coach"><img src="sissa/sissa-face.jpg" class="photo" alt="Maître Sissa"><div class="bubble"><b>Maître Sissa</b><p id="legend-text"></p></div></div>
+      <p id="legend-count" class="level-help"></p>
+      <button id="legend-next" class="btn primary wide" type="button">Continuer</button>
+    </div>
+  </section>
+
   <section id="about" class="screen" aria-label="À propos">
     <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>À propos</h2></header>
     <div class="panel prose">
       <p>Cavalier rend les échecs accessibles à tous.</p>
       <p>Jouez contre l’ordinateur ou à deux, et rejouez les niveaux débloqués.</p>
-      <p>Entraînez-vous avec des problèmes et les conseils de Maître Hiro.</p>
+      <p>Entraînez-vous avec des problèmes et les conseils de Maître Sissa.</p>
       <p>Créateur : Ansufoudine BINA</p>
       <p>Contact : <a href="mailto:ansuf.dev@gmail.com">ansuf.dev@gmail.com</a></p>
     </div>
   </section>
 
-  <aside id="coach-dock" class="coach-dock" hidden aria-label="Maître Hiro">
+  <aside id="coach-dock" class="coach-dock" hidden aria-label="Maître Sissa">
     <section id="coach-dock-panel" class="coach-dock-panel" hidden>
-      <header class="coach-dock-head"><img id="coach-dock-img" class="coach-dock-img" alt="" hidden><div><strong>Maître Hiro</strong><span id="coach-dock-status">Coach d’échecs</span></div><button id="coach-dock-close" class="icon-btn" type="button" aria-label="Réduire le coach">−</button></header>
+      <header class="coach-dock-head"><img id="coach-dock-img" class="coach-dock-img" alt="" hidden><div><strong>Maître Sissa</strong> <button type="button" class="legend-link" data-legend>(La légende de Sissa)</button><span id="coach-dock-status">Coach d’échecs</span></div><button id="coach-dock-close" class="icon-btn" type="button" aria-label="Réduire le coach">−</button></header>
       <p id="coach-dock-message" aria-live="polite"></p>
       <div class="coach-dock-actions"><button id="coach-dock-voice" class="icon-btn" type="button" aria-label="Couper la voix">🔊</button></div>
     </section>
