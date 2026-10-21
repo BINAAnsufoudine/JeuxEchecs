@@ -65,8 +65,16 @@
   let judging = false, judgeSeq = 0, judgeWorker = null;
   const TERRAIN_IDS = ['forest', 'desert', 'prairie', 'steppe', 'mud', 'rock', 'water', 'beach'];
   const TERRAIN_NAMES = L({ forest: 'Forêt', desert: 'Désert', prairie: 'Prairie verte', steppe: 'Plaine sèche', mud: 'Terrain boueux', rock: 'Terrain rocheux', water: 'Flaques d’eau', beach: 'Plage tropicale' }, { forest: 'Forest', desert: 'Desert', prairie: 'Green meadow', steppe: 'Dry plain', mud: 'Muddy ground', rock: 'Rocky ground', water: 'Puddles', beach: 'Tropical beach' });
-  const WEATHER_IDS = ['sun', 'cloudy', 'drizzle', 'heavy', 'storm'];
-  const WEATHER_NAMES = L({ sun: 'Soleil', cloudy: 'Ciel nuageux', drizzle: 'Pluie fine', heavy: 'Grosse pluie', storm: 'Orage et éclairs' }, { sun: 'Sunny', cloudy: 'Cloudy', drizzle: 'Light rain', heavy: 'Heavy rain', storm: 'Thunderstorm' });
+  const WEATHER_IDS = ['sun', 'drizzle', 'heavy', 'heavystorm', 'windstorm', 'sunwind', 'snow', 'sunset'];
+  const WEATHER_NAMES = L({ sun: 'Soleil', drizzle: 'Pluie fine', heavy: 'Grosse pluie', heavystorm: 'Grosse pluie orageuse', windstorm: 'Orage et grand vent', sunwind: 'Soleil et vent', snow: 'Neige fine', sunset: 'Coucher de soleil' },
+    { sun: 'Sunny', drizzle: 'Light rain', heavy: 'Heavy rain', heavystorm: 'Heavy thunderstorm', windstorm: 'Windy thunderstorm', sunwind: 'Sunny and windy', snow: 'Light snow', sunset: 'Sunset' });
+  // Décor et météo tirés au sort, pour tous les modes (parties, replays, problèmes, cours)
+  function randomScenery(terrainId, weatherId) {
+    currentTerrain = TERRAIN_IDS.includes(terrainId) ? terrainId : TERRAIN_IDS[Math.floor(Math.random() * TERRAIN_IDS.length)];
+    currentWeather = WEATHER_IDS.includes(weatherId) ? weatherId : WEATHER_IDS[Math.floor(Math.random() * WEATHER_IDS.length)];
+    if (b3d) { b3d.setTerrain(currentTerrain); b3d.setWeather(currentWeather); }
+    return `${TERRAIN_NAMES[currentTerrain]} · ${WEATHER_NAMES[currentWeather]}`;
+  }
   let currentTerrain = 'forest';
   let currentWeather = 'sun';
 
@@ -522,10 +530,7 @@
     cfg = conf;
     if (cfg.mode === 'coach') cfg.coachTheme = coachPlan().theme;
     result = res;
-    currentTerrain = TERRAIN_IDS.includes(terrainId) ? terrainId : TERRAIN_IDS[Math.floor(Math.random() * TERRAIN_IDS.length)];
-    currentWeather = WEATHER_IDS.includes(weatherId) ? weatherId : WEATHER_IDS[Math.floor(Math.random() * WEATHER_IDS.length)];
-    if (b3d) { b3d.setTerrain(currentTerrain); b3d.setWeather(currentWeather); }
-    $('terrain-name').textContent = `${TERRAIN_NAMES[currentTerrain]} · ${WEATHER_NAMES[currentWeather]}`;
+    $('terrain-name').textContent = randomScenery(terrainId, weatherId);
     flipped = flip !== undefined ? flip : conf.mode !== 'local' && conf.playerColor === 'b';
     selected = -1; hint = null;
     $('game-title').textContent = (conf.fen ? L('Position libre · ', 'Custom position · ') : '') + (conf.mode === 'local' ? L('Deux joueurs', 'Two players') : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`);
@@ -1976,7 +1981,7 @@
     cancelAi();
     result = null;
     attachBoard('puzzle');
-    if (!$('puzzle').classList.contains('active')) show('puzzle');
+    if (!$('puzzle').classList.contains('active')) { randomScenery(); show('puzzle'); }
   }
   function leavePuzzle() {
     hush();
@@ -2880,7 +2885,7 @@
     cfg = { mode: 'local', playerColor: 'w', level: 1 };
     result = null; selected = -1; hint = null;
     flipped = !!entry.flipped;
-    $('terrain-name').textContent = '';
+    $('terrain-name').textContent = randomScenery();
     $('game-title').textContent = `Replay · ${replay.title}`;
     setReplayUi(true);
     show('game');

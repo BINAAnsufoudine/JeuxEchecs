@@ -17,12 +17,18 @@
     water: { name: 'Terrain avec flaques', sky: 0x9bbbc1, ground: 0x526f66, wood: 0x59432f, frame: ['#806b50', '#5a4734', '#3d3027'], squares: ['#d0dfd8', '#63827a'], kind: 'water' },
     beach: { name: 'Plage tropicale', sky: 0x6cc5e8, ground: 0xa88a54, wood: 0x8a6a42, frame: ['#b98d57', '#8a6238', '#5f4226'], squares: ['#ead6a0', '#b98a4c'], kind: 'beach' },
   };
+  // overcast : part de gris dans le ciel ; wind : force du vent (pluie penchée, rafales) ; snow : flocons
   const WEATHERS = {
-    sun: { name: 'Soleil', sky: 0x000000, tint: 0x000000, sun: 1.05, hemi: 0.58, rain: 0, cloud: 0, fogFar: 85 },
-    cloudy: { name: 'Ciel nuageux', sky: 0x000000, tint: 0x87939a, sun: 0.42, hemi: 0.42, rain: 0, cloud: 1, fogFar: 78 },
-    drizzle: { name: 'Pluie fine', sky: 0x000000, tint: 0x71828a, sun: 0.34, hemi: 0.36, rain: 360, cloud: 1, fogFar: 72, speed: 3.1 },
-    heavy: { name: 'Grosse pluie', sky: 0x000000, tint: 0x4c5c65, sun: 0.25, hemi: 0.3, rain: 950, cloud: 1, fogFar: 59, speed: 6.2 },
-    storm: { name: 'Orage et éclairs', sky: 0x000000, tint: 0x3a4654, sun: 0.22, hemi: 0.28, rain: 820, cloud: 1, fogFar: 55, speed: 6.8, lightning: true },
+    sun: { name: 'Soleil', sky: 0x000000, tint: 0x000000, sun: 1.05, hemi: 0.58, rain: 0, cloud: 0, fogFar: 85, overcast: 0, sunColor: 0xfff1d5, sunDisc: 0xffe39a },
+    cloudy: { name: 'Ciel nuageux', sky: 0x000000, tint: 0x87939a, sun: 0.42, hemi: 0.42, rain: 0, cloud: 1, fogFar: 78, overcast: 0.36 },
+    drizzle: { name: 'Pluie fine', sky: 0x000000, tint: 0x71828a, sun: 0.34, hemi: 0.36, rain: 360, cloud: 1, fogFar: 72, speed: 3.1, overcast: 0.48, rainOpacity: 0.4 },
+    heavy: { name: 'Grosse pluie', sky: 0x000000, tint: 0x4c5c65, sun: 0.25, hemi: 0.3, rain: 950, cloud: 1, fogFar: 59, speed: 6.2, overcast: 0.68 },
+    heavystorm: { name: 'Grosse pluie orageuse', sky: 0x000000, tint: 0x3a4654, sun: 0.22, hemi: 0.28, rain: 1100, cloud: 1, fogFar: 52, speed: 7, overcast: 0.76, lightning: true },
+    windstorm: { name: 'Orage et grand vent', sky: 0x000000, tint: 0x35404c, sun: 0.2, hemi: 0.27, rain: 900, cloud: 1, fogFar: 52, speed: 7.2, overcast: 0.78, lightning: true, wind: 1.6, gusts: 160 },
+    sunwind: { name: 'Soleil et vent', sky: 0x000000, tint: 0x000000, sun: 1.0, hemi: 0.56, rain: 0, cloud: 0, fogFar: 85, overcast: 0, sunColor: 0xfff1d5, sunDisc: 0xffe39a, wind: 1.1, gusts: 120, leaves: 40 },
+    snow: { name: 'Neige fine', sky: 0x000000, tint: 0xc9d3dc, sun: 0.55, hemi: 0.62, rain: 0, cloud: 1, fogFar: 62, overcast: 0.55, snow: 700 },
+    sunset: { name: 'Coucher de soleil', sky: 0x000000, tint: 0xe8916a, sun: 0.85, hemi: 0.46, rain: 0, cloud: 0, fogFar: 80, overcast: 0.55, sunColor: 0xffa060, sunDisc: 0xff8a3c, sunLow: true },
+    storm: { name: 'Orage et éclairs', sky: 0x000000, tint: 0x3a4654, sun: 0.22, hemi: 0.28, rain: 820, cloud: 1, fogFar: 55, speed: 6.8, overcast: 0.76, lightning: true },
   };
   const DUEL = 1.3; // durée du coup final de chaque prise (secondes)
   // Avant chaque prise, les deux pièces s'affrontent : l'attaquant frappe, la cible riposte avec sa propre arme
@@ -244,7 +250,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     setWeather(id) {
       const T = this.THREE, weather = WEATHERS[id] || WEATHERS.sun, terrain = this.terrain || TERRAINS.forest;
       this.weather = weather;
-      const overcast = weather === WEATHERS.sun ? 0 : weather === WEATHERS.cloudy ? 0.36 : weather === WEATHERS.drizzle ? 0.48 : weather === WEATHERS.heavy ? 0.68 : 0.76;
+      const overcast = weather.overcast || 0;
       const sky = new T.Color(terrain.sky).lerp(new T.Color(weather.tint), overcast);
       this.scene.background.copy(sky);
       this.scene.fog = new T.Fog(sky, weather.fogFar * 0.38, weather.fogFar);
@@ -252,7 +258,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.hemi.intensity = weather.hemi;
       this.hemi.color.copy(sky);
       this.sun.intensity = weather.sun;
-      this.sun.color.setHex(weather === WEATHERS.sun ? 0xfff1d5 : 0xffffff);
+      this.sun.color.setHex(weather.sunColor || 0xffffff);
       this.lightningLight.intensity = 0;
       this.weatherFlash = null;
       this.nextLightning = weather.lightning ? (this.lastT || 0) + 1.8 + Math.random() * 2.2 : 0;
@@ -268,12 +274,49 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       });
       this.weatherGroup.clear();
       oldGeo.forEach((g) => g.dispose()); oldMat.forEach((m) => m.dispose());
-      this.weatherBolts = []; this.weatherRain = null;
+      this.weatherBolts = []; this.weatherRain = null; this.weatherSnow = null; this.weatherWind = null;
 
-      if (weather === WEATHERS.sun) {
-        const sun = new T.Mesh(new T.SphereGeometry(0.72, 16, 12), new T.MeshBasicMaterial({ color: 0xffe39a, fog: false }));
-        sun.position.set(-8, 8.5, -9); this.weatherGroup.add(sun);
-        return;
+      if (weather.sunDisc) {
+        // soleil haut dans le ciel, ou bas et orangé au coucher
+        const sun = new T.Mesh(new T.SphereGeometry(weather.sunLow ? 1.4 : 0.72, 16, 12), new T.MeshBasicMaterial({ color: weather.sunDisc, fog: false }));
+        sun.position.set(-8, weather.sunLow ? 2.2 : 8.5, weather.sunLow ? -16 : -9); this.weatherGroup.add(sun);
+        if (weather.sunLow) {
+          const halo = new T.Mesh(new T.SphereGeometry(3, 16, 12), new T.MeshBasicMaterial({ color: 0xffb070, transparent: true, opacity: 0.25, fog: false, depthWrite: false, blending: T.AdditiveBlending }));
+          halo.position.copy(sun.position); this.weatherGroup.add(halo);
+        }
+      }
+
+      if (weather.snow) {
+        // flocons qui descendent lentement en se balançant
+        const count = weather.snow, positions = new Float32Array(count * 3), seeds = new Float32Array(count);
+        for (let i = 0; i < count; i++) {
+          positions[i * 3] = (Math.random() - 0.5) * 17; positions[i * 3 + 1] = Math.random() * 12; positions[i * 3 + 2] = (Math.random() - 0.5) * 17;
+          seeds[i] = Math.random() * 10;
+        }
+        const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(positions, 3));
+        const flakes = new T.Points(geo, new T.PointsMaterial({ color: 0xffffff, size: 0.11, transparent: true, opacity: 0.95, depthWrite: false }));
+        flakes.frustumCulled = false; this.weatherGroup.add(flakes);
+        this.weatherSnow = { positions, seeds, count, geometry: geo };
+      }
+
+      if (weather.gusts) {
+        // rafales : traits de vent et feuilles qui traversent le plateau
+        const count = weather.gusts, positions = new Float32Array(count * 6), speeds = new Float32Array(count);
+        for (let i = 0; i < count; i++) {
+          const x = (Math.random() - 0.5) * 20, y = 0.2 + Math.random() * 4, z = (Math.random() - 0.5) * 17, l = 0.4 + Math.random() * 0.9;
+          positions.set([x, y, z, x + l, y + 0.02, z + 0.05], i * 6);
+          speeds[i] = 7 + Math.random() * 6;
+        }
+        const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(positions, 3));
+        const streaks = new T.LineSegments(geo, new T.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: weather.rain ? 0.22 : 0.32, depthWrite: false }));
+        streaks.frustumCulled = false; this.weatherGroup.add(streaks);
+        const leaves = [];
+        for (let i = 0; i < (weather.leaves || 0); i++) {
+          const leaf = new T.Mesh(new T.PlaneGeometry(0.1, 0.06), new T.MeshBasicMaterial({ color: [0x6f9a3c, 0xb8a04a, 0xc77a2e][i % 3], side: T.DoubleSide, transparent: true, opacity: 0.9 }));
+          leaf.position.set((Math.random() - 0.5) * 20, 0.2 + Math.random() * 3, (Math.random() - 0.5) * 16); leaf.userData.seed = Math.random() * 10;
+          this.weatherGroup.add(leaf); leaves.push(leaf);
+        }
+        this.weatherWind = { positions, speeds, count, geometry: geo, leaves };
       }
 
       if (weather.cloud) {
@@ -295,7 +338,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           speeds[i] = weather.speed * (0.72 + Math.random() * 0.65);
         }
         const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(positions, 3));
-        const material = new T.LineBasicMaterial({ color: 0xc6d9e7, transparent: true, opacity: weather === WEATHERS.drizzle ? 0.4 : 0.52, depthWrite: false });
+        const material = new T.LineBasicMaterial({ color: 0xc6d9e7, transparent: true, opacity: weather.rainOpacity || 0.52, depthWrite: false });
         const rain = new T.LineSegments(geo, material); rain.frustumCulled = false; this.weatherGroup.add(rain);
         this.weatherRain = { positions, speeds, count, geometry: geo };
       }
@@ -319,17 +362,47 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         const { positions, speeds, count, geometry } = this.weatherRain;
         for (let i = 0; i < count; i++) {
           const at = i * 6;
+          const lean = 0.09 + (this.weather.wind || 0) * 0.55;
           positions[at + 1] -= speeds[i] * dt;
-          positions[at] -= speeds[i] * dt * 0.09;
+          positions[at] += speeds[i] * dt * (this.weather.wind ? lean : -0.09);
           positions[at + 4] -= speeds[i] * dt;
-          positions[at + 3] -= speeds[i] * dt * 0.09;
+          positions[at + 3] += speeds[i] * dt * (this.weather.wind ? lean : -0.09);
           if (positions[at + 1] < -0.45) {
-            const x = (Math.random() - 0.5) * 17, y = 7 + Math.random() * 6, z = (Math.random() - 0.5) * 17;
+            const w = this.weather.wind || 0;
+            const x = (Math.random() - 0.5) * 17 - w * 4, y = 7 + Math.random() * 6, z = (Math.random() - 0.5) * 17;
             positions[at] = x; positions[at + 1] = y; positions[at + 2] = z;
-            positions[at + 3] = x - 0.055; positions[at + 4] = y - 0.34; positions[at + 5] = z + 0.035;
+            positions[at + 3] = x - 0.055 - w * 0.2; positions[at + 4] = y - 0.34; positions[at + 5] = z + 0.035;
           }
         }
         geometry.attributes.position.needsUpdate = true;
+      }
+      if (this.weatherSnow) {
+        const { positions, seeds, count, geometry } = this.weatherSnow;
+        for (let i = 0; i < count; i++) {
+          positions[i * 3 + 1] -= (0.45 + (seeds[i] % 1) * 0.35) * dt;
+          positions[i * 3] += Math.sin(t * 0.9 + seeds[i]) * 0.25 * dt;
+          positions[i * 3 + 2] += Math.cos(t * 0.7 + seeds[i]) * 0.2 * dt;
+          if (positions[i * 3 + 1] < -0.4) { positions[i * 3] = (Math.random() - 0.5) * 17; positions[i * 3 + 1] = 10 + Math.random() * 2; positions[i * 3 + 2] = (Math.random() - 0.5) * 17; }
+        }
+        geometry.attributes.position.needsUpdate = true;
+      }
+      if (this.weatherWind) {
+        const { positions, speeds, count, geometry, leaves } = this.weatherWind;
+        // rafales : le vent forcit et faiblit
+        const gust = 0.7 + 0.3 * Math.sin(t * 0.8) + 0.15 * Math.sin(t * 2.3);
+        for (let i = 0; i < count; i++) {
+          const d = speeds[i] * gust * dt;
+          positions[i * 6] += d; positions[i * 6 + 3] += d;
+          if (positions[i * 6] > 11) { const l = positions[i * 6 + 3] - positions[i * 6]; positions[i * 6] = -11 - Math.random() * 3; positions[i * 6 + 3] = positions[i * 6] + l; }
+        }
+        geometry.attributes.position.needsUpdate = true;
+        leaves.forEach((leaf) => {
+          const s = leaf.userData.seed;
+          leaf.position.x += (3.5 + (s % 2)) * gust * dt;
+          leaf.position.y += Math.sin(t * 3 + s) * 0.6 * dt;
+          leaf.rotation.set(t * 4 + s, t * 3, t * 5 + s);
+          if (leaf.position.x > 11) { leaf.position.x = -11; leaf.position.y = 0.2 + Math.random() * 3; leaf.position.z = (Math.random() - 0.5) * 16; }
+        });
       }
       if (this.weather.lightning && t >= this.nextLightning) this.makeLightning(t);
       this.weatherBolts = this.weatherBolts.filter(({ bolt, until }) => {
