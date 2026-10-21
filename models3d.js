@@ -691,11 +691,13 @@
   // Vent de la météo (0 = calme) : fait flotter manteaux, cheveux, jupes et rubans des personnages
   let wind = 0;
   function setWind(w) { wind = w || 0; }
-  function animateWind(p, t) {
+  function animateWind(p, t, state) {
     if (!p.windParts || !p.windParts.length) return;
+    // en déplacement, l'air de la course fait flotter la tenue comme un vent fort
+    const w0 = state === 'run' ? Math.max(wind, 1.4) : wind;
     // rafales : la force varie lentement, avec un frémissement rapide
-    const g = wind * (0.75 + 0.25 * Math.sin(t * 0.7 + p.phase) + 0.12 * Math.sin(t * 2.9 + p.phase * 2));
-    const f = Math.sin(t * (6 + wind * 4) + p.phase * 3), f2 = Math.sin(t * (9 + wind * 5) + p.phase);
+    const g = w0 * (0.75 + 0.25 * Math.sin(t * 0.7 + p.phase) + 0.12 * Math.sin(t * 2.9 + p.phase * 2));
+    const f = Math.sin(t * (6 + w0 * 4) + p.phase * 3), f2 = Math.sin(t * (9 + w0 * 5) + p.phase);
     for (const w of p.windParts) {
       const o = w.o;
       if (w.kind === 'cloak') { o.scale.set(1 + (g ? f * 0.05 * g : 0), 1, 1 + g * 0.16 + f2 * 0.06 * g); }
@@ -878,8 +880,8 @@
     if (p.blades) for (const b of p.blades) b.visible = state !== 'cast';
     if (p.tail) p.tail.rotation.x = Math.sin(ph * 3) * 0.3;
     if (p.pony) p.pony.rotation.z = Math.sin(ph * 2.5) * 0.15;
-    animateWind(p, t);
-    if (p.cloak && !wind) p.cloak.scale.x = 1 + Math.sin(ph * 1.8) * 0.04;
+    animateWind(p, t, state);
+    if (p.cloak && !wind && state !== 'run') p.cloak.scale.x = 1 + Math.sin(ph * 1.8) * 0.04;
     animateAura(p, t, state);
     if (p.bolts) {
       p.bolts.rotation.y = t * 2;
