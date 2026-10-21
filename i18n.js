@@ -35,6 +35,7 @@
     'Nouvelle partie': 'New game',
     'Construire une position': 'Set up a position',
     'Positions libres': 'Custom positions',
+    'Apprendre': 'Learn',
     'Replay': 'Replay',
     'Contre ordinateur': 'Against the computer',
     'Deux joueurs': 'Two players',

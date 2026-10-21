@@ -490,3 +490,6 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .ed-check { display: flex; align-items: center; gap: 8px; }
 .ed-check.off { opacity: 0.45; }
 .ed-error { color: #ff8a7a; min-height: 1.2em; margin: 14px 0 0; }
+
+/* Apprendre */
+.train-h { font-size: 1rem; margin: 22px 0 6px; }
