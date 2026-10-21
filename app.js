@@ -2828,8 +2828,9 @@
     progressDirty = true; pushProgress();
     refreshHome();
   }
-  function onUserChange(user, profile) {
+  async function onUserChange(user, profile) {
     rawSet('onlineSession', !!user);
+    if (user) await ON.loadAdminEmail();
     // compte suspendu par l'administrateur : déconnexion
     if (user && profile && profile.banned) {
       ON.signOut();
@@ -2846,6 +2847,8 @@
       ON.markAdmin();
       return;
     }
+    // ancien compte administrateur redevenu joueur : il réapparaît dans la liste des joueurs
+    if (user && profile && profile.admin) ON.markAdmin(false);
     $('btn-account').textContent = user ? L('Mon compte', 'My account') : L('Se connecter', 'Sign in');
     if (inviteStop) { inviteStop(); inviteStop = null; }
     if (gamesStop) { gamesStop(); gamesStop = null; }
@@ -4024,7 +4027,7 @@
     if (!adminCache) { loadAdmin(); return; }
     const { users, games, tournaments } = adminCache, now = Date.now();
     const players = users.filter((x) => !x.admin);
-    const SECTIONS = [['stats', '📊', L('Statistiques', 'Statistics')], ['users', '👥', L('Comptes', 'Accounts')], ['tours', '🏆', L('Tournois', 'Tournaments')]];
+    const SECTIONS = [['stats', '📊', L('Statistiques', 'Statistics')], ['users', '👥', L('Comptes', 'Accounts')], ['tours', '🏆', L('Tournois', 'Tournaments')], ['email', '✉️', L('Adresse administrateur', 'Administrator address')]];
     if (!adminSection) {
       body.innerHTML = `<p class="level-help">${L('Compte administrateur : on ne joue pas avec ce compte, il sert à gérer les comptes et à suivre l’appli.', 'Administrator account: you cannot play with it, it is used to manage accounts and follow the app.')}</p><div class="tour-menu">${SECTIONS.map(([id, icon, label]) => `<button class="btn tour-menu-btn" data-admin-section="${id}"><span class="tour-menu-icon">${icon}</span><b>${label}</b></button>`).join('')}</div>
         <button class="btn ghost wide" data-admin="reload" style="margin-top:10px">↻ ${L('Actualiser les données', 'Refresh data')}</button>`;
@@ -4059,6 +4062,13 @@
       html += `<div class="players-tools"><input id="admin-search" class="profile-name-input" type="search" placeholder="${L('Chercher un pseudo', 'Search a nickname')}" value="${escHtml(adminQuery)}"></div><div class="ed-seg" style="margin-top:8px">${[['recent', L('Vus récemment', 'Recently seen')], ['idle', L('Plus inactifs d’abord', 'Most inactive first')]].map(([k, lab]) => `<button type="button" data-admin-sort="${k}" class="${adminSort === k ? 'on' : ''}">${lab}</button>`).join('')}</div><p id="admin-msg" class="ed-error" role="status"></p>
         <table class="tour-table admin-table"><tr><th>${L('Pseudo', 'Nickname')}</th><th>Elo</th><th>${L('Créé', 'Created')}</th><th>${L('Vu', 'Seen')}</th><th>${L('Inactif', 'Idle')}</th><th>${L('Parties', 'Games')}</th><th></th></tr>${list.map((x) => `<tr${x.banned ? ' class="banned"' : ''}><td><a href="#" data-profile="${x.id}">${escHtml(x.pseudo || '?')}</a>${x.banned ? ` <small>(${L('suspendu', 'suspended')})</small>` : ''}</td><td>${x.elo || 600}</td><td>${x.createdAt ? new Date(x.createdAt).toLocaleDateString(LOCALE) : '–'}</td><td>${x.lastSeen ? new Date(x.lastSeen).toLocaleDateString(LOCALE) : '–'}</td><td class="${idle(x) >= 365 ? 'loss' : ''}">${idle(x)} ${L('j', 'd')}</td><td>${games.filter((g) => (g.players || []).includes(x.id)).length}</td><td class="admin-actions"><button class="mini" data-admin-ban="${x.id}">${x.banned ? L('Réactiver', 'Reinstate') : L('Suspendre', 'Suspend')}</button><button class="mini danger" data-admin-del="${x.id}">${L('Supprimer', 'Delete')}</button></td></tr>`).join('')}</table>`;
     }
+    if (adminSection === 'email') {
+      html += `<p class="level-help">${L(`L’administration est liée à <b>${escHtml(ON.getAdminEmail())}</b>. Tu peux la transmettre à une autre adresse, par exemple si tu crées un compte spécial pour l’administration. Ce compte-ci redeviendra alors un compte de joueur normal.`, `Administration is linked to <b>${escHtml(ON.getAdminEmail())}</b>. You can hand it over to another address, for example if you create a dedicated administration account. This account will then become a normal player account again.`)}</p>
+        ${field('admin-email', L('Nouvelle adresse administrateur', 'New administrator address'), 'email', '', 'autocomplete="off"')}
+        <button class="btn primary wide" data-admin="email">${L('Transmettre l’administration', 'Hand over administration')}</button>
+        <p class="level-help">${L('Le nouveau compte devra se connecter et confirmer son adresse par e-mail pour accéder à l’administration.', 'The new account will have to sign in and confirm its address by e-mail to access administration.')}</p>
+        <p id="admin-msg" class="ed-error" role="status"></p>`;
+    }
     if (adminSection === 'tours') {
       html += `<p id="admin-msg" class="ed-error" role="status"></p><table class="tour-table admin-table"><tr><th>${L('Nom', 'Name')}</th><th>${L('État', 'Status')}</th><th>${L('Inscrits', 'Entrants')}</th><th>${L('Créé', 'Created')}</th><th></th></tr>${tournaments.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map((t) => `<tr><td>${escHtml(t.name || '?')}</td><td>${STATUS_LABELS[t.status] || t.status}</td><td>${(t.members || []).length}</td><td>${t.createdAt ? new Date(t.createdAt).toLocaleDateString(LOCALE) : '–'}</td><td><button class="mini danger" data-admin-deltour="${t.id}">${L('Supprimer', 'Delete')}</button></td></tr>`).join('')}</table>`;
     }
@@ -4069,6 +4079,16 @@
     const b = e.target.closest('button'); if (!b) return;
     const msg = (t, ok) => { const m = $('admin-msg'); if (m) { m.textContent = t; m.style.color = ok ? 'var(--accent, #e9b949)' : ''; } };
     if (b.dataset.adminSection != null) { adminSection = b.dataset.adminSection || null; renderAdmin(); return; }
+    if (b.dataset.admin === 'email') {
+      const email = ($('admin-email').value || '').trim().toLowerCase();
+      if (!email) { msg(L('Indique la nouvelle adresse.', 'Enter the new address.')); return; }
+      if (email === ON.getAdminEmail()) { msg(L('C’est déjà l’adresse administrateur.', 'This is already the administrator address.')); return; }
+      modal({ title: L('Transmettre l’administration ?', 'Hand over administration?'), text: L(`L’administration passera à ${email}. Ce compte perdra immédiatement ses droits d’administrateur.`, `Administration will move to ${email}. This account will lose its administrator rights immediately.`), actions: [
+        { label: L('Transmettre', 'Hand over'), primary: true, onClick: async () => { try { await ON.setAdminEmail(email); toast(L(`Administration transmise à ${email}.`, `Administration handed over to ${email}.`)); show('home'); onUserChange(ON.user, ON.profile); } catch (err) { msg(ON.explain(err)); } } },
+        { label: L('Annuler', 'Cancel'), ghost: true },
+      ] });
+      return;
+    }
     if (b.dataset.adminSort) { adminSort = b.dataset.adminSort; renderAdmin(); return; }
     if (b.dataset.admin === 'reload') { adminCache = null; loadAdmin(); return; }
     if (b.dataset.admin === 'verify') { try { await ON.sendVerification(); msg(L('E-mail envoyé : clique sur le lien qu’il contient, puis sur « J’ai cliqué sur le lien ».', 'E-mail sent: click its link, then “I clicked the link”.'), true); } catch (err) { msg(ON.explain(err)); } return; }

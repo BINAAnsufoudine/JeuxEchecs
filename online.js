@@ -60,10 +60,9 @@ window.Online = (function () {
       'auth/network-request-failed': L('Pas de connexion internet.', 'No internet connection.'),
       'auth/configuration-not-found': L('Les comptes ne sont pas encore activés sur le serveur.', 'Accounts are not enabled on the server yet.'),
       'auth/operation-not-allowed': L('Les comptes ne sont pas encore activés sur le serveur.', 'Accounts are not enabled on the server yet.'),
-      'auth/wrong-password': L('Mot de passe incorrect.', 'Wrong password.'),
-      'auth/invalid-credential': L('Mot de passe incorrect.', 'Wrong password.'),
       'auth/requires-recent-login': L('Reconnecte-toi puis réessaie.', 'Sign in again, then try again.'),
       'permission-denied': L('Accès refusé par le serveur (règles de sécurité).', 'Access denied by the server (security rules).'),
+      'bad-email': L('Adresse e-mail invalide.', 'Invalid e-mail address.'),
       'pseudo-taken': L('Ce pseudo est déjà pris.', 'This nickname is already taken.'),
       'pseudo-empty': L('Choisis un pseudo.', 'Choose a nickname.'),
       'player-unknown': L('Aucun joueur avec ce pseudo.', 'No player with this nickname.'),
@@ -142,8 +141,22 @@ window.Online = (function () {
     await f.deleteUser(u);
   }
   /* ----- Administration (réservée à l'adresse du développeur, vérifiée) ----- */
-  const ADMIN_EMAIL = 'ansuf.dev@gmail.com';
-  const isAdminEmail = () => !!(user && String(user.email || '').toLowerCase() === ADMIN_EMAIL);
+  // adresse administrateur : enregistrée sur le serveur (config/admin), celle du développeur par défaut
+  let adminEmail = 'ansuf.dev@gmail.com';
+  async function loadAdminEmail() {
+    const f = await load();
+    try { const s = await f.getDoc(f.doc(f.db, 'config', 'admin')); if (s.exists() && s.data().email) adminEmail = s.data().email; } catch { /* valeur par défaut */ }
+    return adminEmail;
+  }
+  async function setAdminEmail(email) {
+    const e = String(email || '').trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) fail('bad-email');
+    const f = await load();
+    await f.setDoc(f.doc(f.db, 'config', 'admin'), { email: e, changedAt: Date.now(), changedBy: user.email });
+    adminEmail = e;
+  }
+  const getAdminEmail = () => adminEmail;
+  const isAdminEmail = () => !!(user && String(user.email || '').toLowerCase() === adminEmail);
   const isAdmin = () => isAdminEmail() && user.emailVerified;
   async function sendVerification() { const f = await load(); await f.sendEmailVerification(f.auth.currentUser); }
   async function refreshVerification() { const f = await load(); await f.auth.currentUser.reload(); await f.auth.currentUser.getIdToken(true); user = f.auth.currentUser; return user.emailVerified; }
@@ -166,7 +179,7 @@ window.Online = (function () {
     await f.deleteDoc(f.doc(f.db, 'users', uid));
   }
   // le profil de l'admin est marqué pour ne pas apparaître parmi les joueurs
-  async function markAdmin() { const f = await load(); try { await f.updateDoc(f.doc(f.db, 'users', user.uid), { admin: true }); } catch { /* pas de profil */ } }
+  async function markAdmin(on = true) { const f = await load(); try { await f.updateDoc(f.doc(f.db, 'users', user.uid), { admin: on }); if (profile) profile.admin = on; } catch { /* pas de profil */ } }
   async function adminDeleteTournament(id) { const f = await load(); await f.deleteDoc(f.doc(f.db, 'tournaments', id)); }
   async function setPhoto(photo) {
     if (!user) return;
@@ -552,7 +565,7 @@ window.Online = (function () {
     get user() { return user; }, get profile() { return profile; },
     signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos, publishSummary, getProfile, myTournaments,
     presence, listPlayers, setMuted, sendChat, myGames, deleteAccount,
-    isAdmin, isAdminEmail, sendVerification, refreshVerification, adminData, adminSetBanned, adminDeleteUser, adminDeleteTournament, markAdmin,
+    isAdmin, isAdminEmail, sendVerification, refreshVerification, adminData, adminSetBanned, adminDeleteUser, adminDeleteTournament, markAdmin, loadAdminEmail, setAdminEmail, getAdminEmail,
     saveProgress, loadProgress, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
     createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,
   };

@@ -2,9 +2,19 @@ rules_version = '2';
 // Règles de sécurité Firestore pour Cavalier : à coller dans la console Firebase (Firestore Database > Règles)
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Compte administrateur : l'adresse du développeur, une fois vérifiée par e-mail
+    // Compte administrateur : l'adresse enregistrée dans config/admin (au départ celle du développeur),
+    // une fois vérifiée par e-mail. L'administrateur peut transmettre ce rôle à une autre adresse.
+    function adminEmail() {
+      return exists(/databases/$(database)/documents/config/admin)
+        ? get(/databases/$(database)/documents/config/admin).data.email
+        : 'ansuf.dev@gmail.com';
+    }
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'ansuf.dev@gmail.com' && request.auth.token.email_verified == true;
+      return request.auth != null && request.auth.token.email_verified == true && request.auth.token.email.lower() == adminEmail();
+    }
+    match /config/admin {
+      allow read: if request.auth != null;
+      allow create, update: if isAdmin() && request.resource.data.email is string && request.resource.data.email == request.resource.data.email.lower();
     }
     // Profil public : pseudo et Elo, lisibles par les joueurs connectés, modifiables par leur seul propriétaire
     match /users/{uid} {
