@@ -954,6 +954,12 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
       this.overlay.clear();
       this.ply = o.ply == null ? null : o.ply;
+      if (this.boardCracks && this.boardCracks.length) {
+        this.boardCracks = this.boardCracks.filter((c) => {
+          if (this.ply != null && c.ply != null && this.ply >= c.ply) return true;
+          this.scene.remove(c.object); this.disposeGroup(c.object); return false;
+        });
+      }
       // Pion à un pas de la promotion : un anneau doré pulse sous ses pieds
       for (let sq = 0; sq < 64; sq++) {
         const pc = o.board[sq];
@@ -1134,6 +1140,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         const at = d ? (d.knightAttack ? now + Math.max(0.6, d.knightAttack.duration * 0.55) : d.t0) : now + 0.8;
         this.addPowerBurst(capture.to, o.last.piece === o.last.piece.toUpperCase(), at);
         this.powerUntil = Math.max(this.powerUntil || 0, (this.busyUntil || now) + 0.2);
+        // aura électrique sur l'attaquant, l'échiquier tremble à l'impact et la case se fissure pour de bon
+        const attacker = next.get(o.last.to);
+        if (attacker) this.addElectricAura(attacker, now, at + 0.7);
+        this.addBoardQuake(at);
+        this.addPermanentCracks(o.last.to, at, o.ply);
       }
       if (o.mateUltimate && o.animate && o.mateUltimate.id !== this.mateUltimateKey) {
         const actor = next.get(o.mateUltimate.attackerTo);
@@ -3299,6 +3310,64 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         light.intensity = 8 * f;
         if (e < 0.25) { this.shakeUntil = t + 0.05; this.shakeAmp = Math.max(this.shakeAmp || 0, 0.12); }
       }, end: () => this.disposeGroup(g) });
+    }
+    // Pièce liée qui attaque : éclairs bleutés qui crépitent autour d'elle jusqu'à l'impact
+    addElectricAura(c, start, until) {
+      const T = this.THREE, g = new T.Group(); this.scene.add(g);
+      const mats = [0xbfe8ff, 0x6fb8ff, 0xffffff].map((color) => new T.LineBasicMaterial({ color, transparent: true, opacity: 0.95, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }));
+      const bolts = Array.from({ length: 7 }, (_, i) => { const l = new T.Line(new T.BufferGeometry(), mats[i % 3]); g.add(l); return l; });
+      const light = new T.PointLight(0x8fd0ff, 0, 4, 2); light.position.y = 0.9; g.add(light);
+      const shell = new T.Mesh(new T.SphereGeometry(0.55, 16, 12), new T.MeshBasicMaterial({ color: 0x7cc4ff, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }));
+      shell.position.y = 0.75; shell.scale.set(1, 1.5, 1); g.add(shell);
+      this.addEffect({ start, dur: until - start, tick: (e, t) => {
+        const p = c.holder.position; g.position.set(p.x, p.y, p.z);
+        for (const b of bolts) {
+          // éclair en zigzag de bas en haut autour du corps, redessiné à chaque image
+          if (Math.random() < 0.35) { b.visible = false; continue; }
+          b.visible = true;
+          const a0 = Math.random() * Math.PI * 2, r = 0.32 + Math.random() * 0.18, pts = [];
+          for (let k = 0; k <= 6; k++) {
+            const a = a0 + (Math.random() - 0.5) * 0.9, y = 0.1 + k * 0.24;
+            pts.push(new T.Vector3(Math.cos(a) * (r + (Math.random() - 0.5) * 0.12), y, Math.sin(a) * (r + (Math.random() - 0.5) * 0.12)));
+          }
+          b.geometry.dispose(); b.geometry = new T.BufferGeometry().setFromPoints(pts);
+        }
+        const flick = 0.6 + Math.random() * 0.4;
+        light.intensity = 3.5 * flick; shell.material.opacity = 0.12 * flick;
+      }, end: () => this.disposeGroup(g) });
+    }
+    // L'échiquier tremble fort à l'impact d'une pièce liée
+    addBoardQuake(start) {
+      this.addEffect({ start, dur: 0.75, tick: (e, t) => { this.shakeUntil = t + 0.05; this.shakeAmp = Math.max(this.shakeAmp || 0, 0.28 * (1 - e / 0.75)); }, end: () => {} });
+    }
+    // Fissures sur la case de la pièce prise : elles restent jusqu'à la fin de la partie
+    addPermanentCracks(sq, start, ply) {
+      const T = this.THREE, at = this.sqToPos(sq), g = new T.Group(); g.position.set(at.x, 0, at.z); g.visible = false; this.scene.add(g);
+      const m = new T.MeshBasicMaterial({ color: 0x14100c, transparent: true, opacity: 0.85, depthWrite: false });
+      const glowM = new T.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false });
+      const glowParts = [];
+      const branch = (x, z, ang, len, width, depth) => {
+        let px = x, pz = z;
+        const n = 3 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < n; i++) {
+          ang += (Math.random() - 0.5) * 0.9;
+          const l = len / n, nx = Math.max(-0.49, Math.min(0.49, px + Math.cos(ang) * l)), nz = Math.max(-0.49, Math.min(0.49, pz + Math.sin(ang) * l));
+          const dx = nx - px, dz = nz - pz, d = Math.hypot(dx, dz);
+          if (d < 0.01) break;
+          const w = width * (1 - i / (n + 1));
+          const seg = new T.Mesh(new T.PlaneGeometry(d, w), m); seg.rotation.x = -Math.PI / 2; seg.rotation.z = -Math.atan2(dz, dx);
+          seg.position.set((px + nx) / 2, 0.021, (pz + nz) / 2); g.add(seg);
+          const gl = new T.Mesh(new T.PlaneGeometry(d, w * 2.6), glowM); gl.rotation.copy(seg.rotation); gl.position.copy(seg.position); gl.position.y = 0.022; g.add(gl); glowParts.push(gl);
+          if (depth < 2 && Math.random() < 0.4) branch(nx, nz, ang + (Math.random() < 0.5 ? 0.7 : -0.7), len * 0.5, w * 0.7, depth + 1);
+          px = nx; pz = nz;
+        }
+      };
+      const arms = 5 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < arms; i++) branch(0, 0, i / arms * Math.PI * 2 + Math.random() * 0.5, 0.42 + Math.random() * 0.12, 0.035, 0);
+      const pit = new T.Mesh(new T.CircleGeometry(0.07, 12), m); pit.rotation.x = -Math.PI / 2; pit.position.y = 0.021; g.add(pit);
+      (this.boardCracks = this.boardCracks || []).push({ object: g, ply });
+      // les fissures apparaissent à l'impact avec une lueur électrique qui s'éteint
+      this.addEffect({ start, dur: 1.2, tick: (e) => { g.visible = true; glowM.opacity = 0.8 * Math.max(0, 1 - e / 1.2); }, end: () => { g.visible = true; glowParts.forEach((x) => g.remove(x)); } });
     }
     // Effets passagers posés dans la scène : { start, dur, tick(e, t), end() }
     addEffect(fx) { (this.effects = this.effects || []).push(fx); return fx; }
