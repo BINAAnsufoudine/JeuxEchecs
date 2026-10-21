@@ -617,3 +617,6 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .tour-menu-btn b { flex: 1; }
 .tour-menu-icon { font-size: 1.4rem; }
 .tour-menu-count { background: var(--accent, #e9b949); color: #1b1b1b; border-radius: 999px; padding: 1px 9px; font-weight: 750; font-size: 0.85rem; }
+
+.tour-menu-sub { display: block; font-weight: 500; font-size: 0.75rem; color: var(--muted); }
+.tour-menu-count.hot { background: #e8705f; color: #fff; }

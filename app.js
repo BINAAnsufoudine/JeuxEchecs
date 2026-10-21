@@ -2928,28 +2928,43 @@
     }
     const me = u.uid, myName = (ON.profile && ON.profile.pseudo) || '';
     const tcOptions = Object.keys(TC_LABELS).map((k) => `<option value="${k}"${k === store.get('onlineTc', '10m') ? ' selected' : ''}>${TC_LABELS[k]}</option>`).join('');
-    let html = `<p class="level-help">${L(`Ton pseudo : <b>${escHtml(myName)}</b>. Donne-le à tes amis pour qu'ils t'invitent.`, `Your nickname: <b>${escHtml(myName)}</b>. Give it to your friends so they can invite you.`)}</p>
-      <h3 class="train-h">${L('Inviter un joueur', 'Invite a player')}</h3>
-      ${field('on-pseudo', L('Pseudo du joueur', 'Player\'s nickname'), 'text', '', 'maxlength="24"')}
-      <label class="field-label" for="on-tc">${L('Cadence', 'Time control')}</label><select id="on-tc" class="profile-name-input">${tcOptions}</select>
-      <button id="on-invite" class="btn primary wide" type="button">${L('Envoyer l\'invitation', 'Send the invitation')}</button><p id="on-msg" class="ed-error" role="status"></p>`;
-    html += playersHtml();
-    if (!onlinePlayers) loadPlayers();
     const inv = onlineInvites.in, out = onlineInvites.out;
-    html += `<h3 class="train-h">${L('Invitations reçues', 'Invitations received')}</h3>` + (inv.length ? `<div class="replay-items">${inv.map((i) => `<div class="replay-row"><div class="btn replay-item"><strong>${escHtml(i.fromName)} (${i.fromElo})</strong><span>${TC_LABELS[i.tc]}</span></div><button class="btn primary" data-accept="${i.id}">${L('Accepter', 'Accept')}</button><button class="btn ghost" data-decline="${i.id}">✕</button></div>`).join('')}</div>` : `<p class="level-help">${L('Aucune pour le moment.', 'None for now.')}</p>`);
-    if (out.length) html += `<h3 class="train-h">${L('Invitations envoyées', 'Invitations sent')}</h3><div class="replay-items">${out.map((i) => `<div class="replay-row"><div class="btn replay-item"><strong>${escHtml(i.toName)} (${i.toElo})</strong><span>${TC_LABELS[i.tc]} · ${L('en attente', 'waiting')}</span></div><button class="btn ghost" data-cancel="${i.id}">${L('Annuler', 'Cancel')}</button></div>`).join('')}</div>`;
     const active = onlineGames.filter((g) => g.status === 'active').sort((a, b) => b.lastMoveAt - a.lastMoveAt);
-    html += `<h3 class="train-h">${L('Parties en cours', 'Games in progress')}</h3>` + (active.length ? `<div class="replay-items">${active.map((g) => {
+    const myTurn = active.filter((g) => (g.moves.length % 2 === 0) === (g.white === me)).length;
+    if (!onlinePlayers) loadPlayers();
+    const SECTIONS = [
+      ['find', '🎲', L('Trouver un adversaire', 'Find an opponent'), null],
+      ['players', '👥', L('Joueurs', 'Players'), onlinePlayers ? onlinePlayers.filter((p) => p.uid !== me && isConnected(p)).length : null],
+      ['pseudo', '✉️', L('Inviter par pseudo', 'Invite by nickname'), null],
+      ['in', '📥', L('Invitations reçues', 'Invitations received'), inv.length],
+      ['out', '📤', L('Invitations envoyées', 'Invitations sent'), out.length],
+      ['games', '♟️', L('Parties en cours', 'Games in progress'), active.length],
+    ];
+    if (!onlineSection) {
+      body.innerHTML = `<p class="level-help">${L(`Ton pseudo : <b>${escHtml(myName)}</b>. Donne-le à tes amis pour qu'ils t'invitent.`, `Your nickname: <b>${escHtml(myName)}</b>. Give it to your friends so they can invite you.`)}</p>
+        <div class="tour-menu">${SECTIONS.map(([id, icon, label, n]) => `<button class="btn tour-menu-btn" type="button" data-online-section="${id}"><span class="tour-menu-icon">${icon}</span><b>${label}${id === 'players' && n != null ? `<small class="tour-menu-sub">${L('connectés', 'online')}</small>` : ''}${id === 'games' && myTurn ? `<small class="tour-menu-sub">${L(`à toi de jouer : ${myTurn}`, `your move: ${myTurn}`)}</small>` : ''}</b>${n != null ? `<span class="tour-menu-count${(id === 'in' && n) || (id === 'games' && myTurn) ? ' hot' : ''}">${n}</span>` : ''}</button>`).join('')}</div>`;
+      return;
+    }
+    const sec = SECTIONS.find((x) => x[0] === onlineSection);
+    const tcField = `<label class="field-label" for="on-tc">${L('Cadence', 'Time control')}</label><select id="on-tc" class="profile-name-input">${tcOptions}</select>`;
+    let html = `<button class="btn ghost" type="button" data-online-section="">‹ ${L('Jouer en ligne', 'Play online')}</button><h3 class="train-h">${sec[1]} ${sec[2]}</h3>`;
+    if (onlineSection === 'find') html += tcField + playersHtml('find') + '<p id="on-msg" class="ed-error" role="status"></p>';
+    if (onlineSection === 'players') html += tcField + '<p id="on-msg" class="ed-error" role="status"></p>' + playersHtml('list');
+    if (onlineSection === 'pseudo') html += `${field('on-pseudo', L('Pseudo du joueur', 'Player\'s nickname'), 'text', '', 'maxlength="24"')}${tcField}<button id="on-invite" class="btn primary wide" type="button">${L('Envoyer l\'invitation', 'Send the invitation')}</button><p id="on-msg" class="ed-error" role="status"></p>`;
+    if (onlineSection === 'in') html += inv.length ? `<div class="replay-items">${inv.map((i) => `<div class="replay-row"><div class="btn replay-item"><strong>${escHtml(i.fromName)} (${i.fromElo})</strong><span>${TC_LABELS[i.tc]}</span></div><button class="btn primary" data-accept="${i.id}">${L('Accepter', 'Accept')}</button><button class="btn ghost" data-decline="${i.id}">✕</button></div>`).join('')}</div>` : `<p class="level-help">${L('Aucune pour le moment.', 'None for now.')}</p>`;
+    if (onlineSection === 'out') html += out.length ? `<div class="replay-items">${out.map((i) => `<div class="replay-row"><div class="btn replay-item"><strong>${escHtml(i.toName)} (${i.toElo})</strong><span>${TC_LABELS[i.tc]} · ${L('en attente', 'waiting')}</span></div><button class="btn ghost" data-cancel="${i.id}">${L('Annuler', 'Cancel')}</button></div>`).join('')}</div>` : `<p class="level-help">${L('Aucune invitation en attente.', 'No pending invitation.')}</p>`;
+    if (onlineSection === 'games') html += active.length ? `<div class="replay-items">${active.map((g) => {
       const white = g.white === me, opp = white ? `${g.blackName} (${g.blackElo})` : `${g.whiteName} (${g.whiteElo})`;
       const mine = (g.moves.length % 2 === 0) === white;
       return `<button class="btn replay-item" data-game="${g.id}"><strong>${L('contre', 'vs')} ${escHtml(opp)}${mine ? L(' · à toi de jouer', ' · your move') : ''}</strong><span>${TC_LABELS[g.tc]} · ${L('tu as les', 'you play')} ${white ? L('Blancs', 'White') : L('Noirs', 'Black')} · ${Math.ceil(g.moves.length / 2)} ${L('coups', 'moves')}</span></button>`;
-    }).join('')}</div>` : `<p class="level-help">${L('Aucune partie en cours.', 'No game in progress.')}</p>`);
+    }).join('')}</div>` : `<p class="level-help">${L('Aucune partie en cours.', 'No game in progress.')}</p>`;
     body.innerHTML = html;
   }
   $('online-body').addEventListener('click', async (e) => {
     const t = e.target.closest('button'); if (!t) return;
     if (t.id === 'on-login') return openAccount();
     const msg = (x, ok) => { const m = $('on-msg'); if (m) { m.textContent = x; m.style.color = ok ? 'var(--accent, #e9b949)' : ''; } };
+    if (t.dataset.onlineSection != null) { onlineSection = t.dataset.onlineSection || null; suggestedOpp = null; renderOnline(); return; }
     if (t.id === 'on-refresh') { loadPlayers(); return; }
     if (t.id === 'on-suggest') {
       if (!onlinePlayers) await loadPlayers();
@@ -3508,7 +3523,7 @@
   $('btn-shop').onclick = openShop;
   $('home-rewards').onclick = openShop;
   /* ---------- Joueurs : liste, adversaire proposé, chat coupé ---------- */
-  let onlinePlayers = null, playersQuery = '', playersLoading = false;
+  let onlineSection = null, onlinePlayers = null, playersQuery = '', playersLoading = false;
   const isConnected = (p) => Date.now() - (p.lastSeen || 0) < 3 * 60000;
   const mutedList = () => (ON && ON.profile && ON.profile.muted) || [];
   function lastSeenLabel(p) {
@@ -3547,10 +3562,11 @@
     const close = src.slice().sort((a, b) => Math.abs(a.elo - myElo) - Math.abs(b.elo - myElo)).slice(0, 3);
     return close[Math.floor(Math.random() * close.length)];
   }
-  function playersHtml() {
-    let html = `<h3 class="train-h">${L('Joueurs', 'Players')}</h3>
+  function playersHtml(part) {
+    let html = part === 'list' ? '' : `
       <button id="on-suggest" class="btn primary wide" type="button">🎲 ${L('Proposer un adversaire de mon niveau', 'Suggest an opponent at my level')}</button>`;
     if (suggestedOpp) html += `<p class="level-help">${L(`Je te propose <b>${escHtml(suggestedOpp.pseudo)}</b> (Elo ${suggestedOpp.elo}, ${lastSeenLabel(suggestedOpp)}) : son niveau est proche du tien (${estimatedElo()}).`, `I suggest <b>${escHtml(suggestedOpp.pseudo)}</b> (Elo ${suggestedOpp.elo}, ${lastSeenLabel(suggestedOpp)}): their level is close to yours (${estimatedElo()}).`)}</p><div class="replay-items">${playerRow(suggestedOpp, true)}</div>`;
+    if (part === 'find') return html;
     if (!onlinePlayers) return `${html}<p class="level-help">${L('Chargement des joueurs…', 'Loading players…')}</p>`;
     const others = onlinePlayers.filter((p) => p.uid !== ON.user.uid);
     const live = others.filter(isConnected).length;
@@ -3618,7 +3634,7 @@
   $('chat-mute').onclick = () => { if ($('chat-mute').dataset.uid) toggleMute($('chat-mute').dataset.uid); };
   $('btn-online').onclick = () => {
     returnTo = 'home';
-    onlinePlayers = null; suggestedOpp = null;
+    onlinePlayers = null; suggestedOpp = null; onlineSection = null;
     // sans pseudo, on le demande avant de jouer
     renderOnline(); show('online');
     if (ON) ON.load().then(() => { if (!ON.user) renderOnline(); }).catch(() => {});
