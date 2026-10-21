@@ -334,7 +334,7 @@
   function gamesAsPgn() {
     const out = [];
     for (const g of store.get('archive', [])) {
-      const G = new window.Chess.Game(); const san = [];
+      const G = new window.Chess.Game(g.fen || undefined); const san = [];
       for (const u of g.moves) { const r = G.playUci(u); if (!r) break; san.push(r.san); }
       const st = G.status(), res = g.result && g.result !== '*' ? g.result : st.over ? st.result : '*';
       const d = new Date(g.id), me = L('Joueur', 'Player'), ai = `${L('Ordinateur', 'Computer')} ${LEVEL_NAMES[g.level] || ''} (Elo ${LEVEL_ELO[g.level] || '?'})`;
@@ -488,14 +488,17 @@
     });
     $('ai-options').hidden = setup.mode === 'local';
     $('level-name').textContent = `${LEVEL_NAMES[setup.level]} (Elo ${LEVEL_ELO[setup.level]})`;
+    $('level-grid').innerHTML = levelGridHtml(setup.level);
+  }
+  function levelGridHtml(current) {
     const top = unlocked(), wins = store.get('stats', {});
     let html = '';
     TIERS.forEach((t, i) => {
       const lv = i === 7 ? [22] : [i * 3 + 1, i * 3 + 2, i * 3 + 3];
       html += `<div class="level-row${lv.length === 1 ? ' single' : ''}"><span class="tier">${t}</span>` + lv.map((l) =>
-        `<button data-level="${l}" role="radio" aria-checked="${l === setup.level}" class="${l === setup.level ? 'on' : ''}${wins[l] && wins[l].win ? ' done' : ''}" ${l > top ? 'disabled' : ''} aria-label="${LEVEL_NAMES[l]}, Elo ${LEVEL_ELO[l]}${l > top ? L(' (verrouillé)', ' (locked)') : ''}" title="Elo ${LEVEL_ELO[l]}">${lv.length === 1 ? 'Champion' : (l - 1) % 3 + 1}<small>${LEVEL_ELO[l]}</small></button>`).join('') + '</div>';
+        `<button data-level="${l}" role="radio" aria-checked="${l === current}" class="${l === current ? 'on' : ''}${wins[l] && wins[l].win ? ' done' : ''}" ${l > top ? 'disabled' : ''} aria-label="${LEVEL_NAMES[l]}, Elo ${LEVEL_ELO[l]}${l > top ? L(' (verrouillé)', ' (locked)') : ''}" title="Elo ${LEVEL_ELO[l]}">${lv.length === 1 ? 'Champion' : (l - 1) % 3 + 1}<small>${LEVEL_ELO[l]}</small></button>`).join('') + '</div>';
     });
-    $('level-grid').innerHTML = html;
+    return html;
   }
   document.querySelectorAll('.segmented').forEach((seg) => {
     seg.addEventListener('click', (e) => {
@@ -514,7 +517,7 @@
     replay = null; setReplayUi(false);
     pz = null; marks = null;
     attachBoard('game');
-    game = new Game();
+    game = new Game(conf.fen || undefined);
     for (const u of uciMoves) if (!game.playUci(u)) break;
     cfg = conf;
     if (cfg.mode === 'coach') cfg.coachTheme = coachPlan().theme;
@@ -525,7 +528,7 @@
     $('terrain-name').textContent = `${TERRAIN_NAMES[currentTerrain]} · ${WEATHER_NAMES[currentWeather]}`;
     flipped = flip !== undefined ? flip : conf.mode !== 'local' && conf.playerColor === 'b';
     selected = -1; hint = null;
-    $('game-title').textContent = conf.mode === 'local' ? L('Deux joueurs', 'Two players') : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`;
+    $('game-title').textContent = (conf.fen ? L('Position libre · ', 'Custom position · ') : '') + (conf.mode === 'local' ? L('Deux joueurs', 'Two players') : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`);
     show('game');
     if (conf.mode === 'coach') {
       coachDockOpen = false;
@@ -536,7 +539,9 @@
     }
     render();
     save();
-    if (conf.mode !== 'local' && !uciMoves.length) {
+    if (conf.mode !== 'local' && !uciMoves.length && conf.fen) {
+      toast(L(`Tu joues les ${conf.playerColor === 'w' ? 'Blancs' : 'Noirs'}`, `You play ${conf.playerColor === 'w' ? 'White' : 'Black'}`));
+    } else if (conf.mode !== 'local' && !uciMoves.length) {
       const side = conf.playerColor === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
       toast(L(`Tirage au sort : tu joues les ${side}`, `Random draw: you play ${side}`));
       const champ = conf.mode === 'coach' && conf.champion && champById(conf.champion);
@@ -858,11 +863,12 @@
 
   function renderMoves() {
     const ol = $('moves'); ol.innerHTML = '';
-    const h = game.history;
+    // Position libre où les Noirs commencent : le premier coup s'écrit « 1… »
+    const off = game.states[0].turn === 'b' ? 1 : 0, h = [...new Array(off).fill(null), ...game.history];
+    const cell = (k) => (h[k] ? `<span data-ply="${k - off + 1}"${k === h.length - 1 ? ' class="cur"' : ''}>${h[k].san}</span>` : h.length > k ? '<span>…</span>' : '');
     for (let i = 0; i < h.length; i += 2) {
       const li = document.createElement('li');
-      const cls = (k) => (k === h.length - 1 ? ' class="cur"' : '');
-      li.innerHTML = `<span class="n">${i / 2 + 1}.</span><span data-ply="${i + 1}"${cls(i)}>${h[i].san}</span> ${h[i + 1] ? `<span data-ply="${i + 2}"${cls(i + 1)}>${h[i + 1].san}</span>` : ''}`;
+      li.innerHTML = `<span class="n">${i / 2 + 1}.</span>${cell(i)} ${cell(i + 1)}`;
       ol.appendChild(li);
     }
     ol.scrollTop = ol.scrollHeight;
@@ -1021,7 +1027,8 @@
       outcome = cfg.mode !== 'local' ? (winner === cfg.playerColor ? 'win' : 'loss') : 'win';
     }
     let opened = 0;
-    if (cfg.mode !== 'local') {
+    if (cfg.mode !== 'local' && cfg.fen) archiveGame();
+    else if (cfg.mode !== 'local') {
       updatePlayerRating(LEVEL_ELO[cfg.level] || 600, outcome === 'win' ? 1 : outcome === 'draw' ? 0.5 : 0, 32, 'games');
       recordStat(cfg.level, outcome); archiveGame();
       // Une victoire au plus haut niveau débloqué ouvre le suivant
@@ -1034,10 +1041,10 @@
     (outcome === 'win' ? sounds.win : outcome === 'loss' ? sounds.lose : sounds.draw)();
     const snap = { moves: game.uciList(), cfg: { ...cfg }, result: result.result };
     // L'analyse démarre tout de suite : le bilan est souvent prêt quand on l'ouvre
-    if (cfg.mode !== 'local' && snap.moves.length >= 8) requestReview(window.Chess.START_FEN, snap.moves).catch(() => {});
+    if (cfg.mode !== 'local' && snap.moves.length >= 8) requestReview(cfg.fen || window.Chess.START_FEN, snap.moves).catch(() => {});
     if (cfg.mode === 'local' && !replay) {
       const local = store.get('localArchive', []);
-      local.push({ id: Date.now(), mode: 'local', moves: game.uciList(), result: result.result, reason: result.reason });
+      local.push({ id: Date.now(), mode: 'local', fen: cfg.fen || undefined, moves: game.uciList(), result: result.result, reason: result.reason });
       store.set('localArchive', local.slice(-30));
     }
     setTimeout(() => {
@@ -1046,7 +1053,8 @@
         text: REASONS[result.reason] + L(` · ${Math.ceil(game.history.length / 2)} coups`, ` · ${Math.ceil(game.history.length / 2)} moves`) + (opened ? L(`\nNiveau débloqué : ${LEVEL_NAMES[opened]} !`, `\nLevel unlocked: ${LEVEL_NAMES[opened]}!`) : ''),
         actions: [
           ...(opened ? [{ label: L(`Jouer ${LEVEL_NAMES[opened]}`, `Play ${LEVEL_NAMES[opened]}`), primary: true, onClick: () => startGame({ ...cfg, level: opened, playerColor: randomColor() }) }] : []),
-          { label: L('Rejouer', 'Play again'), primary: true, onClick: () => startGame({ ...cfg, playerColor: randomColor() }) },
+          { label: L('Rejouer', 'Play again'), primary: true, onClick: () => startGame({ ...cfg, playerColor: cfg.fen ? cfg.playerColor : randomColor() }) },
+          ...(cfg.fen ? [{ label: L('Modifier la position', 'Edit the position'), onClick: () => openEditor(cfg.fen) }] : []),
           ...(cfg.mode !== 'local' ? [{ label: L('Choisir un niveau', 'Choose a level'), onClick: () => { renderSetup(); returnTo = 'home'; show('setup'); } }] : []),
           ...(snap.moves.length >= 8 ? [{ label: L('Bilan de Maître Hiro', 'Master Hiro’s review'), onClick: () => showBilan(snap) }] : []),
           { label: L('Voir le plateau', 'View the board'), ghost: true },
@@ -1097,7 +1105,7 @@
         const run = () => {
           sfCur = id; sfBusy = true;
           w.postMessage('setoption name UCI_Elo value ' + LEVEL_ELO[level]);
-          w.postMessage('position startpos moves ' + moves);
+          w.postMessage((cfg.fen ? 'position fen ' + cfg.fen : 'position startpos') + ' moves ' + moves);
           w.postMessage('go movetime 1000');
         };
         if (sfBusy) sfNext = run; else run();
@@ -1441,7 +1449,7 @@
   /* Archive des parties et analyse en arrière-plan */
   function archiveGame() {
     const arch = store.get('archive', []);
-    arch.push({ id: Date.now(), mode: cfg.mode, color: cfg.playerColor, level: cfg.level, champion: cfg.champion || undefined, moves: game.uciList(), result: result ? result.result : '*', reason: result ? result.reason : '', analysed: game.history.length < 12 });
+    arch.push({ id: Date.now(), mode: cfg.mode, color: cfg.playerColor, level: cfg.level, champion: cfg.champion || undefined, fen: cfg.fen || undefined, moves: game.uciList(), result: result ? result.result : '*', reason: result ? result.reason : '', analysed: !!cfg.fen || game.history.length < 12 });
     store.set('archive', arch.slice(-30));
     setTimeout(analyseNext, 1500);
   }
@@ -2225,7 +2233,7 @@
       defense: unit((g.moves.length >= 50 && !lost ? 0.6 : 0) + castled * 0.4),
     };
   }
-  const styleGames = () => store.get('archive', []).filter((g) => g.color && g.moves && g.moves.length >= 12).slice(-20);
+  const styleGames = () => store.get('archive', []).filter((g) => !g.fen && g.color && g.moves && g.moves.length >= 12).slice(-20);
   // Style du joueur : moyenne de ses dernières parties archivées
   function playerStyle() {
     const games = styleGames();
@@ -2310,7 +2318,7 @@
     // Sans faute sur ces thèmes : la position de ta dernière partie où la situation-clé du champion est apparue
     const finaleChamp = ch.style.finale >= 0.8;
     for (const g of store.get('archive', []).slice().reverse()) {
-      if (!g.color || !g.moves || g.moves.length < 16) continue;
+      if (g.fen || !g.color || !g.moves || g.moves.length < 16) continue;
       const G = new Game();
       for (let i = 0; i < g.moves.length; i++) {
         if (!G.playUci(g.moves[i])) break;
@@ -2479,6 +2487,124 @@
     store.set('setup', setup);
     startGame({ mode: setup.mode, playerColor: randomColor(), level: setup.level });
   };
+  /* ---------- Construire une position ---------- */
+  const ED_PIECES = ['K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p'];
+  const ed = { board: [], tool: 'move', from: -1, turn: 'w', castle: { K: true, Q: true, k: true, q: true }, mode: 'ai', color: 'w', level: 1, flip: false };
+  function edLoad(fen) {
+    const s = window.Chess.fromFen(fen);
+    ed.board = s.board.slice(); ed.turn = s.turn; ed.from = -1;
+    ed.castle = { K: s.castling.includes('K'), Q: s.castling.includes('Q'), k: s.castling.includes('k'), q: s.castling.includes('q') };
+  }
+  // Roques possibles seulement si le roi et la tour concernés sont sur leurs cases de départ
+  const edCastleOk = { K: () => ed.board[60] === 'K' && ed.board[63] === 'R', Q: () => ed.board[60] === 'K' && ed.board[56] === 'R', k: () => ed.board[4] === 'k' && ed.board[7] === 'r', q: () => ed.board[4] === 'k' && ed.board[0] === 'r' };
+  function edFen() {
+    const castling = ['K', 'Q', 'k', 'q'].filter((c) => ed.castle[c] && edCastleOk[c]()).join('');
+    return window.Chess.toFen({ board: ed.board, turn: ed.turn, castling, ep: -1, half: 0, full: 1 });
+  }
+  function edError() {
+    const fen = edFen(), err = fenError(fen);
+    if (err) { const m = err.replace(/^FEN invalide : /, '').replace(/^Invalid FEN: /, ''); return m.charAt(0).toUpperCase() + m.slice(1); }
+    const s = window.Chess.fromFen(fen);
+    if (window.Chess.inCheck(s, ed.turn === 'w' ? 'b' : 'w')) return L("Le camp qui n'a pas le trait ne peut pas être en échec.", 'The side not to move cannot be in check.');
+    const st = new Game(fen).status();
+    if (st.over) return st.reason === 'mat' ? L('Cette position est déjà échec et mat.', 'This position is already checkmate.') : L('Cette position est déjà terminée (pat ou nulle).', 'This position is already over (stalemate or draw).');
+    return '';
+  }
+  function openEditor(fen) {
+    edLoad(fen || window.Chess.START_FEN);
+    ed.level = setup.level; ed.mode = setup.mode === 'local' ? 'local' : 'ai';
+    returnTo = 'home';
+    renderEditor();
+    show('editor');
+  }
+  function renderEditor() {
+    const seg = (name, opts, cur) => `<div class="ed-seg" data-ed="${name}">${opts.map(([v, label]) => `<button type="button" data-value="${v}" class="${v === cur ? 'on' : ''}">${label}</button>`).join('')}</div>`;
+    const tool = (v, inner, label) => `<button type="button" class="ed-tool${ed.tool === v ? ' on' : ''}" data-tool="${v}" aria-label="${label}" title="${label}">${inner}</button>`;
+    const castleBox = (c, label) => `<label class="ed-check${edCastleOk[c]() ? '' : ' off'}"><input type="checkbox" data-castle="${c}" ${ed.castle[c] && edCastleOk[c]() ? 'checked' : ''} ${edCastleOk[c]() ? '' : 'disabled'}> ${label}</label>`;
+    const err = edError();
+    $('editor-body').innerHTML = `
+      <p class="level-help">${L('Choisis une pièce puis touche les cases pour la poser. Avec la main, touche une pièce puis sa nouvelle case pour la déplacer.', 'Pick a piece, then tap squares to place it. With the hand, tap a piece and then its new square to move it.')}</p>
+      <div class="ed-palette">${tool('move', '✋', L('Déplacer', 'Move'))}${ED_PIECES.slice(0, 6).map((p) => tool(p, `<span class="pc w">${glyph(p)}</span>`, pieceName(p))).join('')}</div>
+      <div class="ed-palette">${tool('erase', '⌫', L('Effacer', 'Erase'))}${ED_PIECES.slice(6).map((p) => tool(p, `<span class="pc b">${glyph(p)}</span>`, pieceName(p))).join('')}</div>
+      <div class="ed-board-wrap"><div id="ed-board" class="ed-board" role="grid" aria-label="${L('Échiquier à construire', 'Board to set up')}"></div></div>
+      <div class="ed-actions">
+        <button type="button" class="btn" data-ed-act="start">${L('Position de départ', 'Starting position')}</button>
+        <button type="button" class="btn" data-ed-act="clear">${L('Vider', 'Clear')}</button>
+        <button type="button" class="btn" data-ed-act="flip">${L('Retourner', 'Flip')}</button>
+      </div>
+      <label class="field-label">${L('Trait aux', 'To move')}</label>
+      ${seg('turn', [['w', L('Blancs', 'White')], ['b', L('Noirs', 'Black')]], ed.turn)}
+      <label class="field-label">${L('Roques encore possibles', 'Castling still allowed')}</label>
+      <div class="ed-castles">${castleBox('K', L('Blancs O-O', 'White O-O'))}${castleBox('Q', L('Blancs O-O-O', 'White O-O-O'))}${castleBox('k', L('Noirs O-O', 'Black O-O'))}${castleBox('q', L('Noirs O-O-O', 'Black O-O-O'))}</div>
+      <label class="field-label">${L('Adversaire', 'Opponent')}</label>
+      ${seg('mode', [['ai', L('Ordinateur', 'Computer')], ['local', L('Deux joueurs', 'Two players')]], ed.mode)}
+      <div ${ed.mode === 'ai' ? '' : 'hidden'}>
+        <label class="field-label">${L('Ta couleur', 'Your colour')}</label>
+        ${seg('color', [['w', L('Blancs', 'White')], ['b', L('Noirs', 'Black')]], ed.color)}
+        <label class="field-label">${L('Niveau', 'Level')} : <strong>${LEVEL_NAMES[ed.level]} (Elo ${LEVEL_ELO[ed.level]})</strong></label>
+        <div id="ed-level-grid" class="level-grid" role="radiogroup" aria-label="${L('Niveau', 'Level')}">${levelGridHtml(ed.level)}</div>
+      </div>
+      <p class="ed-error" role="status">${escHtml(err)}</p>
+      <button type="button" id="ed-play" class="btn primary wide" ${err ? 'disabled' : ''}>${L('Jouer cette position', 'Play this position')}</button>
+      <p class="level-help">${L('Une partie jouée depuis une position libre ne compte pas pour ton Elo ni pour débloquer les niveaux.', 'A game played from a custom position does not count for your Elo or for unlocking levels.')}</p>`;
+    renderEdBoard();
+  }
+  function renderEdBoard() {
+    const el = $('ed-board'); if (!el) return;
+    let html = '';
+    for (let i = 0; i < 64; i++) {
+      const sq = ed.flip ? 63 - i : i, p = ed.board[sq], row = i >> 3, col = i & 7;
+      const dark = ((sq >> 3) + (sq & 7)) % 2 === 1;
+      html += `<button type="button" class="sq ${dark ? 'd' : 'l'}${sq === ed.from ? ' sel' : ''}" data-sq="${sq}" aria-label="${sqName(sq)}${p ? ' ' + pieceName(p) : ''}">`
+        + (row === 7 ? `<span class="coord f">${sqName(sq)[0]}</span>` : '') + (col === 0 ? `<span class="coord r">${sqName(sq)[1]}</span>` : '')
+        + (p ? `<span class="pc ${colorOf(p)}">${glyph(p)}</span>` : '') + '</button>';
+    }
+    el.innerHTML = html;
+  }
+  function edTap(sq) {
+    if (ed.tool === 'erase') ed.board[sq] = null;
+    else if (ed.tool === 'move') {
+      if (ed.from < 0) { if (ed.board[sq]) ed.from = sq; renderEdBoard(); return; }
+      if (sq !== ed.from) { ed.board[sq] = ed.board[ed.from]; ed.board[ed.from] = null; }
+      ed.from = -1;
+    } else {
+      const p = ed.tool;
+      if (p.toLowerCase() === 'p' && (sq < 8 || sq >= 56)) return toast(L('Un pion ne peut pas être sur la première ou la dernière rangée.', 'A pawn cannot stand on the first or last rank.'));
+      // un seul roi par camp : poser un roi déplace l'ancien
+      if (p.toLowerCase() === 'k') { const old = ed.board.indexOf(p); if (old >= 0) ed.board[old] = null; }
+      ed.board[sq] = ed.board[sq] === p ? null : p;
+    }
+    renderEditor();
+  }
+  $('editor-body').addEventListener('click', (e) => {
+    const cell = e.target.closest('#ed-board [data-sq]');
+    if (cell) return edTap(Number(cell.dataset.sq));
+    const t = e.target.closest('[data-tool]');
+    if (t) { ed.tool = t.dataset.tool; ed.from = -1; return renderEditor(); }
+    const s = e.target.closest('.ed-seg [data-value]');
+    if (s) { ed[s.parentElement.dataset.ed] = s.dataset.value; return renderEditor(); }
+    const lv = e.target.closest('#ed-level-grid button[data-level]');
+    if (lv && !lv.disabled) { ed.level = +lv.dataset.level; return renderEditor(); }
+    const act = e.target.closest('[data-ed-act]');
+    if (act) {
+      const a = act.dataset.edAct;
+      if (a === 'start') edLoad(window.Chess.START_FEN);
+      else if (a === 'clear') { ed.board = new Array(64).fill(null); ed.from = -1; }
+      else if (a === 'flip') ed.flip = !ed.flip;
+      return renderEditor();
+    }
+    if (e.target.id === 'ed-play') {
+      if (edError()) return;
+      const fen = edFen();
+      store.set('editorFen', fen);
+      startGame({ mode: ed.mode, playerColor: ed.mode === 'local' ? 'w' : ed.color, level: ed.level, fen }, [], null, ed.mode === 'local' ? ed.flip : ed.color === 'b');
+    }
+  });
+  $('editor-body').addEventListener('change', (e) => {
+    const c = e.target.closest('[data-castle]');
+    if (c) { ed.castle[c.dataset.castle] = c.checked; renderEditor(); }
+  });
+  $('btn-editor').onclick = () => openEditor(store.get('editorFen', null));
   $('btn-continue').onclick = () => {
     const saved = store.get('game', null);
     if (saved && saved.cfg) startGame(saved.cfg, saved.moves, saved.result, saved.flipped, saved.terrain, saved.weather);
@@ -2699,7 +2825,7 @@
   function showBilan(snap) {
     const my = ++bilanId;
     modal({ title: L('Bilan de Maître Hiro', 'Master Hiro’s review'), text: L('Analyse de la partie…', 'Analysing the game…'), actions: [{ label: L('Fermer', 'Close'), ghost: true, onClick: () => { bilanId++; } }] });
-    requestReview(window.Chess.START_FEN, snap.moves, (done, total) => {
+    requestReview(snap.cfg.fen || window.Chess.START_FEN, snap.moves, (done, total) => {
       if (my === bilanId && !$('modal').hidden) $('modal-text').textContent = L(`Analyse de la partie… ${done} / ${total} coups`, `Analysing the game… ${done} / ${total} moves`);
     }).then((r) => { if (my === bilanId && !$('modal').hidden) renderBilan(snap, r); })
       .catch(() => { if (my === bilanId) { closeModal(); toast(L("L'analyse n'a pas pu être lancée sur cet appareil.", 'The analysis could not start on this device.')); } });
@@ -2709,7 +2835,7 @@
     const mine = [];
     r.marks.forEach((m, i) => { if (isSevere(m) && (local || (i % 2 ? 'b' : 'w') === me)) mine.push({ i, cls: m[0], loss: m[1], best: m[2] }); });
     const top = mine.slice().sort((a, b) => b.loss - a.loss).slice(0, 3).sort((a, b) => a.i - b.i);
-    const sans = []; { const g = new Game(window.Chess.START_FEN); for (const u of snap.moves) { const x = g.playUci(u); if (!x) break; sans.push(x.san); } }
+    const sans = []; { const g = new Game(snap.cfg.fen || window.Chess.START_FEN); for (const u of snap.moves) { const x = g.playUci(u); if (!x) break; sans.push(x.san); } }
     const num = (i) => `${Math.floor(i / 2) + 1}${i % 2 ? '…' : '.'}`;
     const acc = (c) => (r.accuracy[c] == null ? '–' : `${r.accuracy[c]} %`);
     let html = '';
@@ -2717,7 +2843,7 @@
     html += local ? `<p><b>${L('Précision :', 'Accuracy:')}</b> ${L('Blancs', 'White')} ${acc('w')} · ${L('Noirs', 'Black')} ${acc('b')}</p>` : `<p><b>${L('Précision :', 'Accuracy:')}</b> ${L('toi', 'you')} ${acc(me)} · ${L('adversaire', 'opponent')} ${acc(me === 'w' ? 'b' : 'w')}</p>`;
     if (top.length) {
       html += `<p><b>${L(`Tes ${top.length > 1 ? `${top.length} principales erreurs` : 'principale erreur'} :`, `Your ${top.length > 1 ? `${top.length} main mistakes` : 'main mistake'}:`)}</b></p><ul>` + top.map((t) => {
-        const best = sanOfBest(window.Chess.START_FEN, snap.moves, t.i, t.best);
+        const best = sanOfBest(snap.cfg.fen || window.Chess.START_FEN, snap.moves, t.i, t.best);
         return `<li>${L('Coup', 'Move')} ${num(t.i)} ${escHtml(sans[t.i])}${REVIEW_SIGN[t.cls]} — ${L('meilleur :', 'best:')} ${escHtml(best)} (${L('perte', 'loss')} ≈ ${NUM(t.loss / 100)})</li>`;
       }).join('') + '</ul>';
       const counts = { ouverture: 0, milieu: 0, finale: 0 };
@@ -2861,7 +2987,7 @@
     body.onclick = (e) => {
       const b = e.target.closest('.replay-item'); if (!b) return;
       const g = source[Number(b.dataset.i)]; if (!g) return;
-      startReplay({ moves: g.moves, result: g.result, title: `${MODE_LABELS[mode]} · ${fmtDateTime(g.id)}`, flipped: mode !== 'local' && g.color === 'b', date: pgnDate(g.id), ...sideNames({ mode, playerColor: g.color, level: g.level, champion: g.champion }) }, () => openReplayList(mode));
+      startReplay({ moves: g.moves, fen: g.fen, result: g.result, title: `${MODE_LABELS[mode]} · ${fmtDateTime(g.id)}`, flipped: mode !== 'local' && g.color === 'b', date: pgnDate(g.id), ...sideNames({ mode, playerColor: g.color, level: g.level, champion: g.champion }) }, () => openReplayList(mode));
     };
     returnTo = 'home';
     show('replay-list');

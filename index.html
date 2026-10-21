@@ -35,6 +35,7 @@
         <div id="play-submenu" class="menu-submenu" hidden>
           <button id="btn-continue" class="btn">Reprendre la partie</button>
           <button id="btn-new" class="btn">Nouvelle partie</button>
+          <button id="btn-editor" class="btn">Construire une position</button>
         </div>
       </div>
       <div class="menu-group">
@@ -91,6 +92,12 @@
         <p class="level-help">Touche un niveau débloqué pour le rejouer. Gagne au plus haut niveau pour débloquer le suivant.</p>
       </div>
     </div>
+  </section>
+
+  <!-- Construire une position puis la jouer -->
+  <section id="editor" class="screen" aria-label="Construire une position">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Construire une position</h2></header>
+    <div id="editor-body" class="panel editor"></div>
   </section>
 
   <!-- S03 Partie -->
