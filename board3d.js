@@ -2731,7 +2731,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       return pairs;
     }
 
-    // Pièces liées : un halo lumineux à leurs pieds
+    // Pièces liées : un cercle à leurs pieds qui s'élargit en boucle
     drawRopes(t) {
       const T = this.THREE;
       if (!this.ropeGroup) {
@@ -2754,13 +2754,13 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           rw: new T.MeshBasicMaterial({ color: 0xfff0b8, transparent: true, opacity: 0.7, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false }),
           rb: new T.MeshBasicMaterial({ color: 0xd9b3ff, transparent: true, opacity: 0.7, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false }) };
         this.haloGeo = new T.PlaneGeometry(1.15, 1.15);
-        this.auraRing = new T.RingGeometry(0.4, 0.43, 48);
+        this.auraRing = new T.RingGeometry(0.39, 0.44, 48);
       }
       const pulse = 0.6 + Math.abs(Math.sin(t * 2.6)) * 0.4;
       this.auraMat.w.opacity = pulse; this.auraMat.b.opacity = pulse;
       this.auraMat.rw.opacity = this.auraMat.rb.opacity = 0.35 + Math.abs(Math.sin(t * 2.6)) * 0.45;
       const glowing = new Set();
-      // pièces liées : un halo de puissance à leurs pieds (une fois arrivées sur leur case)
+      // pièces liées : un cercle à leurs pieds qui s'élargit en boucle (une fois arrivées sur leur case)
       for (const [a, b] of this.ropes || []) {
         const ca = this.chars.get(a), cb = this.chars.get(b);
         if (!ca || !cb || ca.anim || cb.anim) continue;
@@ -2768,9 +2768,6 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           if (glowing.has(c)) continue;
           glowing.add(c);
           const white = c.piece === c.piece.toUpperCase(), p = c.holder.position;
-          const halo = new T.Mesh(this.haloGeo, white ? this.auraMat.w : this.auraMat.b);
-          halo.rotation.x = -Math.PI / 2; halo.position.set(p.x, 0.022, p.z); halo.scale.setScalar(1 + Math.sin(t * 2.6 + sq) * 0.06); halo.userData.shared = true;
-          this.ropeGroup.add(halo);
           const ring = new T.Mesh(this.auraRing, white ? this.auraMat.rw : this.auraMat.rb);
           ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.026, p.z);
           ring.scale.setScalar(0.8 + ((t * 0.6 + sq * 0.13) % 1) * 0.6); ring.userData.shared = true; // onde qui s'élargit
