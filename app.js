@@ -2954,6 +2954,49 @@
       <button id="tour-create" class="btn primary wide" type="button">${L('Créer le tournoi', 'Create the tournament')}</button>
       <p id="tour-msg" class="ed-error" role="status"></p>`;
   }
+  // Tableau du tournoi, dans la forme la plus adaptée : grille croisée pour les toutes rondes,
+  // tableau ronde par ronde (couleur, rang de l'adversaire, résultat) pour le système suisse
+  function tourTable(t, me) {
+    const ids = t.players, rounds = Object.keys(t.pairings).map((k) => Number(k.slice(1))).sort((a, b) => a - b);
+    const per = {}; ids.forEach((id) => { per[id] = {}; });
+    for (const r of rounds) for (const m of t.pairings[`r${r}`]) {
+      if (m.bye) { per[m.a][r] = { bye: true, pts: 1 }; continue; }
+      for (const g of m.games) {
+        const sw = g.result === '1-0' ? 1 : g.result === '0-1' ? 0 : g.result ? 0.5 : null;
+        per[g.white][r] = { opp: g.black, color: 'w', pts: sw };
+        per[g.black][r] = { opp: g.white, color: 'b', pts: sw == null ? null : 1 - sw };
+      }
+    }
+    const pts = (id) => Object.values(per[id]).reduce((s, x) => s + (x.pts || 0), 0);
+    const buch = (id) => Object.values(per[id]).reduce((s, x) => s + (x.opp ? pts(x.opp) : 0), 0);
+    const order = ids.slice().sort((a, b) => pts(b) - pts(a) || buch(b) - buch(a) || (t.elos[b] || 0) - (t.elos[a] || 0));
+    const rank = (id) => order.indexOf(id) + 1;
+    const fmt = (x) => (x == null ? '…' : x === 0.5 ? '½' : String(x));
+    const n = (x) => NUM(x, x % 1 ? 1 : 0);
+    const title = t.status === 'over' ? L('Classement final', 'Final standings') : t.status === 'cancelled' ? L('Tournoi annulé', 'Tournament cancelled') : L('Tableau du tournoi', 'Tournament table');
+    let html = `<h3 class="train-h">${title}</h3><div class="tour-scroll"><table class="tour-table">`;
+    if (t.format === 'rr') {
+      // grille croisée : chaque case donne le résultat du joueur de la ligne contre celui de la colonne
+      html += `<tr><th>#</th><th>${L('Joueur', 'Player')}</th>${order.map((_, i) => `<th class="c">${i + 1}</th>`).join('')}<th>${L('Pts', 'Pts')}</th><th>${L('Départ.', 'Tiebr.')}</th></tr>`;
+      html += order.map((id, i) => `<tr${id === me ? ' class="me"' : ''}><td>${i + 1}</td><td>${escHtml(t.names[id] || '?')}</td>${order.map((o) => {
+        if (o === id) return '<td class="c x">■</td>';
+        const games = Object.values(per[id]).filter((x) => x.opp === o);
+        return `<td class="c">${games.length ? games.map((x) => fmt(x.pts)).join(' ') : ''}</td>`;
+      }).join('')}<td><b>${n(pts(id))}</b></td><td>${n(buch(id))}</td></tr>`).join('');
+    } else {
+      // suisse : pour chaque ronde, couleur (B/N), rang de l'adversaire et résultat (+, =, −)
+      html += `<tr><th>#</th><th>${L('Joueur', 'Player')}</th><th>Elo</th>${rounds.map((r) => `<th class="c">R${r}</th>`).join('')}<th>${L('Pts', 'Pts')}</th><th>${L('Départ.', 'Tiebr.')}</th></tr>`;
+      html += order.map((id, i) => `<tr${id === me ? ' class="me"' : ''}><td>${i + 1}</td><td>${escHtml(t.names[id] || '?')}</td><td>${t.elos[id] || 600}</td>${rounds.map((r) => {
+        const x = per[id][r];
+        if (!x) return '<td class="c"></td>';
+        if (x.bye) return `<td class="c" title="${L('exempt', 'bye')}">${L('exempt', 'bye')} +</td>`;
+        return `<td class="c">${x.color === 'w' ? L('B', 'W') : L('N', 'B')}${rank(x.opp)} ${x.pts == null ? '…' : x.pts === 1 ? '+' : x.pts === 0 ? '−' : '='}</td>`;
+      }).join('')}<td><b>${n(pts(id))}</b></td><td>${n(buch(id))}</td></tr>`).join('');
+    }
+    html += '</table></div>';
+    if (t.format !== 'rr') html += `<p class="level-help">${L('B / N : Blancs ou Noirs, puis le rang de l’adversaire ; + gagné, = nulle, − perdu ; … partie en cours.', 'W / B: White or Black, then the opponent’s rank; + won, = draw, − lost; … game in progress.')}</p>`;
+    return html;
+  }
   function renderTournamentDetail() {
     const t = tourDoc, me = ON.user.uid, body = $('tour-body');
     const isOwner = t.owner === me, myTeam = t.type === 'team' ? t.teams.find((x) => x.members.includes(me)) : null;
@@ -2987,9 +3030,7 @@
         ? `<div class="btn replay-item"><strong>${escHtml(pName(t, m.a))}</strong><span>${L('exempt (gagne le point)', 'bye (wins the point)')}</span></div>`
         : `<div class="btn replay-item"><strong>${escHtml(pName(t, m.a))} – ${escHtml(pName(t, m.b))}</strong><span>${m.games.map((g) => `${t.type === 'team' ? `${L('éch.', 'bd')} ${m.games.indexOf(g) + 1} : ` : ''}${escHtml(t.names[g.white])} – ${escHtml(t.names[g.black])} ${res(g.result)}`).join(' · ')}</span></div>`).join('')}</div>`;
     }
-    if (t.status !== 'open') {
-      html += `<h3 class="train-h">${t.status === 'over' ? L('Classement final', 'Final standings') : L('Classement', 'Standings')}</h3><table class="tour-table"><tr><th>#</th><th>${t.type === 'team' ? L('Équipe', 'Team') : L('Joueur', 'Player')}</th><th>${L('Pts', 'Pts')}</th><th>${L('Départ.', 'Tiebr.')}</th></tr>${standings(t).map((r, i) => `<tr${(t.type === 'team' ? myTeam && myTeam.id === r.id : r.id === me) ? ' class="me"' : ''}><td>${i + 1}</td><td>${escHtml(pName(t, r.id))}</td><td>${NUM(r.pts, r.pts % 1 ? 1 : 0)}</td><td>${NUM(r.buch, r.buch % 1 ? 1 : 0)}</td></tr>`).join('')}</table>`;
-    }
+    if (t.status !== 'open') html += t.type === 'solo' ? tourTable(t, me) : `<h3 class="train-h">${t.status === 'over' ? L('Classement final', 'Final standings') : L('Classement', 'Standings')}</h3><table class="tour-table"><tr><th>#</th><th>${L('Équipe', 'Team')}</th><th>${L('Pts', 'Pts')}</th><th>${L('Départ.', 'Tiebr.')}</th></tr>${standings(t).map((r, i) => `<tr${myTeam && myTeam.id === r.id ? ' class="me"' : ''}><td>${i + 1}</td><td>${escHtml(pName(t, r.id))}</td><td>${NUM(r.pts, r.pts % 1 ? 1 : 0)}</td><td>${NUM(r.buch, r.buch % 1 ? 1 : 0)}</td></tr>`).join('')}</table>`;
     html += `<p id="tour-msg" class="ed-error" role="status"></p>`;
     body.innerHTML = html;
   }

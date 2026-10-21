@@ -519,3 +519,6 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .tour-table th, .tour-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); }
 .tour-table th { color: var(--muted); font-weight: 600; }
 .tour-table tr.me td { color: var(--accent, #e9b949); font-weight: 700; }
+.tour-scroll { overflow-x: auto; }
+.tour-table td.c, .tour-table th.c { text-align: center; white-space: nowrap; }
+.tour-table td.x { color: var(--muted); }
