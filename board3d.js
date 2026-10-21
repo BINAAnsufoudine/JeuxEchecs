@@ -38,6 +38,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
   class Board3D {
     constructor(container, onSquare) {
+      this.speed = 0.75;
       const THREE = root.THREE;
       if (!THREE) throw new Error('three.js absent');
       this.THREE = THREE;
@@ -246,6 +247,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.boardKey = '';
       this.buildTerrain(terrain);
       this.buildAnimals(terrain);
+      this.buildScenery(terrain);
     }
 
     setWeather(id) {
@@ -256,6 +258,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.scene.background.copy(sky);
       this.scene.fog = new T.Fog(sky, weather.fogFar * 0.38, weather.fogFar);
       this.skyBase = sky.clone();
+      this.backdropTint = new T.Color(0xffffff).lerp(new T.Color(weather.tint || 0x888888), overcast * 0.8);
       this.hemi.intensity = weather.hemi;
       this.hemi.color.copy(sky);
       this.sun.intensity = weather.sun;
@@ -613,6 +616,78 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
     }
 
+    // Sol peint selon le paysage (herbe, sable, boue, cailloux…) et panorama de fond (collines, dunes, montagnes, mer…)
+    groundTexture(terrain) {
+      const T = this.THREE, c = document.createElement('canvas'); c.width = c.height = 512;
+      const g = c.getContext('2d'), k = terrain.kind, base = new T.Color(terrain.ground);
+      const rnd = (() => { let x = 12345; return () => { x = (x * 16807) % 2147483647; return x / 2147483647; }; })();
+      const col = (dl, alpha = 1) => { const cc = base.clone().offsetHSL(0, 0, dl); return `rgba(${Math.round(cc.r * 255)},${Math.round(cc.g * 255)},${Math.round(cc.b * 255)},${alpha})`; };
+      g.fillStyle = col(0); g.fillRect(0, 0, 512, 512);
+      // grain de fond
+      for (let i = 0; i < 2600; i++) { g.fillStyle = col((rnd() - 0.5) * 0.12, 0.5); g.fillRect(rnd() * 512, rnd() * 512, 2 + rnd() * 4, 2 + rnd() * 4); }
+      if (k === 'forest' || k === 'grass') {
+        for (let i = 0; i < 1800; i++) { const x = rnd() * 512, y = rnd() * 512; g.strokeStyle = col(0.04 + rnd() * 0.12, 0.8); g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 4, y - 5 - rnd() * 6); g.stroke(); }
+        if (k === 'grass') for (let i = 0; i < 60; i++) { g.fillStyle = ['#f6f2d0', '#f3d34a', '#e98fb0', '#ffffff'][i % 4]; g.beginPath(); g.arc(rnd() * 512, rnd() * 512, 2.2, 0, 7); g.fill(); }
+        if (k === 'forest') for (let i = 0; i < 90; i++) { g.fillStyle = ['#6b4a26', '#8a6a2a', '#4d3a1f'][i % 3]; g.save(); g.translate(rnd() * 512, rnd() * 512); g.rotate(rnd() * 6); g.beginPath(); g.ellipse(0, 0, 5, 2.5, 0, 0, 7); g.fill(); g.restore(); }
+      } else if (k === 'desert' || k === 'beach') {
+        for (let y = 0; y < 512; y += 9) { g.strokeStyle = col(0.06, 0.45); g.lineWidth = 2; g.beginPath(); for (let x = 0; x <= 512; x += 16) g.lineTo(x, y + Math.sin(x / 40 + y) * 3); g.stroke(); }
+        for (let i = 0; i < 40; i++) { g.fillStyle = k === 'beach' ? '#f4ead8' : col(-0.12, 0.7); g.beginPath(); g.arc(rnd() * 512, rnd() * 512, 1.5 + rnd() * 2, 0, 7); g.fill(); }
+      } else if (k === 'steppe') {
+        for (let i = 0; i < 900; i++) { const x = rnd() * 512, y = rnd() * 512; g.strokeStyle = rnd() < 0.5 ? '#c9b36d' : '#8f7d45'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 6, y - 4 - rnd() * 5); g.stroke(); }
+        for (let i = 0; i < 25; i++) { g.strokeStyle = col(-0.15, 0.5); g.lineWidth = 1.2; g.beginPath(); let x = rnd() * 512, y = rnd() * 512; g.moveTo(x, y); for (let j = 0; j < 4; j++) { x += (rnd() - 0.5) * 40; y += (rnd() - 0.5) * 40; g.lineTo(x, y); } g.stroke(); }
+      } else if (k === 'mud') {
+        for (let i = 0; i < 45; i++) { g.fillStyle = col(-0.1 - rnd() * 0.06, 0.75); g.beginPath(); g.ellipse(rnd() * 512, rnd() * 512, 10 + rnd() * 30, 6 + rnd() * 16, rnd() * 3, 0, 7); g.fill(); }
+        for (let i = 0; i < 30; i++) { g.fillStyle = 'rgba(160,170,160,0.25)'; g.beginPath(); g.ellipse(rnd() * 512, rnd() * 512, 4 + rnd() * 6, 2, 0, 0, 7); g.fill(); }
+      } else if (k === 'rock') {
+        for (let i = 0; i < 220; i++) { g.fillStyle = col((rnd() - 0.3) * 0.3, 0.9); g.beginPath(); const x = rnd() * 512, y = rnd() * 512, r = 2 + rnd() * 8; g.moveTo(x + r, y); for (let a = 1; a < 6; a++) g.lineTo(x + Math.cos(a * 1.25) * r * (0.7 + rnd() * 0.4), y + Math.sin(a * 1.25) * r * (0.7 + rnd() * 0.4)); g.fill(); }
+      } else if (k === 'water') {
+        for (let i = 0; i < 28; i++) { g.fillStyle = 'rgba(90,150,160,0.55)'; g.beginPath(); g.ellipse(rnd() * 512, rnd() * 512, 14 + rnd() * 26, 8 + rnd() * 12, rnd() * 3, 0, 7); g.fill(); }
+        for (let i = 0; i < 900; i++) { const x = rnd() * 512, y = rnd() * 512; g.strokeStyle = col(0.08, 0.6); g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 3, y - 5); g.stroke(); }
+      }
+      const tex = new T.CanvasTexture(c); tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.repeat.set(26, 26); tex.anisotropy = 4;
+      if (T.sRGBEncoding) tex.encoding = T.sRGBEncoding;
+      return tex;
+    }
+    panoramaTexture(terrain) {
+      const T = this.THREE, c = document.createElement('canvas'); c.width = 2048; c.height = 512;
+      const g = c.getContext('2d'), k = terrain.kind, sky = new T.Color(terrain.sky);
+      const hex = (cc) => `#${cc.getHexString()}`;
+      const grad = g.createLinearGradient(0, 0, 0, 512);
+      grad.addColorStop(0, hex(sky.clone().offsetHSL(0, 0.05, 0.12))); grad.addColorStop(0.7, hex(sky)); grad.addColorStop(1, hex(sky.clone().offsetHSL(0, 0, 0.06)));
+      g.fillStyle = grad; g.fillRect(0, 0, 2048, 512);
+      const rnd = (() => { let x = 777; return () => { x = (x * 16807) % 2147483647; return x / 2147483647; }; })();
+      // nuages légers
+      for (let i = 0; i < 14; i++) { g.fillStyle = 'rgba(255,255,255,0.35)'; const x = rnd() * 2048, y = 40 + rnd() * 120; for (let j = 0; j < 4; j++) { g.beginPath(); g.ellipse(x + j * 28, y + (j % 2) * 6, 40, 14, 0, 0, 7); g.fill(); } }
+      const ridge = (color, base, amp, freq, rough) => {
+        g.fillStyle = color; g.beginPath(); g.moveTo(0, 512);
+        for (let x = 0; x <= 2048; x += 8) g.lineTo(x, base - amp * (0.5 + 0.5 * Math.sin(x * freq + rough)) - amp * 0.35 * Math.sin(x * freq * 3.1 + rough * 2) - (rough > 0 ? rnd() * amp * 0.08 : 0));
+        g.lineTo(2048, 512); g.fill();
+      };
+      const ground = new T.Color(terrain.ground), shade = (dl, h = 0) => hex(ground.clone().offsetHSL(h, 0, dl).lerp(sky, 0.35 - dl));
+      if (k === 'rock') { ridge('#8d939a', 360, 180, 0.006, 1.3); ridge('#6c7277', 410, 120, 0.011, 2.1); ridge(shade(0), 460, 50, 0.02, 0.4); }
+      else if (k === 'desert') { ridge('#c99a63', 400, 60, 0.004, 0.2); ridge('#b98a52', 440, 45, 0.008, 1.7); g.fillStyle = '#9a6f45'; g.fillRect(300, 330, 160, 80); g.fillRect(1500, 345, 120, 70); ridge(shade(0.05), 470, 30, 0.012, 0.9); }
+      else if (k === 'beach') {
+        g.fillStyle = '#1aa3c4'; g.fillRect(0, 380, 2048, 132); g.fillStyle = 'rgba(255,255,255,0.5)'; for (let i = 0; i < 40; i++) g.fillRect(rnd() * 2048, 390 + rnd() * 100, 30 + rnd() * 40, 2);
+        for (let i = 0; i < 6; i++) { const x = 150 + i * 340 + rnd() * 80; g.strokeStyle = '#3d3020'; g.lineWidth = 8; g.beginPath(); g.moveTo(x, 470); g.quadraticCurveTo(x + 20, 400, x + 10, 340); g.stroke(); g.fillStyle = '#2d6b3a'; for (let a = 0; a < 6; a++) { g.beginPath(); g.ellipse(x + 10 + Math.cos(a) * 30, 340 + Math.sin(a) * 10, 34, 7, a, 0, 7); g.fill(); } }
+      } else if (k === 'forest') { ridge('#5c7a5e', 380, 70, 0.005, 0.6); for (let x = 0; x < 2048; x += 22) { const h = 70 + rnd() * 60; g.fillStyle = rnd() < 0.5 ? '#2f5434' : '#3b6640'; g.beginPath(); g.moveTo(x, 470); g.lineTo(x + 18, 470 - h); g.lineTo(x + 36, 470); g.fill(); } }
+      else if (k === 'grass') { ridge('#8db37a', 400, 70, 0.004, 0.3); ridge('#79a65e', 440, 50, 0.007, 1.9); for (let i = 0; i < 18; i++) { const x = rnd() * 2048; g.fillStyle = '#4f7a3c'; g.beginPath(); g.arc(x, 420, 18, 0, 7); g.fill(); g.fillRect(x - 3, 420, 6, 30); } }
+      else if (k === 'steppe') { ridge('#a6a3a8', 380, 90, 0.003, 2.4); ridge('#b9a575', 445, 30, 0.006, 0.8); }
+      else if (k === 'mud') { ridge('#7d7a6e', 400, 80, 0.005, 1.1); ridge('#5f594a', 450, 40, 0.01, 0.5); }
+      else { ridge('#86a3a0', 400, 70, 0.005, 1.6); g.fillStyle = '#7fb0b8'; g.fillRect(0, 440, 2048, 30); ridge('#5f7f73', 470, 25, 0.012, 0.2); }
+      const tex = new T.CanvasTexture(c); tex.wrapS = T.RepeatWrapping; tex.repeat.set(1, 1);
+      if (T.sRGBEncoding) tex.encoding = T.sRGBEncoding;
+      return tex;
+    }
+    buildScenery(terrain) {
+      const T = this.THREE;
+      const oldG = this.floor.material.map; this.floor.material.map = this.groundTexture(terrain); this.floor.material.color.setHex(0xffffff); this.floor.material.needsUpdate = true; if (oldG) oldG.dispose();
+      if (!this.backdrop) {
+        this.backdrop = new T.Mesh(new T.CylinderGeometry(70, 70, 36, 48, 1, true), new T.MeshBasicMaterial({ side: T.BackSide, fog: false, depthWrite: false }));
+        this.backdrop.position.y = 16.5; this.backdrop.renderOrder = -1; this.scene.add(this.backdrop);
+      }
+      const oldP = this.backdrop.material.map; this.backdrop.material.map = this.panoramaTexture(terrain); this.backdrop.material.needsUpdate = true; if (oldP) oldP.dispose();
+    }
+
     buildTerrain(terrain) {
       const T = this.THREE, oldGeo = new Set(), oldMat = new Set();
       this.terrainGroup.traverse((o) => {
@@ -909,7 +984,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
 
       // Réutilise les personnages déjà sur le plateau ; seul celui qui joue se déplace
-      const now = performance.now() / 1000;
+      const now = this.now();
       const old = this.chars, next = new Map();
       const boardKey = o.board.join('');
       const boardChanged = boardKey !== this.boardKey;
@@ -1747,13 +1822,13 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         background: this.scene.background && this.scene.background.clone(), fog: this.scene.fog,
         floorY: this.floor.position.y, floorColor: this.floor.material.color.clone(),
         hemi: this.hemi.intensity, sun: this.sun.intensity,
-        visibility: [this.boardMesh, this.base, this.terrainGroup, ...(this.animalGroup ? [this.animalGroup] : []), this.overlay, this.weatherGroup, this.mateFireGroup, this.checkGroup].map((o) => [o, o.visible]),
+        visibility: [this.boardMesh, this.base, this.terrainGroup, ...(this.animalGroup ? [this.animalGroup] : []), ...(this.backdrop ? [this.backdrop] : []), this.overlay, this.weatherGroup, this.mateFireGroup, this.checkGroup].map((o) => [o, o.visible]),
         chars: [...this.chars.values()].map((c) => [c, c.holder.visible]),
         dying: this.dying.map((d) => [d.c.holder, d.c.holder.visible]),
         scars: this.captureScars.map((s) => [s.object, s.object.visible]),
         spark: this.spark && this.spark.visible,
       };
-      this.boardMesh.visible = false; this.base.visible = false; this.terrainGroup.visible = false; if (this.animalGroup) this.animalGroup.visible = false;
+      this.boardMesh.visible = false; this.base.visible = false; this.terrainGroup.visible = false; if (this.animalGroup) this.animalGroup.visible = false; if (this.backdrop) this.backdrop.visible = false;
       this.overlay.visible = false; this.weatherGroup.visible = false; this.mateFireGroup.visible = false; this.checkGroup.visible = false;
       for (const c of this.chars.values()) c.holder.visible = c === u.actor;
       this.dying.forEach((d) => { d.c.holder.visible = false; });
@@ -1764,7 +1839,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.scene.fog = new T.Fog(0x21100c, 8, 38);
       this.hemi.intensity = 0.48; this.sun.intensity = 0.22;
       this.scene.add(u.fx);
-      this.shakeUntil = performance.now() / 1000 + 1.3; this.shakeAmp = 0.3;
+      this.shakeUntil = this.now() + 1.3; this.shakeAmp = 0.3;
     }
 
     restoreFoxWorld(u) {
@@ -2699,6 +2774,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.resize();
     }
 
+    // Horloge des animations : ralentie (speed < 1) pour qu'on profite de chaque mouvement
+    now() { return performance.now() / 1000 * this.speed; }
+    // Temps réel (ms) avant la fin des animations en cours, pour l'interface
+    busyLeftMs() { return this.busyUntil ? (this.busyUntil - this.now()) / this.speed * 1000 : 0; }
+
     tick(nowMs) {
       // Le plateau est conservé entre les écrans, mais ne doit pas animer ni
       // redessiner ses pièces tant qu'il est masqué.
@@ -2715,7 +2795,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         if (this.slowRuns >= 2 && !this.lite && this.onSlow) this.onSlow();
         this.perfFrames = 0; this.perfStart = nowMs;
       }
-      const t = nowMs / 1000;
+      const t = nowMs / 1000 * this.speed;
       const dt = Math.min(0.25, Math.max(0, t - (this.lastT || t)));
       this.lastT = t;
       const ease = 1 - Math.exp(-dt * 11); // rotation indépendante du nombre d'images par seconde
@@ -2945,8 +3025,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (this.spark && t > (this.sparkUntil || 0)) this.spark.visible = false;
       this.drawRopes(t);
       this.drawCheckChains();
-      this.tickWeather(t, dt);
-      this.tickAnimals(t, dt);
+      this.tickWeather(t, dt / this.speed);
+      this.tickAnimals(t, dt / this.speed);
       this.tickEffects(t);
       this.tickDayNight(t, dt);
       this.tickCaptureScars(t);
@@ -3402,6 +3482,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (dim > 0) sky.lerp(new T.Color(0x05070d), dim * 0.9);
       if (this.scene.background && this.scene.background.isColor) this.scene.background.copy(sky);
       if (this.scene.fog && this.scene.fog.color) this.scene.fog.color.copy(sky);
+      if (this.backdrop) this.backdrop.material.color.copy(this.backdropTint || new T.Color(0xffffff)).lerp(new T.Color(0xe8a070), this.sunset * (1 - n) * 0.4).multiplyScalar(1 - 0.75 * n - 0.6 * dim);
       if (this.sun && this.sunset * (1 - n) > 0.005) this.sun.color.setRGB(1, 1 - this.sunset * (1 - n) * 0.25, 1 - this.sunset * (1 - n) * 0.45);
     }
 
@@ -4258,7 +4339,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.spark.position.set((a.x + b.x) / 2, 0.75 + Math.random() * 0.1, (a.z + b.z) / 2);
       this.spark.scale.setScalar(s);
       this.spark.rotation.set(Math.random() * 3, Math.random() * 3, 0);
-      this.sparkUntil = performance.now() / 1000 + 0.05;
+      this.sparkUntil = this.now() + 0.05;
     }
 
     bindInput() {

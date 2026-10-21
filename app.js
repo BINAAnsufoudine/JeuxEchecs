@@ -566,7 +566,7 @@
 
   const isHumanTurn = () => cfg.mode === 'local' || game.turn === cfg.playerColor;
   // Une animation 3D (déplacement, duel, technique de prise ou de mat) doit finir avant tout nouveau mouvement
-  const animBusy = () => !!(b3d && b3d.busyUntil && b3d.busyUntil * 1000 > performance.now());
+  const animBusy = () => !!(b3d && b3d.busyLeftMs() > 0);
   const canInteract = (ignoreAnim = false) => (replay ? false : !ignoreAnim && animBusy() ? false : pz ? !!(pz.item && pz.item.line) && !pz.done && !pz.locked : !result && !thinking && !judging && !(cfg.mode === 'coach' && speechBusy()) && isHumanTurn());
 
   function render() { if (replay) { renderReplay(); return; } renderBoard(); renderPlayers(); renderMoves(); renderStatus(); renderActions(); }
@@ -747,14 +747,19 @@
     const checkSq = game.inCheck() ? s.board.indexOf(s.turn === 'w' ? 'K' : 'k') : -1;
     const mateFire = [];
     let mateUltimate = null;
-    if (result && result.reason === 'mat') {
+    // En problème ou en cours, un mat déclenche aussi l'attaque de mat, comme en partie
+    let shown = result;
+    if (!shown && pz) { const st = game.status(); if (st.over && st.reason === 'mat') shown = { result: st.result, reason: 'mat', ultimateId: `pz-${window.Chess.toFen(s)}` }; }
+    if (shown && shown.reason === 'mat') {
       const kingSq = s.board.indexOf(s.turn === 'w' ? 'K' : 'k');
       if (kingSq >= 0) {
-        if (last && 'pnbrqk'.includes(last.piece.toLowerCase())) {
-          const movedPiece = s.board[last.to] || last.piece;
-          const blackKingUltimate = result.result === '0-1' && !['q', 'n', 'b', 'r'].includes(movedPiece); // dame, cavalier, fou et tour noirs ont leur propre attaque
-          const ultimatePiece = blackKingUltimate ? 'k' : movedPiece;
-          const attackerTo = blackKingUltimate ? s.board.indexOf('k') : last.to;
+        // C'est la pièce qui donne échec (celle qui mate) qui fait l'attaque de mat, même sur un échec à la découverte
+        const checkers = window.Chess.pseudoMoves({ ...s, turn: s.turn === 'w' ? 'b' : 'w', ep: -1, castling: '' }).filter((m) => m.to === kingSq).map((m) => m.from);
+        const mater = last && checkers.includes(last.to) ? last.to : checkers[0];
+        if (last && mater != null && s.board[mater]) {
+          const movedPiece = s.board[mater];
+          const ultimatePiece = movedPiece;
+          const attackerTo = mater;
           const whiteQueenUltimate = ultimatePiece === 'Q';
           const flameSquares = ultimatePiece === 'q' ? s.board.reduce((squares, piece, sq) => {
             if (!piece || (piece === piece.toUpperCase()) !== (ultimatePiece === ultimatePiece.toUpperCase())) squares.push(sq);
@@ -768,7 +773,7 @@
             if (!piece || piece !== piece.toUpperCase()) squares.push(sq);
             return squares;
           }, []) : [];
-          mateUltimate = { id: result.ultimateId, from: blackKingUltimate ? attackerTo : last.from, attackerTo, to: kingSq, piece: ultimatePiece, flameSquares, energySquares, whiteFlameSquares };
+          mateUltimate = { id: shown.ultimateId, from: mater === last.to ? last.from : mater, attackerTo, to: kingSq, piece: ultimatePiece, flameSquares, energySquares, whiteFlameSquares };
         }
         if (!b3d || !mateUltimate || mateUltimate.piece.toLowerCase() !== 'q') {
           const legalKingMoves = new Set(game.movesFrom(kingSq).map((m) => m.to));
@@ -785,7 +790,7 @@
     const arrows = replay ? replayArrows() : (!pz && cfg && cfg.mode === 'coach' ? coachArrows : []);
     if (b3d) {
       const th = THEMES[settings.theme] || THEMES.foret;
-      b3d.update({ board: s.board, selected, targets, last, check: checkSq, mateFire, mateUltimate, hint, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext, outcome: result ? result.result : null, arrows, ply: pz ? null : game.history.length });
+      b3d.update({ board: s.board, selected, targets, last, check: checkSq, mateFire, mateUltimate, hint, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext, outcome: shown ? shown.result : null, arrows, ply: pz ? null : game.history.length });
       animateNext = false;
       renderMinimap(s.board, last, selected, targets, mateFire, arrows);
       return;
@@ -1072,7 +1077,7 @@
           { label: L('Accueil', 'Home'), ghost: true, onClick: () => show('home') },
         ],
       });
-    }, Math.max(450, (b3d && b3d.busyUntil ? b3d.busyUntil * 1000 - performance.now() : 0) + 400)); // après le duel final
+    }, Math.max(450, (b3d ? b3d.busyLeftMs() : 0) + 400)); // après le duel final
   }
 
   /* ---------- IA (Web Worker) ---------- */
@@ -1168,7 +1173,7 @@
     renderStatus(); renderActions();
     // Petit délai pour que le coup du joueur s'affiche d'abord
     // Laisse le duel en cours se terminer avant que l'ordinateur ne joue
-    const busy = b3d && b3d.busyUntil ? b3d.busyUntil * 1000 - performance.now() : 0;
+    const busy = b3d ? b3d.busyLeftMs() : 0;
     const launch = () => {
       if (!thinking) return;
       // En partie coachée, le coach finit de parler avant de jouer
@@ -2049,7 +2054,7 @@
     return lastStep ? (pz.lesson && (pz.lesson.tip || pz.lesson.champion || pz.lesson.onDone) ? L('Terminer', 'Finish') : L('Aux problèmes', 'To the puzzles')) : L('Continuer', 'Continue');
   }
   const lessonCue = () => L(`Appuie sur « ${lessonNextLabel()} » en bas de l'écran ${pz.idx >= pz.steps.length - 1 ? 'pour terminer' : 'pour la suite'}.`, `Press “${lessonNextLabel()}” at the bottom of the screen ${pz.idx >= pz.steps.length - 1 ? 'to finish' : 'to go on'}.`);
-  const busyDelay = (min) => Math.max(min, (b3d && b3d.busyUntil ? b3d.busyUntil * 1000 - performance.now() : 0) + 250);
+  const busyDelay = (min) => Math.max(min, (b3d ? b3d.busyLeftMs() : 0) + 250);
   function pzAfterMove(res) {
     animateNext = true;
     const it = pz.item, uci = window.Chess.toUci(res.move);
@@ -2717,28 +2722,47 @@
     });
   }
   // Défi du jour : le même problème pour toute la journée ; une série de jours réussis à garder
-  function dailyPuzzle() {
+  // Défi du jour : trois problèmes par jour ; ceux qui n'ont pas été trouvés du premier coup reviennent dans la journée
+  function dailyPuzzles() {
     const key = todayKey(); let h = 0;
     for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
     const pool = BANK.filter((p) => p.line && p.line.length && (p.rating || 3) >= 3);
-    return (pool.length ? pool : BANK)[h % (pool.length || BANK.length)];
+    const src = pool.length ? pool : BANK, out = [];
+    for (let i = 0; out.length < 3 && i < 30; i++) {
+      const p = src[(h + i * 7919) % src.length];
+      if (p && !out.includes(p)) out.push(p);
+    }
+    return out;
   }
-  function startDaily() {
-    const p = dailyPuzzle(), d = store.get('daily', { streak: 0, best: 0 });
+  // État du jour : pour chaque problème, 'ok' (trouvé du premier coup) ou 'retry' (à refaire)
+  function dailyState() {
+    const d = store.get('daily', { streak: 0, best: 0 });
+    if (d.day !== todayKey()) { d.day = todayKey(); d.res = {}; d.finished = false; }
+    return d;
+  }
+  function startDaily(i) {
+    const list = dailyPuzzles(), p = list[i], d = dailyState();
     if (!p) return;
-    const side = new Game(p.fen).turn;
-    const steps = [
-      { text: L(`Défi du jour ! Un seul problème par jour, le même toute la journée. Série en cours : ${d.streak || 0} jour${(d.streak || 0) > 1 ? 's' : ''}.`, `Daily challenge! One puzzle a day, the same all day long. Current streak: ${d.streak || 0} day${(d.streak || 0) === 1 ? '' : 's'}.`), fen: p.fen },
-      { text: L(`Tu joues les ${sideName(side)}. ${PZ[p.theme] ? PZ[p.theme].name : ''} : trouve le meilleur coup du premier coup pour garder ta série.`, `You play ${sideName(side)}. ${PZ[p.theme] ? PZ[p.theme].name : ''}: find the best move at the first try to keep your streak.`), fen: p.fen, line: p.line, alts: p.alts, theme: p.theme },
-    ];
-    startTrainer({ title: L('Défi du jour', 'Daily challenge'), theme: p.theme }, steps, () => {
-      const today = todayKey(), yesterday = todayKey(new Date(Date.now() - DAY));
+    const side = new Game(p.fen).turn, again = d.res[i] === 'retry';
+    const steps = [{
+      text: L(`Défi du jour, problème ${i + 1} sur 3${again ? ', deuxième chance' : ''}. Tu joues les ${sideName(side)}. ${PZ[p.theme] ? PZ[p.theme].name : ''} : trouve le meilleur coup du premier coup.`,
+        `Daily challenge, puzzle ${i + 1} of 3${again ? ', second chance' : ''}. You play ${sideName(side)}. ${PZ[p.theme] ? PZ[p.theme].name : ''}: find the best move at the first try.`),
+      fen: p.fen, line: p.line, alts: p.alts, theme: p.theme,
+    }];
+    startTrainer({ title: L(`Défi du jour · ${i + 1}/3`, `Daily challenge · ${i + 1}/3`), theme: p.theme }, steps, () => {
       const clean = !pz.failed && !pz.misses;
-      if (d.last !== today) {
-        if (clean) { d.streak = d.last === yesterday ? (d.streak || 0) + 1 : 1; d.best = Math.max(d.best || 0, d.streak); toast(L(`Défi réussi ! Série : ${d.streak} jour${d.streak > 1 ? 's' : ''}.`, `Challenge done! Streak: ${d.streak} day${d.streak === 1 ? '' : 's'}.`)); }
-        else { d.streak = 0; toast(L('Défi terminé avec de l\'aide : la série repart demain.', 'Challenge finished with help: the streak restarts tomorrow.')); }
-        d.last = today; d.ok = clean; store.set('daily', d);
-      }
+      const st = dailyState();
+      if (st.res[i] !== 'ok') st.res[i] = clean ? 'ok' : 'retry';
+      const okCount = [0, 1, 2].filter((k) => st.res[k] === 'ok').length;
+      if (okCount === 3 && !st.finished) {
+        // la série avance quand les trois problèmes du jour sont trouvés du premier coup (au besoin en les refaisant)
+        const yesterday = todayKey(new Date(Date.now() - DAY));
+        st.streak = st.last === yesterday ? (st.streak || 0) + 1 : 1;
+        st.best = Math.max(st.best || 0, st.streak); st.last = todayKey(); st.finished = true;
+        toast(L(`Défi du jour réussi ! Série : ${st.streak} jour${st.streak > 1 ? 's' : ''}.`, `Daily challenge complete! Streak: ${st.streak} day${st.streak === 1 ? '' : 's'}.`));
+      } else if (!clean) toast(L('Pas du premier coup : ce problème te sera reproposé aujourd\'hui.', 'Not at the first try: this puzzle will come back today.'));
+      else toast(L(`Bravo ! ${okCount} sur 3 aujourd'hui.`, `Well done! ${okCount} out of 3 today.`));
+      store.set('daily', st);
       leavePuzzle();
     });
   }
@@ -2746,13 +2770,13 @@
   const TRAIN_TITLES = L({ daily: 'Défi du jour', mates: 'Les mats', endgames: 'Finales de base', openings: 'Ouvertures', famous: 'Devine le coup' },
     { daily: 'Daily challenge', mates: 'Checkmates', endgames: 'Basic endgames', openings: 'Openings', famous: 'Guess the move' });
   const TRAIN_HELP = L({
-    daily: 'Un problème par jour, le même toute la journée. Réussis-le du premier coup pour prolonger ta série.',
+    daily: 'Trois problèmes par jour. Ceux que tu ne trouves pas du premier coup te sont reproposés dans la journée. Réussis les trois pour prolonger ta série.',
     mates: 'Choisis le mat que tu veux apprendre : Maître Hiro te le montre, puis tu le trouves toi-même.',
     endgames: 'Apprends la méthode, puis joue la position contre l\'ordinateur au plus haut niveau.',
     openings: 'Découvre les coups d\'une ouverture, puis rejoue-les de mémoire. Elles reviennent à réviser au bon moment.',
     famous: 'Prends la place d\'un champion dans sa partie la plus célèbre et devine ses coups.',
   }, {
-    daily: 'One puzzle a day, the same all day long. Solve it at the first try to extend your streak.',
+    daily: 'Three puzzles a day. The ones you miss at the first try come back later the same day. Solve all three to extend your streak.',
     mates: 'Choose the mate you want to learn: Master Hiro shows it to you, then you find it yourself.',
     endgames: 'Learn the method, then play the position against the computer at its highest level.',
     openings: 'Discover the moves of an opening, then replay them from memory. They come back for review at the right time.',
@@ -2761,12 +2785,17 @@
   function renderTrain(section = trainSection) {
     trainSection = section;
     $('train-title').textContent = TRAIN_TITLES[section];
-    const done = trainDone(), sr = openingsSR(), d = store.get('daily', { streak: 0, best: 0 }), now = Date.now();
+    const done = trainDone(), sr = openingsSR(), d = dailyState(), now = Date.now();
     const item = (key, title, sub, extra = '') => `<button type="button" class="btn replay-item" data-train="${key}"><strong>${escHtml(title)}${extra}</strong><span>${escHtml(sub)}</span></button>`;
     const ok = ' ✓';
     let html = `<p class="level-help">${TRAIN_HELP[section]}</p>`;
-    const dailyDone = d.last === todayKey();
-    if (section === 'daily') html += `<div class="replay-items">${item('daily:', dailyDone ? L('Défi du jour réussi', 'Daily challenge done') : L('Le défi du jour', 'Today\'s challenge'), L(`Série en cours : ${d.streak || 0} · record : ${d.best || 0}`, `Current streak: ${d.streak || 0} · best: ${d.best || 0}`), dailyDone && d.ok ? ok : '')}</div>`;
+    if (section === 'daily') {
+      const label = { ok: L('trouvé du premier coup', 'found at the first try'), retry: L('à refaire', 'to try again') };
+      html += `<p class="level-help">${L(`Série en cours : ${d.streak || 0} jour${(d.streak || 0) > 1 ? 's' : ''} · record : ${d.best || 0}`, `Current streak: ${d.streak || 0} day${(d.streak || 0) === 1 ? '' : 's'} · best: ${d.best || 0}`)}</p>`;
+      // les problèmes ratés sont reproposés en premier
+      const order = [0, 1, 2].sort((x, y) => (d.res[y] === 'retry') - (d.res[x] === 'retry'));
+      html += `<div class="replay-items">${order.map((k) => item(`daily:${k}`, L(`Problème ${k + 1}`, `Puzzle ${k + 1}`) + (d.res[k] === 'retry' ? L(' · à refaire', ' · try again') : ''), d.res[k] ? label[d.res[k]] : L('à faire', 'to do'), d.res[k] === 'ok' ? ok : '')).join('')}</div>`;
+    }
     if (section === 'mates') html += `<div class="replay-items">${TR.MATES.map((m) => item(`mate:${m.id}`, m.name, m.text.split('.')[0] + '.', done[`mate:${m.id}`] ? ok : '')).join('')}</div>`;
     if (section === 'endgames') html += `<div class="replay-items">${TR.ENDGAMES.map((e) => item(`end:${e.id}`, e.name, e.goal === 'draw' ? L('Défends et obtiens la nulle contre l\'ordinateur', 'Defend and draw against the computer') : L('Donne le mat contre l\'ordinateur', 'Deliver mate against the computer'), done[`end:${e.id}`] ? ok : '')).join('')}</div>`;
     if (section === 'openings') html += `<div class="replay-items">${TR.OPENINGS.map((o) => {
@@ -2780,7 +2809,7 @@
   $('train-body').addEventListener('click', (e) => {
     const b = e.target.closest('[data-train]'); if (!b) return;
     const [kind, id] = b.dataset.train.split(':');
-    if (kind === 'daily') return startDaily();
+    if (kind === 'daily') return startDaily(Number(id) || 0);
     if (kind === 'mate') return startMateLesson(TR.MATES.find((x) => x.id === id));
     if (kind === 'end') return startEndgame(TR.ENDGAMES.find((x) => x.id === id));
     if (kind === 'open') return startOpening(TR.OPENINGS.find((x) => x.id === id));
@@ -3149,7 +3178,7 @@
       if (!replay || replay.index >= replay.moves.length) { stopReplayPlay(); return; }
       gotoPly(replay.index + 1, true);
       if (replay.index >= replay.moves.length) { stopReplayPlay(); return; }
-      const busy = b3d && b3d.busyUntil ? b3d.busyUntil * 1000 - performance.now() : 0;
+      const busy = b3d ? b3d.busyLeftMs() : 0;
       replayTimer = setTimeout(tick, Math.max(2200, busy + 700));
     };
     replayTimer = setTimeout(tick, 600);
