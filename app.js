@@ -2773,8 +2773,8 @@
   $('btn-editor').onclick = () => openEditor(store.get('editorFen', null));
   /* ---------- En ligne : compte, progression sauvegardée, invitations et parties à distance ---------- */
   const ON = window.Online;
-  const TC_LABELS = L({ unlim: 'Temps illimité', '3d': '3 jours par coup', '1d': '1 jour par coup', pm60: '1 minute par coup', pm30: '30 secondes par coup', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' },
-    { unlim: 'Unlimited time', '3d': '3 days per move', '1d': '1 day per move', pm60: '1 minute per move', pm30: '30 seconds per move', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' });
+  const TC_LABELS = L({ unlim: '7 jours par coup', '7d': '7 jours par coup', '3d': '3 jours par coup', '1d': '1 jour par coup', pm60: '1 minute par coup', pm30: '30 secondes par coup', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' },
+    { unlim: '7 days per move', '7d': '7 days per move', '3d': '3 days per move', '1d': '1 day per move', pm60: '1 minute per move', pm30: '30 seconds per move', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' });
   const announced = new Set();
   let justSignedUp = false, progressDirty = false, inviteStop = null, gamesStop = null, onlineInvites = { in: [], out: [] }, onlineGames = [];
   const SKIP_SYNC = new Set(['lastScreen', 'onlineSession', 'onlineSynced']);
@@ -2879,6 +2879,11 @@
         }
         onlineGames = games;
         renderOnlineSwitch();
+        for (const g of games) {
+          if (g.status !== 'active') continue;
+          const side = g.moves.length % 2 === 0 ? 'w' : 'b', left = onlineTimeLeft(g, side);
+          if (left != null && left <= 0) ON.endGame(g.id, side === 'w' ? '0-1' : '1-0', 'temps');
+        }
         updateOnlineBadge();
         if (document.body.dataset.screen === 'online') renderOnline();
         if (document.body.dataset.screen === 'welcome') renderWelcome();
@@ -2995,7 +3000,8 @@
       return;
     }
     const me = u.uid, myName = (ON.profile && ON.profile.pseudo) || '';
-    const tcOptions = Object.keys(TC_LABELS).map((k) => `<option value="${k}"${k === store.get('onlineTc', '10m') ? ' selected' : ''}>${TC_LABELS[k]}</option>`).join('');
+    // plus de partie sans limite : chaque partie doit pouvoir se terminer
+    const tcOptions = Object.keys(TC_LABELS).filter((k) => k !== 'unlim').map((k) => `<option value="${k}"${k === store.get('onlineTc', '10m') ? ' selected' : ''}>${TC_LABELS[k]}</option>`).join('');
     const inv = onlineInvites.in, out = onlineInvites.out;
     const active = onlineGames.filter((g) => g.status === 'active').sort((a, b) => b.lastMoveAt - a.lastMoveAt);
     const myTurn = active.filter((g) => (g.moves.length % 2 === 0) === (g.white === me)).length;
@@ -3060,7 +3066,7 @@
   const TYPE_LABELS = L({ solo: 'Individuel', team: 'Par équipe' }, { solo: 'Individual', team: 'Team' });
   const STATUS_LABELS = L({ open: 'inscriptions ouvertes', running: 'en cours', over: 'terminé', cancelled: 'annulé (pas assez d\'inscrits)' }, { open: 'registration open', running: 'in progress', over: 'finished', cancelled: 'cancelled (not enough players)' });
   // cadence : pendule (temps total) ou temps par coup
-  const TC_GROUPS = { clock: ['10m', '5m', '2m', '1m'], move: ['pm30', 'pm60', '1d', '3d'], unlim: ['unlim'] };
+  const TC_GROUPS = { clock: ['10m', '5m', '2m', '1m'], move: ['pm30', 'pm60', '1d', '3d', '7d'] };
   let tourForm = { type: 'solo', teamMode: 'auto', format: 'swiss', tcKind: 'clock', tc: '10m', rounds: 5, teamSize: 4 };
   const fmtDeadline = (ms) => new Date(ms).toLocaleString(LOCALE, { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
   const localInput = (ms) => { const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
@@ -3114,8 +3120,8 @@
       <label class="field-label">${L('Format', 'Format')}</label>${seg('format', [['swiss', FORMAT_LABELS.swiss], ['rr', FORMAT_LABELS.rr]])}
       ${tourForm.format === 'swiss' ? `<label class="field-label">${L('Nombre de rondes', 'Number of rounds')}</label>${seg('rounds', [[3, '3'], [4, '4'], [5, '5'], [7, '7']])}` : ''}
       ${tourForm.type === 'team' ? `<label class="field-label">${L('Joueurs par équipe', 'Players per team')}</label>${seg('teamSize', [[2, '2'], [3, '3'], [4, '4']])}` : ''}
-      <label class="field-label">${L('Cadence', 'Time control')}</label>${seg('tcKind', [['clock', L('Pendule', 'Clock')], ['move', L('Temps par coup', 'Time per move')], ['unlim', L('Illimité', 'Unlimited')]])}
-      ${tourForm.tcKind !== 'unlim' ? `<div style="margin-top:8px">${seg('tc', TC_GROUPS[tourForm.tcKind].map((k) => [k, TC_LABELS[k]]))}</div>` : ''}
+      <label class="field-label">${L('Cadence', 'Time control')}</label>${seg('tcKind', [['clock', L('Pendule', 'Clock')], ['move', L('Temps par coup', 'Time per move')]])}
+      <div style="margin-top:8px">${seg('tc', (TC_GROUPS[tourForm.tcKind] || TC_GROUPS.clock).map((k) => [k, TC_LABELS[k]]))}</div>
       <button id="tour-create" class="btn primary wide" type="button">${L('Créer le tournoi', 'Create the tournament')}</button>
       <p id="tour-msg" class="ed-error" role="status"></p>`;
   }
