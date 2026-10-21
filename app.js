@@ -567,7 +567,7 @@
   /* ---------- Partie ---------- */
   function startGame(conf, uciMoves = [], res = null, flip, terrainId, weatherId) {
     if (document.body.classList.contains('admin-mode')) { toast(L('Le compte administrateur ne peut pas jouer.', 'The administrator account cannot play.')); show('admin'); return; }
-    $('chat').hidden = true;
+    $('chat').hidden = true; $('online-switch').hidden = true;
     cancelAi();
     if (conf.mode !== 'online' && typeof stopOnline === 'function') stopOnline();
     replay = null; setReplayUi(false);
@@ -2870,7 +2870,15 @@
         if (document.body.dataset.screen === 'online') renderOnline();
       });
       gamesStop = ON.watchGames((games) => {
+        // parties en différé : prévenir quand l'adversaire a joué dans une autre partie que celle affichée
+        const me = user.uid, prev = new Map(onlineGames.map((g) => [g.id, g.moves.length]));
+        for (const g of games) {
+          const was = prev.get(g.id), myTurn = g.status === 'active' && (g.moves.length % 2 === 0) === (g.white === me);
+          const shown = cfg && cfg.mode === 'online' && cfg.online && cfg.online.id === g.id;
+          if (was != null && g.moves.length > was && myTurn && !shown) toast(L(`${g.white === me ? g.blackName : g.whiteName} a joué : à toi de jouer.`, `${g.white === me ? g.blackName : g.whiteName} has moved: your turn.`));
+        }
         onlineGames = games;
+        renderOnlineSwitch();
         updateOnlineBadge();
         if (document.body.dataset.screen === 'online') renderOnline();
         if (document.body.dataset.screen === 'welcome') renderWelcome();
@@ -2886,6 +2894,24 @@
     if (document.body.dataset.screen === 'account') renderAccount();
     if (document.body.dataset.screen === 'online') renderOnline();
   }
+  // Pendant une partie en ligne : les autres parties en cours, pour passer de l'une à l'autre
+  function renderOnlineSwitch() {
+    const box = $('online-switch');
+    if (!box) return;
+    const cur = cfg && cfg.mode === 'online' && cfg.online ? cfg.online.id : null;
+    const me = ON && ON.user && ON.user.uid;
+    const others = cur && me ? onlineGames.filter((g) => g.status === 'active' && g.id !== cur) : [];
+    box.hidden = !others.length;
+    if (!others.length) return;
+    const mine = (g) => (g.moves.length % 2 === 0) === (g.white === me);
+    others.sort((a, b) => mine(b) - mine(a) || b.lastMoveAt - a.lastMoveAt);
+    box.innerHTML = `<b>${L('Mes autres parties', 'My other games')} (${others.length})</b>${others.map((g) => `<button class="btn switch-game${mine(g) ? ' hot' : ''}" type="button" data-switch-game="${g.id}"><span>${L('contre', 'vs')} ${escHtml(g.white === me ? g.blackName : g.whiteName)}</span><small>${mine(g) ? L('à toi de jouer', 'your move') : L('en attente', 'waiting')} · ${TC_LABELS[g.tc] || ''}</small></button>`).join('')}`;
+  }
+  $('online-switch').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-switch-game]'); if (!b) return;
+    const g = onlineGames.find((x) => x.id === b.dataset.switchGame);
+    if (g) openOnlineGame(g);
+  });
   function updateOnlineBadge() {
     const myTurn = onlineGames.filter((g) => g.status === 'active' && ((g.moves.length % 2 === 0) === (g.white === (ON.user && ON.user.uid)))).length;
     const n = onlineInvites.in.length + myTurn;
@@ -3684,7 +3710,7 @@
 
   // Partie en ligne : le plateau suit la partie stockée sur le serveur
   let onlineStop = null, onlineTimer = null, onlineGame = null, onlinePhotos = {};
-  function stopOnline() { if (onlineStop) onlineStop(); onlineStop = null; clearInterval(onlineTimer); onlineTimer = null; onlineGame = null; $('chat').hidden = true; }
+  function stopOnline() { if (onlineStop) onlineStop(); onlineStop = null; clearInterval(onlineTimer); onlineTimer = null; onlineGame = null; $('chat').hidden = true; $('online-switch').hidden = true; }
   function openOnlineGame(g) {
     stopOnline();
     const me = ON.user.uid, color = g.white === me ? 'w' : 'b';
@@ -3693,7 +3719,7 @@
     startGame({ mode: 'online', playerColor: color, level: 1, online: { id: g.id, tc: g.tc, tournament: g.tournamentName || null, round: g.round || null } }, g.moves, null, color === 'b');
     onlineStop = ON.watchGame(g.id, onOnlineUpdate);
     onlineTimer = setInterval(onlineTick, 1000);
-    chatSeen = (g.chat || []).length; oppMutedMe = false; renderChat();
+    chatSeen = (g.chat || []).length; oppMutedMe = false; renderChat(); renderOnlineSwitch();
     const opp = color === 'w' ? g.black : g.white;
     ON.getProfile(opp).then((u) => { oppMutedMe = !!(u && (u.muted || []).includes(me)); renderChat(); }).catch(() => {});
     ON.heartbeat(g.id);
