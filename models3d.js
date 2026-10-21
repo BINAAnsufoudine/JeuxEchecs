@@ -192,7 +192,7 @@
     const plate = mesh(geo('plate', () => new T.BoxGeometry(0.12, 0.055, 0.02)), mat('#c9d2dc'), 0, 0.25, r - 0.007);
     head.add(plate);
     const tail = mesh(geo('bandtail', () => new T.BoxGeometry(0.03, 0.14, 0.012)), mat(cloth), 0.06, 0.2, -r - 0.003);
-    tail.rotation.z = 0.5; head.add(tail);
+    tail.rotation.z = 0.5; tail.userData.wind = 'tail'; head.add(tail);
   }
   // Cagoule de ninja : couvre toute la tête et le cou, une fente laisse voir les yeux
   function hood(head, cloth) {
@@ -292,14 +292,14 @@
     // repère du buste (la tête est réduite de moitié) : du haut du crâne jusqu'aux fesses, par-dessus le manteau
     const m = mat(color, { double: true, roughness: 0.6 });
     const hair = mesh(geo('long-back-hair', () => new T.CylinderGeometry(0.115, 0.27, 0.47, 18, 1, true, Math.PI * 0.55, Math.PI * 0.9)), m, 0, 0.235, -0.02);
-    p.torso.add(hair); p.hair = hair;
+    p.torso.add(hair); p.hair = hair; hair.userData.wind = 'hair';
     const tip = mesh(geo('long-hair-tip', () => new T.ConeGeometry(0.27, 0.07, 18, 1, true, Math.PI * 0.55, Math.PI * 0.9)), m, 0, -0.035, -0.02);
-    tip.rotation.x = Math.PI; p.torso.add(tip);
+    tip.rotation.x = Math.PI; tip.userData.wind = 'hair'; p.torso.add(tip);
   }
   // Manteau long de la dame, ouvert devant, col et bordure de couleur
   function queenCoat(p, cloth, trim) {
     const coat = mesh(geo('queen-coat', () => new T.CylinderGeometry(0.19, 0.29, 0.66, 24, 1, true, 0.5, Math.PI * 2 - 1.0)), mat(cloth, { double: true, roughness: 0.8 }), 0, -0.04, -0.005);
-    p.torso.add(coat); p.cloak = coat;
+    p.torso.add(coat); p.cloak = coat; coat.userData.wind = 'cloak';
     p.torso.add(mesh(geo('queen-coat-hem', () => new T.CylinderGeometry(0.292, 0.292, 0.03, 24, 1, true, 0.5, Math.PI * 2 - 1.0)), mat(trim, { double: true }), 0, -0.36, -0.005));
     for (const side of [-1, 1]) {
       const lapel = mesh(geo('queen-lapel', () => new T.BoxGeometry(0.03, 0.4, 0.02)), mat(trim), side * 0.1, 0.06, 0.17);
@@ -391,7 +391,7 @@
       p.torso.add(mesh(geo('sodelace', () => new T.BoxGeometry(0.125, 0.015, 0.165)), mat(lace), side * 0.235, 0.2, 0)).children.at(-1).rotation.z = side * 0.3;
     }
     const skirt = mesh(geo('kusazuri', () => new T.CylinderGeometry(0.17, 0.22, 0.12, 14, 1, true)), mat(lacquer, { double: true }), 0, -0.02, 0);
-    p.torso.add(skirt);
+    p.torso.add(skirt); skirt.userData.wind = 'skirt';
     // fourreau à la hanche gauche
     const saya = mesh(geo('saya', () => new T.CylinderGeometry(0.02, 0.018, 0.5, 8)), mat('#1d1d24'), -0.17, 0.0, -0.05);
     saya.rotation.set(1.2, 0, 0.25); p.torso.add(saya);
@@ -474,7 +474,7 @@
       mat(cloth, { double: true, roughness: 0.85 }),
       0, -0.06, -0.01,
     );
-    p.torso.add(robe); p.cloak = robe;
+    p.torso.add(robe); p.cloak = robe; robe.userData.wind = 'cloak';
     const flames = mat(flame, { double: true });
     const tongue = geo('kage-flame', () => new T.ConeGeometry(0.045, 0.16, 4));
     for (let i = 0; i < 16; i++) {
@@ -683,7 +683,26 @@
     parts.piece = piece;
     parts.phase = Math.random() * Math.PI * 2;
     parts.root.traverse((o) => { if (o.isMesh) o.userData.char = parts; });
+    // tissus et cheveux qui bougent au vent
+    parts.windParts = [];
+    parts.root.traverse((o) => { if (o.userData.wind) parts.windParts.push({ o, kind: o.userData.wind, rx: o.rotation.x, rz: o.rotation.z }); });
     return parts;
+  }
+  // Vent de la météo (0 = calme) : fait flotter manteaux, cheveux, jupes et rubans des personnages
+  let wind = 0;
+  function setWind(w) { wind = w || 0; }
+  function animateWind(p, t) {
+    if (!p.windParts || !p.windParts.length) return;
+    // rafales : la force varie lentement, avec un frémissement rapide
+    const g = wind * (0.75 + 0.25 * Math.sin(t * 0.7 + p.phase) + 0.12 * Math.sin(t * 2.9 + p.phase * 2));
+    const f = Math.sin(t * (6 + wind * 4) + p.phase * 3), f2 = Math.sin(t * (9 + wind * 5) + p.phase);
+    for (const w of p.windParts) {
+      const o = w.o;
+      if (w.kind === 'cloak') { o.scale.set(1 + (g ? f * 0.05 * g : 0), 1, 1 + g * 0.16 + f2 * 0.06 * g); }
+      else if (w.kind === 'hair') { o.rotation.x = w.rx - g * 0.22 - f * 0.05 * g; }
+      else if (w.kind === 'skirt') { o.scale.set(1 + f * 0.04 * g, 1, 1 + g * 0.1 + f2 * 0.05 * g); }
+      else if (w.kind === 'tail') { o.rotation.x = w.rx - g * 1.1 - f * 0.25 * g; o.rotation.z = w.rz + f2 * 0.3 * g; }
+    }
   }
 
   function animateAura(p, t, state) {
@@ -859,7 +878,8 @@
     if (p.blades) for (const b of p.blades) b.visible = state !== 'cast';
     if (p.tail) p.tail.rotation.x = Math.sin(ph * 3) * 0.3;
     if (p.pony) p.pony.rotation.z = Math.sin(ph * 2.5) * 0.15;
-    if (p.cloak) p.cloak.scale.x = 1 + Math.sin(ph * 1.8) * 0.04;
+    animateWind(p, t);
+    if (p.cloak && !wind) p.cloak.scale.x = 1 + Math.sin(ph * 1.8) * 0.04;
     animateAura(p, t, state);
     if (p.bolts) {
       p.bolts.rotation.y = t * 2;
@@ -867,5 +887,5 @@
     }
   }
 
-  root.Models3D = { build, animate, setWall, setEarthWall, setFlame, shurikenMesh: (THREE, o) => { T = THREE; return shurikenMesh(o); }, SIZE, SCALE };
+  root.Models3D = { build, animate, setWind, setWall, setEarthWall, setFlame, shurikenMesh: (THREE, o) => { T = THREE; return shurikenMesh(o); }, SIZE, SCALE };
 })(window);

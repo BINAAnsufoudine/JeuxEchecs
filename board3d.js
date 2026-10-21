@@ -253,6 +253,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     setWeather(id) {
       const T = this.THREE, weather = WEATHERS[id] || WEATHERS.sun, terrain = this.terrain || TERRAINS.forest;
       this.weather = weather;
+      // le vent fait aussi bouger les tenues des pièces
+      if (window.Models3D && window.Models3D.setWind) window.Models3D.setWind(weather.wind || 0);
       const overcast = weather.overcast || 0;
       const sky = new T.Color(terrain.sky).lerp(new T.Color(weather.tint), overcast);
       this.scene.background.copy(sky);
