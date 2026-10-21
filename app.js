@@ -119,7 +119,11 @@
     else window.scrollTo(0, 0);
   }
   let returnTo = 'home';
-  document.querySelectorAll('.back').forEach((b) => b.addEventListener('click', () => show(returnTo)));
+  // retour : l'écran d'où l'on vient ; jamais l'écran affiché lui-même (sinon le bouton semble bloqué)
+  document.querySelectorAll('.back').forEach((b) => b.addEventListener('click', () => {
+    const here = b.closest('.screen') ? b.closest('.screen').id : document.body.dataset.screen;
+    show(returnTo && returnTo !== here ? returnTo : 'home');
+  }));
 
   function refreshHome() {
     const saved = store.get('game', null);
