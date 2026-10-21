@@ -26,6 +26,7 @@
       </section>
     </div>
     <div id="home-menu" class="menu">
+      <button id="btn-welcome" class="btn" type="button">▶ Reprendre</button>
       <div class="menu-group">
         <button id="btn-progress-menu" class="btn primary" type="button" aria-expanded="false" aria-controls="progress-submenu">Progresser</button>
         <div id="progress-submenu" class="menu-submenu" hidden>
@@ -229,6 +230,12 @@
   <section id="problems" class="screen" aria-label="Problèmes">
     <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Problèmes</h2></header>
     <div class="panel" id="problems-body"></div>
+  </section>
+
+  <!-- Reprendre : parties, leçons et problèmes en cours (écran d'ouverture) -->
+  <section id="welcome" class="screen" aria-label="Reprendre">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2 id="welcome-title">Bienvenue !</h2></header>
+    <div class="panel" id="welcome-body"></div>
   </section>
 
   <!-- Boutique de Sissa : niveau, quêtes du jour et objets à acheter avec le blé -->

@@ -109,6 +109,7 @@
       $('btn-train-menu').setAttribute('aria-expanded', 'false');
     }
     if (id === 'home') refreshHome();
+    if (id === 'welcome') { refreshHome(); renderWelcome(); }
     if (id === 'program') renderCoachProgram();
     if (id === 'stats') renderStats();
     if (id === 'problems') renderProblems();
@@ -2840,12 +2841,14 @@
         if (known) for (const inv of all.in) if (!known.includes(inv.id)) toast(L(`${inv.fromName} t'invite à une partie (${TC_LABELS[inv.tc]}).`, `${inv.fromName} invites you to a game (${TC_LABELS[inv.tc]}).`));
         known = ids;
         updateOnlineBadge();
+        if (document.body.dataset.screen === 'welcome') renderWelcome();
         if (document.body.dataset.screen === 'online') renderOnline();
       });
       gamesStop = ON.watchGames((games) => {
         onlineGames = games;
         updateOnlineBadge();
         if (document.body.dataset.screen === 'online') renderOnline();
+        if (document.body.dataset.screen === 'welcome') renderWelcome();
         // une invitation que j'ai envoyée vient d'être acceptée : la partie s'ouvre
         const fresh = games.find((g) => !g.tournamentId && g.status === 'active' && !g.moves.length && g.createdAt > Date.now() - 20000 && !(cfg && cfg.online && cfg.online.id === g.id));
         for (const g of games) if (g.tournamentId && g.status === 'active' && !g.moves.length && g.createdAt > Date.now() - 20000 && !announced.has(g.id)) {
@@ -3905,6 +3908,66 @@
   };
   document.querySelectorAll('[data-train-section]').forEach((b) => { b.onclick = () => { returnTo = 'home'; renderTrain(b.dataset.trainSection); show('train'); }; });
 
+  /* ---------- Écran « Reprendre » : affiché à chaque ouverture, tout ce qui est en cours ---------- */
+  function renderWelcome() {
+    const p = playerProfile(), items = [];
+    const card = (icon, title, sub, key, hot) => items.push(`<button class="btn welcome-card${hot ? ' hot' : ''}" type="button" data-resume="${key}"><span class="welcome-icon">${icon}</span><span class="welcome-text"><strong>${title}</strong><small>${sub}</small></span><span class="welcome-go">${L('Continuer', 'Continue')} ›</span></button>`);
+    // partie sur cet appareil (ordinateur, deux joueurs, Maître Sissa, position libre)
+    const saved = store.get('game', null);
+    if (saved && saved.cfg && !saved.result && saved.cfg.mode !== 'online') {
+      const c = saved.cfg, n = Math.ceil((saved.moves || []).length / 2);
+      const who = c.mode === 'local' ? L('Partie à deux joueurs', 'Two-player game') : c.mode === 'coach' ? L('Partie avec Maître Sissa', 'Game with Master Sissa') : `${L('Contre', 'Against')} ${sideNames(c)[c.playerColor === 'w' ? 'black' : 'white']}`;
+      card('♟️', who, `${c.fen ? L('Position libre · ', 'Custom position · ') : ''}${n} ${L('coup', 'move')}${n > 1 ? 's' : ''} ${L('joués', 'played')}`, 'game', true);
+    }
+    // parties en ligne et de tournoi
+    if (ON && ON.user) {
+      const me = ON.user.uid;
+      onlineGames.filter((g) => g.status === 'active').sort((a, b) => b.lastMoveAt - a.lastMoveAt).forEach((g) => {
+        const white = g.white === me, opp = white ? g.blackName : g.whiteName, mine = (g.moves.length % 2 === 0) === white;
+        card(g.tournamentId ? '🏆' : '🌐', `${L('Contre', 'Against')} ${escHtml(opp)}${mine ? L(' · à toi de jouer', ' · your move') : ''}`, `${g.tournamentId ? `${escHtml(g.tournamentName || '')} · ${L('ronde', 'round')} ${g.round} · ` : L('En ligne · ', 'Online · ')}${TC_LABELS[g.tc] || ''} · ${Math.ceil(g.moves.length / 2)} ${L('coups', 'moves')}`, `online:${g.id}`, mine);
+      });
+      const inv = onlineInvites.in.length;
+      if (inv) card('📥', L(`${inv} invitation${inv > 1 ? 's' : ''} à une partie`, `${inv} game invitation${inv > 1 ? 's' : ''}`), onlineInvites.in.map((i) => escHtml(i.fromName)).join(', '), 'invites', true);
+    }
+    // défi du jour
+    const d = dailyState(), okN = [0, 1, 2].filter((k) => d.res[k] === 'ok').length;
+    if (!d.finished) card('📅', L('Défi du jour', 'Daily challenge'), L(`${okN} sur 3 trouvés · série : ${d.streak || 0} jour${(d.streak || 0) > 1 ? 's' : ''}`, `${okN} of 3 found · streak: ${d.streak || 0} day${(d.streak || 0) === 1 ? '' : 's'}`), 'daily', true);
+    // programme de Maître Sissa (problèmes et leçons choisis selon tes erreurs)
+    if (settings.coachEnabled) { const plan = coachPlan(); card('🎓', L('Programme de Maître Sissa', 'Master Sissa\u2019s programme'), escHtml(plan.focus || plan.text), 'program'); }
+    // ouvertures à réviser
+    const sr = openingsSR(), now = Date.now(), due = TR.OPENINGS.filter((o) => sr[o.id] && sr[o.id].due <= now);
+    if (due.length) card('📖', L(`${due.length} ouverture${due.length > 1 ? 's' : ''} à réviser`, `${due.length} opening${due.length > 1 ? 's' : ''} to review`), due.map((o) => o.name).slice(0, 3).join(', '), `open:${due[0].id}`);
+    // leçons pas encore terminées
+    const done = trainDone();
+    const mate = TR.MATES.find((m) => !done[`mate:${m.id}`]);
+    if (mate) card('🧠', L('Les mats', 'Mates'), L(`Prochaine leçon : ${mate.name} (${TR.MATES.filter((m) => done[`mate:${m.id}`]).length}/${TR.MATES.length} apprises)`, `Next lesson: ${mate.name} (${TR.MATES.filter((m) => done[`mate:${m.id}`]).length}/${TR.MATES.length} learned)`), `mate:${mate.id}`);
+    const end = TR.ENDGAMES.find((e) => !done[`end:${e.id}`]);
+    if (end) card('🏁', L('Finales', 'Endgames'), L(`Prochaine finale : ${end.name}`, `Next endgame: ${end.name}`), `end:${end.id}`);
+    // quêtes du jour
+    const q = questState(), qd = q.ids.filter((id) => q.claimed[id]).length;
+    if (qd < 3) card('🎯', L('Quêtes du jour', 'Daily quests'), L(`${qd}/3 accomplies · 30 🌾 chacune`, `${qd}/3 done · 30 🌾 each`), 'quests');
+    $('welcome-title').textContent = p.name ? L(`Bon retour, ${p.name} !`, `Welcome back, ${p.name}!`) : L('Bienvenue !', 'Welcome!');
+    $('welcome-body').innerHTML = `<p class="level-help">${L('Voici tout ce que tu as en cours. Choisis ce que tu veux continuer.', 'Here is everything you have in progress. Choose what to continue.')}</p>
+      <div class="welcome-list">${items.join('')}</div>
+      <div class="welcome-actions"><button class="btn primary" type="button" data-resume="new">${L('Nouvelle partie', 'New game')}</button><button class="btn ghost" type="button" data-resume="home">${L('Menu principal', 'Main menu')}</button></div>`;
+  }
+  $('welcome-body').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-resume]'); if (!b) return;
+    const [kind, id] = b.dataset.resume.split(':');
+    returnTo = 'welcome';
+    if (kind === 'home') return show('home');
+    if (kind === 'new') { renderSetup(); show('setup'); return; }
+    if (kind === 'game') { const saved = store.get('game', null); if (saved && saved.cfg) startGame(saved.cfg, saved.moves, saved.result, saved.flipped, saved.terrain, saved.weather); return; }
+    if (kind === 'online') { const g = onlineGames.find((x) => x.id === id); if (g) openOnlineGame(g); return; }
+    if (kind === 'invites') { onlineSection = 'in'; renderOnline(); show('online'); return; }
+    if (kind === 'daily') { const d = dailyState(); const order = [0, 1, 2].sort((x, y) => (d.res[y] === 'retry') - (d.res[x] === 'retry')); const k = order.find((i) => d.res[i] !== 'ok'); return startDaily(k == null ? 0 : k); }
+    if (kind === 'program') { returnTo = 'problems'; show('problems'); nextActivity(); return; }
+    if (kind === 'open') return startOpening(TR.OPENINGS.find((x) => x.id === id));
+    if (kind === 'mate') return startMateLesson(TR.MATES.find((x) => x.id === id));
+    if (kind === 'end') return startEndgame(TR.ENDGAMES.find((x) => x.id === id));
+    if (kind === 'quests') return openShop();
+  });
+  $('btn-welcome').onclick = () => show('welcome');
   $('btn-continue').onclick = () => {
     const saved = store.get('game', null);
     if (saved && saved.cfg) startGame(saved.cfg, saved.moves, saved.result, saved.flipped, saved.terrain, saved.weather);
@@ -4428,9 +4491,8 @@
   const savedGame = store.get('game', null);
   const savedScreen = store.get('lastScreen', null);
   const restorableScreens = ['home', 'program', 'champions', 'setup', 'game', 'settings', 'problems', 'stats', 'rules', 'about'];
-  const initialScreen = restorableScreens.includes(savedScreen)
-    ? savedScreen
-    : savedGame && savedGame.cfg ? 'game' : 'home';
+  // à chaque ouverture : l'écran « Reprendre » avec tout ce qui est en cours
+  const initialScreen = 'welcome';
   if (initialScreen === 'game' && savedGame && savedGame.cfg) {
     startGame(savedGame.cfg, savedGame.moves, savedGame.result, savedGame.flipped, savedGame.terrain, savedGame.weather);
   } else {
@@ -4438,7 +4500,7 @@
     if (initialScreen === 'settings') renderSettings();
     show(initialScreen);
   }
-  if (initialScreen === 'home' && !playerProfile().nameAsked) setTimeout(promptPlayerName, 250);
+  if (!playerProfile().nameAsked) setTimeout(promptPlayerName, 250);
   openSharedLink();
   setTimeout(analyseNext, 3000);
 

@@ -43,6 +43,7 @@
     'Mon compte': 'My account',
     'Tournois': 'Tournaments',
     'Mon profil': 'My profile',
+    '▶ Reprendre': '▶ Resume',
     'Boutique de Sissa': 'Sissa\'s shop',
     'Apprendre': 'Learn',
     'Défi du jour': 'Daily challenge',
