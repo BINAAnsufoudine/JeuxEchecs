@@ -24,6 +24,7 @@
   const REASONS = {
     mat: L('Échec et mat', 'Checkmate'), pat: L('Pat', 'Stalemate'), materiel: L('Matériel insuffisant', 'Insufficient material'),
     '50coups': L('Règle des 50 coups', '50-move rule'), repetition: L('Triple répétition', 'Threefold repetition'), abandon: L('Abandon', 'Resignation'), import: L('Partie importée', 'Imported game'),
+    temps: L('Temps écoulé', 'Time out'), deconnexion: L('Connexion perdue (nulle)', 'Connection lost (draw)'),
   };
 
   /* Stockage (peut être indisponible : navigation privée, etc.) */
@@ -524,6 +525,7 @@
   /* ---------- Partie ---------- */
   function startGame(conf, uciMoves = [], res = null, flip, terrainId, weatherId) {
     cancelAi();
+    if (conf.mode !== 'online' && typeof stopOnline === 'function') stopOnline();
     replay = null; setReplayUi(false);
     pz = null; marks = null;
     attachBoard('game');
@@ -536,7 +538,7 @@
     flipped = flip !== undefined ? flip : conf.mode !== 'local' && conf.playerColor === 'b';
     selected = -1; hint = null;
     const drillOf = conf.drill && window.TRAINER && window.TRAINER.ENDGAMES.find((x) => x.id === conf.drill);
-    $('game-title').textContent = (drillOf ? `${drillOf.name} · ` : conf.fen ? L('Position libre · ', 'Custom position · ') : '') + (conf.mode === 'local' ? L('Deux joueurs', 'Two players') : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`);
+    $('game-title').textContent = conf.mode === 'online' ? `${L('En ligne', 'Online')} · ${TC_LABELS[conf.online.tc] || ''}` : (drillOf ? `${drillOf.name} · ` : conf.fen ? L('Position libre · ', 'Custom position · ') : '') + (conf.mode === 'local' ? L('Deux joueurs', 'Two players') : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`);
     show('game');
     if (conf.mode === 'coach') {
       coachDockOpen = false;
@@ -547,7 +549,9 @@
     }
     render();
     save();
-    if (conf.mode !== 'local' && !uciMoves.length && conf.fen) {
+    if (conf.mode === 'online') {
+      toast(L(`Tu joues les ${conf.playerColor === 'w' ? 'Blancs' : 'Noirs'}`, `You play ${conf.playerColor === 'w' ? 'White' : 'Black'}`));
+    } else if (conf.mode !== 'local' && !uciMoves.length && conf.fen) {
       toast(L(`Tu joues les ${conf.playerColor === 'w' ? 'Blancs' : 'Noirs'}`, `You play ${conf.playerColor === 'w' ? 'White' : 'Black'}`));
     } else if (conf.mode !== 'local' && !uciMoves.length) {
       const side = conf.playerColor === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
@@ -560,7 +564,7 @@
   }
 
   function save() {
-    if (!game || pz || replay) return;
+    if (!game || pz || replay || (cfg && cfg.mode === 'online')) return;
     store.set('game', { cfg, moves: game.uciList(), result, flipped, terrain: currentTerrain, weather: currentWeather });
   }
 
@@ -860,6 +864,10 @@
       // Replay : les noms des joueurs du PGN remplacent « Blancs » et « Noirs »
       if (replay && (c === 'w' ? replay.white : replay.black)) return c === 'w' ? replay.white : replay.black;
       if (cfg.mode === 'local') return c === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
+      if (cfg.mode === 'online' && onlineGame) {
+        const g = onlineGame, t = onlineTimeLeft(g, c);
+        return `${c === 'w' ? g.whiteName : g.blackName} (${c === 'w' ? g.whiteElo : g.blackElo})${t != null ? ` · ${fmtClock(t)}` : ''}`;
+      }
       if (c === cfg.playerColor) return playerName;
       return cfg.mode === 'coach' ? coachName() : L('Ordinateur', 'Computer');
     };
@@ -899,8 +907,8 @@
 
   function renderActions() {
     const plies = game.history.length;
-    $('btn-undo').disabled = !!result || plies === 0 || (cfg.mode !== 'local' && plies < (cfg.playerColor === 'w' ? 1 : 2));
-    $('btn-hint').disabled = !canInteract(true);
+    $('btn-undo').disabled = cfg.mode === 'online' || !!result || plies === 0 || (cfg.mode !== 'local' && plies < (cfg.playerColor === 'w' ? 1 : 2));
+    $('btn-hint').disabled = cfg.mode === 'online' || !canInteract(true);
     $('btn-resign').disabled = !!result;
   }
 
@@ -908,6 +916,7 @@
     if (!result) return '';
     if (result.result === '1/2-1/2') return L('Partie nulle', 'Draw');
     const winner = result.result === '1-0' ? 'w' : 'b';
+    if (cfg.mode === 'online') return winner === cfg.playerColor ? L('Vous gagnez', 'You win') : L('Votre adversaire gagne', 'Your opponent wins');
     if (cfg.mode !== 'local') return winner === cfg.playerColor ? L('Vous gagnez', 'You win') : cfg.mode === 'coach' ? L(`${coachName()} gagne`, `${coachName()} wins`) : L("L'ordinateur gagne", 'The computer wins');
     return winner === 'w' ? L('Les Blancs gagnent', 'White wins') : L('Les Noirs gagnent', 'Black wins');
   }
@@ -996,6 +1005,7 @@
       else sounds.move();
     }
     if (cfg.mode === 'coach' && !result) coachGameCommentary(res, insight);
+    if (cfg.mode === 'online' && colorOf(res.move.piece) === cfg.playerColor) ON.playMove(cfg.online.id, window.Chess.toUci(res.move), game.history.length - 1, result).catch(() => toast(L('Coup non envoyé : vérifie ta connexion.', 'Move not sent: check your connection.')));
     render();
     save();
     if (!result) maybeAiMove();
@@ -1040,7 +1050,16 @@
       outcome = cfg.mode !== 'local' ? (winner === cfg.playerColor ? 'win' : 'loss') : 'win';
     }
     let opened = 0;
-    if (cfg.mode !== 'local' && cfg.fen) archiveGame();
+    if (cfg.mode === 'online') {
+      const g = onlineGame || {}, oppElo = cfg.playerColor === 'w' ? g.blackElo : g.whiteElo;
+      updatePlayerRating(oppElo || 600, outcome === 'win' ? 1 : outcome === 'draw' ? 0.5 : 0, 32, 'games');
+      ON.setElo(estimatedElo());
+      const arch = store.get('onlineArchive', []);
+      if (!arch.some((x) => x.gameId === cfg.online.id)) {
+        arch.push({ id: Date.now(), gameId: cfg.online.id, moves: game.uciList(), result: result.result, reason: result.reason, white: g.whiteName, black: g.blackName, whiteElo: g.whiteElo, blackElo: g.blackElo, color: cfg.playerColor, tc: g.tc });
+        store.set('onlineArchive', arch.slice(-50));
+      }
+    } else if (cfg.mode !== 'local' && cfg.fen) archiveGame();
     else if (cfg.mode !== 'local') {
       updatePlayerRating(LEVEL_ELO[cfg.level] || 600, outcome === 'win' ? 1 : outcome === 'draw' ? 0.5 : 0, 32, 'games');
       recordStat(cfg.level, outcome); archiveGame();
@@ -1057,7 +1076,7 @@
     if (drillOk) { const d = store.get('trainDone', {}); d[`end:${drill.id}`] = Date.now(); store.set('trainDone', d); }
     const snap = { moves: game.uciList(), cfg: { ...cfg }, result: result.result };
     // L'analyse démarre tout de suite : le bilan est souvent prêt quand on l'ouvre
-    if (cfg.mode !== 'local' && snap.moves.length >= 8) requestReview(cfg.fen || window.Chess.START_FEN, snap.moves).catch(() => {});
+    if (cfg.mode !== 'local' && cfg.mode !== 'online' && snap.moves.length >= 8) requestReview(cfg.fen || window.Chess.START_FEN, snap.moves).catch(() => {});
     if (cfg.mode === 'local' && !replay) {
       const local = store.get('localArchive', []);
       local.push({ id: Date.now(), mode: 'local', fen: cfg.fen || undefined, moves: game.uciList(), result: result.result, reason: result.reason });
@@ -1069,9 +1088,9 @@
         text: (drill ? (drillOk ? L(`Exercice réussi : ${drill.name}. `, `Exercise passed: ${drill.name}. `) : L(`Exercice raté : ${drill.name}. Relis la méthode et réessaie. `, `Exercise failed: ${drill.name}. Reread the method and try again. `)) : '') + REASONS[result.reason] + L(` · ${Math.ceil(game.history.length / 2)} coups`, ` · ${Math.ceil(game.history.length / 2)} moves`) + (opened ? L(`\nNiveau débloqué : ${LEVEL_NAMES[opened]} !`, `\nLevel unlocked: ${LEVEL_NAMES[opened]}!`) : ''),
         actions: [
           ...(opened ? [{ label: L(`Jouer ${LEVEL_NAMES[opened]}`, `Play ${LEVEL_NAMES[opened]}`), primary: true, onClick: () => startGame({ ...cfg, level: opened, playerColor: randomColor() }) }] : []),
-          { label: L('Rejouer', 'Play again'), primary: true, onClick: () => startGame({ ...cfg, playerColor: cfg.fen ? cfg.playerColor : randomColor() }) },
+          ...(cfg.mode === 'online' ? [{ label: L('Jouer en ligne', 'Play online'), primary: true, onClick: () => { stopOnline(); renderOnline(); returnTo = 'home'; show('online'); } }] : [{ label: L('Rejouer', 'Play again'), primary: true, onClick: () => startGame({ ...cfg, playerColor: cfg.fen ? cfg.playerColor : randomColor() }) }]),
           ...(cfg.fen ? [{ label: L('Modifier la position', 'Edit the position'), onClick: () => openEditor(cfg.fen) }] : []),
-          ...(cfg.mode !== 'local' ? [{ label: L('Choisir un niveau', 'Choose a level'), onClick: () => { renderSetup(); returnTo = 'home'; show('setup'); } }] : []),
+          ...(cfg.mode !== 'local' && cfg.mode !== 'online' ? [{ label: L('Choisir un niveau', 'Choose a level'), onClick: () => { renderSetup(); returnTo = 'home'; show('setup'); } }] : []),
           ...(snap.moves.length >= 8 ? [{ label: L('Bilan de Maître Sissa', 'Master Sissa’s review'), onClick: () => showBilan(snap) }] : []),
           { label: L('Voir le plateau', 'View the board'), ghost: true },
           { label: L('Accueil', 'Home'), ghost: true, onClick: () => show('home') },
@@ -1168,7 +1187,7 @@
     if (res) afterMove(res);
   }
   function maybeAiMove() {
-    if (!game || result || cfg.mode === 'local' || game.turn === cfg.playerColor) return;
+    if (!game || result || cfg.mode === 'local' || cfg.mode === 'online' || game.turn === cfg.playerColor) return;
     thinking = true;
     renderStatus(); renderActions();
     // Petit délai pour que le coup du joueur s'affiche d'abord
@@ -1302,6 +1321,7 @@
           cancelAi();
           const loser = cfg.mode !== 'local' ? cfg.playerColor : game.turn;
           result = { result: loser === 'w' ? '0-1' : '1-0', reason: 'abandon' };
+          if (cfg.mode === 'online') ON.endGame(cfg.online.id, result.result, 'abandon');
           finish();
         } },
         { label: L('Continuer à jouer', 'Keep playing'), ghost: true },
@@ -2533,7 +2553,7 @@
 
   /* ---------- Accueil ---------- */
   const randomColor = () => (Math.random() < 0.5 ? 'w' : 'b');
-  $('btn-player-name').onclick = promptPlayerName;
+  $('btn-player-name').onclick = () => (ON && ON.user ? openAccount() : promptPlayerName());
   $('btn-program').onclick = () => { returnTo = 'home'; show('program'); };
   $('btn-progress-menu').onclick = () => {
     const open = $('progress-submenu').hidden;
@@ -2696,6 +2716,262 @@
     if (c) { ed.castle[c.dataset.castle] = c.checked; renderEditor(); }
   });
   $('btn-editor').onclick = () => openEditor(store.get('editorFen', null));
+  /* ---------- En ligne : compte, progression sauvegardée, invitations et parties à distance ---------- */
+  const ON = window.Online;
+  const TC_LABELS = L({ unlim: 'Temps illimité', '3d': '3 jours par coup', '1d': '1 jour par coup', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' },
+    { unlim: 'Unlimited time', '3d': '3 days per move', '1d': '1 day per move', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' });
+  let justSignedUp = false, progressDirty = false, inviteStop = null, gamesStop = null, onlineInvites = { in: [], out: [] }, onlineGames = [];
+  const SKIP_SYNC = new Set(['lastScreen', 'onlineSession', 'onlineSynced']);
+  // toute modification de la progression sera envoyée au compte
+  const rawSet = store.set.bind(store);
+  store.set = (key, value) => { rawSet(key, value); if (!SKIP_SYNC.has(key)) progressDirty = true; };
+  function localProgress() {
+    const data = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('cavalier.') && !SKIP_SYNC.has(k.slice(9))) { try { data[k.slice(9)] = JSON.parse(localStorage.getItem(k)); } catch { /* ignoré */ } }
+    }
+    return data;
+  }
+  const hasProgress = (d) => !!(d && ((d.archive && d.archive.length) || (d.stats && Object.keys(d.stats).length) || (d.pzdone && Object.keys(d.pzdone).length) || (d.coach && d.coach.themes && Object.keys(d.coach.themes).length)));
+  function replaceLocal(data) {
+    for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.startsWith('cavalier.') && !SKIP_SYNC.has(k.slice(9))) localStorage.removeItem(k); }
+    for (const [k, v] of Object.entries(data || {})) rawSet(k, v);
+  }
+  async function pushProgress() {
+    if (!ON || !ON.user || !progressDirty) return;
+    progressDirty = false;
+    try { await ON.saveProgress(localProgress()); } catch { progressDirty = true; }
+  }
+  setInterval(pushProgress, 45000);
+  window.addEventListener('pagehide', pushProgress);
+  // Après connexion : récupère la progression du compte, ou propose d'importer celle de l'appareil
+  async function syncAfterLogin(user, profile) {
+    const local = localProgress();
+    let cloud = null;
+    try { cloud = await ON.loadProgress(); } catch { cloud = null; }
+    const synced = store.get('onlineSynced', null) === user.uid;
+    const name = profile && profile.pseudo;
+    if (name) { const p = playerProfile(); p.name = name; p.nameAsked = true; store.set('player', p); }
+    if (synced && cloud) { refreshHome(); return; }
+    if (!hasProgress(cloud) && hasProgress(local)) {
+      modal({ title: L('Garder ta progression ?', 'Keep your progress?'),
+        text: L('Cet appareil contient déjà une progression (parties, problèmes, niveaux). Veux-tu l\'importer dans ton compte ?', 'This device already holds progress (games, puzzles, levels). Do you want to import it into your account?'),
+        actions: [
+          { label: L('Importer ma progression', 'Import my progress'), primary: true, onClick: async () => { rawSet('onlineSynced', user.uid); progressDirty = true; await pushProgress(); toast(L('Progression importée dans ton compte.', 'Progress imported into your account.')); } },
+          { label: L('Repartir de zéro', 'Start from scratch'), ghost: true, onClick: async () => { const keep = { settings: store.get('settings', {}), player: store.get('player', {}) }; replaceLocal(keep); rawSet('onlineSynced', user.uid); progressDirty = true; await pushProgress(); location.reload(); } },
+        ] });
+      return;
+    }
+    if (hasProgress(cloud) && !synced) {
+      // la progression du compte remplace celle de l'appareil
+      replaceLocal({ ...cloud, settings: store.get('settings', cloud.settings || {}) });
+      rawSet('onlineSynced', user.uid);
+      if (name) { const p = playerProfile(); p.name = name; rawSet('player', p); }
+      location.reload();
+      return;
+    }
+    rawSet('onlineSynced', user.uid);
+    progressDirty = true; pushProgress();
+    refreshHome();
+  }
+  function onUserChange(user, profile) {
+    rawSet('onlineSession', !!user);
+    $('btn-account').textContent = user ? L('Mon compte', 'My account') : L('Se connecter', 'Sign in');
+    if (inviteStop) { inviteStop(); inviteStop = null; }
+    if (gamesStop) { gamesStop(); gamesStop = null; }
+    if (user) {
+      syncAfterLogin(user, profile);
+      let known = null;
+      inviteStop = ON.watchInvites((all) => {
+        onlineInvites = all;
+        const ids = all.in.map((i) => i.id);
+        if (known) for (const inv of all.in) if (!known.includes(inv.id)) toast(L(`${inv.fromName} t'invite à une partie (${TC_LABELS[inv.tc]}).`, `${inv.fromName} invites you to a game (${TC_LABELS[inv.tc]}).`));
+        known = ids;
+        updateOnlineBadge();
+        if (document.body.dataset.screen === 'online') renderOnline();
+      });
+      gamesStop = ON.watchGames((games) => {
+        onlineGames = games;
+        updateOnlineBadge();
+        if (document.body.dataset.screen === 'online') renderOnline();
+        // une invitation que j'ai envoyée vient d'être acceptée : la partie s'ouvre
+        const fresh = games.find((g) => g.status === 'active' && !g.moves.length && g.createdAt > Date.now() - 20000 && !(cfg && cfg.online && cfg.online.id === g.id));
+        if (fresh && document.body.dataset.screen === 'online') openOnlineGame(fresh);
+      });
+    } else { onlineInvites = { in: [], out: [] }; onlineGames = []; updateOnlineBadge(); }
+    if (document.body.dataset.screen === 'account') renderAccount();
+    if (document.body.dataset.screen === 'online') renderOnline();
+  }
+  function updateOnlineBadge() {
+    const myTurn = onlineGames.filter((g) => g.status === 'active' && ((g.moves.length % 2 === 0) === (g.white === (ON.user && ON.user.uid)))).length;
+    const n = onlineInvites.in.length + myTurn;
+    $('online-badge').hidden = !n; $('online-badge').textContent = n;
+  }
+  if (ON) {
+    ON.onUser(onUserChange);
+    if (store.get('onlineSession', false)) ON.load().catch(() => {});
+  }
+  const field = (id, label, type = 'text', value = '', extra = '') => `<label class="field-label" for="${id}">${label}</label><input id="${id}" class="profile-name-input" type="${type}" value="${escHtml(value)}" ${extra}>`;
+  let accountMode = 'signin';
+  function renderAccount() {
+    const body = $('account-body'), u = ON && ON.user, p = ON && ON.profile;
+    if (u) {
+      body.innerHTML = `<p class="level-help">${L('Connecté avec', 'Signed in as')} <b>${escHtml(u.email)}</b>${p ? ` · ${L('pseudo', 'nickname')} <b>${escHtml(p.pseudo)}</b>` : ''}</p>
+        ${field('acc-pseudo', L('Changer de pseudo', 'Change nickname'), 'text', p ? p.pseudo : '', 'maxlength="24" autocomplete="nickname"')}
+        <button id="acc-save-pseudo" class="btn primary wide" type="button">${L('Enregistrer le pseudo', 'Save nickname')}</button>
+        ${field('acc-pw-old', L('Mot de passe actuel', 'Current password'), 'password', '', 'autocomplete="current-password"')}
+        ${field('acc-pw-new', L('Nouveau mot de passe (6 caractères au moins)', 'New password (at least 6 characters)'), 'password', '', 'autocomplete="new-password"')}
+        <button id="acc-save-pw" class="btn wide" type="button">${L('Changer le mot de passe', 'Change password')}</button>
+        <button id="acc-logout" class="btn ghost wide" type="button">${L('Se déconnecter', 'Sign out')}</button>
+        <p id="acc-msg" class="ed-error" role="status"></p>`;
+    } else {
+      const up = accountMode === 'signup';
+      body.innerHTML = `<div class="ed-seg" id="acc-tabs"><button type="button" data-mode="signin" class="${up ? '' : 'on'}">${L('Se connecter', 'Sign in')}</button><button type="button" data-mode="signup" class="${up ? 'on' : ''}">${L('Créer un compte', 'Create an account')}</button></div>
+        <p class="level-help">${up ? L('Ton compte garde ta progression sur tous tes appareils et te permet de jouer en ligne avec tes amis.', 'Your account keeps your progress on all your devices and lets you play online with your friends.') : L('Connecte-toi avec ton adresse e-mail et ton mot de passe.', 'Sign in with your e-mail address and password.')}</p>
+        ${up ? field('acc-pseudo', L('Pseudo (visible par les autres joueurs)', 'Nickname (visible to other players)'), 'text', playerProfile().name || '', 'maxlength="24" autocomplete="nickname"') : ''}
+        ${field('acc-email', L('Adresse e-mail', 'E-mail address'), 'email', '', 'autocomplete="email"')}
+        ${field('acc-pw', L('Mot de passe', 'Password') + (up ? L(' (6 caractères au moins)', ' (at least 6 characters)') : ''), 'password', '', `autocomplete="${up ? 'new-password' : 'current-password'}"`)}
+        <button id="acc-go" class="btn primary wide" type="button">${up ? L('Créer mon compte', 'Create my account') : L('Se connecter', 'Sign in')}</button>
+        ${up ? '' : `<button id="acc-forgot" class="btn ghost wide" type="button">${L('Mot de passe oublié ?', 'Forgot your password?')}</button>`}
+        <p id="acc-msg" class="ed-error" role="status"></p>`;
+    }
+  }
+  const accMsg = (t, ok) => { const m = $('acc-msg'); if (m) { m.textContent = t; m.style.color = ok ? 'var(--accent, #e9b949)' : ''; } };
+  async function accountAction(fn, okText) {
+    accMsg(L('Un instant…', 'One moment…'), true);
+    try { await fn(); if (okText) accMsg(okText, true); } catch (e) { accMsg(ON.explain(e)); }
+  }
+  $('account-body').addEventListener('click', (e) => {
+    const t = e.target.closest('button'); if (!t) return;
+    const v = (id) => ($(id) ? $(id).value : '');
+    if (t.dataset.mode) { accountMode = t.dataset.mode; renderAccount(); return; }
+    if (t.id === 'acc-go') {
+      if (accountMode === 'signup') accountAction(async () => { justSignedUp = true; await ON.signUp(v('acc-pseudo'), v('acc-email'), v('acc-pw'), estimatedElo()); }, L('Compte créé, bienvenue !', 'Account created, welcome!'));
+      else accountAction(() => ON.signIn(v('acc-email'), v('acc-pw')), L('Connecté !', 'Signed in!'));
+    }
+    // mot de passe oublié : un lien de renouvellement est envoyé par e-mail
+    if (t.id === 'acc-forgot') {
+      if (!v('acc-email')) { accMsg(L('Indique d\'abord ton adresse e-mail ci-dessus.', 'First enter your e-mail address above.')); return; }
+      accountAction(() => ON.resetPassword(v('acc-email')), L('Un e-mail pour choisir un nouveau mot de passe vient de t\'être envoyé.', 'An e-mail to choose a new password has just been sent to you.'));
+    }
+    if (t.id === 'acc-save-pseudo') accountAction(async () => { const p = await ON.changePseudo(v('acc-pseudo')); const pl = playerProfile(); pl.name = p.pseudo; store.set('player', pl); refreshHome(); }, L('Pseudo enregistré.', 'Nickname saved.'));
+    if (t.id === 'acc-save-pw') accountAction(() => ON.changePassword(v('acc-pw-old'), v('acc-pw-new')), L('Mot de passe changé.', 'Password changed.'));
+    if (t.id === 'acc-logout') accountAction(async () => { await pushProgress(); await ON.signOut(); rawSet('onlineSynced', null); }, L('Déconnecté.', 'Signed out.'));
+  });
+  function openAccount() { returnTo = 'home'; renderAccount(); show('account'); if (ON) ON.load().catch(() => accMsg(L('Impossible de joindre le serveur. Vérifie ta connexion.', 'Cannot reach the server. Check your connection.'))); }
+  $('btn-account').onclick = openAccount;
+
+  /* Jouer en ligne */
+  function renderOnline() {
+    const body = $('online-body'), u = ON && ON.user;
+    if (!u) {
+      body.innerHTML = `<p class="level-help">${L('Pour jouer en ligne avec un ami, connecte-toi ou crée un compte : tes amis t\'invitent avec ton pseudo.', 'To play online with a friend, sign in or create an account: your friends invite you with your nickname.')}</p><button id="on-login" class="btn primary wide" type="button">${L('Se connecter', 'Sign in')}</button>`;
+      return;
+    }
+    const me = u.uid, myName = (ON.profile && ON.profile.pseudo) || '';
+    const tcOptions = Object.keys(TC_LABELS).map((k) => `<option value="${k}"${k === store.get('onlineTc', '10m') ? ' selected' : ''}>${TC_LABELS[k]}</option>`).join('');
+    let html = `<p class="level-help">${L(`Ton pseudo : <b>${escHtml(myName)}</b>. Donne-le à tes amis pour qu'ils t'invitent.`, `Your nickname: <b>${escHtml(myName)}</b>. Give it to your friends so they can invite you.`)}</p>
+      <h3 class="train-h">${L('Inviter un joueur', 'Invite a player')}</h3>
+      ${field('on-pseudo', L('Pseudo du joueur', 'Player\'s nickname'), 'text', '', 'maxlength="24"')}
+      <label class="field-label" for="on-tc">${L('Cadence', 'Time control')}</label><select id="on-tc" class="profile-name-input">${tcOptions}</select>
+      <button id="on-invite" class="btn primary wide" type="button">${L('Envoyer l\'invitation', 'Send the invitation')}</button><p id="on-msg" class="ed-error" role="status"></p>`;
+    const inv = onlineInvites.in, out = onlineInvites.out;
+    html += `<h3 class="train-h">${L('Invitations reçues', 'Invitations received')}</h3>` + (inv.length ? `<div class="replay-items">${inv.map((i) => `<div class="replay-row"><div class="btn replay-item"><strong>${escHtml(i.fromName)} (${i.fromElo})</strong><span>${TC_LABELS[i.tc]}</span></div><button class="btn primary" data-accept="${i.id}">${L('Accepter', 'Accept')}</button><button class="btn ghost" data-decline="${i.id}">✕</button></div>`).join('')}</div>` : `<p class="level-help">${L('Aucune pour le moment.', 'None for now.')}</p>`);
+    if (out.length) html += `<h3 class="train-h">${L('Invitations envoyées', 'Invitations sent')}</h3><div class="replay-items">${out.map((i) => `<div class="replay-row"><div class="btn replay-item"><strong>${escHtml(i.toName)} (${i.toElo})</strong><span>${TC_LABELS[i.tc]} · ${L('en attente', 'waiting')}</span></div><button class="btn ghost" data-cancel="${i.id}">${L('Annuler', 'Cancel')}</button></div>`).join('')}</div>`;
+    const active = onlineGames.filter((g) => g.status === 'active').sort((a, b) => b.lastMoveAt - a.lastMoveAt);
+    html += `<h3 class="train-h">${L('Parties en cours', 'Games in progress')}</h3>` + (active.length ? `<div class="replay-items">${active.map((g) => {
+      const white = g.white === me, opp = white ? `${g.blackName} (${g.blackElo})` : `${g.whiteName} (${g.whiteElo})`;
+      const mine = (g.moves.length % 2 === 0) === white;
+      return `<button class="btn replay-item" data-game="${g.id}"><strong>${L('contre', 'vs')} ${escHtml(opp)}${mine ? L(' · à toi de jouer', ' · your move') : ''}</strong><span>${TC_LABELS[g.tc]} · ${L('tu as les', 'you play')} ${white ? L('Blancs', 'White') : L('Noirs', 'Black')} · ${Math.ceil(g.moves.length / 2)} ${L('coups', 'moves')}</span></button>`;
+    }).join('')}</div>` : `<p class="level-help">${L('Aucune partie en cours.', 'No game in progress.')}</p>`);
+    body.innerHTML = html;
+  }
+  $('online-body').addEventListener('click', async (e) => {
+    const t = e.target.closest('button'); if (!t) return;
+    if (t.id === 'on-login') return openAccount();
+    const msg = (x, ok) => { const m = $('on-msg'); if (m) { m.textContent = x; m.style.color = ok ? 'var(--accent, #e9b949)' : ''; } };
+    if (t.id === 'on-invite') {
+      const tc = $('on-tc').value; store.set('onlineTc', tc);
+      msg(L('Envoi…', 'Sending…'), true);
+      try { const o = await ON.invite($('on-pseudo').value, tc); msg(L(`Invitation envoyée à ${o.pseudo}. La partie s'ouvrira dès qu'il ou elle l'acceptera.`, `Invitation sent to ${o.pseudo}. The game will open as soon as they accept.`), true); } catch (err) { msg(ON.explain(err)); }
+      return;
+    }
+    const find = (id) => [...onlineInvites.in, ...onlineInvites.out].find((i) => i.id === id);
+    if (t.dataset.accept) { try { const id = await ON.answerInvite(find(t.dataset.accept), true); const g = onlineGames.find((x) => x.id === id); if (g) openOnlineGame(g); else toast(L('Partie créée : elle apparaît dans tes parties en cours.', 'Game created: it appears in your games in progress.')); } catch (err) { toast(ON.explain(err)); } }
+    if (t.dataset.decline || t.dataset.cancel) { try { await ON.answerInvite(find(t.dataset.decline || t.dataset.cancel), false); } catch (err) { toast(ON.explain(err)); } }
+    if (t.dataset.game) { const g = onlineGames.find((x) => x.id === t.dataset.game); if (g) openOnlineGame(g); }
+  });
+  $('btn-online').onclick = () => {
+    returnTo = 'home';
+    // sans pseudo, on le demande avant de jouer
+    renderOnline(); show('online');
+    if (ON) ON.load().then(() => { if (!ON.user) renderOnline(); }).catch(() => {});
+  };
+
+  // Partie en ligne : le plateau suit la partie stockée sur le serveur
+  let onlineStop = null, onlineTimer = null, onlineGame = null;
+  function stopOnline() { if (onlineStop) onlineStop(); onlineStop = null; clearInterval(onlineTimer); onlineTimer = null; onlineGame = null; }
+  function openOnlineGame(g) {
+    stopOnline();
+    const me = ON.user.uid, color = g.white === me ? 'w' : 'b';
+    onlineGame = g;
+    startGame({ mode: 'online', playerColor: color, level: 1, online: { id: g.id, tc: g.tc } }, g.moves, null, color === 'b');
+    onlineStop = ON.watchGame(g.id, onOnlineUpdate);
+    onlineTimer = setInterval(onlineTick, 1000);
+    ON.heartbeat(g.id);
+  }
+  function onOnlineUpdate(g) {
+    if (!cfg || cfg.mode !== 'online' || cfg.online.id !== g.id) return;
+    onlineGame = g;
+    // coups de l'adversaire pas encore joués sur ce plateau
+    let played = null;
+    while (game.history.length < g.moves.length) {
+      const r = game.playUci(g.moves[game.history.length]);
+      if (!r) break;
+      played = r;
+    }
+    if (played) {
+      animateNext = true;
+      const st = game.status();
+      if (st.over && !result) { result = { result: st.result, reason: st.reason, ultimateId: `${game.history.length}-${Date.now()}` }; if (st.reason === 'mat') shout(L('Échec et mat !', 'Checkmate!')); finish(); }
+      else if (game.inCheck()) { sounds.check(); shout(L('Échec !', 'Check!')); } else if (played.move.captured) sounds.capture(); else sounds.move();
+    }
+    if (g.status === 'over' && !result) { result = { result: g.result, reason: g.reason || 'abandon' }; finish(); }
+    render();
+  }
+  // Pendule, délai par coup et coupure de connexion (nulle après 30 s sans nouvelles sur une partie chronométrée)
+  function onlineTimeLeft(g, side) {
+    const tc = ON.TIME_CONTROLS[g.tc] || {};
+    const running = g.status === 'active' && (g.moves.length % 2 === 0 ? 'w' : 'b') === side;
+    if (tc.ms) return g.clock[side] - (running && g.moves.length ? Date.now() - g.lastMoveAt : 0);
+    if (tc.perMove) return running ? tc.perMove - (Date.now() - g.lastMoveAt) : tc.perMove;
+    return null;
+  }
+  const fmtClock = (ms) => {
+    if (ms == null) return '';
+    ms = Math.max(0, ms);
+    if (ms >= 86400000) return `${Math.floor(ms / 86400000)} ${L('j', 'd')} ${Math.floor(ms % 86400000 / 3600000)} h`;
+    if (ms >= 3600000) return `${Math.floor(ms / 3600000)} h ${String(Math.floor(ms % 3600000 / 60000)).padStart(2, '0')}`;
+    return `${Math.floor(ms / 60000)}:${String(Math.floor(ms % 60000 / 1000)).padStart(2, '0')}`;
+  };
+  function onlineTick() {
+    const g = onlineGame;
+    if (!g || !cfg || cfg.mode !== 'online') return stopOnline();
+    if (g.status !== 'active' || result) { renderPlayers(); return; }
+    const tc = ON.TIME_CONTROLS[g.tc] || {}, side = g.moves.length % 2 === 0 ? 'w' : 'b';
+    const left = onlineTimeLeft(g, side);
+    if (left != null && left <= 0) {
+      ON.endGame(g.id, side === 'w' ? '0-1' : '1-0', 'temps');
+    } else if (tc.ms) {
+      const opp = cfg.playerColor === 'w' ? g.black : g.white;
+      const seen = g.seen && g.seen[opp];
+      if (seen && Date.now() - seen > 30000) ON.endGame(g.id, '1/2-1/2', 'deconnexion');
+    }
+    if (Date.now() % 10000 < 1000) ON.heartbeat(g.id);
+    renderPlayers();
+  }
+
   /* ---------- Apprendre : mats guidés, finales de base, ouvertures, parties célèbres, défi du jour ---------- */
   const TR = window.TRAINER || { MATES: [], ENDGAMES: [], OPENINGS: [], FAMOUS: [] };
   const DAY = 86400000;
@@ -2899,7 +3175,7 @@
   $('btn-settings').onclick = () => { returnTo = 'home'; renderSettings(); show('settings'); };
 
   /* ---------- Replay ---------- */
-  const MODE_LABELS = L({ ai: 'Contre ordinateur', coach: 'Partie coachée', local: 'Deux joueurs', free: 'Positions libres' }, { ai: 'Against the computer', coach: 'Coached game', local: 'Two players', free: 'Custom positions' });
+  const MODE_LABELS = L({ ai: 'Contre ordinateur', coach: 'Partie coachée', local: 'Deux joueurs', free: 'Positions libres', online: 'En ligne' }, { ai: 'Against the computer', coach: 'Coached game', local: 'Two players', free: 'Custom positions', online: 'Online' });
   const RESULT_LABELS = L({ '1-0': 'Victoire des Blancs', '0-1': 'Victoire des Noirs', '1/2-1/2': 'Partie nulle', '*': 'Partie inachevée' }, { '1-0': 'White wins', '0-1': 'Black wins', '1/2-1/2': 'Draw', '*': 'Unfinished game' });
   const escHtml = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtDateTime = (id) => new Date(id).toLocaleString(LOCALE, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
@@ -3263,7 +3539,7 @@
 
   function openReplayList(mode) {
     // Les parties jouées depuis une position construite ont leur propre rubrique, à deux ou contre l'ordinateur
-    const source = mode === 'free'
+    const source = mode === 'online' ? store.get('onlineArchive', []) : mode === 'free'
       ? [...store.get('archive', []), ...store.get('localArchive', []).map((g) => ({ ...g, mode: 'local' }))].filter((g) => g.fen).sort((a, b) => a.id - b.id)
       : (mode === 'local' ? store.get('localArchive', []) : store.get('archive', []).filter((g) => (g.mode || 'ai') === mode)).filter((g) => !g.fen);
     $('replay-list-title').textContent = `Replay · ${MODE_LABELS[mode]}`;
@@ -3273,6 +3549,7 @@
     } else {
       body.innerHTML = '<div class="replay-items">' + source.map((g, i) => [g, i]).reverse().map(([g, i]) => {
         const gm = mode === 'free' ? g.mode || 'ai' : mode;
+        if (mode === 'online') return `<button type="button" class="btn replay-item" data-i="${i}"><strong>${escHtml(fmtDateTime(g.id))}</strong><span>${escHtml(g.white)} (${g.whiteElo}) – ${escHtml(g.black)} (${g.blackElo}) · ${TC_LABELS[g.tc] || ''} · ${RESULT_LABELS[g.result] || RESULT_LABELS['*']}</span></button>`;
         const who = (mode === 'free' ? ` · ${MODE_LABELS[gm]}` : '') + (gm === 'local' ? '' : ` · ${g.champion && champById(g.champion) ? champById(g.champion).name : mode === 'coach' ? L('Maître Sissa', 'Master Sissa') : LEVEL_NAMES[g.level] || ''} · ${L('vous', 'you')}: ${g.color === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black')}`);
         return `<button type="button" class="btn replay-item" data-i="${i}"><strong>${escHtml(fmtDateTime(g.id))}</strong><span>${Math.ceil(g.moves.length / 2)} ${L('coups', 'moves')}${escHtml(who)} · ${RESULT_LABELS[g.result] || RESULT_LABELS['*']}</span></button>`;
       }).join('') + '</div>';
@@ -3281,6 +3558,7 @@
       const b = e.target.closest('.replay-item'); if (!b) return;
       const g = source[Number(b.dataset.i)]; if (!g) return;
       const gm = mode === 'free' ? g.mode || 'ai' : mode;
+      if (mode === 'online') return startReplay({ moves: g.moves, result: g.result, title: `${MODE_LABELS.online} · ${fmtDateTime(g.id)}`, flipped: g.color === 'b', date: pgnDate(g.id), white: `${g.white} (${g.whiteElo})`, black: `${g.black} (${g.blackElo})` }, () => openReplayList(mode));
       startReplay({ moves: g.moves, fen: g.fen, result: g.result, title: `${MODE_LABELS[mode]} · ${fmtDateTime(g.id)}`, flipped: gm !== 'local' && g.color === 'b', date: pgnDate(g.id), ...sideNames({ mode: gm, playerColor: g.color, level: g.level, champion: g.champion }) }, () => openReplayList(mode));
     };
     returnTo = 'home';

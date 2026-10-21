@@ -505,3 +505,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .legend-board .l { background: #f1dfb4; }
 .legend-board .d { background: #b8874f; color: #fff6e0; }
 .legend-coach .bubble p { margin: 4px 0 0; }
+
+/* En ligne */
+.menu-badge { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 8px; border-radius: 9px; background: #e5484d; color: #fff; font-size: 0.75rem; line-height: 18px; text-align: center; }
+#online-body .replay-row { display: flex; gap: 8px; align-items: stretch; }
+#online-body .replay-row .replay-item { flex: 1; }
+.player-profile .profile-edit + .profile-edit { margin-top: 6px; }
