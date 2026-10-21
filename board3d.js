@@ -2704,10 +2704,19 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     findRopes(board) {
       const pairs = [];
       const lineClear = (a, b, step) => { for (let s = a + step; s !== b; s += step) if (board[s]) return false; return true; };
-      // pions côte à côte sur la même rangée : une chaîne forte (une fois sortis de leur rangée de départ)
-      for (const pawn of ['P', 'p']) for (let i = 0; i < 64; i++) {
-        const home = pawn === 'P' ? 6 : 1;
-        if (board[i] === pawn && (i & 7) < 7 && board[i + 1] === pawn && i >> 3 !== home) pairs.push([i, i + 1]);
+      // Pions : ceux des colonnes qui se suivent forment un îlot et sont liés, quelle que soit leur rangée.
+      // Un pion isolé (aucun pion ami sur les colonnes voisines) ou doublé (deux sur la même colonne) est marqué en rouge.
+      this.weakPawns = [];
+      for (const pawn of ['P', 'p']) {
+        const files = Array.from({ length: 8 }, () => []);
+        for (let i = 0; i < 64; i++) if (board[i] === pawn) files[i & 7].push(i);
+        for (let f = 0; f < 8; f++) {
+          if (!files[f].length) continue;
+          const isolated = !(f > 0 && files[f - 1].length) && !(f < 7 && files[f + 1].length);
+          if (isolated || files[f].length > 1) this.weakPawns.push(...files[f]);
+          // chaque pion est relié à un pion de la colonne voisine de droite (l'îlot entier est ainsi lié)
+          if (f < 7 && files[f + 1].length) for (const a of files[f]) pairs.push([a, files[f + 1][0]]);
+        }
       }
       for (const piece of ['R', 'r', 'Q', 'q', 'B', 'b', 'N', 'n']) {
         const kind = piece.toLowerCase(), sqs = [];
@@ -2754,8 +2763,27 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const pulse = 0.6 + Math.abs(Math.sin(t * 2.6)) * 0.4;
       this.auraMat.w.opacity = pulse; this.auraMat.b.opacity = pulse;
       this.auraMat.rw.opacity = this.auraMat.rb.opacity = 0.35 + Math.abs(Math.sin(t * 2.6)) * 0.45;
-      // pièces liées : un halo de puissance à leurs pieds (une fois arrivées sur leur case)
+      // pions faibles (isolés ou doublés) : halo rouge, prioritaire sur le halo des pièces liées
+      if (!this.auraMat.red) {
+        // rouge en mélange normal : en lumière additive, il pâlirait sur les cases claires
+        this.auraMat.red = this.auraMat.w.clone(); this.auraMat.red.color.set(0xe0201a); this.auraMat.red.blending = T.NormalBlending;
+        this.auraMat.rred = this.auraMat.rw.clone(); this.auraMat.rred.color.set(0xff2a1f); this.auraMat.rred.blending = T.NormalBlending;
+      }
+      this.auraMat.red.opacity = pulse; this.auraMat.rred.opacity = this.auraMat.rw.opacity;
       const glowing = new Set();
+      for (const sq of this.weakPawns || []) {
+        const c = this.chars.get(sq);
+        if (!c || c.anim) continue;
+        glowing.add(c);
+        const p = c.holder.position;
+        const halo = new T.Mesh(this.haloGeo, this.auraMat.red);
+        halo.rotation.x = -Math.PI / 2; halo.position.set(p.x, 0.022, p.z); halo.scale.setScalar(1 + Math.sin(t * 2.6 + sq) * 0.06); halo.userData.shared = true;
+        this.ropeGroup.add(halo);
+        const ring = new T.Mesh(this.auraRing, this.auraMat.rred);
+        ring.rotation.x = -Math.PI / 2; ring.position.set(p.x, 0.026, p.z); ring.scale.setScalar(0.8 + ((t * 0.6 + sq * 0.13) % 1) * 0.6); ring.userData.shared = true;
+        this.ropeGroup.add(ring);
+      }
+      // pièces liées : un halo de puissance à leurs pieds (une fois arrivées sur leur case)
       for (const [a, b] of this.ropes || []) {
         const ca = this.chars.get(a), cb = this.chars.get(b);
         if (!ca || !cb || ca.anim || cb.anim) continue;
