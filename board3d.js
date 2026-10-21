@@ -231,6 +231,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.terrain = terrain;
       this.scene.background.setHex(terrain.sky);
       this.scene.fog = new this.THREE.Fog(terrain.sky, 32, 85);
+      this.skyBase = new this.THREE.Color(terrain.sky);
       this.floor.material.color.setHex(terrain.ground);
       this.base.material.color.setHex(terrain.wood);
       this.hemi.color.setHex(terrain.sky);
@@ -247,6 +248,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const sky = new T.Color(terrain.sky).lerp(new T.Color(weather.tint), overcast);
       this.scene.background.copy(sky);
       this.scene.fog = new T.Fog(sky, weather.fogFar * 0.38, weather.fogFar);
+      this.skyBase = sky.clone();
       this.hemi.intensity = weather.hemi;
       this.hemi.color.copy(sky);
       this.sun.intensity = weather.sun;
@@ -345,6 +347,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       // Ciel assombri par une technique (éclairs du fou noir) : les éclairs n'en brillent que plus
       const dim = this.skyDim || 0;
       if (dim > 0) { this.sun.intensity *= 1 - 0.85 * dim; this.hemi.intensity *= 1 - 0.75 * dim; }
+      const night = this.night || 0;
+      if (night > 0) { this.sun.intensity *= 1 - 0.7 * night; this.hemi.intensity *= 1 - 0.45 * night; }
     }
 
     buildTerrain(terrain) {
@@ -610,6 +614,18 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.setCamera(o.flipped);
 
       this.overlay.clear();
+      this.ply = o.ply == null ? null : o.ply;
+      // Pion à un pas de la promotion : un anneau doré pulse sous ses pieds
+      for (let sq = 0; sq < 64; sq++) {
+        const pc = o.board[sq];
+        if (!((pc === 'P' && sq >> 3 === 1) || (pc === 'p' && sq >> 3 === 6))) continue;
+        const p = this.sqToPos(sq), g = new T.Group();
+        const ring = new T.Mesh(new T.RingGeometry(0.3, 0.42, 32), new T.MeshBasicMaterial({ color: 0xffd65a, transparent: true, opacity: 0.6, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }));
+        ring.rotation.x = -Math.PI / 2; g.add(ring);
+        const beam = new T.Mesh(new T.CylinderGeometry(0.3, 0.36, 1.1, 20, 1, true), new T.MeshBasicMaterial({ color: 0xffe9a0, transparent: true, opacity: 0.12, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false }));
+        beam.position.y = 0.55; g.add(beam);
+        g.position.set(p.x, 0.03, p.z); g.userData.pulse = sq; this.overlay.add(g);
+      }
       this.setMateFire(o.mateUltimate && o.mateUltimate.piece.toLowerCase() === 'q' ? [] : o.mateFire || []);
       let capture = null;
       const mark = (sq, color, opacity) => {
@@ -662,7 +678,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           const len = Math.hypot(b.x - a.x, b.z - a.z) || 1;
           const ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
           const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); } };
-          if (kind === 'n') {
+          if (m.flag === 'ep') {
+            // Prise en passant : le pion file en un éclair à côté de sa cible, dont la tête tombe au sol
+            knightAttack = { style: 'enpassant', start: now, from: a, target: b, to: this.sqToPos(m.to), duration: 2.6, victim: v, fx: [] };
+            die({ t0: now + knightAttack.duration, knightAttack });
+          } else if (kind === 'n') {
             const style = white
               ? (Math.random() < 0.5 ? 'tunnel-eat' : 'tunnel-impact')
               : (Math.random() < 0.5 ? 'eagle-release' : 'eagle-slam');
@@ -729,12 +749,22 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           const burning = this.dying.find((x) => x.c === (capture && capture.victim) && x.burn);
           if (burning) this.busyUntil = Math.max(this.busyUntil, burning.t0 + BURN_TIME);
           next.set(m.to, mover);
+          if (kind === 'p' && landed !== m.piece && !o.mateUltimate) {
+            const at = Math.max(now + mover.anim.dur, (this.busyUntil || now) - 0.35);
+            this.addPromotionFx(mover, this.sqToPos(m.to), at);
+            this.busyUntil = Math.max(this.busyUntil, at + 2.0);
+          }
         }
         if (m.flag === 'castle') {
           const kingside = m.to > m.from;
           const rf = kingside ? m.from + 3 : m.from - 4, rt = kingside ? m.from + 1 : m.from - 1;
           const rook = take(rf);
-          if (rook) { moveChar(rook, rf, rt); next.set(rt, rook); }
+          // Roque : le roi et la tour échangent leurs places d'un bond croisé, puis un dôme protecteur se lève
+          if (mover) { mover.anim.leap = true; mover.anim.dur = 0.7; }
+          if (rook) { moveChar(rook, rf, rt, { leap: true }); rook.anim.dur = 0.7; rook.anim.high = 1.5; next.set(rt, rook); }
+          const k = this.sqToPos(m.to), r = this.sqToPos(rt);
+          this.addCastleDome({ x: (k.x + r.x) / 2, z: (k.z + r.z) / 2 }, white, now + 0.7);
+          this.busyUntil = Math.max(this.busyUntil || now, now + 1.1);
         }
       }
       for (let sq = 0; sq < 64; sq++) {
@@ -775,13 +805,15 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
       if (!this.outcome && this.mateUltimate) this.resetMateUltimate();
       this.setCheckChains(o.board, o.check);
-      if (!this.outcome) for (const c of this.chars.values()) { c.endPose = null; c.endPoseAt = null; }
+      if (!this.outcome) for (const c of this.chars.values()) { c.endPose = null; c.endPoseAt = null; c.drawTo = null; }
+      if (this.outcome === '1/2-1/2') this.planDrawFormation(now);
       this.ropes = this.findRopes(o.board);
       this.setArrows(o.arrows || []);
     }
 
     // Interrompt proprement toute animation en cours (saut dans une partie rejouée, coup pendant un duel)
     clearTransient() {
+      if (this.effects) { this.effects.forEach((fx) => fx.end()); this.effects = []; }
       for (const c of this.chars.values()) {
         const a = c.anim;
         this.endToss(c);
@@ -2453,7 +2485,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             c.holder.position.set(p0.x + (p1.x - p0.x) * e, 0, p0.z + (p1.z - p0.z) * e);
             turn(c, Math.atan2(p1.x - p0.x, p1.z - p0.z));
             M.animate(c.parts, t, 'run');
-            const arc = Math.sin(Math.PI * u) * (leap ? 0.9 : 0.12);
+            const arc = Math.sin(Math.PI * u) * (leap ? a.high || 0.9 : 0.12);
             c.parts.root.position.y = arc;
             c.shadow.scale.setScalar(1 - arc * 0.4);
             if (c.parts.fast && u < 1) this.trail(c, true, t);
@@ -2554,6 +2586,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           c.parts.root.position.x = 0;
           continue;
         }
+        if (this.outcome && c.drawTo) { this.tickDrawFormation(c, t, M); continue; }
         if (this.outcome) {
           const winner = this.outcome === '1-0' ? 'w' : this.outcome === '0-1' ? 'b' : null;
           const side = c.piece === c.piece.toUpperCase() ? 'w' : 'b';
@@ -2651,13 +2684,19 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.drawRopes(t);
       this.drawCheckChains();
       this.tickWeather(t, dt);
+      this.tickEffects(t);
+      this.tickDayNight(t, dt);
       this.tickCaptureScars(t);
       this.tickCaptureCamera(t);
       this.tickMateCamera(t);
       // tremblement de l'image au lancer et à l'impact
       if (this.shakeUntil > t) { const a = this.shakeAmp || 0.05; this.scene.position.set((Math.random() - 0.5) * a, (Math.random() - 0.5) * a, (Math.random() - 0.5) * a); }
       else this.scene.position.set(0, 0, 0);
+      // la nuit et le coucher de soleil assombrissent l'image (sans toucher aux réglages des techniques)
+      const ex = this.renderer.toneMappingExposure, nt = this.night || 0;
+      this.renderer.toneMappingExposure = ex * (1 - 0.45 * nt - 0.1 * (this.sunset || 0) * (1 - nt));
       this.renderer.render(this.scene, this.camera);
+      this.renderer.toneMappingExposure = ex;
     }
 
     // Traînée de vitesse derrière le samouraï
@@ -2777,6 +2816,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (a.style === 'orb') { this.tickOrb(c, a, el, t, M); return; }
       if (a.style === 'fireroll') { this.tickFireroll(c, a, el, t, M); return; }
       if (a.style === 'flameline') { this.tickFlameline(c, a, el, t, M); return; }
+      if (a.style === 'enpassant') { this.tickEnPassant(c, a, el, t, M); return; }
       if (a.pre && a.style === 'tunnel-impact') {
         if (this.tickWhirlwind(c, a, el, t, M)) return;
         el -= a.pre;
@@ -2857,6 +2897,249 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         this.spinWhirl(a, t, 1 - gone);
       }
       if (a.boom) this.boomStep(a, el);
+    }
+
+    // Effets passagers posés dans la scène : { start, dur, tick(e, t), end() }
+    addEffect(fx) { (this.effects = this.effects || []).push(fx); return fx; }
+    tickEffects(t) {
+      if (this.overlay) for (const g of this.overlay.children) {
+        if (g.userData.pulse == null) continue;
+        const k = 0.5 + 0.5 * Math.sin(t * 4 + g.userData.pulse);
+        g.children[0].material.opacity = 0.35 + k * 0.5;
+        g.children[0].scale.setScalar(0.92 + k * 0.16);
+        g.children[1].material.opacity = 0.06 + k * 0.12;
+      }
+      if (!this.effects || !this.effects.length) return;
+      this.effects = this.effects.filter((fx) => {
+        const e = t - fx.start;
+        if (e < 0) return true;
+        fx.tick(e, t);
+        if (e >= fx.dur) { fx.end(); return false; }
+        return true;
+      });
+    }
+    disposeGroup(g) {
+      this.scene.remove(g);
+      g.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+    }
+    // Roque : dôme protecteur, blanc ou noir selon le camp, qui s'efface en quelques secondes
+    addCastleDome(at, white, start) {
+      const T = this.THREE, g = new T.Group(); g.position.set(at.x, 0, at.z); g.visible = false; this.scene.add(g);
+      const color = white ? 0xdff2ff : 0x7a3ad0;
+      const shell = new T.Mesh(new T.SphereGeometry(1.25, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), new T.MeshBasicMaterial({ color, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false }));
+      const grid = new T.Mesh(new T.IcosahedronGeometry(1.27, 2), new T.MeshBasicMaterial({ color: white ? 0xffffff : 0xb98cff, wireframe: true, transparent: true, opacity: 0, depthWrite: false, toneMapped: false }));
+      const ring = new T.Mesh(new T.RingGeometry(1.15, 1.3, 48), new T.MeshBasicMaterial({ color, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false }));
+      ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03;
+      const clip = new T.Plane(new T.Vector3(0, 1, 0), 0);
+      grid.material.clippingPlanes = [clip]; this.renderer.localClippingEnabled = true;
+      g.add(shell, grid, ring);
+      this.addEffect({ start, dur: 3.2, tick: (e, t) => {
+        g.visible = true;
+        const rise = Math.min(1, e / 0.35), fade = 1 - Math.max(0, Math.min(1, (e - 2.2) / 1.0));
+        g.scale.set(1, Math.max(0.01, rise), 1);
+        shell.material.opacity = 0.28 * fade + (e < 0.35 ? 0.25 * (1 - e / 0.35) : 0);
+        grid.material.opacity = (0.22 + Math.abs(Math.sin(t * 6)) * 0.12) * fade;
+        grid.rotation.y = t * 0.6;
+        ring.material.opacity = 0.6 * fade; ring.scale.setScalar(1 + Math.sin(t * 5) * 0.03);
+      }, end: () => this.disposeGroup(g) });
+    }
+    // Promotion : colonne de lumière, la nouvelle pièce grandit dans la lumière avec son aura ; la dame déclenche une onde d'énergie
+    addPromotionFx(c, at, start) {
+      const T = this.THREE, g = new T.Group(); g.position.set(at.x, 0, at.z); g.visible = false; this.scene.add(g);
+      const white = c.piece === c.piece.toUpperCase(), queen = c.piece.toLowerCase() === 'q';
+      const glow = (color, opacity) => new T.MeshBasicMaterial({ color, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false });
+      const column = new T.Mesh(new T.CylinderGeometry(0.3, 0.36, 6, 24, 1, true), glow(white ? 0xfff4c8 : 0xd7b8ff, 0));
+      column.position.y = 3;
+      const core = new T.Mesh(new T.CylinderGeometry(0.1, 0.14, 6, 16, 1, true), glow(0xffffff, 0));
+      core.position.y = 3;
+      const base = new T.Mesh(new T.RingGeometry(0.2, 0.6, 40), glow(white ? 0xffd65a : 0xb07cff, 0));
+      base.rotation.x = -Math.PI / 2; base.position.y = 0.03;
+      const motes = [];
+      for (let i = 0; i < 16; i++) {
+        const m = new T.Mesh(new T.SphereGeometry(0.035, 6, 4), glow(i % 2 ? 0xffffff : white ? 0xffe28a : 0xc9a0ff, 0.9));
+        m.userData = { a: i * 2.399, h: (i % 8) * 0.25 }; motes.push(m); g.add(m);
+      }
+      const wave = new T.Mesh(new T.SphereGeometry(0.5, 24, 16), glow(white ? 0xfff0b0 : 0xc39bff, 0));
+      wave.position.y = 0.6; wave.visible = queen;
+      const shock = new T.Mesh(new T.RingGeometry(0.5, 0.7, 48), glow(0xffffff, 0));
+      shock.rotation.x = -Math.PI / 2; shock.position.y = 0.05; shock.visible = queen;
+      g.add(column, core, base, wave, shock);
+      const light = new T.PointLight(white ? 0xffe9b0 : 0xc59bff, 0, 6, 2); light.position.y = 1.2; g.add(light);
+      const baseScale = c.parts.root.scale.x;
+      c.parts.root.scale.setScalar(baseScale * 0.6); // encore à la taille d'un pion pendant son dernier pas
+      this.addEffect({ start, dur: 2.0, tick: (e, t) => {
+        g.visible = true;
+        const inn = Math.min(1, e / 0.3), out = 1 - Math.max(0, Math.min(1, (e - 1.4) / 0.6));
+        column.material.opacity = 0.2 * inn * out; core.material.opacity = 0.3 * inn * out;
+        column.scale.set(1 + Math.sin(t * 9) * 0.04, 1, 1 + Math.sin(t * 9) * 0.04);
+        base.material.opacity = 0.8 * inn * out; base.scale.setScalar(1 + e * 0.4);
+        motes.forEach((m) => { const a = m.userData.a + t * 4, r = 0.35 + Math.sin(t * 3 + m.userData.a) * 0.06; m.position.set(Math.cos(a) * r, (m.userData.h + e * 1.2) % 2.2, Math.sin(a) * r); m.material.opacity = 0.9 * out; });
+        // la pièce s'éveille : elle grandit dans la lumière
+        const grow = e < 1.1 ? 0.6 + 0.4 * (1 - Math.pow(1 - e / 1.1, 3)) : 1;
+        c.parts.root.scale.setScalar(baseScale * grow * (e > 1.0 && e < 1.3 ? 1 + Math.sin((e - 1.0) / 0.3 * Math.PI) * 0.12 : 1));
+        if (queen && e > 1.0) {
+          const w = Math.min(1, (e - 1.0) / 0.6);
+          wave.scale.setScalar(1 + w * 5); wave.material.opacity = 0.5 * (1 - w);
+          shock.scale.setScalar(1 + w * 6); shock.material.opacity = 0.7 * (1 - w);
+          if (e < 1.15) { this.shakeUntil = t + 0.05; this.shakeAmp = 0.1; }
+        }
+        light.intensity = 3.5 * inn * out;
+      }, end: () => { c.parts.root.scale.setScalar(baseScale); this.disposeGroup(g); } });
+    }
+    // Prise en passant : le pion passe en un éclair à côté de sa cible et la fauche
+    tickEnPassant(c, a, el, t, M) {
+      const T = this.THREE, dash0 = 0.25, dash1 = 0.5;
+      const u = Math.max(0, Math.min(1, (el - dash0) / (dash1 - dash0)));
+      const e2 = u * u * (3 - 2 * u);
+      c.holder.position.set(a.from.x + (a.to.x - a.from.x) * e2, 0, a.from.z + (a.to.z - a.from.z) * e2);
+      c.holder.rotation.y = Math.atan2(a.to.x - a.from.x, a.to.z - a.from.z);
+      if (el < dash0) M.animate(c.parts, t, 'guard', 1);
+      else if (el < dash1 + 0.1) { M.animate(c.parts, t, 'run'); this.trail(c, true, t); }
+      else M.animate(c.parts, t, el < 1.2 ? 'punch' : 'idle', el < 1.2 ? 0.5 : 0);
+      if (!a.slash) {
+        // trait de lumière qui fend l'air au passage
+        a.slash = new T.Mesh(new T.PlaneGeometry(1.2, 0.05), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false }));
+        a.slash.position.set((a.target.x + a.to.x) / 2, 0.75, (a.target.z + a.to.z) / 2);
+        a.slash.rotation.set(0, Math.atan2(a.to.x - a.from.x, a.to.z - a.from.z) + Math.PI / 2, 0.4);
+        this.fx(a, a.slash);
+      }
+      const s = el - (dash0 + dash1) / 2 - 0.05;
+      a.slash.material.opacity = s > 0 && s < 0.35 ? 1 - s / 0.35 : 0;
+      a.slash.scale.set(1 + Math.max(0, s) * 2, 1, 1);
+      if (s > 0 && s < 0.1) { this.shakeUntil = t + 0.04; this.shakeAmp = 0.05; }
+    }
+    // La tête de la cible tombe au sol et roule ; le corps reste debout
+    tickEnPassantVictim(d, a, c, el, t, M) {
+      const T = this.THREE, cut = 0.42;
+      c.holder.position.set(a.target.x, 0, a.target.z);
+      if (el < cut) { M.animate(c.parts, t, 'idle'); return el < a.duration; }
+      const head = c.parts.head;
+      if (head && !a.headClone) {
+        head.updateWorldMatrix(true, true);
+        const pos = new T.Vector3(), quat = new T.Quaternion(), scl = new T.Vector3();
+        head.matrixWorld.decompose(pos, quat, scl);
+        // copie visuelle de la tête (clone() échoue : userData.char est circulaire)
+        const copy = (o) => {
+          const n = o.isMesh ? new T.Mesh(o.geometry, o.material) : new T.Group();
+          n.position.copy(o.position); n.quaternion.copy(o.quaternion); n.scale.copy(o.scale); n.visible = o.visible;
+          o.children.forEach((ch) => n.add(copy(ch)));
+          return n;
+        };
+        const clone = copy(head); clone.visible = true;
+        clone.position.copy(pos); clone.quaternion.copy(quat); clone.scale.copy(scl);
+        this.scene.add(clone);
+        head.visible = false;
+        a.headClone = clone; a.headY = pos.y; a.headQuat = quat.clone();
+        const dir = new T.Vector3(a.to.x - a.from.x, 0, a.to.z - a.from.z).normalize();
+        a.headVel = { x: dir.x * 0.9 + (Math.random() - 0.5) * 0.3, y: 0.8, z: dir.z * 0.9 + (Math.random() - 0.5) * 0.3 };
+        a.headRest = 0.06 * scl.y / 0.5;
+      }
+      // le corps reste figé debout
+      if (a.headClone) {
+        const h = a.headClone, f = el - cut;
+        const ground = Math.max(0.06, a.headRest || 0.08);
+        if (!a.headLanded) {
+          h.position.x = a.target.x + a.headVel.x * f + (h.position.x - h.position.x);
+          h.position.z = a.target.z + a.headVel.z * f;
+          h.position.y = a.headY + a.headVel.y * f - 4.9 * f * f;
+          h.rotation.set(f * 9, f * 3, f * 5);
+          if (h.position.y <= ground) { h.position.y = ground; a.headLanded = el; a.landX = h.position.x; a.landZ = h.position.z; this.shakeUntil = t + 0.04; this.shakeAmp = 0.03; }
+        } else {
+          // petite roulade avant de s'arrêter
+          const r = Math.min(1, (el - a.headLanded) / 0.6), k = 1 - (1 - r) * (1 - r);
+          h.position.set(a.landX + a.headVel.x * 0.35 * k, ground, a.landZ + a.headVel.z * 0.35 * k);
+          h.rotation.z += (1 - r) * 0.25;
+        }
+      }
+      if (el >= a.duration) {
+        if (a.headClone) { this.scene.remove(a.headClone); a.headClone = null; }
+        return false;
+      }
+      return true;
+    }
+    // Partie nulle : les deux rois marchent au centre et se saluent, les autres pièces se rangent derrière leur roi
+    planDrawFormation(now) {
+      const start = Math.max(now, this.busyUntil || now) + 0.4;
+      const order = { q: 0, r: 1, b: 2, n: 3, p: 4 };
+      let planned = false;
+      for (const side of ['w', 'b']) {
+        const sign = side === 'w' ? 1 : -1;
+        const list = [...this.chars.entries()].filter(([, c]) => (c.piece === c.piece.toUpperCase() ? 'w' : 'b') === side);
+        const king = list.find(([, c]) => c.piece.toLowerCase() === 'k');
+        const others = list.filter(([, c]) => c.piece.toLowerCase() !== 'k').sort((x, y) => order[x[1].piece.toLowerCase()] - order[y[1].piece.toLowerCase()] || x[0] - y[0]);
+        if (king) {
+          const c = king[1];
+          if (!c.drawTo) { const p = this.sqToPos(king[0]); c.drawFrom = { x: p.x, z: p.z }; c.drawTo = { x: 0, z: 0.55 * sign }; c.drawAt = start; c.drawFace = sign > 0 ? Math.PI : 0; c.drawKing = true; planned = true; }
+        }
+        const rows = [others.filter(([, c]) => c.piece.toLowerCase() !== 'p'), others.filter(([, c]) => c.piece.toLowerCase() === 'p')].filter((r) => r.length);
+        rows.forEach((row, ri) => {
+          row.forEach(([sq, c], i) => {
+            if (c.drawTo) return;
+            const p = this.sqToPos(sq), x = (i - (row.length - 1) / 2) * 0.85;
+            c.drawFrom = { x: p.x, z: p.z }; c.drawTo = { x, z: (1.65 + ri * 1.0) * sign };
+            c.drawAt = start + 0.15 + ri * 0.2 + Math.abs(x) * 0.05; c.drawFace = sign > 0 ? Math.PI : 0; planned = true;
+          });
+        });
+      }
+      if (planned) this.busyUntil = Math.max(this.busyUntil || now, start + 2.4);
+    }
+    tickDrawFormation(c, t, M) {
+      const e = t - c.drawAt, dur = 1.6;
+      const u = Math.max(0, Math.min(1, e / dur)), k = u * u * (3 - 2 * u);
+      const x = c.drawFrom.x + (c.drawTo.x - c.drawFrom.x) * k, z = c.drawFrom.z + (c.drawTo.z - c.drawFrom.z) * k;
+      c.holder.position.set(x, 0, z);
+      if (e > 0 && u < 1) {
+        const dx = c.drawTo.x - c.drawFrom.x, dz = c.drawTo.z - c.drawFrom.z;
+        if (Math.hypot(dx, dz) > 0.01) c.holder.rotation.y = Math.atan2(dx, dz);
+        M.animate(c.parts, t, 'run');
+        return;
+      }
+      c.holder.rotation.y = c.drawFace;
+      M.animate(c.parts, t, 'idle');
+      if (e <= 0) return;
+      // les rois se saluent, les autres baissent la tête
+      const after = e - dur;
+      if (c.drawKing) {
+        const bow = after > 0.2 && after < 1.6 ? Math.sin((after - 0.2) / 1.4 * Math.PI) : 0;
+        if (c.parts.torso) c.parts.torso.rotation.x = 0.6 * bow;
+      } else if (c.parts.head) c.parts.head.rotation.x = 0.35 * Math.min(1, after / 0.5);
+    }
+    // Ciel qui passe du jour au coucher de soleil puis à la nuit au fil de la partie
+    tickDayNight(t, dt) {
+      const T = this.THREE;
+      const ply = this.ply == null ? 0 : this.ply;
+      const sunsetT = Math.max(0, Math.min(1, (ply - 30) / 40)), nightT = Math.max(0, Math.min(1, (ply - 70) / 40));
+      // transition douce d'une valeur à l'autre (retour en arrière dans un replay compris)
+      const ease = 1 - Math.exp(-dt * 1.5);
+      this.sunset = (this.sunset || 0) + (sunsetT - (this.sunset || 0)) * ease;
+      this.night = (this.night || 0) + (nightT - (this.night || 0)) * ease;
+      if (!this.nightSky) {
+        const g = new T.Group(), n = 260, pos = new Float32Array(n * 3);
+        for (let i = 0; i < n; i++) {
+          const a = Math.random() * Math.PI * 2, el = 0.15 + Math.random() * 1.25, r = 55;
+          pos[i * 3] = Math.cos(a) * Math.cos(el) * r; pos[i * 3 + 1] = Math.sin(el) * r; pos[i * 3 + 2] = Math.sin(a) * Math.cos(el) * r;
+        }
+        const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3));
+        const stars = new T.Points(geo, new T.PointsMaterial({ color: 0xffffff, size: 0.35, transparent: true, opacity: 0, fog: false, depthWrite: false }));
+        const moon = new T.Mesh(new T.SphereGeometry(2.2, 24, 16), new T.MeshBasicMaterial({ color: 0xf4f1df, transparent: true, opacity: 0, fog: false }));
+        moon.position.set(-24, 26, -38);
+        const halo = new T.Mesh(new T.SphereGeometry(3.6, 24, 16), new T.MeshBasicMaterial({ color: 0xbfcfff, transparent: true, opacity: 0, fog: false, blending: T.AdditiveBlending, depthWrite: false }));
+        halo.position.copy(moon.position);
+        g.add(stars, moon, halo); this.scene.add(g);
+        this.nightSky = { g, stars, moon, halo };
+      }
+      const ns = this.nightSky, n = this.night;
+      ns.g.visible = n > 0.01;
+      ns.stars.material.opacity = n * (0.75 + Math.sin(t * 2) * 0.05);
+      ns.moon.material.opacity = n; ns.halo.material.opacity = 0.18 * n;
+      const u = this.mateUltimate;
+      if (!this.skyBase || (u && u.apocalypse)) return;
+      const sky = this.skyBase.clone().lerp(new T.Color(0xe08a5c), this.sunset * (1 - n) * 0.55).lerp(new T.Color(0x0a1024), n * 0.85);
+      const dim = this.skyDim || 0;
+      if (dim > 0) sky.lerp(new T.Color(0x05070d), dim * 0.9);
+      if (this.scene.background && this.scene.background.isColor) this.scene.background.copy(sky);
+      if (this.scene.fog && this.scene.fog.color) this.scene.fog.color.copy(sky);
+      if (this.sun && this.sunset * (1 - n) > 0.005) this.sun.color.setRGB(1, 1 - this.sunset * (1 - n) * 0.25, 1 - this.sunset * (1 - n) * 0.45);
     }
 
     // Cavalier blanc : le chien et son ninja tournent sur eux-mêmes et se changent en tourbillon de vent
@@ -3413,6 +3696,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (a.style === 'orb') return this.tickOrbVictim(d, a, c, el, t, M);
       if (a.style === 'fireroll') return this.tickFirerollVictim(d, a, c, el, t, M);
       if (a.style === 'flameline') return this.tickFlamelineVictim(d, a, c, el, t, M);
+      if (a.style === 'enpassant') return this.tickEnPassantVictim(d, a, c, el, t, M);
       if (a.style === 'tunnel-eat') {
         if (el < 1.55) { c.holder.position.set(a.target.x, 0, a.target.z); return true; }
         M.animate(c.parts, t, 'ko');
@@ -3640,6 +3924,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         this.scene.remove(o);
         o.traverse((x) => { if (x.geometry) x.geometry.dispose(); if (x.material) x.material.dispose(); });
       }
+      if (s.headClone) { this.scene.remove(s.headClone); s.headClone = null; }
       s.fx = []; s.ball = null; s.boom = null; s.dragon = null;
     }
 
