@@ -2615,7 +2615,7 @@
   $('btn-settings').onclick = () => { returnTo = 'home'; renderSettings(); show('settings'); };
 
   /* ---------- Replay ---------- */
-  const MODE_LABELS = L({ ai: 'Contre ordinateur', coach: 'Partie coachée', local: 'Deux joueurs' }, { ai: 'Against the computer', coach: 'Coached game', local: 'Two players' });
+  const MODE_LABELS = L({ ai: 'Contre ordinateur', coach: 'Partie coachée', local: 'Deux joueurs', free: 'Positions libres' }, { ai: 'Against the computer', coach: 'Coached game', local: 'Two players', free: 'Custom positions' });
   const RESULT_LABELS = L({ '1-0': 'Victoire des Blancs', '0-1': 'Victoire des Noirs', '1/2-1/2': 'Partie nulle', '*': 'Partie inachevée' }, { '1-0': 'White wins', '0-1': 'Black wins', '1/2-1/2': 'Draw', '*': 'Unfinished game' });
   const escHtml = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fmtDateTime = (id) => new Date(id).toLocaleString(LOCALE, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
@@ -2905,15 +2905,20 @@
     const sans = replay.sans, cur = replay.index;
     const rv = replay.review && replay.showReview ? replay.review : null;
     const BAD = ['inaccuracy', 'mistake', 'blunder'];
-    for (let i = 0; i < sans.length; i += 2) {
-      const cell = (ply) => {
+    // Si les Noirs commencent (position libre), le premier coup s'écrit « 1… »
+    const off = window.Chess.fromFen(replay.fen).turn === 'b' ? 1 : 0;
+    for (let i = 0; i < sans.length + off; i += 2) {
+      const cell = (k) => {
+        const ply = k - off + 1;
+        if (ply < 1) return '<span>…</span>';
+        if (ply > sans.length) return '';
         const mark = replay.review && replay.review.marks[ply - 1];
         const bad = mark && BAD.includes(mark[0]);
         const cls = [ply === cur ? 'cur' : '', bad ? `q-${mark[0]}` : ''].filter(Boolean).join(' ');
         return `<span data-ply="${ply}"${cls ? ` class="${cls}"` : ''}>${escHtml(sans[ply - 1])}${bad ? REVIEW_SIGN[mark[0]] : ''}</span>`;
       };
       const li = document.createElement('li');
-      li.innerHTML = `<span class="n">${i / 2 + 1}.</span>${cell(i + 1)} ${sans[i + 1] ? cell(i + 2) : ''}`;
+      li.innerHTML = `<span class="n">${i / 2 + 1}.</span>${cell(i)} ${cell(i + 1)}`;
       ol.appendChild(li);
     }
     renderReview(rv, cur);
@@ -2973,21 +2978,26 @@
   });
 
   function openReplayList(mode) {
-    const source = mode === 'local' ? store.get('localArchive', []) : store.get('archive', []).filter((g) => (g.mode || 'ai') === mode);
+    // Les parties jouées depuis une position construite ont leur propre rubrique, à deux ou contre l'ordinateur
+    const source = mode === 'free'
+      ? [...store.get('archive', []), ...store.get('localArchive', []).map((g) => ({ ...g, mode: 'local' }))].filter((g) => g.fen).sort((a, b) => a.id - b.id)
+      : (mode === 'local' ? store.get('localArchive', []) : store.get('archive', []).filter((g) => (g.mode || 'ai') === mode)).filter((g) => !g.fen);
     $('replay-list-title').textContent = `Replay · ${MODE_LABELS[mode]}`;
     const body = $('replay-list-body');
     if (!source.length) {
       body.innerHTML = `<p class="level-help">${L(`Aucune partie terminée dans ce mode pour le moment. Les parties « ${MODE_LABELS[mode]} » apparaîtront ici à la fin de chaque partie.`, `No finished game in this mode yet. “${MODE_LABELS[mode]}” games will appear here at the end of each game.`)}</p>`;
     } else {
       body.innerHTML = '<div class="replay-items">' + source.map((g, i) => [g, i]).reverse().map(([g, i]) => {
-        const who = mode === 'local' ? '' : ` · ${g.champion && champById(g.champion) ? champById(g.champion).name : mode === 'coach' ? L('Maître Hiro', 'Master Hiro') : LEVEL_NAMES[g.level] || ''} · ${L('vous', 'you')}: ${g.color === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black')}`;
+        const gm = mode === 'free' ? g.mode || 'ai' : mode;
+        const who = (mode === 'free' ? ` · ${MODE_LABELS[gm]}` : '') + (gm === 'local' ? '' : ` · ${g.champion && champById(g.champion) ? champById(g.champion).name : mode === 'coach' ? L('Maître Hiro', 'Master Hiro') : LEVEL_NAMES[g.level] || ''} · ${L('vous', 'you')}: ${g.color === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black')}`);
         return `<button type="button" class="btn replay-item" data-i="${i}"><strong>${escHtml(fmtDateTime(g.id))}</strong><span>${Math.ceil(g.moves.length / 2)} ${L('coups', 'moves')}${escHtml(who)} · ${RESULT_LABELS[g.result] || RESULT_LABELS['*']}</span></button>`;
       }).join('') + '</div>';
     }
     body.onclick = (e) => {
       const b = e.target.closest('.replay-item'); if (!b) return;
       const g = source[Number(b.dataset.i)]; if (!g) return;
-      startReplay({ moves: g.moves, fen: g.fen, result: g.result, title: `${MODE_LABELS[mode]} · ${fmtDateTime(g.id)}`, flipped: mode !== 'local' && g.color === 'b', date: pgnDate(g.id), ...sideNames({ mode, playerColor: g.color, level: g.level, champion: g.champion }) }, () => openReplayList(mode));
+      const gm = mode === 'free' ? g.mode || 'ai' : mode;
+      startReplay({ moves: g.moves, fen: g.fen, result: g.result, title: `${MODE_LABELS[mode]} · ${fmtDateTime(g.id)}`, flipped: gm !== 'local' && g.color === 'b', date: pgnDate(g.id), ...sideNames({ mode: gm, playerColor: g.color, level: g.level, champion: g.champion }) }, () => openReplayList(mode));
     };
     returnTo = 'home';
     show('replay-list');

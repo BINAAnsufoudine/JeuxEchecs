@@ -34,6 +34,7 @@
     'Reprendre la partie': 'Resume game',
     'Nouvelle partie': 'New game',
     'Construire une position': 'Set up a position',
+    'Positions libres': 'Custom positions',
     'Replay': 'Replay',
     'Contre ordinateur': 'Against the computer',
     'Deux joueurs': 'Two players',
