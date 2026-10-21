@@ -255,8 +255,10 @@ window.Online = (function () {
       deadline: Number(opts.deadline) > now ? Number(opts.deadline) : now + 86400000,
       members: [me], names: { [me]: profile.pseudo }, elos: { [me]: profile.elo || 600 },
       players: [], teams: [], round: 0, pairings: {}, scores: {}, met: {},
+      // par équipe : « auto » = équipes formées au départ selon le niveau ; « made » = équipes déjà faites
+      teamMode: opts.teamMode === 'made' ? 'made' : 'auto',
     };
-    if (t.type === 'solo') t.players = [me];
+    if (t.type === 'solo' || t.teamMode === 'auto') t.players = [me];
     const ref = await f.addDoc(f.collection(f.db, 'tournaments'), t);
     return { id: ref.id, ...t };
   }
@@ -284,7 +286,7 @@ window.Online = (function () {
     return editTournament(id, (t) => {
       if (t.status !== 'open') fail('tournament-started');
       if (t.deadline && Date.now() > t.deadline) fail('deadline-passed');
-      if (t.type !== 'solo') fail('tournament-team');
+      if (t.type !== 'solo' && t.teamMode !== 'auto') fail('tournament-team');
       if (t.players.includes(user.uid)) return null;
       return { players: [...t.players, user.uid], members: [...new Set([...t.members, user.uid])], ...meInfo() };
     });
@@ -331,7 +333,7 @@ window.Online = (function () {
     }
     // suisse : par points (puis Elo), sans rejouer le même adversaire ; le dernier sans adversaire est exempt
     const score = (x) => t.scores[x] || 0;
-    const rating = (x) => (t.type === 'team' ? 0 : t.elos[x] || 600);
+    const rating = (x) => (t.type === 'team' ? (t.teams.find((tm) => tm.id === x) || {}).elo || 0 : t.elos[x] || 600);
     const order = [...ids].sort((a, b) => score(b) - score(a) || rating(b) - rating(a));
     const out = [], used = new Set();
     for (const a of order) {
@@ -373,6 +375,18 @@ window.Online = (function () {
     });
     return out;
   }
+  // Équipes de force égale : joueurs classés par Elo, répartis en serpentin (1-2-3-3-2-1…) ;
+  // chaque équipe range ensuite ses joueurs du plus fort au plus faible (échiquier 1 = le plus fort)
+  function balancedTeams(t) {
+    const n = Math.max(2, Math.round(t.players.length / t.teamSize));
+    const teams = Array.from({ length: n }, (_, i) => ({ id: code6(), name: `${window.L('Équipe', 'Team')} ${i + 1}`, captain: null, members: [] }));
+    const sorted = [...t.players].sort((a, b) => (t.elos[b] || 600) - (t.elos[a] || 600));
+    sorted.forEach((uid, i) => {
+      const lap = Math.floor(i / n), k = i % n;
+      teams[lap % 2 ? n - 1 - k : k].members.push(uid);
+    });
+    return teams.filter((tm) => tm.members.length).map((tm) => ({ ...tm, captain: tm.members[0], elo: Math.round(tm.members.reduce((s, u) => s + (t.elos[u] || 600), 0) / tm.members.length) }));
+  }
   const totalRounds = (t) => (t.format === 'rr' ? Math.max(1, participants(t).length - (participants(t).length % 2 ? 0 : 1)) : t.rounds);
   // Lancé par l'organisateur, ou automatiquement par un inscrit une fois la date limite passée
   function startTournament(id, auto) {
@@ -380,9 +394,15 @@ window.Online = (function () {
       if (t.status !== 'open') return null;
       const late = t.deadline && Date.now() > t.deadline;
       if (t.owner !== user.uid && !(auto && late && t.members.includes(user.uid))) fail('not-owner');
+      let extra = {};
+      if (t.type === 'team' && t.teamMode === 'auto') {
+        if (t.players.length < 2) { if (auto && late) return { status: 'cancelled' }; fail('too-few'); }
+        t = { ...t, teams: balancedTeams(t) };
+        extra = { teams: t.teams };
+      }
       if (participants(t).length < 2) { if (auto && late) return { status: 'cancelled' }; fail('too-few'); }
       const pairs = pairRound(t, 1);
-      return { status: 'running', round: 1, totalRounds: totalRounds(t), startedAt: Date.now(), [`pairings.r1`]: roundGames(t, 1, pairs, tx, f) };
+      return { ...extra, status: 'running', round: 1, totalRounds: totalRounds(t), startedAt: Date.now(), [`pairings.r1`]: roundGames(t, 1, pairs, tx, f) };
     });
   }
   // Résultat d'une partie de tournoi : enregistré par les joueurs, puis ronde suivante quand tout est fini
