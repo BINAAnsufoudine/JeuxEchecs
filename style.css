@@ -635,3 +635,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .welcome-go { color: var(--accent, #e9b949); font-weight: 700; white-space: nowrap; }
 .welcome-actions { display: flex; gap: 8px; margin: 4px 0 10px; }
 .welcome-actions .btn { flex: 1; }
+
+/* Suppression du compte */
+.danger-zone { margin-top: 18px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(232,112,95,0.45); }
+.danger-zone summary { cursor: pointer; color: #e8705f; font-weight: 650; }
+.btn.danger { background: #b9443a; color: #fff; }

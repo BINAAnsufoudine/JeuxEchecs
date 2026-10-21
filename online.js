@@ -60,6 +60,8 @@ window.Online = (function () {
       'auth/network-request-failed': L('Pas de connexion internet.', 'No internet connection.'),
       'auth/configuration-not-found': L('Les comptes ne sont pas encore activés sur le serveur.', 'Accounts are not enabled on the server yet.'),
       'auth/operation-not-allowed': L('Les comptes ne sont pas encore activés sur le serveur.', 'Accounts are not enabled on the server yet.'),
+      'auth/wrong-password': L('Mot de passe incorrect.', 'Wrong password.'),
+      'auth/invalid-credential': L('Mot de passe incorrect.', 'Wrong password.'),
       'auth/requires-recent-login': L('Reconnecte-toi puis réessaie.', 'Sign in again, then try again.'),
       'permission-denied': L('Accès refusé par le serveur (règles de sécurité).', 'Access denied by the server (security rules).'),
       'pseudo-taken': L('Ce pseudo est déjà pris.', 'This nickname is already taken.'),
@@ -123,6 +125,21 @@ window.Online = (function () {
     const u = f.auth.currentUser;
     await f.reauthenticateWithCredential(u, f.EmailAuthProvider.credential(u.email, current));
     await f.updatePassword(u, next);
+  }
+  // Suppression du compte : profil, pseudo, progression, invitations, puis le compte lui-même.
+  // Les parties déjà jouées restent dans l'historique de leurs adversaires.
+  async function deleteAccount(password) {
+    const f = await load();
+    const u = f.auth.currentUser;
+    await f.reauthenticateWithCredential(u, f.EmailAuthProvider.credential(u.email, password));
+    for (const field of ['from', 'to']) {
+      const snap = await f.getDocs(f.query(f.collection(f.db, 'invites'), f.where(field, '==', u.uid)));
+      for (const d of snap.docs) { try { await f.deleteDoc(d.ref); } catch { /* déjà supprimée */ } }
+    }
+    try { await f.deleteDoc(f.doc(f.db, 'users', u.uid, 'private', 'progress')); } catch { /* aucune */ }
+    if (profile && profile.pseudoLower) { try { await f.deleteDoc(f.doc(f.db, 'pseudos', profile.pseudoLower)); } catch { /* aucun */ } }
+    await f.deleteDoc(f.doc(f.db, 'users', u.uid));
+    await f.deleteUser(u);
   }
   async function setPhoto(photo) {
     if (!user) return;
@@ -507,7 +524,7 @@ window.Online = (function () {
     TIME_CONTROLS, load, onUser, explain,
     get user() { return user; }, get profile() { return profile; },
     signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos, publishSummary, getProfile, myTournaments,
-    presence, listPlayers, setMuted, sendChat, myGames,
+    presence, listPlayers, setMuted, sendChat, myGames, deleteAccount,
     saveProgress, loadProgress, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
     createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,
   };

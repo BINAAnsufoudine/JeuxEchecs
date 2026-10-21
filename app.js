@@ -2883,7 +2883,12 @@
         ${field('acc-pw-new', L('Nouveau mot de passe (6 caractères au moins)', 'New password (at least 6 characters)'), 'password', '', 'autocomplete="new-password"')}
         <button id="acc-save-pw" class="btn wide" type="button">${L('Changer le mot de passe', 'Change password')}</button>
         <button id="acc-logout" class="btn ghost wide" type="button">${L('Se déconnecter', 'Sign out')}</button>
-        <p id="acc-msg" class="ed-error" role="status"></p>`;
+        <p id="acc-msg" class="ed-error" role="status"></p>
+        <details class="danger-zone"><summary>${L('Supprimer mon compte', 'Delete my account')}</summary>
+          <p class="level-help">${L('Ton profil, ton pseudo, ta progression en ligne et tes invitations seront effacés définitivement. Les parties déjà jouées restent dans l’historique de tes adversaires. La progression enregistrée sur cet appareil est conservée. Un compte inutilisé pendant un an est supprimé automatiquement, après trois e-mails d’avertissement.', 'Your profile, nickname, online progress and invitations will be erased for good. Games already played stay in your opponents’ history. Progress saved on this device is kept. An account unused for a year is deleted automatically, after three warning e-mails.')}</p>
+          ${field('acc-del-pw', L('Mot de passe, pour confirmer', 'Password, to confirm'), 'password', '', 'autocomplete="current-password"')}
+          <button id="acc-delete" class="btn danger wide" type="button">${L('Supprimer définitivement mon compte', 'Delete my account permanently')}</button>
+        </details>`;
     } else {
       const up = accountMode === 'signup';
       body.innerHTML = `<div class="ed-seg" id="acc-tabs"><button type="button" data-mode="signin" class="${up ? '' : 'on'}">${L('Se connecter', 'Sign in')}</button><button type="button" data-mode="signup" class="${up ? 'on' : ''}">${L('Créer un compte', 'Create an account')}</button></div>
@@ -2917,6 +2922,15 @@
     if (t.id === 'acc-save-pseudo') accountAction(async () => { const p = await ON.changePseudo(v('acc-pseudo')); const pl = playerProfile(); pl.name = p.pseudo; store.set('player', pl); refreshHome(); }, L('Pseudo enregistré.', 'Nickname saved.'));
     if (t.id === 'acc-save-pw') accountAction(() => ON.changePassword(v('acc-pw-old'), v('acc-pw-new')), L('Mot de passe changé.', 'Password changed.'));
     if (t.id === 'acc-photo') { pickPhoto(() => renderAccount()); return; }
+    if (t.id === 'acc-delete') {
+      const pw = v('acc-del-pw');
+      if (!pw) { accMsg(L('Indique ton mot de passe pour confirmer.', 'Enter your password to confirm.')); return; }
+      modal({ title: L('Supprimer ton compte ?', 'Delete your account?'), text: L('Cette action est définitive : ton profil, ton pseudo et ta progression en ligne seront effacés.', 'This cannot be undone: your profile, nickname and online progress will be erased.'), actions: [
+        { label: L('Supprimer', 'Delete'), primary: true, onClick: () => accountAction(async () => { await ON.deleteAccount(pw); rawSet('onlineSynced', null); }, L('Ton compte a été supprimé.', 'Your account has been deleted.')) },
+        { label: L('Annuler', 'Cancel'), ghost: true },
+      ] });
+      return;
+    }
     if (t.id === 'acc-logout') accountAction(async () => { await pushProgress(); await ON.signOut(); rawSet('onlineSynced', null); }, L('Déconnecté.', 'Signed out.'));
   });
   function openAccount() { returnTo = 'home'; renderAccount(); show('account'); if (ON) ON.load().catch(() => accMsg(L('Impossible de joindre le serveur. Vérifie ta connexion.', 'Cannot reach the server. Check your connection.'))); }
