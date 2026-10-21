@@ -666,8 +666,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             const style = white
               ? (Math.random() < 0.5 ? 'tunnel-eat' : 'tunnel-impact')
               : (Math.random() < 0.5 ? 'eagle-release' : 'eagle-slam');
-            const duration = style === 'tunnel-eat' ? 2.8 : style === 'tunnel-impact' ? 2.45 : style === 'eagle-release' ? 3.65 : 3.85;
-            knightAttack = { style, start: now, from: a, target: b, duration, victim: v, hitCount: 0 };
+            // tunnel percutant : le chien et son ninja se changent d'abord en tourbillon
+            const pre = style === 'tunnel-impact' ? 0.6 : 0;
+            const duration = pre + (style === 'tunnel-eat' ? 2.8 : style === 'tunnel-impact' ? 2.45 : style === 'eagle-release' ? 3.65 : 3.85);
+            knightAttack = { style, start: now, from: a, target: b, duration, pre, victim: v, hitCount: 0 };
             die({ t0: now + duration, knightAttack });
           } else if (far && kind === 'q') {
             // Dame : une ligne de flammes (blanches et éblouissantes ou noires) court au sol jusqu'à la cible et la consume
@@ -2461,6 +2463,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             this.tickKnightAttack(c, a.knightAttack, el, t, M);
             if (el >= a.dur) {
               this.endShot(a.knightAttack);
+              c.parts.root.visible = true; if (c.parts.riderRoot) c.parts.riderRoot.visible = true;
               c.anim = null; c.holder.position.set(a.to.x, 0, a.to.z);
               c.parts.root.rotation.set(0, 0, 0); c.parts.root.position.set(0, 0, 0); c.shadow.scale.setScalar(1);
             }
@@ -2774,6 +2777,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (a.style === 'orb') { this.tickOrb(c, a, el, t, M); return; }
       if (a.style === 'fireroll') { this.tickFireroll(c, a, el, t, M); return; }
       if (a.style === 'flameline') { this.tickFlameline(c, a, el, t, M); return; }
+      if (a.pre && a.style === 'tunnel-impact') {
+        if (this.tickWhirlwind(c, a, el, t, M)) return;
+        el -= a.pre;
+      }
       const T = this.THREE, white = a.style.startsWith('tunnel') || a.style.startsWith('spin');
       const from = new T.Vector3(a.from.x, 0, a.from.z), target = new T.Vector3(a.target.x, 0, a.target.z);
       const travelEnd = white ? 0.88 : 1.08;
@@ -2839,7 +2846,68 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           this.shakeUntil = t + 0.25; this.shakeAmp = 0.09;
         }
       }
+      if (a.whirl) {
+        // le tourbillon suit le chien sous terre, jaillit avec lui puis se dissipe et les rend visibles
+        const gone = Math.max(0, Math.min(1, (el - 1.45) / 0.25));
+        c.parts.root.visible = gone >= 1;
+        if (c.parts.riderRoot) c.parts.riderRoot.visible = gone >= 1;
+        a.whirl.visible = gone < 1;
+        a.whirl.position.set(c.holder.position.x, Math.max(-0.2, c.holder.position.y), c.holder.position.z);
+        a.whirl.scale.setScalar(Math.max(0.01, 1 + gone * 0.6));
+        this.spinWhirl(a, t, 1 - gone);
+      }
       if (a.boom) this.boomStep(a, el);
+    }
+
+    // Cavalier blanc : le chien et son ninja tournent sur eux-mêmes et se changent en tourbillon de vent
+    tickWhirlwind(c, a, el, t, M) {
+      const T = this.THREE;
+      if (!a.whirl) {
+        a.whirl = new T.Group();
+        a.whirlBands = [];
+        for (let i = 0; i < 7; i++) {
+          const r = 0.16 + i * 0.07;
+          const band = new T.Mesh(new T.TorusGeometry(r, 0.022 + i * 0.003, 6, 28, Math.PI * 1.3),
+            new T.MeshBasicMaterial({ color: i % 2 ? 0xffffff : 0xd9ecf5, transparent: true, opacity: 0.75, depthWrite: false, side: T.DoubleSide }));
+          band.rotation.x = Math.PI / 2; band.position.y = 0.12 + i * 0.22;
+          band.userData = { speed: 9 + i * 1.5, phase: i * 0.9 };
+          a.whirl.add(band); a.whirlBands.push(band);
+        }
+        a.whirlBits = [];
+        for (let i = 0; i < 14; i++) {
+          const bit = new T.Mesh(new T.PlaneGeometry(0.07, 0.04), new T.MeshBasicMaterial({ color: i % 3 ? 0xcfe6c4 : 0xb7a57a, transparent: true, opacity: 0.85, side: T.DoubleSide, depthWrite: false }));
+          bit.userData = { a: i * 2.399, h: (i % 7) * 0.22, r: 0.25 + (i % 4) * 0.1 };
+          a.whirl.add(bit); a.whirlBits.push(bit);
+        }
+        a.whirl.scale.setScalar(0.01);
+        this.fx(a, a.whirl);
+      }
+      if (el >= a.pre) return false;
+      const k = el / a.pre;
+      c.holder.position.set(a.from.x, 0, a.from.z);
+      c.holder.rotation.y = Math.atan2(a.target.x - a.from.x, a.target.z - a.from.z);
+      M.animate(c.parts, t, 'run');
+      // ils tournent de plus en plus vite, puis disparaissent dans le vent
+      c.parts.root.rotation.set(0, k * k * 30, 0);
+      c.parts.root.visible = k < 0.75;
+      if (c.parts.riderRoot) c.parts.riderRoot.visible = k < 0.75;
+      a.whirl.visible = true;
+      a.whirl.position.set(a.from.x, 0, a.from.z);
+      a.whirl.scale.setScalar(Math.max(0.01, Math.min(1, k * 1.4)));
+      this.spinWhirl(a, t, 1);
+      return true;
+    }
+    spinWhirl(a, t, fade) {
+      a.whirlBands.forEach((b) => {
+        b.rotation.z = t * b.userData.speed + b.userData.phase;
+        b.material.opacity = (0.45 + Math.abs(Math.sin(t * 7 + b.userData.phase)) * 0.35) * fade;
+      });
+      a.whirlBits.forEach((bit, i) => {
+        const d = bit.userData, ang = d.a + t * (8 + (i % 3));
+        bit.position.set(Math.cos(ang) * d.r, d.h + Math.sin(t * 5 + i) * 0.05, Math.sin(ang) * d.r);
+        bit.rotation.set(t * 6 + i, t * 4, 0);
+        bit.material.opacity = 0.85 * fade;
+      });
     }
 
     tunnelDust(c, a, t) {
@@ -3354,8 +3422,9 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         return el < a.duration;
       }
       if (a.style === 'tunnel-impact') {
-        if (el < 1.5) { c.holder.position.set(a.target.x, 0, a.target.z); return true; }
-        const u = Math.max(0, Math.min(1, (el - 1.5) / (a.duration - 1.5)));
+        const pre = a.pre || 0, e2 = el - pre;
+        if (e2 < 1.5) { c.holder.position.set(a.target.x, 0, a.target.z); return true; }
+        const u = Math.max(0, Math.min(1, (e2 - 1.5) / (a.duration - pre - 1.5)));
         M.animate(c.parts, t, 'ko');
         c.holder.position.set(a.target.x + d.dx * u * 7, Math.sin(Math.PI * u) * 1.8, a.target.z + d.dz * u * 7);
         c.parts.root.rotation.set(u * 10, u * 8, u * 6);
