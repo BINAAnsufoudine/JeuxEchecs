@@ -2800,11 +2800,14 @@
   const TC_LABELS = L({ unlim: '3 jours par coup', '7d': '3 jours par coup', '3d': '3 jours par coup', '1d': '1 jour par coup', pm60: '1 minute par coup', pm30: '30 secondes par coup', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' },
     { unlim: '3 days per move', '7d': '3 days per move', '3d': '3 days per move', '1d': '1 day per move', pm60: '1 minute per move', pm30: '30 seconds per move', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' });
   const announced = new Set();
-  let justSignedUp = false, progressDirty = false, inviteStop = null, gamesStop = null, onlineInvites = { in: [], out: [] }, onlineGames = [];
-  const SKIP_SYNC = new Set(['lastScreen', 'onlineSession', 'onlineSynced']);
+  let justSignedUp = false, progressDirty = false, progressRev = 0, progressPushing = false, inviteStop = null, gamesStop = null, onlineInvites = { in: [], out: [] }, onlineGames = [];
+  const SKIP_SYNC = new Set(['lastScreen', 'onlineSession', 'onlineSynced', 'progressDirty']);
   // toute modification de la progression sera envoyée au compte
   const rawSet = store.set.bind(store);
-  store.set = (key, value) => { rawSet(key, value); if (!SKIP_SYNC.has(key)) progressDirty = true; };
+  // Progression modifiée mais pas encore envoyée : retenu sur l'appareil, pour être envoyé même après
+  // une coupure de connexion ou une fermeture de l'appli (à la prochaine connexion)
+  store.set = (key, value) => { rawSet(key, value); if (!SKIP_SYNC.has(key)) { progressDirty = true; progressRev++; if (!store.get('progressDirty', false)) rawSet('progressDirty', true); } };
+  progressDirty = store.get('progressDirty', false);
   function localProgress() {
     const data = {};
     for (let i = 0; i < localStorage.length; i++) {
@@ -2819,11 +2822,18 @@
     for (const [k, v] of Object.entries(data || {})) rawSet(k, v);
   }
   async function pushProgress() {
-    if (!ON || !ON.user || !progressDirty) return;
-    progressDirty = false;
-    try { await ON.saveProgress(localProgress()); } catch { progressDirty = true; }
+    if (!ON || !ON.user || !progressDirty || progressPushing) return;
+    // le drapeau n'est levé qu'une fois l'envoi confirmé par le serveur (hors connexion, l'envoi attend)
+    progressPushing = true;
+    const rev = progressRev;
+    try {
+      await ON.saveProgress(localProgress());
+      if (rev === progressRev) { progressDirty = false; rawSet('progressDirty', false); }
+    } catch { /* nouvel essai plus tard */ }
+    progressPushing = false;
   }
   setInterval(pushProgress, 45000);
+  window.addEventListener('online', () => pushProgress());
   setInterval(() => { if (ON && ON.user && document.visibilityState === 'visible') ON.presence(); }, 60000);
   window.addEventListener('pagehide', pushProgress);
   // Après connexion : récupère la progression du compte, ou propose d'importer celle de l'appareil
@@ -2834,7 +2844,8 @@
     const synced = store.get('onlineSynced', null) === user.uid;
     const name = profile && profile.pseudo;
     if (name) { const p = playerProfile(); p.name = name; p.nameAsked = true; store.set('player', p); }
-    if (synced && cloud) { refreshHome(); return; }
+    // progression faite hors connexion sur cet appareil : envoyée maintenant
+    if (synced && cloud) { if (progressDirty) pushProgress(); refreshHome(); return; }
     if (!hasProgress(cloud) && hasProgress(local)) {
       modal({ title: L('Garder ta progression ?', 'Keep your progress?'),
         text: L('Cet appareil contient déjà une progression (parties, problèmes, niveaux). Veux-tu l\'importer dans ton compte ?', 'This device already holds progress (games, puzzles, levels). Do you want to import it into your account?'),
