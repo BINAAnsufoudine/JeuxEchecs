@@ -640,3 +640,11 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .danger-zone { margin-top: 18px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(232,112,95,0.45); }
 .danger-zone summary { cursor: pointer; color: #e8705f; font-weight: 650; }
 .btn.danger { background: #b9443a; color: #fff; }
+
+/* Mode administrateur : pas de jeu */
+body.admin-mode #home-menu > :not(#btn-admin):not(#btn-settings):not(#btn-about),
+body.admin-mode #home-rewards, body.admin-mode #coach-program, body.admin-mode #btn-profile, body.admin-mode #btn-player-name { display: none !important; }
+.admin-table td { font-size: 0.85rem; }
+.admin-table tr.banned td { opacity: 0.55; }
+.admin-actions { display: flex; gap: 4px; }
+.mini.danger { color: #e8705f; }

@@ -266,6 +266,7 @@
     input.click();
   }
   function promptPlayerName() {
+    if (document.body.classList.contains('admin-mode')) return;
     const player = playerProfile();
     const body = document.createElement('div');
     const photoRow = document.createElement('div'); photoRow.className = 'photo-row';
@@ -561,6 +562,7 @@
 
   /* ---------- Partie ---------- */
   function startGame(conf, uciMoves = [], res = null, flip, terrainId, weatherId) {
+    if (document.body.classList.contains('admin-mode')) { toast(L('Le compte administrateur ne peut pas jouer.', 'The administrator account cannot play.')); show('admin'); return; }
     $('chat').hidden = true;
     cancelAi();
     if (conf.mode !== 'online' && typeof stopOnline === 'function') stopOnline();
@@ -2828,6 +2830,22 @@
   }
   function onUserChange(user, profile) {
     rawSet('onlineSession', !!user);
+    // compte suspendu par l'administrateur : déconnexion
+    if (user && profile && profile.banned) {
+      ON.signOut();
+      modal({ title: L('Compte suspendu', 'Account suspended'), text: L('Ce compte a été suspendu par l’administrateur. Tu peux continuer à jouer sur cet appareil sans compte.', 'This account has been suspended by the administrator. You can keep playing on this device without an account.'), actions: [{ label: 'OK', primary: true }] });
+      return;
+    }
+    // compte administrateur : pas de jeu, écran d'administration
+    const admin = !!(user && ON.isAdminEmail());
+    setAdminMode(admin);
+    if (admin) {
+      adminCache = null; adminSection = null;
+      $('btn-account').textContent = L('Mon compte', 'My account');
+      closeModal(); returnTo = 'home'; show('admin'); renderAdmin();
+      ON.markAdmin();
+      return;
+    }
     $('btn-account').textContent = user ? L('Mon compte', 'My account') : L('Se connecter', 'Sign in');
     if (inviteStop) { inviteStop(); inviteStop = null; }
     if (gamesStop) { gamesStop(); gamesStop = null; }
@@ -3982,6 +4000,100 @@
     if (kind === 'quests') return openShop();
   });
   $('btn-welcome').onclick = () => show('welcome');
+  /* ---------- Administration : compte réservé au développeur, sans jeu ---------- */
+  let adminSection = null, adminCache = null, adminQuery = '';
+  const DAYMS = 86400000;
+  function setAdminMode(on) {
+    document.body.classList.toggle('admin-mode', on);
+    $('btn-admin').hidden = !on;
+  }
+  async function loadAdmin() {
+    $('admin-body').innerHTML = `<p class="level-help">${L('Chargement…', 'Loading…')}</p>`;
+    try { adminCache = await ON.adminData(); } catch (err) { $('admin-body').innerHTML = `<p class="ed-error">${ON.explain(err)}</p><p class="level-help">${L('Vérifie que les règles Firebase avec l\u2019administration sont publiées.', 'Check that the Firebase rules with administration are published.')}</p>`; return; }
+    renderAdmin();
+  }
+  function renderAdmin() {
+    const body = $('admin-body'), u = ON && ON.user;
+    if (!u || !ON.isAdminEmail()) { body.innerHTML = `<p class="level-help">${L('Réservé au compte administrateur.', 'Administrator account only.')}</p>`; return; }
+    if (!ON.isAdmin()) {
+      body.innerHTML = `<p class="level-help">${L(`Pour activer l’administration, confirme d’abord ton adresse <b>${escHtml(u.email)}</b> : un e-mail de vérification va t’être envoyé.`, `To enable administration, first confirm your address <b>${escHtml(u.email)}</b>: a verification e-mail will be sent to you.`)}</p>
+        <button class="btn primary wide" data-admin="verify">${L('Envoyer l’e-mail de vérification', 'Send the verification e-mail')}</button>
+        <button class="btn wide" data-admin="checked">${L('J’ai cliqué sur le lien', 'I clicked the link')}</button><p id="admin-msg" class="ed-error" role="status"></p>`;
+      return;
+    }
+    if (!adminCache) { loadAdmin(); return; }
+    const { users, games, tournaments } = adminCache, now = Date.now();
+    const players = users.filter((x) => !x.admin);
+    const SECTIONS = [['stats', '📊', L('Statistiques', 'Statistics')], ['users', '👥', L('Comptes', 'Accounts')], ['tours', '🏆', L('Tournois', 'Tournaments')]];
+    if (!adminSection) {
+      body.innerHTML = `<p class="level-help">${L('Compte administrateur : on ne joue pas avec ce compte, il sert à gérer les comptes et à suivre l’appli.', 'Administrator account: you cannot play with it, it is used to manage accounts and follow the app.')}</p><div class="tour-menu">${SECTIONS.map(([id, icon, label]) => `<button class="btn tour-menu-btn" data-admin-section="${id}"><span class="tour-menu-icon">${icon}</span><b>${label}</b></button>`).join('')}</div>
+        <button class="btn ghost wide" data-admin="reload" style="margin-top:10px">↻ ${L('Actualiser les données', 'Refresh data')}</button>`;
+      return;
+    }
+    const sec = SECTIONS.find((x) => x[0] === adminSection);
+    let html = `<button class="btn ghost" data-admin-section="">‹ ${L('Administration', 'Administration')}</button><h3 class="train-h">${sec[1]} ${sec[2]}</h3>`;
+    if (adminSection === 'stats') {
+      const seen = (d) => players.filter((x) => now - (x.lastSeen || 0) < d * DAYMS).length;
+      const created = (d) => players.filter((x) => now - (x.createdAt || 0) < d * DAYMS).length;
+      const over = games.filter((g) => g.status === 'over'), live = games.filter((g) => g.status === 'active');
+      const recent = (d) => games.filter((g) => now - (g.createdAt || 0) < d * DAYMS).length;
+      const elos = players.map((x) => x.elo || 600), avg = elos.length ? Math.round(elos.reduce((a, b) => a + b, 0) / elos.length) : 0;
+      const tc = {}; games.forEach((g) => { tc[g.tc] = (tc[g.tc] || 0) + 1; });
+      const reasons = {}; over.forEach((g) => { reasons[g.reason || '?'] = (reasons[g.reason || '?'] || 0) + 1; });
+      const card = (title, rows) => `<div class="stat-card"><h4>${title}</h4>${rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>`;
+      const top = players.slice().sort((a, b) => (b.elo || 0) - (a.elo || 0)).slice(0, 5);
+      html += `<div class="stat-cards">
+        ${card(L('Comptes', 'Accounts'), [[L('Total', 'Total'), players.length], [L('Suspendus', 'Suspended'), players.filter((x) => x.banned).length], [L('Nouveaux (7 j)', 'New (7 d)'), created(7)], [L('Nouveaux (30 j)', 'New (30 d)'), created(30)]])}
+        ${card(L('Activité', 'Activity'), [[L('Connectés maintenant', 'Online now'), players.filter((x) => now - (x.lastSeen || 0) < 3 * 60000).length], [L('Actifs aujourd’hui', 'Active today'), seen(1)], [L('Actifs (7 j)', 'Active (7 d)'), seen(7)], [L('Actifs (30 j)', 'Active (30 d)'), seen(30)], [L('Inactifs depuis 1 an', 'Inactive for 1 year'), players.filter((x) => now - (x.lastSeen || x.createdAt || 0) > 365 * DAYMS).length]])}
+        ${card(L('Parties en ligne', 'Online games'), [[L('Total', 'Total'), games.length], [L('En cours', 'In progress'), live.length], [L('Terminées', 'Finished'), over.length], [L('Jouées (7 j)', 'Played (7 d)'), recent(7)], [L('De tournoi', 'Tournament'), games.filter((g) => g.tournamentId).length]])}
+        ${card(L('Résultats', 'Results'), [[L('Blancs gagnent', 'White wins'), over.filter((g) => g.result === '1-0').length], [L('Noirs gagnent', 'Black wins'), over.filter((g) => g.result === '0-1').length], [L('Nulles', 'Draws'), over.filter((g) => g.result === '1/2-1/2').length], ...Object.entries(reasons).map(([k, v]) => [REASONS[k] || k, v])])}
+        ${card(L('Cadences', 'Time controls'), Object.entries(tc).sort((a, b) => b[1] - a[1]).map(([k, v]) => [TC_LABELS[k] || k, v]))}
+        ${card(L('Tournois', 'Tournaments'), [[L('Total', 'Total'), tournaments.length], [L('Inscriptions ouvertes', 'Open'), tournaments.filter((t) => t.status === 'open').length], [L('En cours', 'Running'), tournaments.filter((t) => t.status === 'running').length], [L('Terminés', 'Finished'), tournaments.filter((t) => t.status === 'over').length]])}
+        ${card(L('Niveau', 'Level'), [[L('Elo moyen', 'Average Elo'), avg], ...top.map((x, i) => [`${i + 1}. ${escHtml(x.pseudo || '?')}`, x.elo || 600])])}
+      </div>`;
+    }
+    if (adminSection === 'users') {
+      const q = adminQuery.trim().toLowerCase();
+      const list = players.filter((x) => !q || String(x.pseudo || '').toLowerCase().includes(q)).sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+      html += `<div class="players-tools"><input id="admin-search" class="profile-name-input" type="search" placeholder="${L('Chercher un pseudo', 'Search a nickname')}" value="${escHtml(adminQuery)}"></div><p id="admin-msg" class="ed-error" role="status"></p>
+        <table class="tour-table admin-table"><tr><th>${L('Pseudo', 'Nickname')}</th><th>Elo</th><th>${L('Créé', 'Created')}</th><th>${L('Vu', 'Seen')}</th><th>${L('Parties', 'Games')}</th><th></th></tr>${list.map((x) => `<tr${x.banned ? ' class="banned"' : ''}><td><a href="#" data-profile="${x.id}">${escHtml(x.pseudo || '?')}</a>${x.banned ? ` <small>(${L('suspendu', 'suspended')})</small>` : ''}</td><td>${x.elo || 600}</td><td>${x.createdAt ? new Date(x.createdAt).toLocaleDateString(LOCALE) : '–'}</td><td>${x.lastSeen ? new Date(x.lastSeen).toLocaleDateString(LOCALE) : '–'}</td><td>${games.filter((g) => (g.players || []).includes(x.id)).length}</td><td class="admin-actions"><button class="mini" data-admin-ban="${x.id}">${x.banned ? L('Réactiver', 'Reinstate') : L('Suspendre', 'Suspend')}</button><button class="mini danger" data-admin-del="${x.id}">${L('Supprimer', 'Delete')}</button></td></tr>`).join('')}</table>`;
+    }
+    if (adminSection === 'tours') {
+      html += `<p id="admin-msg" class="ed-error" role="status"></p><table class="tour-table admin-table"><tr><th>${L('Nom', 'Name')}</th><th>${L('État', 'Status')}</th><th>${L('Inscrits', 'Entrants')}</th><th>${L('Créé', 'Created')}</th><th></th></tr>${tournaments.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map((t) => `<tr><td>${escHtml(t.name || '?')}</td><td>${STATUS_LABELS[t.status] || t.status}</td><td>${(t.members || []).length}</td><td>${t.createdAt ? new Date(t.createdAt).toLocaleDateString(LOCALE) : '–'}</td><td><button class="mini danger" data-admin-deltour="${t.id}">${L('Supprimer', 'Delete')}</button></td></tr>`).join('')}</table>`;
+    }
+    body.innerHTML = html;
+  }
+  $('admin-body').addEventListener('input', (e) => { if (e.target.id === 'admin-search') { adminQuery = e.target.value; const pos = e.target.selectionStart; renderAdmin(); const i = $('admin-search'); i.focus(); i.setSelectionRange(pos, pos); } });
+  $('admin-body').addEventListener('click', async (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    const msg = (t, ok) => { const m = $('admin-msg'); if (m) { m.textContent = t; m.style.color = ok ? 'var(--accent, #e9b949)' : ''; } };
+    if (b.dataset.adminSection != null) { adminSection = b.dataset.adminSection || null; renderAdmin(); return; }
+    if (b.dataset.admin === 'reload') { adminCache = null; loadAdmin(); return; }
+    if (b.dataset.admin === 'verify') { try { await ON.sendVerification(); msg(L('E-mail envoyé : clique sur le lien qu’il contient, puis sur « J’ai cliqué sur le lien ».', 'E-mail sent: click its link, then “I clicked the link”.'), true); } catch (err) { msg(ON.explain(err)); } return; }
+    if (b.dataset.admin === 'checked') { try { const ok = await ON.refreshVerification(); if (ok) { renderAdmin(); } else msg(L('Adresse pas encore vérifiée.', 'Address not verified yet.')); } catch (err) { msg(ON.explain(err)); } return; }
+    const find = (id) => adminCache.users.find((x) => x.id === id);
+    if (b.dataset.adminBan) {
+      const x = find(b.dataset.adminBan);
+      try { await ON.adminSetBanned(x.id, !x.banned); x.banned = !x.banned; renderAdmin(); } catch (err) { msg(ON.explain(err)); }
+      return;
+    }
+    if (b.dataset.adminDel) {
+      const x = find(b.dataset.adminDel);
+      modal({ title: L(`Supprimer le compte de ${x.pseudo} ?`, `Delete ${x.pseudo}’s account?`), text: L('Son profil, son pseudo, sa progression en ligne et ses invitations seront effacés. Ses parties restent dans l’historique de ses adversaires. Il ne pourra plus se reconnecter avec ce compte.', 'Their profile, nickname, online progress and invitations will be erased. Their games stay in their opponents’ history. They will not be able to sign in with this account again.'), actions: [
+        { label: L('Supprimer', 'Delete'), primary: true, onClick: async () => { try { await ON.adminDeleteUser(x.id); adminCache.users = adminCache.users.filter((y) => y.id !== x.id); renderAdmin(); toast(L('Compte supprimé.', 'Account deleted.')); } catch (err) { toast(ON.explain(err)); } } },
+        { label: L('Annuler', 'Cancel'), ghost: true },
+      ] });
+      return;
+    }
+    if (b.dataset.adminDeltour) {
+      const t = adminCache.tournaments.find((x) => x.id === b.dataset.adminDeltour);
+      modal({ title: L(`Supprimer le tournoi « ${t.name} » ?`, `Delete the tournament “${t.name}”?`), text: L('Le tournoi disparaît des listes et de l’historique. Ses parties restent dans l’historique des joueurs.', 'The tournament disappears from the lists and history. Its games stay in the players’ history.'), actions: [
+        { label: L('Supprimer', 'Delete'), primary: true, onClick: async () => { try { await ON.adminDeleteTournament(t.id); adminCache.tournaments = adminCache.tournaments.filter((y) => y.id !== t.id); renderAdmin(); } catch (err) { toast(ON.explain(err)); } } },
+        { label: L('Annuler', 'Cancel'), ghost: true },
+      ] });
+    }
+  });
+  $('btn-admin').onclick = () => { returnTo = 'home'; adminSection = null; show('admin'); renderAdmin(); };
   $('btn-continue').onclick = () => {
     const saved = store.get('game', null);
     if (saved && saved.cfg) startGame(saved.cfg, saved.moves, saved.result, saved.flipped, saved.terrain, saved.weather);

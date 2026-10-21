@@ -141,6 +141,33 @@ window.Online = (function () {
     await f.deleteDoc(f.doc(f.db, 'users', u.uid));
     await f.deleteUser(u);
   }
+  /* ----- Administration (réservée à l'adresse du développeur, vérifiée) ----- */
+  const ADMIN_EMAIL = 'ansuf.dev@gmail.com';
+  const isAdminEmail = () => !!(user && String(user.email || '').toLowerCase() === ADMIN_EMAIL);
+  const isAdmin = () => isAdminEmail() && user.emailVerified;
+  async function sendVerification() { const f = await load(); await f.sendEmailVerification(f.auth.currentUser); }
+  async function refreshVerification() { const f = await load(); await f.auth.currentUser.reload(); await f.auth.currentUser.getIdToken(true); user = f.auth.currentUser; return user.emailVerified; }
+  async function adminData() {
+    const f = await load();
+    const [u, g, t] = await Promise.all(['users', 'games', 'tournaments'].map((c) => f.getDocs(f.collection(f.db, c))));
+    const rows = (s) => s.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return { users: rows(u), games: rows(g), tournaments: rows(t) };
+  }
+  async function adminSetBanned(uid, banned) { const f = await load(); await f.updateDoc(f.doc(f.db, 'users', uid), { banned: !!banned }); }
+  async function adminDeleteUser(uid) {
+    const f = await load();
+    const u = await f.getDoc(f.doc(f.db, 'users', uid)), data = u.exists() ? u.data() : {};
+    for (const field of ['from', 'to']) {
+      const snap = await f.getDocs(f.query(f.collection(f.db, 'invites'), f.where(field, '==', uid)));
+      for (const d of snap.docs) { try { await f.deleteDoc(d.ref); } catch { /* déjà supprimée */ } }
+    }
+    try { await f.deleteDoc(f.doc(f.db, 'users', uid, 'private', 'progress')); } catch { /* aucune */ }
+    if (data.pseudoLower) { try { await f.deleteDoc(f.doc(f.db, 'pseudos', data.pseudoLower)); } catch { /* aucun */ } }
+    await f.deleteDoc(f.doc(f.db, 'users', uid));
+  }
+  // le profil de l'admin est marqué pour ne pas apparaître parmi les joueurs
+  async function markAdmin() { const f = await load(); try { await f.updateDoc(f.doc(f.db, 'users', user.uid), { admin: true }); } catch { /* pas de profil */ } }
+  async function adminDeleteTournament(id) { const f = await load(); await f.deleteDoc(f.doc(f.db, 'tournaments', id)); }
   async function setPhoto(photo) {
     if (!user) return;
     const f = await load();
@@ -213,7 +240,7 @@ window.Online = (function () {
   async function listPlayers() {
     const f = await load();
     const snap = await f.getDocs(f.query(f.collection(f.db, 'users'), f.orderBy('lastSeen', 'desc'), f.limit(150)));
-    return snap.docs.map((d) => { const u = d.data(); return { uid: d.id, pseudo: u.pseudo, elo: u.elo || 600, lastSeen: u.lastSeen || 0, summary: u.summary ? { level: u.summary.level, title: u.summary.title } : null }; });
+    return snap.docs.filter((d) => !d.data().admin && !d.data().banned).map((d) => { const u = d.data(); return { uid: d.id, pseudo: u.pseudo, elo: u.elo || 600, lastSeen: u.lastSeen || 0, summary: u.summary ? { level: u.summary.level, title: u.summary.title } : null }; });
   }
   // Chat coupé avec certains joueurs
   async function setMuted(list) {
@@ -525,6 +552,7 @@ window.Online = (function () {
     get user() { return user; }, get profile() { return profile; },
     signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos, publishSummary, getProfile, myTournaments,
     presence, listPlayers, setMuted, sendChat, myGames, deleteAccount,
+    isAdmin, isAdminEmail, sendVerification, refreshVerification, adminData, adminSetBanned, adminDeleteUser, adminDeleteTournament, markAdmin,
     saveProgress, loadProgress, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
     createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,
   };
