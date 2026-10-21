@@ -30,7 +30,12 @@ window.Online = (function () {
         fb = { ...Au, ...F, auth, db: F.getFirestore(app) };
         Au.onAuthStateChanged(auth, async (u) => {
           user = u; profile = null;
-          if (u) { try { const s = await F.getDoc(F.doc(fb.db, 'users', u.uid)); profile = s.exists() ? s.data() : null; } catch { profile = null; } }
+          // juste après une inscription, le profil peut ne pas encore être écrit : on réessaie un peu plus tard
+          for (let i = 0; u && i < 4 && !profile; i++) {
+            try { const s = await F.getDoc(F.doc(fb.db, 'users', u.uid)); if (s.exists()) profile = s.data(); } catch { /* hors ligne */ }
+            if (!profile) await new Promise((r) => setTimeout(r, 1200));
+          }
+          if (user !== u) return;
           listeners.forEach((f) => { try { f(user, profile); } catch { /* écouteur fautif ignoré */ } });
         });
         return fb;

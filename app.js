@@ -902,7 +902,7 @@
     if (thinking) { st.textContent = L("L'ordinateur réfléchit…", 'The computer is thinking…'); return; }
     const side = game.turn === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
     if (game.inCheck()) { st.textContent = L('Échec !', 'Check!'); st.classList.add('alert'); return; }
-    st.textContent = cfg.mode !== 'local' ? (isHumanTurn() ? L('À vous de jouer', 'Your move') : cfg.mode === 'coach' ? L(`${coachName()} réfléchit…`, `${coachName()} is thinking…`) : '') : L(`Au tour des ${side}`, `${side} to move`);
+    st.textContent = cfg.mode !== 'local' ? (isHumanTurn() ? L('À vous de jouer', 'Your move') : cfg.mode === 'coach' ? L(`${coachName()} réfléchit…`, `${coachName()} is thinking…`) : cfg.mode === 'online' && onlineGame ? L(`Au tour de ${game.turn === 'w' ? onlineGame.whiteName : onlineGame.blackName}`, `${game.turn === 'w' ? onlineGame.whiteName : onlineGame.blackName} to move`) : '') : L(`Au tour des ${side}`, `${side} to move`);
   }
 
   function renderActions() {
@@ -2841,7 +2841,7 @@
   const accMsg = (t, ok) => { const m = $('acc-msg'); if (m) { m.textContent = t; m.style.color = ok ? 'var(--accent, #e9b949)' : ''; } };
   async function accountAction(fn, okText) {
     accMsg(L('Un instant…', 'One moment…'), true);
-    try { await fn(); if (okText) accMsg(okText, true); } catch (e) { accMsg(ON.explain(e)); }
+    try { await fn(); if (document.body.dataset.screen === 'account') renderAccount(); if (okText) accMsg(okText, true); } catch (e) { accMsg(ON.explain(e)); }
   }
   $('account-body').addEventListener('click', (e) => {
     const t = e.target.closest('button'); if (!t) return;
