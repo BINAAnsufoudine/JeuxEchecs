@@ -511,3 +511,4 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 #online-body .replay-row { display: flex; gap: 8px; align-items: stretch; }
 #online-body .replay-row .replay-item { flex: 1; }
 .player-profile .profile-edit + .profile-edit { margin-top: 6px; }
+.legend-figure img.wide { width: 100%; height: auto; max-height: none; object-fit: contain; }

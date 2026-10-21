@@ -2517,7 +2517,8 @@
   function renderLegend() {
     const s = LEGEND[legendIdx];
     $('legend-img').hidden = !s.img;
-    if (s.img) $('legend-img').src = s.img;
+    // image en largeur (montagne de riz, dernière vignette) : toute la largeur, proportions gardées
+    if (s.img) { const im = $('legend-img'); im.onload = () => im.classList.toggle('wide', im.naturalWidth > im.naturalHeight); im.src = s.img; }
     const b = $('legend-board');
     b.hidden = !s.board;
     if (s.board) {
