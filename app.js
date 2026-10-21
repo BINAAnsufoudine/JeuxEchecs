@@ -2040,10 +2040,15 @@
     const task = pz.item && pz.item.line;
     $('pz-hint').disabled = !task || pz.done || pz.locked;
     $('pz-solution').disabled = !task || pz.done || pz.locked;
-    const lastStep = pz.kind === 'lesson' && pz.idx >= pz.steps.length - 1;
-    $('pz-next').innerHTML = `<span>→</span>${pz.kind === 'lesson' ? (lastStep ? (pz.lesson && (pz.lesson.tip || pz.lesson.champion || pz.lesson.onDone) ? L('Terminer', 'Finish') : L('Aux problèmes', 'To the puzzles')) : L('Continuer', 'Continue')) : L('Suivant', 'Next')}`;
+    $('pz-next').innerHTML = `<span>→</span>${pz.kind === 'lesson' ? lessonNextLabel() : L('Suivant', 'Next')}`;
     $('pz-next').disabled = !pz.done;
   }
+  // Libellé du bouton du bas pendant un cours, et la phrase de l'entraîneur qui invite à l'utiliser
+  function lessonNextLabel() {
+    const lastStep = pz.idx >= pz.steps.length - 1;
+    return lastStep ? (pz.lesson && (pz.lesson.tip || pz.lesson.champion || pz.lesson.onDone) ? L('Terminer', 'Finish') : L('Aux problèmes', 'To the puzzles')) : L('Continuer', 'Continue');
+  }
+  const lessonCue = () => L(`Appuie sur « ${lessonNextLabel()} » en bas de l'écran ${pz.idx >= pz.steps.length - 1 ? 'pour terminer' : 'pour la suite'}.`, `Press “${lessonNextLabel()}” at the bottom of the screen ${pz.idx >= pz.steps.length - 1 ? 'to finish' : 'to go on'}.`);
   const busyDelay = (min) => Math.max(min, (b3d && b3d.busyUntil ? b3d.busyUntil * 1000 - performance.now() : 0) + 250);
   function pzAfterMove(res) {
     animateNext = true;
@@ -2095,7 +2100,7 @@
       const st = pz.steps[pz.idx];
       const lessonLevel = themeRow(loadCoach(), pz.lesson.theme).level;
       if (!pz.lesson.noRating) updatePlayerRating(400 + lessonLevel * 250, clean ? 1 : 0, 8, 'puzzles');
-      say(st.why || L('Exactement ! Tu as trouvé.', 'Exactly! You found it.'), 'happy');
+      say(`${st.why || L('Exactement ! Tu as trouvé.', 'Exactly! You found it.')} ${lessonCue()}`, 'happy');
       if (st.mistake) touchMistake(st.mistake, clean);
     } else {
       const r = recordPuzzle(pz.item, clean);
@@ -2199,7 +2204,7 @@
     marks = st.marks ? st.marks.map((s) => window.Chess.sqIndex(s)) : null;
     $('puzzle-title').textContent = pz.lesson.title;
     $('pz-count').textContent = L(`Étape ${pz.idx + 1} / ${pz.steps.length}`, `Step ${pz.idx + 1} / ${pz.steps.length}`);
-    say(st.text);
+    say(st.line ? st.text : `${st.text} ${lessonCue()}`);
     setPzStatus('', st.line ? L('À toi de jouer', 'Your move') : '');
     renderBoard();
     pzButtons();
