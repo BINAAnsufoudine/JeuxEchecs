@@ -180,9 +180,33 @@ window.Online = (function () {
     const u = await f.getDoc(f.doc(f.db, 'users', uid));
     return { uid, ...(u.exists() ? u.data() : { pseudo }) };
   }
-  async function invite(pseudo, tc) {
+  // Présence : date de dernière visite, pour savoir qui est connecté
+  async function presence() {
+    if (!user) return;
     const f = await load();
-    const other = await findPlayer(pseudo);
+    try { await f.updateDoc(f.doc(f.db, 'users', user.uid), { lastSeen: Date.now() }); } catch { /* hors ligne */ }
+  }
+  // Liste des joueurs, les plus récemment connectés d'abord (sans les photos, trop lourdes pour une liste)
+  async function listPlayers() {
+    const f = await load();
+    const snap = await f.getDocs(f.query(f.collection(f.db, 'users'), f.orderBy('lastSeen', 'desc'), f.limit(150)));
+    return snap.docs.map((d) => { const u = d.data(); return { uid: d.id, pseudo: u.pseudo, elo: u.elo || 600, lastSeen: u.lastSeen || 0, summary: u.summary ? { level: u.summary.level, title: u.summary.title } : null }; });
+  }
+  // Chat coupé avec certains joueurs
+  async function setMuted(list) {
+    const f = await load();
+    await f.updateDoc(f.doc(f.db, 'users', user.uid), { muted: list });
+    if (profile) profile.muted = list;
+  }
+  async function sendChat(gameId, text) {
+    const f = await load();
+    const msg = { from: user.uid, name: (profile && profile.pseudo) || '?', text: String(text).trim().slice(0, 200), at: Date.now() };
+    if (!msg.text) return;
+    await f.updateDoc(f.doc(f.db, 'games', gameId), { chat: f.arrayUnion(msg) });
+  }
+  async function invite(pseudo, tc, target) {
+    const f = await load();
+    const other = target || await findPlayer(pseudo);
     if (other.uid === user.uid) fail('self-invite');
     await f.addDoc(f.collection(f.db, 'invites'), {
       from: user.uid, fromName: profile.pseudo, fromElo: profile.elo || 600,
@@ -477,6 +501,7 @@ window.Online = (function () {
     TIME_CONTROLS, load, onUser, explain,
     get user() { return user; }, get profile() { return profile; },
     signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos, publishSummary, getProfile, myTournaments,
+    presence, listPlayers, setMuted, sendChat,
     saveProgress, loadProgress, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
     createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,
   };

@@ -560,6 +560,7 @@
 
   /* ---------- Partie ---------- */
   function startGame(conf, uciMoves = [], res = null, flip, terrainId, weatherId) {
+    $('chat').hidden = true;
     cancelAi();
     if (conf.mode !== 'online' && typeof stopOnline === 'function') stopOnline();
     replay = null; setReplayUi(false);
@@ -2788,6 +2789,7 @@
     try { await ON.saveProgress(localProgress()); } catch { progressDirty = true; }
   }
   setInterval(pushProgress, 45000);
+  setInterval(() => { if (ON && ON.user && document.visibilityState === 'visible') ON.presence(); }, 60000);
   window.addEventListener('pagehide', pushProgress);
   // Après connexion : récupère la progression du compte, ou propose d'importer celle de l'appareil
   async function syncAfterLogin(user, profile) {
@@ -2826,6 +2828,7 @@
     if (gamesStop) { gamesStop(); gamesStop = null; }
     if (user) {
       syncAfterLogin(user, profile);
+      ON.presence();
       let known = null;
       inviteStop = ON.watchInvites((all) => {
         onlineInvites = all;
@@ -2926,6 +2929,8 @@
       ${field('on-pseudo', L('Pseudo du joueur', 'Player\'s nickname'), 'text', '', 'maxlength="24"')}
       <label class="field-label" for="on-tc">${L('Cadence', 'Time control')}</label><select id="on-tc" class="profile-name-input">${tcOptions}</select>
       <button id="on-invite" class="btn primary wide" type="button">${L('Envoyer l\'invitation', 'Send the invitation')}</button><p id="on-msg" class="ed-error" role="status"></p>`;
+    html += playersHtml();
+    if (!onlinePlayers) loadPlayers();
     const inv = onlineInvites.in, out = onlineInvites.out;
     html += `<h3 class="train-h">${L('Invitations reçues', 'Invitations received')}</h3>` + (inv.length ? `<div class="replay-items">${inv.map((i) => `<div class="replay-row"><div class="btn replay-item"><strong>${escHtml(i.fromName)} (${i.fromElo})</strong><span>${TC_LABELS[i.tc]}</span></div><button class="btn primary" data-accept="${i.id}">${L('Accepter', 'Accept')}</button><button class="btn ghost" data-decline="${i.id}">✕</button></div>`).join('')}</div>` : `<p class="level-help">${L('Aucune pour le moment.', 'None for now.')}</p>`);
     if (out.length) html += `<h3 class="train-h">${L('Invitations envoyées', 'Invitations sent')}</h3><div class="replay-items">${out.map((i) => `<div class="replay-row"><div class="btn replay-item"><strong>${escHtml(i.toName)} (${i.toElo})</strong><span>${TC_LABELS[i.tc]} · ${L('en attente', 'waiting')}</span></div><button class="btn ghost" data-cancel="${i.id}">${L('Annuler', 'Cancel')}</button></div>`).join('')}</div>`;
@@ -2941,6 +2946,16 @@
     const t = e.target.closest('button'); if (!t) return;
     if (t.id === 'on-login') return openAccount();
     const msg = (x, ok) => { const m = $('on-msg'); if (m) { m.textContent = x; m.style.color = ok ? 'var(--accent, #e9b949)' : ''; } };
+    if (t.id === 'on-refresh') { loadPlayers(); return; }
+    if (t.id === 'on-suggest') {
+      if (!onlinePlayers) await loadPlayers();
+      suggestedOpp = suggestOpponent();
+      renderOnline();
+      if (!suggestedOpp) msg(L('Aucun adversaire disponible pour le moment : réessaie plus tard.', 'No opponent available right now: try again later.'));
+      return;
+    }
+    if (t.dataset.inviteUid) { await invitePlayer(t.dataset.inviteUid, msg); $('on-msg').scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+    if (t.dataset.mute) { toggleMute(t.dataset.mute); return; }
     if (t.id === 'on-invite') {
       const tc = $('on-tc').value; store.set('onlineTc', tc);
       msg(L('Envoi…', 'Sending…'), true);
@@ -3430,8 +3445,118 @@
   });
   $('btn-shop').onclick = openShop;
   $('home-rewards').onclick = openShop;
+  /* ---------- Joueurs : liste, adversaire proposé, chat coupé ---------- */
+  let onlinePlayers = null, playersQuery = '', playersLoading = false;
+  const isConnected = (p) => Date.now() - (p.lastSeen || 0) < 3 * 60000;
+  const mutedList = () => (ON && ON.profile && ON.profile.muted) || [];
+  function lastSeenLabel(p) {
+    if (isConnected(p)) return L('connecté', 'online');
+    if (!p.lastSeen) return '';
+    const m = Math.round((Date.now() - p.lastSeen) / 60000);
+    if (m < 60) return L(`vu il y a ${m} min`, `seen ${m} min ago`);
+    if (m < 1440) return L(`vu il y a ${Math.round(m / 60)} h`, `seen ${Math.round(m / 60)} h ago`);
+    return L(`vu il y a ${Math.round(m / 1440)} j`, `seen ${Math.round(m / 1440)} d ago`);
+  }
+  async function loadPlayers() {
+    if (playersLoading) return;
+    playersLoading = true;
+    try { onlinePlayers = await ON.listPlayers(); } catch { onlinePlayers = onlinePlayers || []; }
+    playersLoading = false;
+    if (document.body.dataset.screen === 'online') renderOnline();
+  }
+  function playerRow(p, suggested) {
+    const muted = mutedList().includes(p.uid), q = playersQuery.toLowerCase();
+    const hide = !suggested && q && !String(p.pseudo || '').toLowerCase().includes(q);
+    return `<div class="replay-row player-row" data-name="${escHtml(String(p.pseudo || '').toLowerCase())}"${hide ? ' hidden' : ''}>
+      <button type="button" class="btn replay-item" data-profile="${p.uid}"><strong><i class="on-dot${isConnected(p) ? ' on' : ''}"></i>${escHtml(p.pseudo || '?')} (${p.elo})${p.summary && p.summary.title ? ` <em class="player-title">« ${escHtml(p.summary.title)} »</em>` : ''}</strong><span>${p.summary && p.summary.level ? `${L('Niveau', 'Level')} ${p.summary.level} · ` : ''}${lastSeenLabel(p)}${muted ? L(' · chat coupé', ' · chat muted') : ''}</span></button>
+      <button class="btn primary" data-invite-uid="${p.uid}">${L('Inviter', 'Invite')}</button>
+      <button class="btn ghost" data-mute="${p.uid}" title="${muted ? L('Réactiver le chat avec ce joueur', 'Unmute chat with this player') : L('Couper le chat avec ce joueur', 'Mute chat with this player')}" aria-label="${muted ? L('Réactiver le chat', 'Unmute chat') : L('Couper le chat', 'Mute chat')}">${muted ? '🔇' : '💬'}</button>
+    </div>`;
+  }
+  // Adversaire proposé : joueurs connectés de niveau le plus proche (sinon les plus récemment vus)
+  let suggestedOpp = null;
+  function suggestOpponent() {
+    const me = ON.user.uid, myElo = estimatedElo();
+    const pool = (onlinePlayers || []).filter((p) => p.uid !== me && !mutedList().includes(p.uid));
+    const live = pool.filter(isConnected), recent = pool.filter((p) => Date.now() - p.lastSeen < 7 * 86400000);
+    const src = live.length ? live : recent;
+    if (!src.length) return null;
+    // un peu de hasard parmi les trois plus proches pour ne pas proposer toujours le même
+    const close = src.slice().sort((a, b) => Math.abs(a.elo - myElo) - Math.abs(b.elo - myElo)).slice(0, 3);
+    return close[Math.floor(Math.random() * close.length)];
+  }
+  function playersHtml() {
+    let html = `<h3 class="train-h">${L('Joueurs', 'Players')}</h3>
+      <button id="on-suggest" class="btn primary wide" type="button">🎲 ${L('Proposer un adversaire de mon niveau', 'Suggest an opponent at my level')}</button>`;
+    if (suggestedOpp) html += `<p class="level-help">${L(`Je te propose <b>${escHtml(suggestedOpp.pseudo)}</b> (Elo ${suggestedOpp.elo}, ${lastSeenLabel(suggestedOpp)}) : son niveau est proche du tien (${estimatedElo()}).`, `I suggest <b>${escHtml(suggestedOpp.pseudo)}</b> (Elo ${suggestedOpp.elo}, ${lastSeenLabel(suggestedOpp)}): their level is close to yours (${estimatedElo()}).`)}</p><div class="replay-items">${playerRow(suggestedOpp, true)}</div>`;
+    if (!onlinePlayers) return `${html}<p class="level-help">${L('Chargement des joueurs…', 'Loading players…')}</p>`;
+    const others = onlinePlayers.filter((p) => p.uid !== ON.user.uid);
+    const live = others.filter(isConnected).length;
+    html += `<div class="players-tools"><input id="on-search" class="profile-name-input" type="search" placeholder="${L('Chercher un joueur', 'Search a player')}" value="${escHtml(playersQuery)}"><button id="on-refresh" class="btn ghost" type="button" aria-label="${L('Actualiser', 'Refresh')}">↻</button></div>
+      <p class="level-help">${L(`${others.length} joueur${others.length > 1 ? 's' : ''}, dont ${live} connecté${live > 1 ? 's' : ''}. Choisis la cadence plus haut, puis « Inviter ».`, `${others.length} player${others.length === 1 ? '' : 's'}, ${live} online. Choose the time control above, then “Invite”.`)}</p>`;
+    html += others.length ? `<div class="replay-items players-list">${others.map((p) => playerRow(p)).join('')}</div>` : `<p class="level-help">${L('Aucun autre joueur pour le moment.', 'No other player yet.')}</p>`;
+    return html;
+  }
+  async function invitePlayer(uid, msg) {
+    const p = (onlinePlayers || []).find((x) => x.uid === uid);
+    if (!p) return;
+    const tc = $('on-tc').value; store.set('onlineTc', tc);
+    msg(L('Envoi…', 'Sending…'), true);
+    try { await ON.invite(p.pseudo, tc, { uid: p.uid, pseudo: p.pseudo, elo: p.elo }); msg(L(`Invitation envoyée à ${p.pseudo}. La partie s'ouvrira dès qu'il ou elle l'acceptera.`, `Invitation sent to ${p.pseudo}. The game will open as soon as they accept.`), true); } catch (err) { msg(ON.explain(err)); }
+  }
+  async function toggleMute(uid) {
+    const list = mutedList().slice(), i = list.indexOf(uid);
+    if (i >= 0) list.splice(i, 1); else list.push(uid);
+    try { await ON.setMuted(list); } catch (err) { toast(ON.explain(err)); return; }
+    if (document.body.dataset.screen === 'online') renderOnline();
+    if (cfg && cfg.mode === 'online') renderChat();
+  }
+  $('online-body').addEventListener('input', (e) => {
+    if (e.target.id !== 'on-search') return;
+    playersQuery = e.target.value;
+    const q = playersQuery.trim().toLowerCase();
+    document.querySelectorAll('.players-list .player-row').forEach((r) => { r.hidden = !!q && !r.dataset.name.includes(q); });
+  });
+
+  /* ---------- Chat pendant une partie en ligne ---------- */
+  let oppMutedMe = false, chatSeen = 0;
+  function renderChat() {
+    const box = $('chat'), g = onlineGame;
+    if (!g || !cfg || cfg.mode !== 'online') { box.hidden = true; return; }
+    box.hidden = false;
+    const me = ON.user.uid, opp = g.white === me ? g.black : g.white, oppName = g.white === me ? g.blackName : g.whiteName;
+    const muted = mutedList().includes(opp);
+    const msgs = (g.chat || []).filter((m) => !(muted && m.from === opp));
+    $('chat-log').innerHTML = msgs.length ? msgs.map((m) => `<div class="chat-msg${m.from === me ? ' me' : ''}"><b>${escHtml(m.name)}</b> ${escHtml(m.text)}</div>`).join('') : `<p class="level-help">${muted ? L('Les messages de ce joueur sont masqués.', 'This player’s messages are hidden.') : L('Écris un message à ton adversaire.', 'Write a message to your opponent.')}</p>`;
+    $('chat-log').scrollTop = $('chat-log').scrollHeight;
+    const off = muted || oppMutedMe || (g.chat || []).length >= 300;
+    $('chat-input').disabled = off; $('chat-send').disabled = off;
+    $('chat-input').placeholder = muted ? L(`Chat coupé avec ${oppName}`, `Chat muted with ${oppName}`) : oppMutedMe ? L(`${oppName} a coupé le chat`, `${oppName} muted the chat`) : L('Message…', 'Message…');
+    $('chat-mute').textContent = muted ? L('🔇 Réactiver le chat', '🔇 Unmute chat') : L('💬 Couper le chat', '💬 Mute chat');
+    $('chat-mute').dataset.uid = opp;
+  }
+  function onChatUpdate(g) {
+    const chat = g.chat || [], me = ON.user.uid;
+    const opp = g.white === me ? g.black : g.white;
+    if (chat.length > chatSeen && chatSeen) { const last = chat[chat.length - 1]; if (last.from !== me && !mutedList().includes(last.from)) { sounds.move(); const r = $('chat').getBoundingClientRect(); if (r.top > innerHeight - 40 || r.bottom < 0) toast(`${last.name} : ${last.text}`); } }
+    chatSeen = chat.length;
+    if (opp) renderChat();
+  }
+  $('chat-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const t = $('chat-input').value.trim();
+    if (!t || !onlineGame) return;
+    // l'adversaire a peut-être coupé le chat depuis le début de la partie
+    const me = ON.user.uid, opp = onlineGame.white === me ? onlineGame.black : onlineGame.white;
+    try { const u = await ON.getProfile(opp); oppMutedMe = !!(u && (u.muted || []).includes(me)); } catch { /* hors ligne */ }
+    if (oppMutedMe) { renderChat(); return; }
+    $('chat-input').value = '';
+    try { await ON.sendChat(onlineGame.id, t); } catch (err) { toast(ON.explain(err)); }
+  });
+  $('chat-mute').onclick = () => { if ($('chat-mute').dataset.uid) toggleMute($('chat-mute').dataset.uid); };
   $('btn-online').onclick = () => {
     returnTo = 'home';
+    onlinePlayers = null; suggestedOpp = null;
     // sans pseudo, on le demande avant de jouer
     renderOnline(); show('online');
     if (ON) ON.load().then(() => { if (!ON.user) renderOnline(); }).catch(() => {});
@@ -3439,7 +3564,7 @@
 
   // Partie en ligne : le plateau suit la partie stockée sur le serveur
   let onlineStop = null, onlineTimer = null, onlineGame = null, onlinePhotos = {};
-  function stopOnline() { if (onlineStop) onlineStop(); onlineStop = null; clearInterval(onlineTimer); onlineTimer = null; onlineGame = null; }
+  function stopOnline() { if (onlineStop) onlineStop(); onlineStop = null; clearInterval(onlineTimer); onlineTimer = null; onlineGame = null; $('chat').hidden = true; }
   function openOnlineGame(g) {
     stopOnline();
     const me = ON.user.uid, color = g.white === me ? 'w' : 'b';
@@ -3448,11 +3573,15 @@
     startGame({ mode: 'online', playerColor: color, level: 1, online: { id: g.id, tc: g.tc, tournament: g.tournamentName || null, round: g.round || null } }, g.moves, null, color === 'b');
     onlineStop = ON.watchGame(g.id, onOnlineUpdate);
     onlineTimer = setInterval(onlineTick, 1000);
+    chatSeen = (g.chat || []).length; oppMutedMe = false; renderChat();
+    const opp = color === 'w' ? g.black : g.white;
+    ON.getProfile(opp).then((u) => { oppMutedMe = !!(u && (u.muted || []).includes(me)); renderChat(); }).catch(() => {});
     ON.heartbeat(g.id);
   }
   function onOnlineUpdate(g) {
     if (!cfg || cfg.mode !== 'online' || cfg.online.id !== g.id) return;
     onlineGame = g;
+    onChatUpdate(g);
     // coups de l'adversaire pas encore joués sur ce plateau
     let played = null;
     while (game.history.length < g.moves.length) {
