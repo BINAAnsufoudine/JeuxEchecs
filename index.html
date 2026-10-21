@@ -11,11 +11,12 @@
         </div>
         <div class="player-profile" aria-live="polite">
           <img id="home-player-photo" class="profile-photo" alt="" hidden>
-          <div><strong id="home-player-name">Joueur</strong><span id="home-player-elo">Elo estimé : 600</span><span id="home-player-style" class="player-style" hidden></span><small id="home-player-progress">L’estimation s’affine avec les parties et les problèmes.</small></div>
+          <div><strong id="home-player-name">Joueur</strong><em id="home-player-title" class="player-title" hidden></em><span id="home-player-elo">Elo estimé : 600</span><span id="home-player-style" class="player-style" hidden></span><small id="home-player-progress">L’estimation s’affine avec les parties et les problèmes.</small></div>
           <button id="btn-player-name" class="profile-edit" type="button">Modifier</button>
           <button id="btn-account" class="profile-edit" type="button">Se connecter</button>
           <button id="btn-profile" class="profile-edit" type="button">Mon profil</button>
         </div>
+        <button id="home-rewards" class="home-rewards" type="button" aria-label="Niveau, blé et quêtes du jour"></button>
       </div>
       <section id="coach-program" class="coach-program" aria-labelledby="coach-program-title" hidden>
         <div class="coach-program-head"><div><span class="coach-kicker">Programme personnalisé</span><h2 id="coach-program-title">Avec Maître Sissa</h2></div><span id="coach-program-badge" class="coach-program-badge"></span></div>
@@ -64,6 +65,7 @@
           <button class="btn" id="btn-replay-external">Parties externes</button>
         </div>
       </div>
+      <button id="btn-shop" class="btn">Boutique de Sissa</button>
       <button id="btn-stats" class="btn">Statistiques</button>
       <button id="btn-rules" class="btn">Règles et conseils</button>
       <button id="btn-settings" class="btn">Réglages</button>
@@ -221,6 +223,12 @@
   <section id="problems" class="screen" aria-label="Problèmes">
     <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Problèmes</h2></header>
     <div class="panel" id="problems-body"></div>
+  </section>
+
+  <!-- Boutique de Sissa : niveau, quêtes du jour et objets à acheter avec le blé -->
+  <section id="shop" class="screen" aria-label="Boutique">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Boutique de Sissa</h2></header>
+    <div class="panel" id="shop-body"></div>
   </section>
 
   <!-- Profil du joueur : statistiques et grades -->

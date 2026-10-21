@@ -20,6 +20,13 @@
     noyer: { name: L('Noyer', 'Walnut'), light: '#ecd8b8', dark: '#a0704b' },
     ardoise: { name: L('Ardoise', 'Slate'), light: '#dfe3e8', dark: '#6d7f95' },
     corail: { name: L('Corail', 'Coral'), light: '#f3e3d3', dark: '#c9775f' },
+    // plateaux de la boutique de Sissa
+    marbre: { name: L('Marbre', 'Marble'), light: '#f2f0eb', dark: '#8a8d93', price: 150 },
+    glace: { name: L('Glace', 'Ice'), light: '#eef7fb', dark: '#7fb0c8', price: 250 },
+    nuit: { name: L('Nuit', 'Night'), light: '#c9cfe0', dark: '#2f3a5c', price: 300 },
+    emeraude: { name: L('Émeraude', 'Emerald'), light: '#e3f1e6', dark: '#2f7d55', price: 350 },
+    rubis: { name: L('Rubis', 'Ruby'), light: '#f4dede', dark: '#9b2f3a', price: 350 },
+    or: { name: L('Or', 'Gold'), light: '#f6e7b0', dark: '#b8892e', price: 500 },
   };
   const REASONS = {
     mat: L('Échec et mat', 'Checkmate'), pat: L('Pat', 'Stalemate'), materiel: L('Matériel insuffisant', 'Insufficient material'),
@@ -119,6 +126,7 @@
     const player = playerProfile();
     $('home-player-name').textContent = player.name || L('Joueur', 'Player');
     $('home-player-photo').hidden = !player.photo; if (player.photo) $('home-player-photo').src = player.photo;
+    renderHomeRewards();
     $('home-player-elo').textContent = L(`Elo estimé : ${estimatedElo()}`, `Estimated Elo: ${estimatedElo()}`);
     const style = dominantStyle();
     $('home-player-style').hidden = !style;
@@ -334,7 +342,7 @@
 
   /* ---------- Réglages ---------- */
   function applyTheme() {
-    const th = THEMES[settings.theme] || THEMES.foret;
+    const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
     document.documentElement.style.setProperty('--light', th.light);
     document.documentElement.style.setProperty('--dark', th.dark);
   }
@@ -344,8 +352,9 @@
       const b = document.createElement('button');
       b.className = 'theme' + (settings.theme === key ? ' on' : '');
       b.setAttribute('aria-label', th.name);
-      b.innerHTML = `<i style="background:${th.light}"></i><i style="background:${th.dark}"></i><i style="background:${th.dark}"></i><i style="background:${th.light}"></i><span class="theme-name">${th.name}</span>`;
-      b.onclick = () => { settings.theme = key; saveSettings(); renderSettings(); };
+      const have = owns(`theme:${key}`);
+      b.innerHTML = `<i style="background:${th.light}"></i><i style="background:${th.dark}"></i><i style="background:${th.dark}"></i><i style="background:${th.light}"></i><span class="theme-name">${th.name}${have ? '' : ` 🔒 ${th.price} 🌾`}</span>`;
+      b.onclick = () => { if (!have) { openShop(); return; } settings.theme = key; saveSettings(); renderSettings(); };
       wrap.appendChild(b);
     }
     $('opt-moves').checked = settings.showMoves;
@@ -820,7 +829,7 @@
     }
     const arrows = replay ? replayArrows() : (!pz && cfg && cfg.mode === 'coach' ? coachArrows : []);
     if (b3d) {
-      const th = THEMES[settings.theme] || THEMES.foret;
+      const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
       b3d.update({ board: s.board, selected, targets, last, check: checkSq, mateFire, mateUltimate, hint, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext, outcome: shown ? shown.result : null, arrows, ply: pz ? null : game.history.length });
       animateNext = false;
       renderMinimap(s.board, last, selected, targets, mateFire, arrows);
@@ -1088,11 +1097,13 @@
       if (!arch.some((x) => x.gameId === cfg.online.id)) {
         arch.push({ id: Date.now(), gameId: cfg.online.id, moves: game.uciList(), result: result.result, reason: result.reason, white: g.whiteName, black: g.blackName, whiteElo: g.whiteElo, blackElo: g.blackElo, color: cfg.playerColor, tc: g.tc });
         store.set('onlineArchive', arch.slice(-50));
+        onlineReward(outcome, !!g.tournamentId);
       }
     } else if (cfg.mode !== 'local' && cfg.fen) archiveGame();
     else if (cfg.mode !== 'local') {
       updatePlayerRating(LEVEL_ELO[cfg.level] || 600, outcome === 'win' ? 1 : outcome === 'draw' ? 0.5 : 0, 32, 'games');
       recordStat(cfg.level, outcome); archiveGame();
+      gameReward(outcome, cfg.level, result.reason === 'mat');
       // Une victoire au plus haut niveau débloqué ouvre le suivant
       if (outcome === 'win' && cfg.level === unlocked() && cfg.level < MAX_GAME_LEVEL) {
         opened = cfg.level + 1;
@@ -1103,7 +1114,7 @@
     (outcome === 'win' ? sounds.win : outcome === 'loss' ? sounds.lose : sounds.draw)();
     const drill = cfg.drill && (window.TRAINER ? window.TRAINER.ENDGAMES.find((x) => x.id === cfg.drill) : null);
     const drillOk = drill && (drill.goal === 'draw' ? outcome === 'draw' : outcome === 'win');
-    if (drillOk) { const d = store.get('trainDone', {}); d[`end:${drill.id}`] = Date.now(); store.set('trainDone', d); }
+    if (drillOk) { lessonReward(`end:${drill.id}`); const d = store.get('trainDone', {}); d[`end:${drill.id}`] = Date.now(); store.set('trainDone', d); }
     const snap = { moves: game.uciList(), cfg: { ...cfg }, result: result.result };
     // L'analyse démarre tout de suite : le bilan est souvent prêt quand on l'ouvre
     if (cfg.mode !== 'local' && cfg.mode !== 'online' && snap.moves.length >= 8) requestReview(cfg.fen || window.Chess.START_FEN, snap.moves).catch(() => {});
@@ -2181,7 +2192,7 @@
     updatePlayerRating(challengeElo, clean ? 1 : 0, 12, 'puzzles');
     store.set('coach', c);
     if (it.personal) touchMistake(it.personal.id, clean);
-    if (it.id) { const st = store.get('pzdone', {}); st[it.id] = clean ? 's' : 'f'; store.set('pzdone', st); }
+    if (it.id) { const st = store.get('pzdone', {}); if (clean && st[it.id] !== 's') { reward(5, 10, L('Problème résolu', 'Puzzle solved')); questEvent('puzzle'); } st[it.id] = clean ? 's' : 'f'; store.set('pzdone', st); }
     refreshCoachProgram();
     return { validated, level: row.level, ok: row.ok, pending: row.pending };
   }
@@ -3196,7 +3207,8 @@
       const place = ON && ON.user ? tournamentPlace(t, ON.user.uid) : null;
       if (t.status === 'over' && place) { tour.played++; if (place === 1) tour.wins++; else if (place === 2) tour.second++; else if (place === 3) tour.third++; }
     }
-    return { ai, online: { win: on.win, draw: on.draw, loss: on.loss, opponents: on.opponents.size }, tour, pz, mates, ends, openings, dailyBest: daily.best || 0, unlocked: unlocked(), elo: estimatedElo() };
+    const w = walletState();
+    return { level: levelOf(w.xp).level, title: w.title ? titleName(w.title) : null, frame: w.frame, ai, online: { win: on.win, draw: on.draw, loss: on.loss, opponents: on.opponents.size }, tour, pz, mates, ends, openings, dailyBest: daily.best || 0, unlocked: unlocked(), elo: estimatedElo() };
   }
   // Grades gagnés par les exploits : étoiles (ordinateur), médailles et coupes (tournois), et plus
   const BADGES = [
@@ -3224,7 +3236,8 @@
     const n = (x) => NUM(x, x % 1 ? 1 : 0);
     const won = BADGES.filter((b) => b.ok(s));
     const pct = (w, d, l) => { const t = w + d + l; return t ? `${Math.round((100 * (w + d / 2)) / t)} %` : '–'; };
-    let html = `<div class="profile-head">${who.photo ? `<img class="profile-photo big" src="${who.photo}" alt="">` : '<span class="profile-photo big placeholder">♞</span>'}<div><b>${escHtml(who.name)}</b><span>Elo ${L('estimé', 'est.')} ${s.elo}</span>${won.length ? `<span class="profile-badges-line">${won.slice(-6).map((b) => b.icon).join(' ')}</span>` : ''}</div></div>`;
+    const fr = s.frame ? ` frame-${escHtml(s.frame)}` : '';
+    let html = `<div class="profile-head">${who.photo ? `<img class="profile-photo big${fr}" src="${who.photo}" alt="">` : `<span class="profile-photo big placeholder${fr}">♞</span>`}<div><b>${escHtml(who.name)}</b>${s.title ? `<em class="player-title">« ${escHtml(s.title)} »</em>` : ''}<span>${s.level ? `${L('Niveau', 'Level')} ${s.level} · ` : ''}Elo ${L('estimé', 'est.')} ${s.elo}</span>${won.length ? `<span class="profile-badges-line">${won.slice(-6).map((b) => b.icon).join(' ')}</span>` : ''}</div></div>`;
     html += `<h3 class="train-h">${L('Grades', 'Ranks')} (${won.length}/${BADGES.length})</h3><div class="badge-grid">${BADGES.map((b) => `<div class="badge${b.ok(s) ? ' on' : ''}" title="${escHtml(b.desc)}"><span class="badge-icon">${b.icon}</span><b>${escHtml(b.name)}</b><small>${escHtml(b.desc)}</small></div>`).join('')}</div>`;
     const card = (title, rows) => `<div class="stat-card"><h4>${title}</h4>${rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>`;
     html += `<h3 class="train-h">${L('Statistiques', 'Statistics')}</h3><div class="stat-cards">
@@ -3244,11 +3257,18 @@
     if (mine) {
       const p = playerProfile();
       let tours = [];
+      const payBadges = (s) => { const w = walletState(), fresh = BADGES.filter((b) => b.ok(s) && !w.badgesPaid.includes(b.id)); if (!fresh.length) return; w.badgesPaid.push(...fresh.map((b) => b.id)); store.set('wallet', w); reward(50 * fresh.length, 50 * fresh.length, L(`${fresh.length} grade${fresh.length > 1 ? 's' : ''} gagné${fresh.length > 1 ? 's' : ''}`, `${fresh.length} rank${fresh.length > 1 ? 's' : ''} earned`)); };
+      payBadges(localSummary([]));
       body.innerHTML = profileHtml(localSummary([]), { name: p.name || L('Joueur', 'Player'), photo: p.photo });
+      body.insertAdjacentHTML('afterbegin', `<button class="btn primary profile-shop" type="button">🌾 ${L('Boutique et quêtes', 'Shop and quests')}</button>`);
+      body.querySelector('.profile-shop').onclick = openShop;
       if (ON && ON.user) {
         try { tours = await ON.myTournaments(); } catch { tours = []; }
+        payBadges(localSummary(tours));
         const s = localSummary(tours);
         body.innerHTML = profileHtml(s, { name: p.name || L('Joueur', 'Player'), photo: p.photo });
+        body.insertAdjacentHTML('afterbegin', `<button class="btn primary profile-shop" type="button">🌾 ${L('Boutique et quêtes', 'Shop and quests')}</button>`);
+        body.querySelector('.profile-shop').onclick = openShop;
         // résumé public pour que les autres joueurs voient ce profil
         ON.publishSummary({ ...s, badges: BADGES.filter((b) => b.ok(s)).map((b) => b.id) });
       } else body.insertAdjacentHTML('beforeend', `<p class="level-help">${L('Connecte-toi pour ajouter tes parties en ligne et tes tournois, et pour que les autres joueurs voient ton profil.', 'Sign in to add your online games and tournaments, and so other players can see your profile.')}</p>`);
@@ -3265,6 +3285,151 @@
   $('btn-profile').onclick = () => openProfile();
   // clic sur un joueur (tournois) : son profil
   document.addEventListener('click', (e) => { const el = e.target.closest('[data-profile]'); if (el) { e.preventDefault(); openProfile(el.dataset.profile); } });
+  /* ---------- Récompenses : grains de blé 🌾, niveau du joueur, quêtes du jour, boutique de Sissa ---------- */
+  const xpFor = (lvl) => 100 + 40 * (lvl - 1); // expérience pour passer du niveau lvl au suivant
+  function walletState() { return Object.assign({ wheat: 0, xp: 0, owned: [], frame: null, title: null, firstWin: '', badgesPaid: [] }, store.get('wallet', {})); }
+  function levelOf(xp) { let l = 1; while (l < 50 && xp >= xpFor(l)) { xp -= xpFor(l); l++; } return { level: l, into: xp, need: xpFor(l) }; }
+  function rewardPop(text, big) {
+    let box = document.querySelector('.reward-pops');
+    if (!box) { box = document.createElement('div'); box.className = 'reward-pops'; document.body.appendChild(box); }
+    const el = document.createElement('div');
+    el.className = 'reward-pop' + (big ? ' big' : ''); el.textContent = text;
+    box.appendChild(el);
+    setTimeout(() => el.remove(), big ? 4200 : 3000);
+  }
+  function reward(wheat, xp, why) {
+    const w = walletState(), before = levelOf(w.xp).level;
+    w.wheat += wheat; w.xp += xp;
+    const after = levelOf(w.xp).level;
+    if (after > before) w.wheat += 50 * (after - before);
+    store.set('wallet', w);
+    rewardPop(`${why ? `${why} · ` : ''}+${wheat} 🌾 · +${xp} XP`);
+    if (after > before) { rewardPop(L(`Niveau ${after} atteint ! +${50 * (after - before)} 🌾`, `Level ${after} reached! +${50 * (after - before)} 🌾`), true); sounds.win(); }
+    renderHomeRewards();
+  }
+  // Quêtes du jour : trois missions tirées chaque jour, qui font passer par les différents modes
+  function questList() {
+    return [
+      { id: 'win_ai', goal: 1, text: L('Gagner une partie contre l\'ordinateur', 'Win a game against the computer') },
+      { id: 'play_ai', goal: 2, text: L('Jouer 2 parties contre l\'ordinateur', 'Play 2 games against the computer') },
+      { id: 'mate_ai', goal: 1, text: L('Gagner par échec et mat', 'Win by checkmate') },
+      { id: 'puzzle', goal: 3, text: L('Résoudre 3 problèmes du premier coup', 'Solve 3 puzzles at the first try') },
+      { id: 'daily', goal: 1, text: L('Réussir le défi du jour', 'Complete the daily challenge') },
+      { id: 'lesson', goal: 1, text: L('Terminer une leçon (mat, finale, ouverture ou Devine le coup)', 'Finish a lesson (mate, endgame, opening or Guess the move)') },
+      { id: 'opening', goal: 1, text: L('Réviser une ouverture sans faute', 'Review an opening without mistakes') },
+      { id: 'online', goal: 1, text: L('Finir une partie en ligne', 'Finish an online game'), online: true },
+    ];
+  }
+  function questState() {
+    const d0 = new Date(), day = `${d0.getFullYear()}-${d0.getMonth() + 1}-${d0.getDate()}`; // même clé que todayKey
+    let q = store.get('quests', null);
+    if (!q || q.day !== day) {
+      const pool = questList().filter((x) => !x.online || (window.Online && window.Online.user));
+      let seed = [...day].reduce((s, c) => s * 31 + c.charCodeAt(0), 7) >>> 0;
+      const ids = [];
+      while (ids.length < 3 && pool.length) { seed = (seed * 1103515245 + 12345) >>> 0; ids.push(pool.splice(seed % pool.length, 1)[0].id); }
+      q = { day, ids, prog: {}, claimed: {}, chest: false };
+      store.set('quests', q);
+    }
+    return q;
+  }
+  function questEvent(type, n = 1) {
+    const q = questState();
+    if (!q.ids.includes(type) || q.claimed[type]) return;
+    const def = questList().find((x) => x.id === type);
+    q.prog[type] = (q.prog[type] || 0) + n;
+    if (q.prog[type] >= def.goal) {
+      q.claimed[type] = true; store.set('quests', q);
+      reward(30, 40, L('Quête accomplie', 'Quest complete'));
+      if (q.ids.every((id) => q.claimed[id]) && !q.chest) { q.chest = true; store.set('quests', q); reward(60, 60, L('Coffre des trois quêtes', 'Three-quest chest')); }
+    } else store.set('quests', q);
+  }
+  // Gains par mode
+  function gameReward(outcome, level, mate) {
+    const w = walletState(), day = questState().day;
+    questEvent('play_ai');
+    if (outcome === 'win') {
+      reward(10 + 2 * level + (mate ? 5 : 0), 20 + 2 * level, L('Victoire', 'Win'));
+      if (w.firstWin !== day) { const w2 = walletState(); w2.firstWin = day; store.set('wallet', w2); reward(20, 20, L('Première victoire du jour', 'First win of the day')); }
+      questEvent('win_ai'); if (mate) questEvent('mate_ai');
+    } else if (outcome === 'draw') reward(5 + level, 12 + level, L('Nulle', 'Draw'));
+    else reward(3, 10, L('Partie jouée', 'Game played'));
+  }
+  function onlineReward(outcome, tournament) {
+    const bonus = tournament ? 10 : 0;
+    if (outcome === 'win') reward(30 + bonus, 50, tournament ? L('Victoire en tournoi', 'Tournament win') : L('Victoire en ligne', 'Online win'));
+    else if (outcome === 'draw') reward(15 + bonus, 30, L('Nulle', 'Draw'));
+    else reward(8 + bonus, 20, L('Partie jouée', 'Game played'));
+    questEvent('online');
+  }
+  function lessonReward(key) {
+    const first = !trainDone()[key];
+    reward(first ? 25 : 5, first ? 40 : 10, L('Leçon terminée', 'Lesson finished'));
+    questEvent('lesson');
+  }
+  // Boutique de Sissa : objets uniquement visuels, achetés avec le blé gagné
+  function shopItems() {
+    const out = [];
+    for (const [k, th] of Object.entries(THEMES)) if (th.price) out.push({ id: `theme:${k}`, kind: 'theme', key: k, name: th.name, price: th.price, preview: `<span class="shop-board"><i style="background:${th.light}"></i><i style="background:${th.dark}"></i><i style="background:${th.dark}"></i><i style="background:${th.light}"></i></span>` });
+    [['bronze', L('Cadre de bronze', 'Bronze frame'), 100], ['argent', L('Cadre d\'argent', 'Silver frame'), 250], ['or', L('Cadre d\'or', 'Gold frame'), 500], ['feu', L('Cadre de feu', 'Fire frame'), 800]]
+      .forEach(([k, name, price]) => out.push({ id: `frame:${k}`, kind: 'frame', key: k, name, price, preview: `<span class="profile-photo shop-frame frame-${k}">♞</span>` }));
+    [['ecuyer', L('Écuyer', 'Squire'), 80, 1], ['chevalier', L('Chevalier', 'Knight'), 200, 5], ['seigneur', L('Seigneur', 'Lord'), 400, 10], ['vizir', L('Grand vizir', 'Grand vizier'), 700, 20], ['roi', L('Roi du blé', 'King of wheat'), 1200, 30]]
+      .forEach(([k, name, price, lvl]) => out.push({ id: `title:${k}`, kind: 'title', key: k, name, price, lvl, preview: `<span class="shop-title">« ${name} »</span>` }));
+    return out;
+  }
+  const owns = (id) => { const it = id.startsWith('theme:') ? THEMES[id.slice(6)] : null; return (it && !it.price) || walletState().owned.includes(id); };
+  const titleName = (k) => { const it = shopItems().find((x) => x.id === `title:${k}`); return it ? it.name : ''; };
+  function renderHomeRewards() {
+    const w = walletState(), lv = levelOf(w.xp), q = questState();
+    const done = q.ids.filter((id) => q.claimed[id]).length;
+    $('home-rewards').innerHTML = `<span class="lvl-badge">${L('Niv.', 'Lvl')} ${lv.level}</span><span class="xp-bar"><i style="width:${Math.round((100 * lv.into) / lv.need)}%"></i></span><span>🌾 ${w.wheat}</span><span>${L('Quêtes', 'Quests')} ${done}/3</span>`;
+    $('home-player-photo').className = 'profile-photo' + (w.frame ? ` frame-${w.frame}` : '');
+    $('home-player-title').hidden = !w.title; $('home-player-title').textContent = w.title ? `« ${titleName(w.title)} »` : '';
+  }
+  function renderShop() {
+    const w = walletState(), lv = levelOf(w.xp), q = questState(), defs = questList();
+    let html = `<div class="shop-head"><span class="lvl-badge big">${L('Niveau', 'Level')} ${lv.level}</span><div class="shop-xp"><span class="xp-bar"><i style="width:${Math.round((100 * lv.into) / lv.need)}%"></i></span><small>${lv.level >= 50 ? L('Niveau maximum', 'Max level') : `${lv.into} / ${lv.need} XP`}</small></div><span class="shop-wheat">🌾 ${w.wheat}</span></div>`;
+    html += `<p class="level-help">${L('Gagne du blé et de l\'expérience dans tous les modes : parties, problèmes, leçons, défi du jour, parties en ligne et tournois. Chaque niveau gagné rapporte 50 🌾.', 'Earn wheat and experience in every mode: games, puzzles, lessons, daily challenge, online games and tournaments. Each level gained gives 50 🌾.')}</p>`;
+    html += `<h3 class="train-h">${L('Quêtes du jour', 'Daily quests')}</h3><div class="quest-list">${q.ids.map((id) => { const d = defs.find((x) => x.id === id); const p = Math.min(d.goal, q.prog[id] || 0); return `<div class="quest${q.claimed[id] ? ' done' : ''}"><span>${q.claimed[id] ? '✅' : '🎯'} ${d.text}</span><b>${p}/${d.goal} · 30 🌾</b></div>`; }).join('')}<div class="quest${q.chest ? ' done' : ''}"><span>${q.chest ? '✅' : '🎁'} ${L('Coffre : finir les trois quêtes', 'Chest: finish all three quests')}</span><b>60 🌾</b></div></div>`;
+    const section = (kind, title) => {
+      const items = shopItems().filter((x) => x.kind === kind);
+      return `<h3 class="train-h">${title}</h3><div class="shop-grid">${items.map((it) => {
+        const have = owns(it.id), used = (kind === 'frame' && w.frame === it.key) || (kind === 'title' && w.title === it.key) || (kind === 'theme' && settings.theme === it.key);
+        const locked = it.lvl && lv.level < it.lvl;
+        const btn = used ? `<button class="btn" data-shop-off="${it.id}">${kind === 'theme' ? L('Utilisé', 'In use') : L('Retirer', 'Remove')}</button>`
+          : have ? `<button class="btn primary" data-shop-use="${it.id}">${L('Utiliser', 'Use')}</button>`
+          : locked ? `<button class="btn" disabled>${L(`Niveau ${it.lvl}`, `Level ${it.lvl}`)}</button>`
+          : `<button class="btn${w.wheat >= it.price ? ' primary' : ''}" data-shop-buy="${it.id}" ${w.wheat >= it.price ? '' : 'disabled'}>${it.price} 🌾</button>`;
+        return `<div class="shop-item${used ? ' on' : ''}">${it.preview}<b>${it.name}</b>${btn}</div>`;
+      }).join('')}</div>`;
+    };
+    html += section('theme', L('Plateaux', 'Boards')) + section('frame', L('Cadres de photo', 'Photo frames')) + section('title', L('Titres', 'Titles'));
+    $('shop-body').innerHTML = html;
+  }
+  function openShop() {
+    returnTo = document.body.dataset.screen && document.body.dataset.screen !== 'shop' ? document.body.dataset.screen : 'home';
+    show('shop'); renderShop();
+  }
+  $('shop-body').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-shop-buy],[data-shop-use],[data-shop-off]'); if (!b) return;
+    const w = walletState();
+    const id = b.dataset.shopBuy || b.dataset.shopUse || b.dataset.shopOff, it = shopItems().find((x) => x.id === id);
+    if (b.dataset.shopBuy) {
+      if (w.wheat < it.price || owns(id)) return;
+      w.wheat -= it.price; w.owned.push(id); store.set('wallet', w);
+      rewardPop(L(`${it.name} acheté !`, `${it.name} bought!`), true);
+    }
+    if (b.dataset.shopBuy || b.dataset.shopUse) {
+      const w2 = walletState();
+      if (it.kind === 'theme') { settings.theme = it.key; saveSettings(); }
+      if (it.kind === 'frame') w2.frame = it.key;
+      if (it.kind === 'title') w2.title = it.key;
+      store.set('wallet', w2);
+    } else if (it.kind !== 'theme') { const w2 = walletState(); if (it.kind === 'frame') w2.frame = null; else w2.title = null; store.set('wallet', w2); }
+    renderShop(); renderHomeRewards();
+  });
+  $('btn-shop').onclick = openShop;
+  $('home-rewards').onclick = openShop;
   $('btn-online').onclick = () => {
     returnTo = 'home';
     // sans pseudo, on le demande avant de jouer
@@ -3374,7 +3539,7 @@
         wrong: L('Ce coup ne mate pas. Regarde toutes les cases où le roi pourrait fuir.', 'That move does not mate. Look at every square the king could escape to.') });
     });
     steps.push({ text: m.tip || L(`Bravo, tu connais maintenant ${m.name.toLowerCase()}. Cherche ce motif dans tes parties : il revient souvent.`, `Well done, you now know the ${m.name.toLowerCase()}. Look for this pattern in your games: it comes up often.`) });
-    startTrainer({ title: m.name, theme: 'mat' }, steps, () => { markTrain(`mate:${m.id}`); leavePuzzle(); });
+    startTrainer({ title: m.name, theme: 'mat' }, steps, () => { lessonReward(`mate:${m.id}`); markTrain(`mate:${m.id}`); leavePuzzle(); });
   }
   function startEndgame(e) {
     const steps = e.steps.map((text) => ({ text, fen: e.fen }));
@@ -3404,6 +3569,8 @@
       row.stage = clean ? Math.min(OPEN_GAPS.length, row.stage + 1) : 0;
       row.due = Date.now() + (clean ? OPEN_GAPS[row.stage - 1] * DAY : 10 * 60000);
       sr[o.id] = row; store.set('openingsSR', sr);
+      if (clean) { reward(10, 15, L('Ouverture révisée', 'Opening reviewed')); questEvent('opening'); }
+      questEvent('lesson');
       toast(clean ? L(`Parfait ! Prochaine révision dans ${OPEN_GAPS[row.stage - 1]} jour${OPEN_GAPS[row.stage - 1] > 1 ? 's' : ''}.`, `Perfect! Next review in ${OPEN_GAPS[row.stage - 1]} day${OPEN_GAPS[row.stage - 1] > 1 ? 's' : ''}.`) : L('Quelques erreurs : cette ouverture reviendra bientôt.', 'A few mistakes: this opening will come back soon.'));
       leavePuzzle();
     });
@@ -3424,6 +3591,7 @@
       const found = Math.max(0, total - (pz.misses || 0));
       const best = Math.max(found, trainDone()[`famous:${f.id}`] || 0);
       markTrain(`famous:${f.id}`, best);
+      reward(Math.max(2, 2 * found), Math.max(5, 3 * found), L('Devine le coup', 'Guess the move')); questEvent('lesson');
       toast(L(`${found} coup${found > 1 ? 's' : ''} sur ${total} trouvé${found > 1 ? 's' : ''} du premier coup.`, `${found} move${found === 1 ? '' : 's'} out of ${total} found at the first try.`));
       leavePuzzle();
     });
@@ -3467,6 +3635,7 @@
         st.streak = st.last === yesterday ? (st.streak || 0) + 1 : 1;
         st.best = Math.max(st.best || 0, st.streak); st.last = todayKey(); st.finished = true;
         toast(L(`Défi du jour réussi ! Série : ${st.streak} jour${st.streak > 1 ? 's' : ''}.`, `Daily challenge complete! Streak: ${st.streak} day${st.streak === 1 ? '' : 's'}.`));
+        setTimeout(() => { reward(40 + 5 * Math.min(st.streak, 10), 50, L('Défi du jour', 'Daily challenge')); questEvent('daily'); }, 50);
       } else if (!clean) toast(L('Pas du premier coup : ce problème te sera reproposé aujourd\'hui.', 'Not at the first try: this puzzle will come back today.'));
       else toast(L(`Bravo ! ${okCount} sur 3 aujourd'hui.`, `Well done! ${okCount} out of 3 today.`));
       store.set('daily', st);
