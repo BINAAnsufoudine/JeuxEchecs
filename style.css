@@ -648,3 +648,7 @@ body.admin-mode #home-rewards, body.admin-mode #coach-program, body.admin-mode #
 .admin-table tr.banned td { opacity: 0.55; }
 .admin-actions { display: flex; gap: 4px; }
 .mini.danger { color: #e8705f; }
+
+/* comptes inactifs depuis au moins un an */
+.admin-table tr.inactive td { color: #e8705f; background: rgba(232,112,95,0.10); }
+.admin-table tr.inactive a { color: #e8705f; }
