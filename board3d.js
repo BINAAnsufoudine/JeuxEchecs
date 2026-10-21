@@ -2702,6 +2702,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     findRopes(board) {
       const pairs = [];
       const lineClear = (a, b, step) => { for (let s = a + step; s !== b; s += step) if (board[s]) return false; return true; };
+      // pions côte à côte sur la même rangée : une chaîne forte (une fois sortis de leur rangée de départ)
+      for (const pawn of ['P', 'p']) for (let i = 0; i < 64; i++) {
+        const home = pawn === 'P' ? 6 : 1;
+        if (board[i] === pawn && (i & 7) < 7 && board[i + 1] === pawn && i >> 3 !== home) pairs.push([i, i + 1]);
+      }
       for (const piece of ['R', 'r', 'Q', 'q', 'B', 'b', 'N', 'n']) {
         const kind = piece.toLowerCase(), sqs = [];
         for (let i = 0; i < 64; i++) if (board[i] === piece) sqs.push(i);
