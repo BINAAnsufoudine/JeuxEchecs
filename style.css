@@ -522,3 +522,13 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .tour-scroll { overflow-x: auto; }
 .tour-table td.c, .tour-table th.c { text-align: center; white-space: nowrap; }
 .tour-table td.x { color: var(--muted); }
+
+/* Photo de profil et parties de tournoi à regarder */
+.profile-photo { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex: none; box-shadow: 0 2px 8px rgba(0,0,0,0.35); }
+.profile-photo.big { width: 84px; height: 84px; }
+.photo-row { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
+.tour-game { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+.tour-watch { padding: 4px 10px; font-size: 0.78rem; flex: none; }
+.player-profile { flex-wrap: wrap; }
+.player-profile > div { flex: 1 1 150px; }
+.player-profile .profile-photo { width: 44px; height: 44px; }

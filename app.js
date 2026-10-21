@@ -118,6 +118,7 @@
     $('btn-continue').disabled = !(saved && !saved.result);
     const player = playerProfile();
     $('home-player-name').textContent = player.name || L('Joueur', 'Player');
+    $('home-player-photo').hidden = !player.photo; if (player.photo) $('home-player-photo').src = player.photo;
     $('home-player-elo').textContent = L(`Elo estimé : ${estimatedElo()}`, `Estimated Elo: ${estimatedElo()}`);
     const style = dominantStyle();
     $('home-player-style').hidden = !style;
@@ -233,9 +234,35 @@
     if (vocalize) speak(coachMessage);
   }
 
+  // Photo de profil : réduite à 160 px (JPEG) pour rester légère, gardée sur l'appareil et dans le compte
+  function pickPhoto(done) {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*';
+    input.onchange = () => {
+      const file = input.files && input.files[0]; if (!file) return;
+      const img = new Image();
+      img.onload = () => {
+        const size = 160, c = document.createElement('canvas'); c.width = c.height = size;
+        const k = Math.max(size / img.width, size / img.height), w = img.width * k, h = img.height * k;
+        c.getContext('2d').drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        URL.revokeObjectURL(img.src);
+        const data = c.toDataURL('image/jpeg', 0.82);
+        const p = playerProfile(); p.photo = data; store.set('player', p); refreshHome();
+        if (ON && ON.user) ON.setPhoto(data).catch(() => {});
+        if (done) done(data);
+      };
+      img.onerror = () => toast(L('Cette image ne peut pas être lue.', 'This image cannot be read.'));
+      img.src = URL.createObjectURL(file);
+    };
+    input.click();
+  }
   function promptPlayerName() {
     const player = playerProfile();
     const body = document.createElement('div');
+    const photoRow = document.createElement('div'); photoRow.className = 'photo-row';
+    photoRow.innerHTML = `<img class="profile-photo big" alt="" ${player.photo ? `src="${player.photo}"` : 'hidden'}><button type="button" class="btn">${player.photo ? L('Changer ma photo', 'Change my photo') : L('Ajouter ma photo', 'Add my photo')}</button>`;
+    photoRow.querySelector('button').onclick = () => pickPhoto((data) => { const im = photoRow.querySelector('img'); im.src = data; im.hidden = false; });
+    body.appendChild(photoRow);
     const label = document.createElement('label');
     label.className = 'field-label'; label.htmlFor = 'player-name-input'; label.textContent = L('Comment l’entraîneur doit-il t’appeler ?', 'What should the coach call you?');
     const input = document.createElement('input');
@@ -876,6 +903,8 @@
       name.textContent = label(c);
       const champ = !replay && cfg.mode === 'coach' && c !== cfg.playerColor && activeChampion();
       if (champ && champ.photo) { const im = document.createElement('img'); im.className = 'player-photo'; im.src = champ.photo.src; im.alt = ''; name.prepend(im); }
+      const ph = cfg.mode === 'online' && onlineGame ? onlinePhotos[c === 'w' ? onlineGame.white : onlineGame.black] : !replay && cfg.mode !== 'local' && c === cfg.playerColor ? playerProfile().photo : null;
+      if (ph) { const im = document.createElement('img'); im.className = 'player-photo'; im.src = ph; im.alt = ''; name.prepend(im); }
       name.classList.toggle('turn', !result && game.turn === c);
       const adv = material(c);
       $('cap-' + pos).innerHTML = capturedBy(c) + (adv > 0 ? `<small>+${adv}</small>` : '');
@@ -2828,6 +2857,7 @@
       body.innerHTML = `<p class="level-help">${L('Connecté avec', 'Signed in as')} <b>${escHtml(u.email)}</b>${p ? ` · ${L('pseudo', 'nickname')} <b>${escHtml(p.pseudo)}</b>` : ''}</p>
         ${field('acc-pseudo', L('Changer de pseudo', 'Change nickname'), 'text', p ? p.pseudo : '', 'maxlength="24" autocomplete="nickname"')}
         <button id="acc-save-pseudo" class="btn primary wide" type="button">${L('Enregistrer le pseudo', 'Save nickname')}</button>
+        <div class="photo-row">${playerProfile().photo ? `<img class="profile-photo big" alt="" src="${playerProfile().photo}">` : ''}<button id="acc-photo" class="btn" type="button">${playerProfile().photo ? L('Changer ma photo', 'Change my photo') : L('Ajouter ma photo', 'Add my photo')}</button></div>
         ${field('acc-pw-old', L('Mot de passe actuel', 'Current password'), 'password', '', 'autocomplete="current-password"')}
         ${field('acc-pw-new', L('Nouveau mot de passe (6 caractères au moins)', 'New password (at least 6 characters)'), 'password', '', 'autocomplete="new-password"')}
         <button id="acc-save-pw" class="btn wide" type="button">${L('Changer le mot de passe', 'Change password')}</button>
@@ -2865,6 +2895,7 @@
     }
     if (t.id === 'acc-save-pseudo') accountAction(async () => { const p = await ON.changePseudo(v('acc-pseudo')); const pl = playerProfile(); pl.name = p.pseudo; store.set('player', pl); refreshHome(); }, L('Pseudo enregistré.', 'Nickname saved.'));
     if (t.id === 'acc-save-pw') accountAction(() => ON.changePassword(v('acc-pw-old'), v('acc-pw-new')), L('Mot de passe changé.', 'Password changed.'));
+    if (t.id === 'acc-photo') { pickPhoto(() => renderAccount()); return; }
     if (t.id === 'acc-logout') accountAction(async () => { await pushProgress(); await ON.signOut(); rawSet('onlineSynced', null); }, L('Déconnecté.', 'Signed out.'));
   });
   function openAccount() { returnTo = 'home'; renderAccount(); show('account'); if (ON) ON.load().catch(() => accMsg(L('Impossible de joindre le serveur. Vérifie ta connexion.', 'Cannot reach the server. Check your connection.'))); }
@@ -2937,12 +2968,17 @@
     const tcOpts = Object.keys(TC_LABELS).map((k) => `<option value="${k}"${k === tourForm.tc ? ' selected' : ''}>${TC_LABELS[k]}</option>`).join('');
     const card = (t) => `<button class="btn replay-item" data-tour-open="${t.id}"><strong>${escHtml(t.name)}</strong><span>${TYPE_LABELS[t.type]} · ${FORMAT_LABELS[t.format]} · ${TC_LABELS[t.tc] || ''} · ${ON.participants(t).length} ${t.type === 'team' ? L('équipe(s)', 'team(s)') : L('joueur(s)', 'player(s)')} · ${t.status === 'open' && t.deadline ? (Date.now() < t.deadline ? L(`inscriptions jusqu'au ${fmtDeadline(t.deadline)}`, `registration until ${fmtDeadline(t.deadline)}`) : L('inscriptions closes', 'registration closed')) : STATUS_LABELS[t.status]}</span></button>`;
     const mine = tourList.mine.slice().sort((a, b) => b.createdAt - a.createdAt), open = tourList.open.filter((t) => !t.members.includes(u.uid));
+    const pub = tourList.public || [];
+    const running = pub.filter((t) => t.status === 'running').sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
+    const history = pub.filter((t) => t.status === 'over').sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0)).slice(0, 30);
     body.innerHTML = `
       <h3 class="train-h">${L('Mes tournois', 'My tournaments')}</h3>${mine.length ? `<div class="replay-items">${mine.map(card).join('')}</div>` : `<p class="level-help">${L('Aucun pour le moment.', 'None for now.')}</p>`}
       <h3 class="train-h">${L('Rejoindre avec un code', 'Join with a code')}</h3>
       ${field('tour-code', L('Code du tournoi', 'Tournament code'), 'text', '', 'maxlength="6" style="text-transform:uppercase"')}
       <button id="tour-join-code" class="btn wide" type="button">${L('Rejoindre', 'Join')}</button>
       <h3 class="train-h">${L('Tournois ouverts', 'Open tournaments')}</h3>${open.length ? `<div class="replay-items">${open.map(card).join('')}</div>` : `<p class="level-help">${L('Aucun tournoi ouvert pour le moment.', 'No open tournament for now.')}</p>`}
+      <h3 class="train-h">${L('En cours : à regarder en direct', 'In progress: watch live')}</h3>${running.length ? `<div class="replay-items">${running.map(card).join('')}</div>` : `<p class="level-help">${L('Aucun tournoi en cours.', 'No tournament in progress.')}</p>`}
+      <h3 class="train-h">${L('Historique des tournois', 'Tournament history')}</h3>${history.length ? `<div class="replay-items">${history.map(card).join('')}</div>` : `<p class="level-help">${L('Aucun tournoi terminé pour le moment.', 'No finished tournament yet.')}</p>`}
       <h3 class="train-h">${L('Créer un tournoi', 'Create a tournament')}</h3>
       ${field('tour-name', L('Nom du tournoi', 'Tournament name'), 'text', tourForm.name || '', 'maxlength="40"')}
       ${field('tour-deadline', L('Date limite d\'inscription (le tournoi démarre à ce moment-là)', 'Registration deadline (the tournament starts then)'), 'datetime-local', localInput(tourForm.deadline || Date.now() + 86400000))}
@@ -2958,43 +2994,47 @@
   // tableau ronde par ronde (couleur, rang de l'adversaire, résultat) pour le système suisse
   function tourTable(t, me) {
     const ids = t.players, rounds = Object.keys(t.pairings).map((k) => Number(k.slice(1))).sort((a, b) => a - b);
+    // pour chaque joueur et chaque ronde : la liste de ses parties (aller et retour)
     const per = {}; ids.forEach((id) => { per[id] = {}; });
     for (const r of rounds) for (const m of t.pairings[`r${r}`]) {
-      if (m.bye) { per[m.a][r] = { bye: true, pts: 1 }; continue; }
+      if (m.bye) { per[m.a][r] = [{ bye: true, pts: 2 }]; continue; }
       for (const g of m.games) {
         const sw = g.result === '1-0' ? 1 : g.result === '0-1' ? 0 : g.result ? 0.5 : null;
-        per[g.white][r] = { opp: g.black, color: 'w', pts: sw };
-        per[g.black][r] = { opp: g.white, color: 'b', pts: sw == null ? null : 1 - sw };
+        (per[g.white][r] = per[g.white][r] || []).push({ opp: g.black, color: 'w', pts: sw });
+        (per[g.black][r] = per[g.black][r] || []).push({ opp: g.white, color: 'b', pts: sw == null ? null : 1 - sw });
       }
     }
-    const pts = (id) => Object.values(per[id]).reduce((s, x) => s + (x.pts || 0), 0);
-    const buch = (id) => Object.values(per[id]).reduce((s, x) => s + (x.opp ? pts(x.opp) : 0), 0);
+    const all = (id) => Object.values(per[id]).flat();
+    const pts = (id) => all(id).reduce((s, x) => s + (x.pts || 0), 0);
+    const opps = (id) => [...new Set(all(id).filter((x) => x.opp).map((x) => x.opp))];
+    const buch = (id) => opps(id).reduce((s, o) => s + pts(o), 0);
     const order = ids.slice().sort((a, b) => pts(b) - pts(a) || buch(b) - buch(a) || (t.elos[b] || 0) - (t.elos[a] || 0));
     const rank = (id) => order.indexOf(id) + 1;
     const fmt = (x) => (x == null ? '…' : x === 0.5 ? '½' : String(x));
     const n = (x) => NUM(x, x % 1 ? 1 : 0);
+    const sum = (list) => (list.some((x) => x.pts == null) ? null : list.reduce((s, x) => s + x.pts, 0));
     const title = t.status === 'over' ? L('Classement final', 'Final standings') : t.status === 'cancelled' ? L('Tournoi annulé', 'Tournament cancelled') : L('Tableau du tournoi', 'Tournament table');
     let html = `<h3 class="train-h">${title}</h3><div class="tour-scroll"><table class="tour-table">`;
     if (t.format === 'rr') {
-      // grille croisée : chaque case donne le résultat du joueur de la ligne contre celui de la colonne
+      // grille croisée : résultats des deux parties (Blancs puis Noirs) du joueur de la ligne contre celui de la colonne
       html += `<tr><th>#</th><th>${L('Joueur', 'Player')}</th>${order.map((_, i) => `<th class="c">${i + 1}</th>`).join('')}<th>${L('Pts', 'Pts')}</th><th>${L('Départ.', 'Tiebr.')}</th></tr>`;
       html += order.map((id, i) => `<tr${id === me ? ' class="me"' : ''}><td>${i + 1}</td><td>${escHtml(t.names[id] || '?')}</td>${order.map((o) => {
         if (o === id) return '<td class="c x">■</td>';
-        const games = Object.values(per[id]).filter((x) => x.opp === o);
-        return `<td class="c">${games.length ? games.map((x) => fmt(x.pts)).join(' ') : ''}</td>`;
+        const games = all(id).filter((x) => x.opp === o).sort((x, y) => (x.color === 'w' ? -1 : 1) - (y.color === 'w' ? -1 : 1));
+        return `<td class="c">${games.map((x) => fmt(x.pts)).join(' ')}</td>`;
       }).join('')}<td><b>${n(pts(id))}</b></td><td>${n(buch(id))}</td></tr>`).join('');
     } else {
-      // suisse : pour chaque ronde, couleur (B/N), rang de l'adversaire et résultat (+, =, −)
+      // suisse : pour chaque ronde, rang de l'adversaire et points marqués sur les deux parties
       html += `<tr><th>#</th><th>${L('Joueur', 'Player')}</th><th>Elo</th>${rounds.map((r) => `<th class="c">R${r}</th>`).join('')}<th>${L('Pts', 'Pts')}</th><th>${L('Départ.', 'Tiebr.')}</th></tr>`;
       html += order.map((id, i) => `<tr${id === me ? ' class="me"' : ''}><td>${i + 1}</td><td>${escHtml(t.names[id] || '?')}</td><td>${t.elos[id] || 600}</td>${rounds.map((r) => {
-        const x = per[id][r];
-        if (!x) return '<td class="c"></td>';
-        if (x.bye) return `<td class="c" title="${L('exempt', 'bye')}">${L('exempt', 'bye')} +</td>`;
-        return `<td class="c">${x.color === 'w' ? L('B', 'W') : L('N', 'B')}${rank(x.opp)} ${x.pts == null ? '…' : x.pts === 1 ? '+' : x.pts === 0 ? '−' : '='}</td>`;
+        const list = per[id][r];
+        if (!list) return '<td class="c"></td>';
+        if (list[0].bye) return `<td class="c">${L('exempt', 'bye')} 2</td>`;
+        return `<td class="c">${L('c.', 'vs')} ${rank(list[0].opp)} : ${fmt(sum(list))}</td>`;
       }).join('')}<td><b>${n(pts(id))}</b></td><td>${n(buch(id))}</td></tr>`).join('');
     }
     html += '</table></div>';
-    if (t.format !== 'rr') html += `<p class="level-help">${L('B / N : Blancs ou Noirs, puis le rang de l’adversaire ; + gagné, = nulle, − perdu ; … partie en cours.', 'W / B: White or Black, then the opponent’s rank; + won, = draw, − lost; … game in progress.')}</p>`;
+    html += `<p class="level-help">${t.format === 'rr' ? L('Chaque rencontre se joue en deux parties, une avec chaque couleur : la case montre le résultat avec les Blancs, puis avec les Noirs.', 'Each pairing is played over two games, one with each colour: the square shows the result with White, then with Black.') : L('Chaque ronde se joue en deux parties, une avec chaque couleur : « c. 3 : 1½ » veut dire 1 point et demi marqué contre le 3e du classement ; … partie en cours.', 'Each round is played over two games, one with each colour: “vs 3: 1½” means 1.5 points scored against the 3rd in the standings; … game in progress.')}</p>`;
     return html;
   }
   function renderTournamentDetail() {
@@ -3024,11 +3064,14 @@
       const round = t.pairings[`r${t.round}`] || [];
       const myGames = [];
       round.forEach((m) => m.games.forEach((g) => { if ((g.white === me || g.black === me) && !g.result) myGames.push(g); }));
-      if (t.status === 'running' && myGames.length) html += myGames.map((g) => `<button class="btn primary wide" data-tour-game="${g.id}">${L(`Jouer ma partie de la ronde ${t.round}`, `Play my round ${t.round} game`)} : ${escHtml(t.names[g.white])} – ${escHtml(t.names[g.black])}</button>`).join('');
+      if (t.status === 'running' && myGames.length) html += myGames.map((g) => `<button class="btn primary wide" data-tour-game="${g.id}">${L(`Jouer ma partie ${g.leg === 2 ? 'retour' : 'aller'} de la ronde ${t.round}`, `Play my round ${t.round} ${g.leg === 2 ? 'return' : 'first'} game`)} : ${escHtml(t.names[g.white])} – ${escHtml(t.names[g.black])}</button>`).join('');
       const res = (r) => (r ? r.replace('1/2-1/2', '½-½') : '…');
       html += `<h3 class="train-h">${t.status === 'over' ? L('Dernière ronde', 'Last round') : L(`Ronde ${t.round}`, `Round ${t.round}`)}</h3><div class="replay-items">${round.map((m) => m.bye
         ? `<div class="btn replay-item"><strong>${escHtml(pName(t, m.a))}</strong><span>${L('exempt (gagne le point)', 'bye (wins the point)')}</span></div>`
-        : `<div class="btn replay-item"><strong>${escHtml(pName(t, m.a))} – ${escHtml(pName(t, m.b))}</strong><span>${m.games.map((g) => `${t.type === 'team' ? `${L('éch.', 'bd')} ${m.games.indexOf(g) + 1} : ` : ''}${escHtml(t.names[g.white])} – ${escHtml(t.names[g.black])} ${res(g.result)}`).join(' · ')}</span></div>`).join('')}</div>`;
+        : `<div class="btn replay-item"><strong>${escHtml(pName(t, m.a))} – ${escHtml(pName(t, m.b))}</strong>${m.games.map((g) => `<span class="tour-game">${t.type === 'team' ? `${L('éch.', 'bd')} ${g.board || 1} · ` : ''}${g.leg === 2 ? L('retour', 'return') : L('aller', 'first')} : ${escHtml(t.names[g.white])} – ${escHtml(t.names[g.black])} ${res(g.result)} <button type="button" class="btn ghost tour-watch" data-watch="${g.id}">${g.result ? L('Revoir', 'Replay') : L('Regarder', 'Watch')}</button></span>`).join('')}${isLiveTc(t) && m.games.length < (m.expected || 0) ? `<span class="tour-game">${L('retour : après la partie aller', 'return: after the first game')}</span>` : ''}</div>`).join('')}</div>`;
+      // rondes précédentes, à revoir
+      const past = Object.keys(t.pairings).map((k) => Number(k.slice(1))).filter((r) => r !== t.round).sort((a, b) => b - a);
+      if (past.length) html += `<h3 class="train-h">${L('Rondes précédentes', 'Previous rounds')}</h3><div class="replay-items">${past.map((r) => t.pairings[`r${r}`].filter((m) => !m.bye).map((m) => `<div class="btn replay-item"><strong>${L('Ronde', 'Round')} ${r} · ${escHtml(pName(t, m.a))} – ${escHtml(pName(t, m.b))}</strong>${m.games.map((g) => `<span class="tour-game">${escHtml(t.names[g.white])} – ${escHtml(t.names[g.black])} ${res(g.result)} <button type="button" class="btn ghost tour-watch" data-watch="${g.id}">${L('Revoir', 'Replay')}</button></span>`).join('')}</div>`).join('')).join('')}</div>`;
     }
     if (t.status !== 'open') html += t.type === 'solo' ? tourTable(t, me) : `<h3 class="train-h">${t.status === 'over' ? L('Classement final', 'Final standings') : L('Classement', 'Standings')}</h3><table class="tour-table"><tr><th>#</th><th>${L('Équipe', 'Team')}</th><th>${L('Pts', 'Pts')}</th><th>${L('Départ.', 'Tiebr.')}</th></tr>${standings(t).map((r, i) => `<tr${myTeam && myTeam.id === r.id ? ' class="me"' : ''}><td>${i + 1}</td><td>${escHtml(pName(t, r.id))}</td><td>${NUM(r.pts, r.pts % 1 ? 1 : 0)}</td><td>${NUM(r.buch, r.buch % 1 ? 1 : 0)}</td></tr>`).join('')}</table>`;
     html += `<p id="tour-msg" class="ed-error" role="status"></p>`;
@@ -3036,13 +3079,42 @@
   }
   function openTournament(id) {
     if (tourStop) tourStop();
-    tourId = id; tourDoc = (tourList.mine.concat(tourList.open)).find((x) => x.id === id) || null;
+    tourId = id; tourDoc = (tourList.mine.concat(tourList.open, tourList.public || [])).find((x) => x.id === id) || null;
     tourStop = ON.watchTournament(id, (t) => { tourDoc = t; if (document.body.dataset.screen === 'tournaments' && tourId === t.id) renderTournaments(); });
     renderTournaments();
   }
   function closeTournament() { if (tourStop) tourStop(); tourStop = null; tourId = null; tourDoc = null; renderTournaments(); }
+  const isLiveTc = (t) => !!((ON.TIME_CONTROLS[t.tc] || {}).ms);
+  let spectStop = null;
+  function stopSpect() { if (spectStop) spectStop(); spectStop = null; }
+  // Partie de tournoi suivie en direct (les coups arrivent au fur et à mesure) ou revue une fois finie
+  function openSpectate(id) {
+    stopSpect();
+    const tid = tourId;
+    let first = true;
+    spectStop = ON.watchGame(id, (g) => {
+      const label = `${g.tournamentName} · ${L('ronde', 'round')} ${g.round}${g.status === 'active' ? L(' · en direct', ' · live') : ''}`;
+      if (first) {
+        first = false;
+        startReplay({ moves: g.moves, result: g.result || '*', title: label, white: `${g.whiteName} (${g.whiteElo})`, black: `${g.blackName} (${g.blackElo})` }, () => { stopSpect(); show('tournaments'); if (tid) openTournament(tid); });
+        replay.liveId = id;
+        if (g.moves.length) gotoPly(g.moves.length);
+        return;
+      }
+      if (!replay || replay.liveId !== id) { stopSpect(); return; }
+      if (g.moves.length > replay.moves.length) {
+        const atEnd = replay.index === replay.moves.length;
+        const probe = new Game(replay.fen), sans = [];
+        for (const u of g.moves) { const r = probe.playUci(u); if (!r) break; sans.push(r.san); }
+        replay.moves = g.moves.slice(0, sans.length); replay.sans = sans;
+        if (atEnd) gotoPly(replay.moves.length, true); else render();
+      }
+      if (g.status === 'over') { replay.result = g.result; $('game-title').textContent = `Replay · ${label}`; render(); }
+    });
+  }
   $('tour-body').addEventListener('click', async (e) => {
     const t = e.target.closest('button'); if (!t) return;
+    if (t.dataset.watch) return openSpectate(t.dataset.watch);
     const msg = (x, ok) => { const m = $('tour-msg'); if (m) { m.textContent = x; m.style.color = ok ? 'var(--accent, #e9b949)' : ''; } };
     const run = async (fn, ok) => { msg(L('Un instant…', 'One moment…'), true); try { await fn(); msg(ok || '', true); } catch (err) { msg(ON.explain(err)); } };
     const seg = t.closest('[data-tour]');
@@ -3095,12 +3167,13 @@
   };
 
   // Partie en ligne : le plateau suit la partie stockée sur le serveur
-  let onlineStop = null, onlineTimer = null, onlineGame = null;
+  let onlineStop = null, onlineTimer = null, onlineGame = null, onlinePhotos = {};
   function stopOnline() { if (onlineStop) onlineStop(); onlineStop = null; clearInterval(onlineTimer); onlineTimer = null; onlineGame = null; }
   function openOnlineGame(g) {
     stopOnline();
     const me = ON.user.uid, color = g.white === me ? 'w' : 'b';
-    onlineGame = g;
+    onlineGame = g; onlinePhotos = {};
+    ON.getPhotos([g.white, g.black]).then((ph) => { onlinePhotos = ph; if (cfg && cfg.mode === 'online') renderPlayers(); });
     startGame({ mode: 'online', playerColor: color, level: 1, online: { id: g.id, tc: g.tc, tournament: g.tournamentName || null, round: g.round || null } }, g.moves, null, color === 'b');
     onlineStop = ON.watchGame(g.id, onOnlineUpdate);
     onlineTimer = setInterval(onlineTick, 1000);

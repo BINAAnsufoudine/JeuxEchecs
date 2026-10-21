@@ -124,6 +124,17 @@ window.Online = (function () {
     await f.reauthenticateWithCredential(u, f.EmailAuthProvider.credential(u.email, current));
     await f.updatePassword(u, next);
   }
+  async function setPhoto(photo) {
+    if (!user) return;
+    const f = await load();
+    await f.updateDoc(f.doc(f.db, 'users', user.uid), { photo: photo || null });
+    if (profile) profile.photo = photo || null;
+  }
+  async function getPhotos(uids) {
+    const f = await load(), out = {};
+    await Promise.all(uids.map(async (u) => { try { const s = await f.getDoc(f.doc(f.db, 'users', u)); out[u] = s.exists() ? s.data().photo || null : null; } catch { out[u] = null; } }));
+    return out;
+  }
   async function setElo(elo) {
     if (!user) return;
     const f = await load();
@@ -332,26 +343,35 @@ window.Online = (function () {
     return out;
   }
   // Crée les parties d'une ronde (une par échiquier en tournoi par équipe)
-  function roundGames(t, r, pairs, tx, f) {
+  // Une partie de tournoi (leg 1 ou 2 : chaque appariement se joue en aller-retour, une fois avec chaque couleur)
+  function makeGame(t, r, w, bl, board, leg, tx, f) {
     const tc = TIME_CONTROLS[t.tc] || TIME_CONTROLS.unlim, now = Date.now();
-    const games = [];
-    pairs.forEach(([a, b], k) => {
-      if (!a || !b) { games.push({ a: a || b, b: null, bye: true, games: [] }); return; }
+    const ref = f.doc(f.collection(f.db, 'games'));
+    tx.set(ref, {
+      players: [w, bl], white: w, black: bl, whiteName: t.names[w] || '?', blackName: t.names[bl] || '?', whiteElo: t.elos[w] || 600, blackElo: t.elos[bl] || 600,
+      tc: t.tc, clock: tc.ms ? { w: tc.ms, b: tc.ms } : null, moves: [], lastMoveAt: now, status: 'active', result: null, reason: null,
+      seen: { [w]: now, [bl]: now }, createdAt: now, tournamentId: t.id, tournamentName: t.name, round: r, board, leg,
+    });
+    return { id: ref.id, white: w, black: bl, board, leg, result: null };
+  }
+  // En différé (temps par coup ou illimité), les deux parties sont jouées en même temps ;
+  // à la pendule, la partie retour est créée quand la partie aller est finie.
+  const isLive = (t) => !!(TIME_CONTROLS[t.tc] || {}).ms;
+  function roundGames(t, r, pairs, tx, f) {
+    const out = [];
+    pairs.forEach(([a, b]) => {
+      if (!a || !b) { out.push({ a: a || b, b: null, bye: true, games: [] }); return; }
       const boards = t.type === 'team'
         ? (() => { const ta = t.teams.find((x) => x.id === a), tb = t.teams.find((x) => x.id === b); const n = Math.min(ta.members.length, tb.members.length); return Array.from({ length: n }, (_, i) => (i % 2 ? [tb.members[i], ta.members[i]] : [ta.members[i], tb.members[i]])); })()
         : [[a, b]];
-      const ids = boards.map(([w, bl], i) => {
-        const ref = f.doc(f.collection(f.db, 'games'));
-        tx.set(ref, {
-          players: [w, bl], white: w, black: bl, whiteName: t.names[w] || '?', blackName: t.names[bl] || '?', whiteElo: t.elos[w] || 600, blackElo: t.elos[bl] || 600,
-          tc: t.tc, clock: tc.ms ? { w: tc.ms, b: tc.ms } : null, moves: [], lastMoveAt: now, status: 'active', result: null, reason: null,
-          seen: { [w]: now, [bl]: now }, createdAt: now, tournamentId: t.id, tournamentName: t.name, round: r, board: i + 1,
-        });
-        return { id: ref.id, white: w, black: bl, result: null };
+      const games = [];
+      boards.forEach(([w, bl], i) => {
+        games.push(makeGame(t, r, w, bl, i + 1, 1, tx, f));
+        if (!isLive(t)) games.push(makeGame(t, r, bl, w, i + 1, 2, tx, f));
       });
-      games.push({ a, b, games: ids });
+      out.push({ a, b, games, expected: boards.length * 2 });
     });
-    return games;
+    return out;
   }
   const totalRounds = (t) => (t.format === 'rr' ? Math.max(1, participants(t).length - (participants(t).length % 2 ? 0 : 1)) : t.rounds);
   // Lancé par l'organisateur, ou automatiquement par un inscrit une fois la date limite passée
@@ -369,14 +389,22 @@ window.Online = (function () {
   function reportResult(tid, gameId, result) {
     return editTournament(tid, (t, tx, f) => {
       if (t.status !== 'running') return null;
-      const key = `r${t.round}`, round = (t.pairings[key] || []).map((m) => ({ ...m, games: m.games.map((g) => (g.id === gameId && !g.result ? { ...g, result } : g)) }));
+      const key = `r${t.round}`;
+      const round = (t.pairings[key] || []).map((m) => {
+        const games = m.games.map((g) => (g.id === gameId && !g.result ? { ...g, result } : g));
+        // partie aller finie à la pendule : on lance la partie retour, couleurs inversées
+        const done1 = games.find((g) => g.id === gameId && g.leg === 1);
+        if (done1 && isLive(t) && !games.some((g) => g.board === done1.board && g.leg === 2)) games.push(makeGame(t, t.round, done1.black, done1.white, done1.board, 2, tx, f));
+        return { ...m, games };
+      });
       const upd = { [`pairings.${key}`]: round };
-      const done = round.every((m) => m.bye || m.games.every((g) => g.result));
+      const done = round.every((m) => m.bye || (m.games.length >= (m.expected || m.games.length) && m.games.every((g) => g.result)));
       if (!done) return upd;
       // fin de ronde : points (1, ½, 0 par partie ; 1 point pour l'exempt) et adversaires rencontrés
       const scores = { ...t.scores }, met = { ...t.met };
       for (const m of round) {
-        if (m.bye) { scores[m.a] = (scores[m.a] || 0) + (t.type === 'team' ? Math.max(1, t.teamSize / 2) : 1); continue; }
+        // l'exempt gagne les deux parties de la ronde
+        if (m.bye) { scores[m.a] = (scores[m.a] || 0) + (t.type === 'team' ? t.teamSize : 2); continue; }
         let pa = 0, pb = 0;
         for (const g of m.games) {
           const aWhite = t.type === 'team' ? (t.teams.find((x) => x.id === m.a) || { members: [] }).members.includes(g.white) : g.white === m.a;
@@ -395,10 +423,11 @@ window.Online = (function () {
   function watchTournaments(cb) {
     let stop = [];
     load().then((f) => {
-      const all = { open: [], mine: [] };
+      const all = { open: [], mine: [], public: [] };
       const sub = (q, key) => f.onSnapshot(q, (snap) => { all[key] = snap.docs.map((d) => ({ id: d.id, ...d.data() })); cb(all); }, () => cb(all));
       stop = [sub(f.query(f.collection(f.db, 'tournaments'), f.where('status', '==', 'open')), 'open'),
-        sub(f.query(f.collection(f.db, 'tournaments'), f.where('members', 'array-contains', user.uid)), 'mine')];
+        sub(f.query(f.collection(f.db, 'tournaments'), f.where('members', 'array-contains', user.uid)), 'mine'),
+        sub(f.query(f.collection(f.db, 'tournaments'), f.where('status', 'in', ['running', 'over'])), 'public')];
     });
     return () => stop.forEach((s) => s());
   }
@@ -411,7 +440,7 @@ window.Online = (function () {
   return {
     TIME_CONTROLS, load, onUser, explain,
     get user() { return user; }, get profile() { return profile; },
-    signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo,
+    signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos,
     saveProgress, loadProgress, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
     createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,
   };
