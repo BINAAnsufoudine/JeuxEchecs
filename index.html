@@ -28,7 +28,16 @@
           <button id="btn-program" class="btn">Programme personnalisé</button>
           <button id="btn-problems" class="btn">Problèmes</button>
           <button id="btn-champions" class="btn">Comme un champion</button>
-          <button id="btn-train" class="btn">Apprendre</button>
+        </div>
+      </div>
+      <div class="menu-group">
+        <button id="btn-train-menu" class="btn primary" type="button" aria-expanded="false" aria-controls="train-submenu">Apprendre</button>
+        <div id="train-submenu" class="menu-submenu" hidden>
+          <button class="btn" data-train-section="daily">Défi du jour</button>
+          <button class="btn" data-train-section="mates">Les mats</button>
+          <button class="btn" data-train-section="endgames">Finales de base</button>
+          <button class="btn" data-train-section="openings">Ouvertures</button>
+          <button class="btn" data-train-section="famous">Devine le coup</button>
         </div>
       </div>
       <div class="menu-group">
@@ -210,7 +219,7 @@
 
   <!-- Apprendre : mats guidés, finales, ouvertures, parties célèbres, défi du jour -->
   <section id="train" class="screen" aria-label="Apprendre">
-    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Apprendre</h2></header>
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2 id="train-title">Apprendre</h2></header>
     <div class="panel" id="train-body"></div>
   </section>
 

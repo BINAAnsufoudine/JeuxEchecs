@@ -97,6 +97,8 @@
       $('btn-progress-menu').setAttribute('aria-expanded', 'false');
       $('replay-submenu').hidden = true;
       $('btn-replay-menu').setAttribute('aria-expanded', 'false');
+      $('train-submenu').hidden = true;
+      $('btn-train-menu').setAttribute('aria-expanded', 'false');
     }
     if (id === 'home') refreshHome();
     if (id === 'program') renderCoachProgram();
@@ -2735,21 +2737,39 @@
       leavePuzzle();
     });
   }
-  function renderTrain() {
+  let trainSection = 'daily';
+  const TRAIN_TITLES = L({ daily: 'Défi du jour', mates: 'Les mats', endgames: 'Finales de base', openings: 'Ouvertures', famous: 'Devine le coup' },
+    { daily: 'Daily challenge', mates: 'Checkmates', endgames: 'Basic endgames', openings: 'Openings', famous: 'Guess the move' });
+  const TRAIN_HELP = L({
+    daily: 'Un problème par jour, le même toute la journée. Réussis-le du premier coup pour prolonger ta série.',
+    mates: 'Choisis le mat que tu veux apprendre : Maître Hiro te le montre, puis tu le trouves toi-même.',
+    endgames: 'Apprends la méthode, puis joue la position contre l\'ordinateur au plus haut niveau.',
+    openings: 'Découvre les coups d\'une ouverture, puis rejoue-les de mémoire. Elles reviennent à réviser au bon moment.',
+    famous: 'Prends la place d\'un champion dans sa partie la plus célèbre et devine ses coups.',
+  }, {
+    daily: 'One puzzle a day, the same all day long. Solve it at the first try to extend your streak.',
+    mates: 'Choose the mate you want to learn: Master Hiro shows it to you, then you find it yourself.',
+    endgames: 'Learn the method, then play the position against the computer at its highest level.',
+    openings: 'Discover the moves of an opening, then replay them from memory. They come back for review at the right time.',
+    famous: 'Take a champion\'s place in their most famous game and guess their moves.',
+  });
+  function renderTrain(section = trainSection) {
+    trainSection = section;
+    $('train-title').textContent = TRAIN_TITLES[section];
     const done = trainDone(), sr = openingsSR(), d = store.get('daily', { streak: 0, best: 0 }), now = Date.now();
     const item = (key, title, sub, extra = '') => `<button type="button" class="btn replay-item" data-train="${key}"><strong>${escHtml(title)}${extra}</strong><span>${escHtml(sub)}</span></button>`;
     const ok = ' ✓';
-    let html = `<p class="level-help">${L('Choisis ce que tu veux apprendre. Maître Hiro t\'explique, puis tu t\'entraînes.', 'Choose what you want to learn. Master Hiro explains, then you practise.')}</p>`;
+    let html = `<p class="level-help">${TRAIN_HELP[section]}</p>`;
     const dailyDone = d.last === todayKey();
-    html += `<h3 class="train-h">${L('Défi du jour', 'Daily challenge')}</h3><div class="replay-items">${item('daily:', dailyDone ? L('Défi du jour réussi', 'Daily challenge done') : L('Le défi du jour', 'Today\'s challenge'), L(`Série en cours : ${d.streak || 0} · record : ${d.best || 0}`, `Current streak: ${d.streak || 0} · best: ${d.best || 0}`), dailyDone && d.ok ? ok : '')}</div>`;
-    html += `<h3 class="train-h">${L('Les mats', 'Checkmates')}</h3><div class="replay-items">${TR.MATES.map((m) => item(`mate:${m.id}`, m.name, m.text.split('.')[0] + '.', done[`mate:${m.id}`] ? ok : '')).join('')}</div>`;
-    html += `<h3 class="train-h">${L('Finales de base', 'Basic endgames')}</h3><div class="replay-items">${TR.ENDGAMES.map((e) => item(`end:${e.id}`, e.name, e.goal === 'draw' ? L('Défends et obtiens la nulle contre l\'ordinateur', 'Defend and draw against the computer') : L('Donne le mat contre l\'ordinateur', 'Deliver mate against the computer'), done[`end:${e.id}`] ? ok : '')).join('')}</div>`;
-    html += `<h3 class="train-h">${L('Ouvertures', 'Openings')}</h3><div class="replay-items">${TR.OPENINGS.map((o) => {
+    if (section === 'daily') html += `<div class="replay-items">${item('daily:', dailyDone ? L('Défi du jour réussi', 'Daily challenge done') : L('Le défi du jour', 'Today\'s challenge'), L(`Série en cours : ${d.streak || 0} · record : ${d.best || 0}`, `Current streak: ${d.streak || 0} · best: ${d.best || 0}`), dailyDone && d.ok ? ok : '')}</div>`;
+    if (section === 'mates') html += `<div class="replay-items">${TR.MATES.map((m) => item(`mate:${m.id}`, m.name, m.text.split('.')[0] + '.', done[`mate:${m.id}`] ? ok : '')).join('')}</div>`;
+    if (section === 'endgames') html += `<div class="replay-items">${TR.ENDGAMES.map((e) => item(`end:${e.id}`, e.name, e.goal === 'draw' ? L('Défends et obtiens la nulle contre l\'ordinateur', 'Defend and draw against the computer') : L('Donne le mat contre l\'ordinateur', 'Deliver mate against the computer'), done[`end:${e.id}`] ? ok : '')).join('')}</div>`;
+    if (section === 'openings') html += `<div class="replay-items">${TR.OPENINGS.map((o) => {
       const r = sr[o.id], due = r && r.due <= now;
       const sub = `${L('Avec les', 'With')} ${sideName(o.color)} · ${!r ? L('nouvelle', 'new') : due ? L('à réviser', 'to review') : L(`révision dans ${Math.max(1, Math.round((r.due - now) / DAY))} j`, `review in ${Math.max(1, Math.round((r.due - now) / DAY))} d`)}`;
       return item(`open:${o.id}`, o.name, sub, r && r.stage && !due ? ok : '');
     }).join('')}</div>`;
-    html += `<h3 class="train-h">${L('Devine le coup', 'Guess the move')}</h3><div class="replay-items">${TR.FAMOUS.map((f) => item(`famous:${f.id}`, f.name, `${f.players}${done[`famous:${f.id}`] != null ? L(` · record : ${done[`famous:${f.id}`]} coups trouvés`, ` · best: ${done[`famous:${f.id}`]} moves found`) : ''}`)).join('')}</div>`;
+    if (section === 'famous') html += `<div class="replay-items">${TR.FAMOUS.map((f) => item(`famous:${f.id}`, f.name, `${f.players}${done[`famous:${f.id}`] != null ? L(` · record : ${done[`famous:${f.id}`]} coups trouvés`, ` · best: ${done[`famous:${f.id}`]} moves found`) : ''}`)).join('')}</div>`;
     $('train-body').innerHTML = html;
   }
   $('train-body').addEventListener('click', (e) => {
@@ -2761,7 +2781,12 @@
     if (kind === 'open') return startOpening(TR.OPENINGS.find((x) => x.id === id));
     if (kind === 'famous') return startFamous(TR.FAMOUS.find((x) => x.id === id));
   });
-  $('btn-train').onclick = () => { returnTo = 'home'; renderTrain(); show('train'); };
+  $('btn-train-menu').onclick = () => {
+    const open = $('train-submenu').hidden;
+    $('train-submenu').hidden = !open;
+    $('btn-train-menu').setAttribute('aria-expanded', String(open));
+  };
+  document.querySelectorAll('[data-train-section]').forEach((b) => { b.onclick = () => { returnTo = 'home'; renderTrain(b.dataset.trainSection); show('train'); }; });
 
   $('btn-continue').onclick = () => {
     const saved = store.get('game', null);
