@@ -3268,18 +3268,26 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         M.animate(c.parts, t, 'run');
         this.trail(c, el > 0.15 && el < 2.1, t);
         this.launchMiniEagles(a, el, t);
+        // l'aigle saisit sa proie dans ses serres, monte avec elle puis redescend et l'écrase sur sa case
+        const UP = 1.95, DOWN = 2.62, TOP = 2.7, clamp = (x) => Math.max(0, Math.min(1, x));
         if (el < travelEnd) {
           c.holder.position.set(pos.x, Math.sin(Math.PI * u) * 0.9, pos.z);
-        } else if (a.style === 'eagle-release') {
-          const uDrop = Math.max(0, Math.min(1, (el - 2.0) / 1.65));
-          c.holder.position.set(target.x + Math.sin(uDrop * Math.PI) * 0.65, 2.5 * (1 - uDrop), target.z + Math.cos(uDrop * Math.PI) * 0.55 - 0.55);
-        } else {
-          const dive = Math.max(0, Math.min(1, (el - 1.95) / 0.72));
-          c.holder.position.set(target.x, el < 1.95 ? 0.75 + (el - travelEnd) / (1.95 - travelEnd) * 2.2 : 2.95 * (1 - dive), target.z);
-          if (el >= 2.62 && !a.craterMade) {
-            a.craterMade = true;
+        } else if (el < UP) {
+          const r = clamp((el - travelEnd) / (UP - travelEnd));
+          c.holder.position.set(target.x, TOP * r * r * (3 - 2 * r), target.z);
+        } else if (el < DOWN) {
+          const d = clamp((el - UP) / (DOWN - UP));
+          c.holder.position.set(target.x, TOP * (1 - d * d), target.z);
+        } else c.holder.position.set(target.x, 0, target.z); // posé sur la proie écrasée
+        a.eagleY = c.holder.position.y;
+        if (el >= DOWN && !a.craterMade) {
+          a.craterMade = true;
+          // la case se fissure sous l'impact (les fissures restent jusqu'à la fin de la partie)
+          const sq = Math.round(a.target.z + 3.5) * 8 + Math.round(a.target.x + 3.5);
+          this.addPermanentCracks(sq, t, this.ply);
+          this.shakeUntil = t + 0.45; this.shakeAmp = 0.14;
+          if (a.style !== 'eagle-release') {
             this.createCrater(a.target, t);
-            this.shakeUntil = t + 0.45; this.shakeAmp = 0.14;
             this.explode(a, new T.Vector3(a.target.x, 0.38, a.target.z), el, t,
               [0xfff0c8, 0xb98552, 0xffd35a], [0x513b2a, 0x9e7140], false);
           }
@@ -4388,22 +4396,16 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         return u < 1;
       }
       M.animate(c.parts, t, el < 1.08 ? 'guard' : 'ko', 1);
-      if (a.style === 'eagle-release') {
-        const lift = Math.max(0, Math.min(1, (el - 1.08) / 0.92));
-        const fall = Math.max(0, Math.min(1, (el - 2.0) / 1.65));
-        const y = el < 2.0 ? 0.12 + lift * 2.55 : 2.67 * (1 - fall);
+      if (el < 2.62) {
+        // suspendue sous les serres de l'aigle, elle suit exactement sa montée puis sa descente
+        const y = el < 1.08 ? 0 : Math.max(0, (a.eagleY || 0) - 0.62);
         c.holder.position.set(a.target.x, y, a.target.z);
-        c.parts.root.rotation.set(-Math.min(1, Math.max(0, el - 2.0)) * 3, 0, fall * 5);
+        c.parts.root.rotation.set(el < 1.08 ? 0 : 0.35, 0, el < 1.08 ? 0 : Math.sin(el * 8) * 0.1);
       } else {
-        if (el < 2.62) {
-          const lift = Math.max(0, Math.min(1, (el - 1.08) / 1.54));
-          c.holder.position.set(a.target.x, 0.12 + lift * 2.75, a.target.z);
-          c.parts.root.rotation.set(0.35, 0, Math.sin(el * 8) * 0.1);
-        } else {
-          c.holder.position.set(a.target.x, 0.08, a.target.z);
-          c.parts.root.rotation.set(-Math.PI / 2, 0, 0.2);
-          c.parts.root.scale.set(d.base * 0.95, d.base * 0.48, d.base * 0.95);
-        }
+        // écrasée à plat sur sa case
+        c.holder.position.set(a.target.x, 0.06, a.target.z);
+        c.parts.root.rotation.set(-Math.PI / 2, 0, 0.2);
+        c.parts.root.scale.set(d.base * 0.95, d.base * 0.48, d.base * 0.95);
       }
       return el < a.duration;
     }
