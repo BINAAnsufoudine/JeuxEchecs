@@ -222,10 +222,24 @@ window.Online = (function () {
   }
 
   /* ----- Progression : copie de toutes les données « cavalier.* » de l'appareil ----- */
-  async function saveProgress(data) {
+  async function saveProgress(data, at, device) {
     if (!user) return;
     const f = await load();
-    await f.setDoc(f.doc(f.db, 'users', user.uid, 'private', 'progress'), { json: JSON.stringify(data), updatedAt: Date.now() });
+    await f.setDoc(f.doc(f.db, 'users', user.uid, 'private', 'progress'), { json: JSON.stringify(data), updatedAt: at || Date.now(), device: device || null });
+  }
+  // Suivi en direct de la progression du compte : un autre appareil qui enregistre est vu aussitôt
+  function watchProgress(cb) {
+    let stop = () => {};
+    load().then((f) => {
+      if (!user) return;
+      stop = f.onSnapshot(f.doc(f.db, 'users', user.uid, 'private', 'progress'), (s) => {
+        if (!s.exists()) return;
+        const d = s.data();
+        let data = null; try { data = JSON.parse(d.json); } catch { return; }
+        cb({ data, updatedAt: d.updatedAt || 0, device: d.device || null });
+      }, () => {});
+    });
+    return () => stop();
   }
   async function loadProgress() {
     if (!user) return null;
@@ -567,7 +581,7 @@ window.Online = (function () {
     signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos, publishSummary, getProfile, myTournaments,
     presence, listPlayers, setMuted, sendChat, myGames, deleteAccount,
     isAdmin, isAdminEmail, sendVerification, refreshVerification, adminData, adminSetBanned, adminDeleteUser, adminDeleteTournament, markAdmin, loadAdminEmail, setAdminEmail, getAdminEmail,
-    saveProgress, loadProgress, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
+    saveProgress, loadProgress, watchProgress, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
     createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,
   };
 })();

@@ -2801,12 +2801,22 @@
     { unlim: '3 days per move', '7d': '3 days per move', '3d': '3 days per move', '1d': '1 day per move', pm60: '1 minute per move', pm30: '30 seconds per move', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' });
   const announced = new Set();
   let justSignedUp = false, progressDirty = false, progressRev = 0, progressPushing = false, inviteStop = null, gamesStop = null, onlineInvites = { in: [], out: [] }, onlineGames = [];
-  const SKIP_SYNC = new Set(['lastScreen', 'onlineSession', 'onlineSynced', 'progressDirty']);
+  const SKIP_SYNC = new Set(['lastScreen', 'onlineSession', 'onlineSynced', 'progressDirty', 'progressAt', 'progressEditAt', 'deviceId']);
   // toute modification de la progression sera envoyée au compte
   const rawSet = store.set.bind(store);
   // Progression modifiée mais pas encore envoyée : retenu sur l'appareil, pour être envoyé même après
   // une coupure de connexion ou une fermeture de l'appli (à la prochaine connexion)
-  store.set = (key, value) => { rawSet(key, value); if (!SKIP_SYNC.has(key)) { progressDirty = true; progressRev++; if (!store.get('progressDirty', false)) rawSet('progressDirty', true); } };
+  store.set = (key, value) => {
+    rawSet(key, value);
+    if (SKIP_SYNC.has(key)) return;
+    progressDirty = true; progressRev++;
+    if (!store.get('progressDirty', false)) rawSet('progressDirty', true);
+    rawSet('progressEditAt', Date.now());
+    // envoi rapide pour que les autres appareils du compte voient la même chose (écran Reprendre compris)
+    clearTimeout(pushSoon); pushSoon = setTimeout(() => pushProgress(), 4000);
+  };
+  let pushSoon = null;
+  const deviceId = store.get('deviceId', null) || (() => { const id = Math.random().toString(36).slice(2, 10); rawSet('deviceId', id); return id; })();
   progressDirty = store.get('progressDirty', false);
   function localProgress() {
     const data = {};
@@ -2827,7 +2837,9 @@
     progressPushing = true;
     const rev = progressRev;
     try {
-      await ON.saveProgress(localProgress());
+      const at = Date.now();
+      await ON.saveProgress(localProgress(), at, deviceId);
+      rawSet('progressAt', at);
       if (rev === progressRev) { progressDirty = false; rawSet('progressDirty', false); }
     } catch { /* nouvel essai plus tard */ }
     progressPushing = false;
@@ -2837,6 +2849,25 @@
   setInterval(() => { if (ON && ON.user && document.visibilityState === 'visible') ON.presence(); }, 60000);
   window.addEventListener('pagehide', pushProgress);
   // Après connexion : récupère la progression du compte, ou propose d'importer celle de l'appareil
+  // Progression enregistrée par un autre appareil du même compte : on la reprend ici si elle est plus récente
+  let progressStop = null;
+  function watchCloudProgress() {
+    if (progressStop) progressStop();
+    progressStop = ON.watchProgress(({ data, updatedAt, device }) => {
+      if (!data || device === deviceId || updatedAt <= store.get('progressAt', 0)) return;
+      if (store.get('onlineSynced', null) !== (ON.user && ON.user.uid)) return; // première connexion : gérée par syncAfterLogin
+      // modifications locales plus récentes pas encore envoyées : elles l'emportent (elles partent juste après)
+      if (progressDirty && store.get('progressEditAt', 0) > updatedAt) { pushProgress(); return; }
+      replaceLocal({ ...data, settings: store.get('settings', data.settings || {}) });
+      rawSet('progressAt', updatedAt);
+      progressDirty = false; rawSet('progressDirty', false);
+      refreshHome();
+      const scr = document.body.dataset.screen;
+      if (scr === 'welcome') renderWelcome();
+      if (scr === 'profile') openProfile();
+      if (scr === 'train') renderTrain();
+    });
+  }
   async function syncAfterLogin(user, profile) {
     const local = localProgress();
     let cloud = null;
@@ -2892,7 +2923,7 @@
     if (inviteStop) { inviteStop(); inviteStop = null; }
     if (gamesStop) { gamesStop(); gamesStop = null; }
     if (user) {
-      syncAfterLogin(user, profile);
+      syncAfterLogin(user, profile).finally(() => watchCloudProgress());
       ON.presence();
       let known = null;
       inviteStop = ON.watchInvites((all) => {
@@ -2930,7 +2961,7 @@
         }
         if (fresh && document.body.dataset.screen === 'online') openOnlineGame(fresh);
       });
-    } else { onlineInvites = { in: [], out: [] }; onlineGames = []; updateOnlineBadge(); }
+    } else { onlineInvites = { in: [], out: [] }; onlineGames = []; updateOnlineBadge(); if (progressStop) { progressStop(); progressStop = null; } }
     if (document.body.dataset.screen === 'account') renderAccount();
     if (document.body.dataset.screen === 'online') renderOnline();
   }
@@ -4023,7 +4054,7 @@
     if (saved && saved.cfg && !saved.result && saved.cfg.mode !== 'online' && (saved.moves || []).length) {
       const c = saved.cfg, n = Math.ceil((saved.moves || []).length / 2);
       const who = c.mode === 'local' ? L('Partie à deux joueurs', 'Two-player game') : c.mode === 'coach' ? L('Partie avec Maître Sissa', 'Game with Master Sissa') : `${L('Contre', 'Against')} ${sideNames(c)[c.playerColor === 'w' ? 'black' : 'white']}`;
-      card('♟️', who, `${c.fen ? L('Position libre · ', 'Custom position · ') : ''}${n} ${L('coup', 'move')}${n > 1 ? 's' : ''} ${L('joués', 'played')}`, 'game', true);
+      card('♟️', who, `${c.fen ? L('Position libre · ', 'Custom position · ') : ''}${L(`${n} coup${n > 1 ? 's' : ''} joué${n > 1 ? 's' : ''}`, `${n} move${n === 1 ? '' : 's'} played`)}`, 'game', true);
     }
     // parties en ligne et de tournoi
     if (ON && ON.user) {
