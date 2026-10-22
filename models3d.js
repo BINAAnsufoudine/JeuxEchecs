@@ -781,7 +781,7 @@
       // garde : avant-bras croisés devant le visage
       p.armL.rotation.set(-1.9, 0, 0.6); p.armR.rotation.set(-1.9, 0, -0.6);
       p.torso.rotation.x = 0.1; p.legL.rotation.x = -0.3; p.legR.rotation.x = 0.3;
-      setWall(p, Math.min(1, k));
+      setWall(p, p.noWall ? 0 : Math.min(1, k)); // pas de mur dans un combat au corps à corps
     } else if (state === 'cast') {
       // signes des mains, puis poussée vers l'avant (k : 0 → 1)
       if (k < 0.6) {

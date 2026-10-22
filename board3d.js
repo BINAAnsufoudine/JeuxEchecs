@@ -3023,6 +3023,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           let dd = Math.atan2(d.from.x - p.x, d.from.z - p.z) - d.c.holder.rotation.y;
           d.c.holder.rotation.y += Math.atan2(Math.sin(dd), Math.cos(dd)) * ease;
           const e = t - (d.start || 0);
+          if (d.ex) this.brawlMode(d.c, true); // côte à côte : aux poings et aux pieds, sans mur de protection
           if (d.counter && t < d.counter.end) this.counterShot(d, t); // riposte à distance avec sa propre technique
           else if (d.ex && e >= 0 && e < X1) M.animate(d.c.parts, t, 'guard', Math.min(1, e * 4)); // encaisse l'assaut
           else if (d.ex && e >= X1 && e < X2) {
@@ -3382,10 +3383,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     brawlMode(c, on) {
       const p = c.parts;
       if (on && p.savedWeapon === undefined) {
-        p.savedWeapon = p.weapon; p.weapon = 'brawl';
+        p.savedWeapon = p.weapon; p.weapon = 'brawl'; p.noWall = true;
         if (p.blade) p.blade.visible = false;
       } else if (!on && p.savedWeapon !== undefined) {
-        p.weapon = p.savedWeapon; p.savedWeapon = undefined;
+        p.weapon = p.savedWeapon; p.savedWeapon = undefined; p.noWall = false;
         if (p.blade) p.blade.visible = true;
       }
     }
