@@ -1046,17 +1046,17 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             // Roi noir : Main de l'Empereur (une main d'ombre géante sort du sol et écrase la cible).
             knightAttack = { style: white ? 'judgment' : 'emperorhand', white, start: now, from: a, target: b, duration: white ? 3.6 : 3.4, victim: v, dir: { x: ux, z: uz }, len, fx: [] };
             die({ t0: now + knightAttack.duration, knightAttack });
-          } else if (kind === 'r' && white) {
+          } else if (far && kind === 'r' && white) {
             // Tour blanche : elle devient une boule de feu qui roule jusqu'à sa cible en laissant des flammes derrière elle
             const run = 0.18 + len * 0.045;
             knightAttack = { style: 'fireroll', start: now, from: a, target: b, run, duration: 0.5 + run + 1.7, victim: v, dir: { x: ux, z: uz }, len, fx: [] };
             die({ t0: now + knightAttack.duration, knightAttack });
-          } else if (kind === 'b' && white) {
+          } else if (far && kind === 'b' && white) {
             // Fou blanc : boule d'énergie blanche en main, il court frapper sa cible et la projette au loin
             const run = 0.2 + len * 0.06;
             knightAttack = { style: 'orb', start: now, from: a, target: b, run, duration: 0.5 + run + 1.9, victim: v, dir: { x: ux, z: uz }, fx: [] };
             die({ t0: now + knightAttack.duration, knightAttack });
-          } else if ((far && (kind === 'q' || kind === 'r')) || (kind === 'r' && !white)) {
+          } else if (far && (kind === 'q' || kind === 'r')) {
             // Technique à distance lancée depuis sa case : boule de feu (dame), dragon d'eau (tour blanche)
             // ou dragon de feu (tour noire, même au contact) qui réduit sa cible en cendres
             const fireDragon = kind === 'r' && !white;
@@ -1072,14 +1072,13 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             knightAttack = { style: 'chidori', start: now, from: a, target: b, run, pierce, duration: pierce + 2.75, victim: v, dir: { x: ux, z: uz }, fx: [] };
             die({ t0: now + knightAttack.duration, knightAttack });
           } else {
-            // Corps à corps : l'attaquant s'arrête face à sa cible, puis la technique propre à chaque pièce
+            // Pièces côte à côte : elles se battent uniquement aux poings et aux pieds
             const gap = Math.min(0.62, len);
-            duel = { stop: { x: b.x - ux * gap, z: b.z - uz * gap }, foe: b, len: DUEL, rate: 1.5 };
+            duel = { stop: { x: b.x - ux * gap, z: b.z - uz * gap }, foe: b, len: DUEL, rate: 1.5, brawl: true };
             if (kind === 'k') duel.len = 2.6; // enchaînement de coups de poing et de pied
             duel.approach = 0.35 + Math.max(0, len - gap) * 0.09;
             duel.len += X2; // assaut + riposte, puis le coup final
             const o = { t0: now + duel.approach + duel.len, from: duel.stop, start: now + duel.approach, ex: true, far: true };
-            if (kind === 'r') Object.assign(o, { burn: true }); // brûlé par les flammes au coup final
             die(o);
           }
         }
@@ -2948,6 +2947,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           } else if (el < a.dur + a.duel.len) {
             // duel : la technique de chaque pièce (karaté, katana, sabre, flammes…)
             const d0 = el - a.dur;
+            this.brawlMode(c, true);
             c.holder.position.set(a.duel.stop.x, 0, a.duel.stop.z);
             turn(c, Math.atan2(a.duel.foe.x - a.duel.stop.x, a.duel.foe.z - a.duel.stop.z));
             if (d0 >= X1 && d0 < X2) {
@@ -2966,6 +2966,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             if (c.parts.weapon !== 'element') this.flash(a.duel.stop, a.duel.foe, hits, c.parts.fast ? 0xffffff : 0xffe066);
           } else {
             const u = Math.min(1, (el - a.dur - a.duel.len) / 0.35);
+            this.brawlMode(c, false);
             c.parts.root.position.z = 0;
             glide(a.duel.stop, a.to, u, false);
             if (u >= 1) arrive();
@@ -3025,7 +3026,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           if (d.counter && t < d.counter.end) this.counterShot(d, t); // riposte à distance avec sa propre technique
           else if (d.ex && e >= 0 && e < X1) M.animate(d.c.parts, t, 'guard', Math.min(1, e * 4)); // encaisse l'assaut
           else if (d.ex && e >= X1 && e < X2) {
-            // riposte au corps à corps avec ses propres armes
+            // riposte au corps à corps, aux poings et aux pieds
+            this.brawlMode(d.c, true);
             const hits = (e - X1) * 2.2;
             M.animate(d.c.parts, t, 'punch', d.c.parts.weapon === 'element' ? 0.5 : hits);
             if (d.c.parts.weapon !== 'element') this.flash(d.c.holder.position, d.from, hits, d.c.parts.fast ? 0xffffff : 0x9ad7ff);
@@ -3375,6 +3377,17 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       (this.boardCracks = this.boardCracks || []).push({ object: g, ply });
       // les fissures apparaissent à l'impact avec une lueur électrique qui s'éteint
       this.addEffect({ start, dur: 1.2, tick: (e) => { g.visible = true; glowM.opacity = 0.8 * Math.max(0, 1 - e / 1.2); }, end: () => { g.visible = true; glowParts.forEach((x) => g.remove(x)); } });
+    }
+    // Combat rapproché : la pièce range son arme et se bat aux poings et aux pieds
+    brawlMode(c, on) {
+      const p = c.parts;
+      if (on && p.savedWeapon === undefined) {
+        p.savedWeapon = p.weapon; p.weapon = 'brawl';
+        if (p.blade) p.blade.visible = false;
+      } else if (!on && p.savedWeapon !== undefined) {
+        p.weapon = p.savedWeapon; p.savedWeapon = undefined;
+        if (p.blade) p.blade.visible = true;
+      }
     }
     // Effets passagers posés dans la scène : { start, dur, tick(e, t), end() }
     addEffect(fx) { (this.effects = this.effects || []).push(fx); return fx; }
