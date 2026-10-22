@@ -3233,6 +3233,9 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       c.holder.rotation.y = toward;
 
       if (white) {
+        // le forage laisse un trou dans le sol sur la case de départ, puis sur la case d'arrivée
+        if (el >= 0.1 && !a.holeFrom) { a.holeFrom = true; this.createCrater(a.from, t); }
+        if (el >= travelEnd - 0.1 && !a.holeTo) { a.holeTo = true; this.createCrater(a.target, t); this.shakeUntil = t + 0.15; this.shakeAmp = 0.08; }
         // Le ninja se baisse/disparaît pendant le forage : on ne voit que le chien tourner.
         if (c.parts.riderRoot) c.parts.riderRoot.visible = el >= 1.55;
         if (a.style === 'tunnel-eat') {
@@ -3295,7 +3298,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         c.parts.root.visible = gone >= 1;
         if (c.parts.riderRoot) c.parts.riderRoot.visible = gone >= 1;
         a.whirl.visible = gone < 1;
-        a.whirl.position.set(c.holder.position.x, Math.max(-0.2, c.holder.position.y), c.holder.position.z);
+        a.whirl.position.set(c.holder.position.x, c.holder.position.y + 0.42, c.holder.position.z);
+        a.whirl.rotation.set(Math.PI / 2, toward, 0);
         a.whirl.scale.setScalar(Math.max(0.01, 1 + gone * 0.6));
         this.spinWhirl(a, t, 1 - gone);
       }
@@ -3638,20 +3642,21 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     tickWhirlwind(c, a, el, t, M) {
       const T = this.THREE;
       if (!a.whirl) {
-        a.whirl = new T.Group();
+        // tourbillon couché à l'horizontale dans l'axe de l'attaque, anneaux fermés et serrés
+        a.whirl = new T.Group(); a.whirl.rotation.order = 'YXZ';
         a.whirlBands = [];
         for (let i = 0; i < 7; i++) {
-          const r = 0.16 + i * 0.07;
-          const band = new T.Mesh(new T.TorusGeometry(r, 0.022 + i * 0.003, 6, 28, Math.PI * 1.3),
+          const r = 0.2 + Math.abs(i - 3) * 0.035;
+          const band = new T.Mesh(new T.TorusGeometry(r, 0.026, 6, 32, Math.PI * 1.9),
             new T.MeshBasicMaterial({ color: i % 2 ? 0xffffff : 0xd9ecf5, transparent: true, opacity: 0.75, depthWrite: false, side: T.DoubleSide }));
-          band.rotation.x = Math.PI / 2; band.position.y = 0.12 + i * 0.22;
+          band.rotation.x = Math.PI / 2; band.position.y = (i - 3) * 0.13;
           band.userData = { speed: 9 + i * 1.5, phase: i * 0.9 };
           a.whirl.add(band); a.whirlBands.push(band);
         }
         a.whirlBits = [];
         for (let i = 0; i < 14; i++) {
           const bit = new T.Mesh(new T.PlaneGeometry(0.07, 0.04), new T.MeshBasicMaterial({ color: i % 3 ? 0xcfe6c4 : 0xb7a57a, transparent: true, opacity: 0.85, side: T.DoubleSide, depthWrite: false }));
-          bit.userData = { a: i * 2.399, h: (i % 7) * 0.22, r: 0.25 + (i % 4) * 0.1 };
+          bit.userData = { a: i * 2.399, h: ((i % 7) - 3) * 0.13, r: 0.2 + (i % 3) * 0.05 };
           a.whirl.add(bit); a.whirlBits.push(bit);
         }
         a.whirl.scale.setScalar(0.01);
@@ -3667,7 +3672,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       c.parts.root.visible = k < 0.75;
       if (c.parts.riderRoot) c.parts.riderRoot.visible = k < 0.75;
       a.whirl.visible = true;
-      a.whirl.position.set(a.from.x, 0, a.from.z);
+      a.whirl.position.set(a.from.x, 0.42, a.from.z);
+      a.whirl.rotation.set(Math.PI / 2, Math.atan2(a.target.x - a.from.x, a.target.z - a.from.z), 0);
       a.whirl.scale.setScalar(Math.max(0.01, Math.min(1, k * 1.4)));
       this.spinWhirl(a, t, 1);
       return true;
