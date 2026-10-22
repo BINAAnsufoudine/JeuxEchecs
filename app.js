@@ -955,7 +955,10 @@
   function renderActions() {
     const plies = game.history.length;
     const myPlies = cfg.mode === 'online' ? game.history.filter((h, i) => (i % 2 === 0 ? 'w' : 'b') === cfg.playerColor).length : 0;
-    $('btn-undo').disabled = !!result || plies === 0 || !!pendingMove || (cfg.mode === 'online' ? myPlies === 0 : cfg.mode !== 'local' && plies < (cfg.playerColor === 'w' ? 1 : 2));
+    // parties rapides (à la pendule) : pas de reprise de coup
+    const rapid = cfg.mode === 'online' && !isDeferred();
+    $('btn-undo').hidden = rapid;
+    $('btn-undo').disabled = rapid || !!result || plies === 0 || !!pendingMove || (cfg.mode === 'online' ? myPlies === 0 : cfg.mode !== 'local' && plies < (cfg.playerColor === 'w' ? 1 : 2));
     $('btn-draw').hidden = !humanVsHuman();
     $('btn-draw').disabled = !!result || plies < 2;
     renderConfirm();
@@ -3902,7 +3905,7 @@
       ] });
       return;
     }
-    if (cfg.mode !== 'online' || !onlineGame) return;
+    if (cfg.mode !== 'online' || !onlineGame || !isDeferred()) return;
     if (onlineGame.takeback) { toast(L('Une demande est déjà en attente.', 'A request is already pending.')); return; }
     ON.requestTakeback(onlineGame.id).then(() => toast(L('Demande envoyée : ton adversaire doit l’accepter.', 'Request sent: your opponent must accept it.'))).catch((e) => toast(ON.explain(e)));
   }
