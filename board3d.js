@@ -126,8 +126,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.mateUltimateKey = '';
       this.captureScars = [];
       this.checkGroup = new THREE.Group(); this.scene.add(this.checkGroup);
-      this.checkLinkGeo = new THREE.TorusGeometry(0.065, 0.022, 6, 10);
-      this.checkLinkMat = new THREE.MeshStandardMaterial({ color: 0xb8c2cc, metalness: 0.78, roughness: 0.3 });
+      // échec : disque noir sous le roi, trait noir au sol jusqu'à la pièce qui donne l'échec
+      this.checkDiskGeo = new THREE.CircleGeometry(0.49, 48);
+      this.checkLineGeo = new THREE.PlaneGeometry(1, 0.07);
+      this.checkMat = new THREE.MeshBasicMaterial({ color: 0x050505, transparent: true, opacity: 0.82, depthWrite: false, side: THREE.DoubleSide });
       this.checkLinks = []; this.checkKey = '';
       this.shadowTex = this.makeShadowTexture();
       this.flipped = null;
@@ -2683,33 +2685,35 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (key === this.checkKey) return;
       this.checkKey = key; this.checkGroup.clear(); this.checkLinks = [];
       if (!key) return;
-      const king = this.sqToPos(kingSq);
+      const disk = new this.THREE.Mesh(this.checkDiskGeo, this.checkMat);
+      disk.rotation.x = -Math.PI / 2; disk.renderOrder = 3; this.checkGroup.add(disk);
+      this.checkLinks.push({ disk, kingSq });
       for (const checkerSq of checkers) {
-        const checker = this.sqToPos(checkerSq);
-        const count = Math.max(4, Math.ceil(Math.hypot(king.x - checker.x, king.z - checker.z) * 4));
-        for (let i = 0; i < count; i++) {
-          const link = new this.THREE.Mesh(this.checkLinkGeo, this.checkLinkMat);
-          this.checkGroup.add(link);
-          this.checkLinks.push({ mesh: link, checkerSq, kingSq, i, count });
-        }
+        const line = new this.THREE.Mesh(this.checkLineGeo, this.checkMat);
+        line.rotation.x = -Math.PI / 2; line.renderOrder = 3; this.checkGroup.add(line);
+        this.checkLinks.push({ line, checkerSq, kingSq });
       }
     }
 
     // Suit les deux pièces pendant leurs déplacements et relie le roi à son assaillant.
     drawCheckChains() {
-      const T = this.THREE, axis = new T.Vector3(0, 0, 1);
       for (const link of this.checkLinks) {
-        const attacker = this.chars.get(link.checkerSq), king = this.chars.get(link.kingSq);
-        if (!attacker || !king) { link.mesh.visible = false; continue; }
-        link.mesh.visible = true;
-        const start = new T.Vector3(attacker.holder.position.x, 0.76, attacker.holder.position.z);
-        const end = new T.Vector3(king.holder.position.x, 0.76, king.holder.position.z);
-        const direction = end.clone().sub(start);
-        const u = (link.i + 0.5) / link.count;
-        link.mesh.position.copy(start).lerp(end, u);
-        direction.normalize();
-        link.mesh.quaternion.setFromUnitVectors(axis, direction);
-        link.mesh.quaternion.multiply(new T.Quaternion().setFromAxisAngle(axis, link.i % 2 ? Math.PI / 2 : 0));
+        const king = this.chars.get(link.kingSq);
+        if (link.disk) {
+          link.disk.visible = !!king;
+          if (king) { link.disk.position.set(king.holder.position.x, 0.045, king.holder.position.z); link.disk.scale.setScalar(1 + Math.sin(performance.now() / 180) * 0.04); }
+          continue;
+        }
+        const attacker = this.chars.get(link.checkerSq);
+        if (!attacker || !king) { link.line.visible = false; continue; }
+        link.line.visible = true;
+        const a = attacker.holder.position, b = king.holder.position;
+        const dx = b.x - a.x, dz = b.z - a.z, len = Math.hypot(dx, dz);
+        // trait au sol, du pied de la pièce qui donne l'échec jusqu'au bord du disque du roi
+        link.line.scale.set(Math.max(0.01, len - 0.49), 1, 1);
+        const mid = (len - 0.49) / 2 / (len || 1);
+        link.line.position.set(a.x + dx * mid, 0.044, a.z + dz * mid);
+        link.line.rotation.z = -Math.atan2(dz, dx);
       }
     }
 
@@ -2997,7 +3001,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         // Les personnages ne suivent plus la caméra : ils fixent l'adversaire le plus proche (ou le plus fort à égalité)
         const at = c.holder.position;
         turn(c, (c.watch ? Math.atan2(c.watch.x - at.x, c.watch.z - at.z) : restYaw) + (c.parts.yawOffset || 0));
-        if (c.inCheck && c.parts.wall) { state = 'guard'; k = 1; } // le roi en échec lève son mur de glace
+        if (c.inCheck && !c.selected) { state = 'panic'; k = 0; } // le roi en échec agite les bras en l'air
         M.animate(c.parts, t, state, k);
         if (c.inCheck) c.parts.root.position.x = Math.sin(t * 40) * 0.025; // le roi tremble en échec
         else c.parts.root.position.x = 0;

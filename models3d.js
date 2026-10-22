@@ -763,7 +763,13 @@
     const hit = Math.floor(k), e = k - hit, swing = Math.sin(Math.min(1, e) * Math.PI);
     setWall(p, 0); setFlame(p, 0, t);
 
-    if (state === 'select') {
+    if (state === 'panic') {
+      // roi en échec : il agite les bras en l'air, affolé
+      p.armL.rotation.set(Math.sin(t * 14) * 0.5, 0, -2.6 + Math.sin(t * 9) * 0.35);
+      p.armR.rotation.set(-Math.sin(t * 14) * 0.5, 0, 2.6 - Math.sin(t * 9 + 1) * 0.35);
+      p.torso.rotation.z = Math.sin(t * 7) * 0.08;
+      p.root.position.y = Math.abs(Math.sin(t * 9)) * 0.04;
+    } else if (state === 'select') {
       const hop = Math.abs(Math.sin(t * 6));
       p.root.position.y = hop * 0.12;
       p.armL.rotation.z = -2.4 + hop * 0.3; p.armR.rotation.z = 2.4 - hop * 0.3; // bras levés, prêt au combat
