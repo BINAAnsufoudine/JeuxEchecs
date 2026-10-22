@@ -2689,6 +2689,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       disk.rotation.x = -Math.PI / 2; disk.renderOrder = 3; this.checkGroup.add(disk);
       this.checkLinks.push({ disk, kingSq });
       for (const checkerSq of checkers) {
+        // le même disque noir sous la pièce qui donne l'échec, et le trait qui relie les deux disques
+        const cd = new this.THREE.Mesh(this.checkDiskGeo, this.checkMat);
+        cd.rotation.x = -Math.PI / 2; cd.renderOrder = 3; this.checkGroup.add(cd);
+        this.checkLinks.push({ disk: cd, kingSq: checkerSq });
         const line = new this.THREE.Mesh(this.checkLineGeo, this.checkMat);
         line.rotation.x = -Math.PI / 2; line.renderOrder = 3; this.checkGroup.add(line);
         this.checkLinks.push({ line, checkerSq, kingSq });
@@ -2697,6 +2701,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
     // Suit les deux pièces pendant leurs déplacements et relie le roi à son assaillant.
     drawCheckChains() {
+      // le roi en échec et la pièce qui le menace se font face, même de loin
+      for (const c of this.chars.values()) c.faceTarget = null;
       for (const link of this.checkLinks) {
         const king = this.chars.get(link.kingSq);
         if (link.disk) {
@@ -2708,10 +2714,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         if (!attacker || !king) { link.line.visible = false; continue; }
         link.line.visible = true;
         const a = attacker.holder.position, b = king.holder.position;
+        attacker.faceTarget = { x: b.x, z: b.z }; king.faceTarget = { x: a.x, z: a.z };
         const dx = b.x - a.x, dz = b.z - a.z, len = Math.hypot(dx, dz);
-        // trait au sol, du pied de la pièce qui donne l'échec jusqu'au bord du disque du roi
-        link.line.scale.set(Math.max(0.01, len - 0.49), 1, 1);
-        const mid = (len - 0.49) / 2 / (len || 1);
+        // trait au sol, d'un disque à l'autre
+        link.line.scale.set(Math.max(0.01, len - 0.98), 1, 1);
+        const mid = 0.5;
         link.line.position.set(a.x + dx * mid, 0.044, a.z + dz * mid);
         link.line.rotation.z = -Math.atan2(dz, dx);
       }
@@ -3000,7 +3007,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         if (c.selected) state = 'select';
         // Les personnages ne suivent plus la caméra : ils fixent l'adversaire le plus proche (ou le plus fort à égalité)
         const at = c.holder.position;
-        turn(c, (c.watch ? Math.atan2(c.watch.x - at.x, c.watch.z - at.z) : restYaw) + (c.parts.yawOffset || 0));
+        const look = c.faceTarget || c.watch;
+        turn(c, (look ? Math.atan2(look.x - at.x, look.z - at.z) : restYaw) + (c.parts.yawOffset || 0));
         if (c.inCheck && !c.selected) { state = 'panic'; k = 0; } // le roi en échec agite les bras en l'air
         M.animate(c.parts, t, state, k);
         if (c.inCheck) c.parts.root.position.x = Math.sin(t * 40) * 0.025; // le roi tremble en échec
