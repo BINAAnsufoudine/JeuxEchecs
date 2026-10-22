@@ -623,7 +623,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 
 .pgn-preview { max-height: 220px; overflow: auto; white-space: pre-wrap; font-size: 0.8rem; background: rgba(0,0,0,0.25); padding: 10px; border-radius: 8px; user-select: text; }
 
-#game-actions { grid-template-columns: repeat(5, 1fr); }
+#game-actions { grid-template-columns: repeat(6, 1fr); }
 
 /* Écran « Reprendre » */
 .welcome-list { display: flex; flex-direction: column; gap: 8px; }
@@ -663,3 +663,10 @@ body.admin-mode #home-rewards, body.admin-mode #coach-program, body.admin-mode #
 .switch-game small { color: var(--muted); }
 .switch-game.hot { box-shadow: inset 0 0 0 2px rgba(233,185,73,0.6); }
 .switch-game.hot small { color: var(--accent, #e9b949); font-weight: 650; }
+
+/* Validation du coup (parties en ligne en différé) */
+.confirm-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; margin: 6px 0; border-radius: 12px; background: var(--surface); box-shadow: inset 0 0 0 2px rgba(233,185,73,0.6); }
+.confirm-bar[hidden], .auto-confirm[hidden] { display: none; }
+.confirm-bar span { flex: 1; font-weight: 650; }
+.confirm-bar .btn { min-height: 0; padding: 7px 12px; }
+.auto-confirm { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--muted); margin: 4px 0; }

@@ -348,6 +348,33 @@ window.Online = (function () {
       tx.update(ref, upd);
     });
   }
+  // Demandes entre joueurs : reprendre son dernier coup ou proposer la nulle (l'adversaire accepte ou refuse)
+  async function requestTakeback(id) { const f = await load(); await f.updateDoc(f.doc(f.db, 'games', id), { takeback: { by: user.uid, at: Date.now() } }); }
+  async function answerTakeback(id, accept) {
+    const f = await load();
+    await f.runTransaction(f.db, async (tx) => {
+      const ref = f.doc(f.db, 'games', id), s = await tx.get(ref), g = s.data();
+      if (!g || !g.takeback || g.status !== 'active') return;
+      const by = g.takeback.by, color = g.white === by ? 'w' : 'b';
+      const upd = { takeback: null, takebackAnswer: { by: user.uid, ok: !!accept, at: Date.now() } };
+      if (accept) {
+        // on retire le dernier coup du demandeur (et la réponse de l'adversaire s'il a déjà rejoué)
+        const moves = g.moves.slice();
+        const toMove = () => (moves.length % 2 === 0 ? 'w' : 'b');
+        if (moves.length && toMove() !== color) moves.pop();
+        else if (moves.length >= 2) { moves.pop(); moves.pop(); }
+        Object.assign(upd, { moves, lastMoveAt: Date.now() });
+      }
+      tx.update(ref, upd);
+    });
+  }
+  async function offerDraw(id) { const f = await load(); await f.updateDoc(f.doc(f.db, 'games', id), { drawOffer: { by: user.uid, at: Date.now() } }); }
+  async function answerDraw(id, accept) {
+    const f = await load();
+    const upd = { drawOffer: null, drawAnswer: { by: user.uid, ok: !!accept, at: Date.now() } };
+    if (accept) Object.assign(upd, { status: 'over', result: '1/2-1/2', reason: 'accord' });
+    await f.updateDoc(f.doc(f.db, 'games', id), upd);
+  }
   async function endGame(id, result, reason) {
     const f = await load();
     try { await f.updateDoc(f.doc(f.db, 'games', id), { status: 'over', result, reason }); } catch { /* déjà terminée */ }
@@ -581,7 +608,7 @@ window.Online = (function () {
     signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos, publishSummary, getProfile, myTournaments,
     presence, listPlayers, setMuted, sendChat, myGames, deleteAccount,
     isAdmin, isAdminEmail, sendVerification, refreshVerification, adminData, adminSetBanned, adminDeleteUser, adminDeleteTournament, markAdmin, loadAdminEmail, setAdminEmail, getAdminEmail,
-    saveProgress, loadProgress, watchProgress, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
+    saveProgress, loadProgress, watchProgress, requestTakeback, answerTakeback, offerDraw, answerDraw, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
     createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,
   };
 })();

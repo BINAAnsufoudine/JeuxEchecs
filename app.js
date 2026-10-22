@@ -31,7 +31,7 @@
   const REASONS = {
     mat: L('Échec et mat', 'Checkmate'), pat: L('Pat', 'Stalemate'), materiel: L('Matériel insuffisant', 'Insufficient material'),
     '50coups': L('Règle des 50 coups', '50-move rule'), repetition: L('Triple répétition', 'Threefold repetition'), abandon: L('Abandon', 'Resignation'), import: L('Partie importée', 'Imported game'),
-    temps: L('Temps écoulé', 'Time out'), deconnexion: L('Connexion perdue (nulle)', 'Connection lost (draw)'),
+    temps: L('Temps écoulé', 'Time out'), deconnexion: L('Connexion perdue (nulle)', 'Connection lost (draw)'), accord: L('Nulle par accord', 'Draw by agreement'),
   };
 
   /* Stockage (peut être indisponible : navigation privée, etc.) */
@@ -568,6 +568,7 @@
   function startGame(conf, uciMoves = [], res = null, flip, terrainId, weatherId) {
     if (document.body.classList.contains('admin-mode')) { toast(L('Le compte administrateur ne peut pas jouer.', 'The administrator account cannot play.')); show('admin'); return; }
     $('chat').hidden = true; $('online-switch').hidden = true;
+    pendingMove = null;
     cancelAi();
     if (conf.mode !== 'online' && typeof stopOnline === 'function') stopOnline();
     replay = null; setReplayUi(false);
@@ -953,7 +954,11 @@
 
   function renderActions() {
     const plies = game.history.length;
-    $('btn-undo').disabled = cfg.mode === 'online' || !!result || plies === 0 || (cfg.mode !== 'local' && plies < (cfg.playerColor === 'w' ? 1 : 2));
+    const myPlies = cfg.mode === 'online' ? game.history.filter((h, i) => (i % 2 === 0 ? 'w' : 'b') === cfg.playerColor).length : 0;
+    $('btn-undo').disabled = !!result || plies === 0 || !!pendingMove || (cfg.mode === 'online' ? myPlies === 0 : cfg.mode !== 'local' && plies < (cfg.playerColor === 'w' ? 1 : 2));
+    $('btn-draw').hidden = !humanVsHuman();
+    $('btn-draw').disabled = !!result || plies < 2;
+    renderConfirm();
     $('btn-hint').disabled = cfg.mode === 'online' || !canInteract(true);
     $('btn-resign').disabled = !!result;
   }
@@ -1051,7 +1056,11 @@
       else sounds.move();
     }
     if (cfg.mode === 'coach' && !result) coachGameCommentary(res, insight);
-    if (cfg.mode === 'online' && colorOf(res.move.piece) === cfg.playerColor) ON.playMove(cfg.online.id, window.Chess.toUci(res.move), game.history.length - 1, result).catch(() => toast(L('Coup non envoyé : vérifie ta connexion.', 'Move not sent: check your connection.')));
+    if (cfg.mode === 'online' && colorOf(res.move.piece) === cfg.playerColor) {
+      const uci = window.Chess.toUci(res.move), ply = game.history.length - 1;
+      if (isDeferred() && settings.autoConfirm === false && !result) { pendingMove = { uci, ply, san: res.san || uci }; renderConfirm(); }
+      else sendOnlineMove(uci, ply, result);
+    }
     render();
     save();
     if (!result) maybeAiMove();
@@ -1346,6 +1355,8 @@
   /* ---------- Actions ---------- */
   $('btn-undo').onclick = () => {
     if (animBusy()) return;
+    // entre deux humains, reprendre un coup demande l'accord de l'adversaire
+    if (humanVsHuman()) { requestTakeback(); return; }
     cancelAi();
     if (cfg.mode !== 'local') {
       game.undo();
@@ -3782,6 +3793,93 @@
 
   // Partie en ligne : le plateau suit la partie stockée sur le serveur
   let onlineStop = null, onlineTimer = null, onlineGame = null, onlinePhotos = {};
+  /* ---------- Entre deux humains : valider son coup (différé), reprendre un coup, proposer la nulle ---------- */
+  let pendingMove = null;
+  const isDeferred = () => cfg && cfg.mode === 'online' && onlineGame && !(ON.TIME_CONTROLS[onlineGame.tc] || {}).ms;
+  const humanVsHuman = () => cfg && (cfg.mode === 'local' || cfg.mode === 'online');
+  function renderConfirm() {
+    const deferred = isDeferred();
+    $('auto-confirm').hidden = !deferred || !!result;
+    $('opt-autoconfirm').checked = settings.autoConfirm !== false;
+    $('confirm-bar').hidden = !pendingMove;
+    if (pendingMove) $('confirm-text').textContent = L(`Ton coup : ${pendingMove.san}`, `Your move: ${pendingMove.san}`);
+  }
+  $('opt-autoconfirm').addEventListener('change', (e) => { settings.autoConfirm = e.target.checked; store.set('settings', settings); renderConfirm(); });
+  function sendOnlineMove(uci, ply, over) {
+    ON.playMove(cfg.online.id, uci, ply, over).catch(() => toast(L('Coup non envoyé : vérifie ta connexion.', 'Move not sent: check your connection.')));
+  }
+  $('btn-confirm-move').onclick = () => {
+    if (!pendingMove) return;
+    const p = pendingMove; pendingMove = null;
+    sendOnlineMove(p.uci, p.ply, null);
+    renderConfirm(); render();
+  };
+  $('btn-cancel-move').onclick = () => {
+    if (!pendingMove) return;
+    pendingMove = null;
+    game.undo(); selected = -1;
+    renderConfirm(); render(); save();
+  };
+  // Annuler son dernier coup : l'adversaire doit l'accepter (refus : le coup reste)
+  function requestTakeback() {
+    if (result) return;
+    if (cfg.mode === 'local') {
+      const by = game.turn === 'w' ? L('Noirs', 'Black') : L('Blancs', 'White'), other = game.turn === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
+      modal({ title: L('Annuler le dernier coup ?', 'Take back the last move?'), text: L(`Les ${by} demandent à reprendre leur dernier coup. Les ${other} acceptent-ils ?`, `${by} ask to take back their last move. Do ${other} accept?`), actions: [
+        { label: L(`Les ${other} acceptent`, `${other} accept`), primary: true, onClick: () => { game.undo(); selected = -1; hint = null; render(); save(); } },
+        { label: L('Refuser', 'Refuse'), ghost: true, onClick: () => toast(L('Demande refusée : le coup reste joué.', 'Request refused: the move stands.')) },
+      ] });
+      return;
+    }
+    if (cfg.mode !== 'online' || !onlineGame) return;
+    if (onlineGame.takeback) { toast(L('Une demande est déjà en attente.', 'A request is already pending.')); return; }
+    ON.requestTakeback(onlineGame.id).then(() => toast(L('Demande envoyée : ton adversaire doit l’accepter.', 'Request sent: your opponent must accept it.'))).catch((e) => toast(ON.explain(e)));
+  }
+  // Proposer la nulle
+  $('btn-draw').onclick = () => {
+    if (result || !humanVsHuman()) return;
+    if (cfg.mode === 'local') {
+      const by = game.turn === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black'), other = game.turn === 'w' ? L('Noirs', 'Black') : L('Blancs', 'White');
+      modal({ title: L('Proposer la nulle ?', 'Offer a draw?'), text: L(`Les ${by} proposent la nulle. Les ${other} acceptent-ils ?`, `${by} offer a draw. Do ${other} accept?`), actions: [
+        { label: L(`Les ${other} acceptent`, `${other} accept`), primary: true, onClick: () => { result = { result: '1/2-1/2', reason: 'accord' }; finish(); } },
+        { label: L('Refuser', 'Refuse'), ghost: true, onClick: () => toast(L('Nulle refusée : la partie continue.', 'Draw refused: the game goes on.')) },
+      ] });
+      return;
+    }
+    if (!onlineGame) return;
+    if (onlineGame.drawOffer) { toast(L('Une proposition est déjà en attente.', 'An offer is already pending.')); return; }
+    modal({ title: L('Proposer la nulle ?', 'Offer a draw?'), text: L('Ton adversaire pourra accepter ou refuser.', 'Your opponent can accept or refuse.'), actions: [
+      { label: L('Proposer', 'Offer'), primary: true, onClick: () => ON.offerDraw(onlineGame.id).then(() => toast(L('Nulle proposée.', 'Draw offered.'))).catch((e) => toast(ON.explain(e))) },
+      { label: L('Annuler', 'Cancel'), ghost: true },
+    ] });
+  };
+  // Demandes reçues de l'adversaire en ligne, et réponses à mes demandes
+  const answered = new Set();
+  function onlineRequests(g) {
+    const me = ON.user.uid, opp = g.white === me ? g.blackName : g.whiteName;
+    if (g.status !== 'active') return;
+    if (g.takeback && g.takeback.by !== me && !answered.has(`t${g.takeback.at}`)) {
+      answered.add(`t${g.takeback.at}`);
+      modal({ title: L('Annuler un coup ?', 'Take back a move?'), text: L(`${opp} demande à reprendre son dernier coup.`, `${opp} asks to take back their last move.`), actions: [
+        { label: L('Accepter', 'Accept'), primary: true, onClick: () => ON.answerTakeback(g.id, true).catch((e) => toast(ON.explain(e))) },
+        { label: L('Refuser', 'Refuse'), ghost: true, onClick: () => ON.answerTakeback(g.id, false).catch((e) => toast(ON.explain(e))) },
+      ] });
+    }
+    if (g.drawOffer && g.drawOffer.by !== me && !answered.has(`d${g.drawOffer.at}`)) {
+      answered.add(`d${g.drawOffer.at}`);
+      modal({ title: L('Nulle proposée', 'Draw offered'), text: L(`${opp} te propose la nulle.`, `${opp} offers you a draw.`), actions: [
+        { label: L('Accepter la nulle', 'Accept the draw'), primary: true, onClick: () => ON.answerDraw(g.id, true).catch((e) => toast(ON.explain(e))) },
+        { label: L('Refuser', 'Refuse'), ghost: true, onClick: () => ON.answerDraw(g.id, false).catch((e) => toast(ON.explain(e))) },
+      ] });
+    }
+    for (const [k, a] of [['ta', g.takebackAnswer], ['da', g.drawAnswer]]) {
+      if (!a || a.by === me || answered.has(`${k}${a.at}`)) continue;
+      answered.add(`${k}${a.at}`);
+      if (Date.now() - a.at > 60000) continue; // réponse ancienne : déjà vue
+      if (k === 'ta') toast(a.ok ? L(`${opp} a accepté : ton coup est annulé.`, `${opp} accepted: your move is taken back.`) : L(`${opp} a refusé : le coup reste joué.`, `${opp} refused: the move stands.`));
+      else if (!a.ok) toast(L(`${opp} a refusé la nulle.`, `${opp} refused the draw.`));
+    }
+  }
   function stopOnline() { if (onlineStop) onlineStop(); onlineStop = null; clearInterval(onlineTimer); onlineTimer = null; onlineGame = null; $('chat').hidden = true; $('online-switch').hidden = true; }
   function openOnlineGame(g) {
     stopOnline();
@@ -3798,8 +3896,11 @@
   }
   function onOnlineUpdate(g) {
     if (!cfg || cfg.mode !== 'online' || cfg.online.id !== g.id) return;
+    // coup repris d'un commun accord : la partie est rechargée à la nouvelle position
+    if (g.moves.length < game.history.length - (pendingMove ? 1 : 0)) { pendingMove = null; openOnlineGame(g); return; }
     onlineGame = g;
     onChatUpdate(g);
+    onlineRequests(g);
     // coups de l'adversaire pas encore joués sur ce plateau
     let played = null;
     while (game.history.length < g.moves.length) {

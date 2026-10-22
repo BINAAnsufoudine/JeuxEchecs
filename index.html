@@ -177,12 +177,18 @@
             </div>
           </div>
         </div>
-        <div class="actions" id="game-actions">
+        <div id="confirm-bar" class="confirm-bar" hidden>
+          <span id="confirm-text"></span>
+          <button class="btn primary" id="btn-confirm-move" type="button">Valider le coup</button>
+          <button class="btn ghost" id="btn-cancel-move" type="button">Annuler</button>
+        </div>
+        <label id="auto-confirm" class="auto-confirm" hidden><input type="checkbox" id="opt-autoconfirm"> Validation automatique des coups</label>
         <div class="actions" id="game-actions">
           <button class="act" id="btn-undo"><span>↶</span>Annuler</button>
           <button class="act" id="btn-hint"><span>✦</span>Indice</button>
           <button class="act" id="btn-flip"><span>⇅</span>Tourner</button>
           <button class="act" id="btn-pgn" aria-label="Exporter la partie en PGN"><span>⬇</span>PGN</button>
+          <button class="act" id="btn-draw" aria-label="Proposer la nulle"><span>½</span>Nulle</button>
           <button class="act" id="btn-resign"><span>⚑</span>Abandon</button>
         </div>
       </div>
