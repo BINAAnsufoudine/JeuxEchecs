@@ -1120,7 +1120,11 @@
         onlineReward(outcome, !!g.tournamentId);
         updateGrade(outcome, cfg.playerColor === 'w' ? g.black : g.white);
       }
-    } else if (cfg.mode !== 'local' && cfg.fen) archiveGame();
+    } else if (cfg.mode !== 'local' && cfg.fen) {
+      // position libre ou finale contre l'ordinateur : comptée aussi pour l'Elo (seules les parties à deux sur un appareil ne comptent pas)
+      updatePlayerRating(LEVEL_ELO[cfg.level] || 600, outcome === 'win' ? 1 : outcome === 'draw' ? 0.5 : 0, 32, 'games');
+      archiveGame();
+    }
     else if (cfg.mode !== 'local') {
       updatePlayerRating(LEVEL_ELO[cfg.level] || 600, outcome === 'win' ? 1 : outcome === 'draw' ? 0.5 : 0, 32, 'games');
       recordStat(cfg.level, outcome); archiveGame();
