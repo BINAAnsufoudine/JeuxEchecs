@@ -4146,7 +4146,24 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         cx.shadowColor = '#ffcf4a'; cx.shadowBlur = 28; cx.fillStyle = '#fff3c4'; cx.fillText('火', 128, 138);
         cx.lineWidth = 6; cx.strokeStyle = '#ffb21a'; cx.beginPath(); cx.arc(128, 128, 118, 0, Math.PI * 2); cx.stroke();
         const glow = (color, o = 0) => new T.MeshBasicMaterial({ color, transparent: true, opacity: o, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false });
-        a.sigil = this.fx(a, new T.Mesh(new T.PlaneGeometry(1.5, 1.5), new T.MeshBasicMaterial({ map: new T.CanvasTexture(cv), transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false })));
+        const sigilTex = new T.CanvasTexture(cv);
+        a.sigil = this.fx(a, new T.Mesh(new T.PlaneGeometry(1.5, 1.5), new T.MeshBasicMaterial({ map: sigilTex, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false })));
+        // au moment du rayon, le symbole s'imprime au sol sur la case et y reste quelques secondes
+        // empreinte au sol : symbole doré cerné de brun, en mélange normal pour rester visible sur les cases claires
+        const mc = document.createElement('canvas'); mc.width = mc.height = 256;
+        const mx = mc.getContext('2d');
+        mx.lineWidth = 12; mx.strokeStyle = '#6b3d00'; mx.beginPath(); mx.arc(128, 128, 114, 0, Math.PI * 2); mx.stroke();
+        mx.lineWidth = 6; mx.strokeStyle = '#ffc83a'; mx.beginPath(); mx.arc(128, 128, 114, 0, Math.PI * 2); mx.stroke();
+        mx.font = 'bold 190px serif'; mx.textAlign = 'center'; mx.textBaseline = 'middle';
+        mx.lineWidth = 14; mx.strokeStyle = '#6b3d00'; mx.strokeText('火', 128, 136);
+        mx.fillStyle = '#ffcf4a'; mx.fillText('火', 128, 136);
+        const mark = new T.Mesh(new T.PlaneGeometry(1.0, 1.0), new T.MeshBasicMaterial({ map: new T.CanvasTexture(mc), transparent: true, opacity: 0, depthWrite: false, toneMapped: false }));
+        mark.rotation.x = -Math.PI / 2; mark.position.set(p.x, 0.03, p.z); mark.rotation.z = -Math.atan2(a.dir.x, a.dir.z); mark.visible = false; this.scene.add(mark);
+        const markLife = 5;
+        this.addEffect({ start: a.start + STRIKE, dur: markLife, tick: (e) => {
+          mark.visible = true;
+          mark.material.opacity = Math.min(1, e / 0.2) * (1 - Math.max(0, (e - (markLife - 1.2)) / 1.2)) * (0.85 + 0.15 * Math.sin(e * 6));
+        }, end: () => { this.scene.remove(mark); mark.geometry.dispose(); if (mark.material.map) mark.material.map.dispose(); mark.material.dispose(); } });
         a.sigil.position.set(p.x, 2.25, p.z);
         a.beam = this.fx(a, new T.Mesh(new T.CylinderGeometry(0.28, 0.42, 2.2, 24, 1, true), glow(0xffd36a)));
         a.beam.position.set(p.x, 1.1, p.z);
