@@ -1041,6 +1041,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             const travel = 0.3 + len * 0.09;
             knightAttack = { style: 'flameline', white, start: now, from: a, target: b, travel, duration: 0.45 + travel + 2.0, victim: v, dir: { x: ux, z: uz }, len, fx: [] };
             die({ t0: now + knightAttack.duration, knightAttack });
+          } else if (kind === 'k') {
+            // Roi blanc : Jugement du Hokage (symbole « 火 » dans le ciel, rayon de lumière dorée).
+            // Roi noir : Main de l'Empereur (une main d'ombre géante sort du sol et écrase la cible).
+            knightAttack = { style: white ? 'judgment' : 'emperorhand', white, start: now, from: a, target: b, duration: white ? 3.6 : 3.4, victim: v, dir: { x: ux, z: uz }, len, fx: [] };
+            die({ t0: now + knightAttack.duration, knightAttack });
           } else if (kind === 'r' && white) {
             // Tour blanche : elle devient une boule de feu qui roule jusqu'à sa cible en laissant des flammes derrière elle
             const run = 0.18 + len * 0.045;
@@ -3209,6 +3214,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (a.style === 'orb') { this.tickOrb(c, a, el, t, M); return; }
       if (a.style === 'fireroll') { this.tickFireroll(c, a, el, t, M); return; }
       if (a.style === 'flameline') { this.tickFlameline(c, a, el, t, M); return; }
+      if (a.style === 'judgment') { this.tickJudgment(c, a, el, t, M); return; }
+      if (a.style === 'emperorhand') { this.tickEmperorHand(c, a, el, t, M); return; }
       if (a.style === 'enpassant') { this.tickEnPassant(c, a, el, t, M); return; }
       if (a.pre && a.style === 'tunnel-impact') {
         if (this.tickWhirlwind(c, a, el, t, M)) return;
@@ -4101,6 +4108,162 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (el >= arrive && el < arrive + 0.2) { this.shakeUntil = t + 0.05; this.shakeAmp = 0.06; }
       if (el >= end) { if (a.sky) { this.renderer.toneMappingExposure = a.sky.exposure; a.sky = null; } this.endShot(a); }
     }
+    // ---------- Attaques du roi (prise sans mat) ----------
+    // Le roi reste sur sa case pendant la technique, puis prend la case de sa victime
+    kingStance(c, a, el, t, M, end) {
+      const clamp = (x) => Math.max(0, Math.min(1, x));
+      c.holder.rotation.y = Math.atan2(a.dir.x, a.dir.z);
+      if (el < end) {
+        c.holder.position.set(a.from.x, 0, a.from.z);
+        M.animate(c.parts, t, el < end - 0.6 ? 'cast' : 'idle', clamp(el / 0.35));
+      } else {
+        M.animate(c.parts, t, 'run');
+        const u = clamp((el - end) / (a.duration - end));
+        c.holder.position.set(a.from.x + (a.target.x - a.from.x) * u, 0, a.from.z + (a.target.z - a.from.z) * u);
+      }
+    }
+    // Roi blanc : le ciel s'assombrit, un « 火 » géant apparaît au-dessus de la cible et un rayon doré la frappe
+    tickJudgment(c, a, el, t, M) {
+      const T = this.THREE, clamp = (x) => Math.max(0, Math.min(1, x)), p = a.target;
+      const SHOW = 0.7, STRIKE = 1.55, WALK = a.duration - 0.6;
+      if (!a.sigil) {
+        const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+        const cx = cv.getContext('2d');
+        cx.font = 'bold 200px serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+        cx.shadowColor = '#ffcf4a'; cx.shadowBlur = 28; cx.fillStyle = '#fff3c4'; cx.fillText('火', 128, 138);
+        cx.lineWidth = 6; cx.strokeStyle = '#ffb21a'; cx.beginPath(); cx.arc(128, 128, 118, 0, Math.PI * 2); cx.stroke();
+        const glow = (color, o = 0) => new T.MeshBasicMaterial({ color, transparent: true, opacity: o, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false });
+        a.sigil = this.fx(a, new T.Mesh(new T.PlaneGeometry(1.5, 1.5), new T.MeshBasicMaterial({ map: new T.CanvasTexture(cv), transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false })));
+        a.sigil.position.set(p.x, 2.25, p.z);
+        a.beam = this.fx(a, new T.Mesh(new T.CylinderGeometry(0.28, 0.42, 2.2, 24, 1, true), glow(0xffd36a)));
+        a.beam.position.set(p.x, 1.1, p.z);
+        a.core = this.fx(a, new T.Mesh(new T.CylinderGeometry(0.1, 0.14, 2.2, 12, 1, true), glow(0xffffff)));
+        a.core.position.set(p.x, 1.1, p.z);
+        a.ring = this.fx(a, new T.Mesh(new T.RingGeometry(0.3, 0.5, 40), glow(0xffe08a)));
+        a.ring.rotation.x = -Math.PI / 2; a.ring.position.set(p.x, 0.04, p.z);
+        a.sparks = this.fx(a, new T.Group());
+        for (let i = 0; i < 26; i++) {
+          const sp = new T.Mesh(new T.SphereGeometry(0.035, 6, 4), glow(i % 2 ? 0xffffff : 0xffc23a, 0));
+          sp.userData.v = { x: (Math.random() - 0.5) * 2.2, y: (Math.random() - 0.2) * 1.6, z: (Math.random() - 0.5) * 2.2 };
+          a.sparks.add(sp);
+        }
+        a.sparks.position.set(p.x, 2.25, p.z);
+        a.light = this.fx(a, new T.PointLight(0xffd36a, 0, 9, 2)); a.light.position.set(p.x, 1.6, p.z);
+        a.expo = this.renderer.toneMappingExposure;
+      }
+      this.kingStance(c, a, el, t, M, WALK);
+      // le ciel s'assombrit le temps du jugement
+      const dark = clamp(el / 0.5) * (1 - clamp((el - 2.6) / 0.6));
+      this.renderer.toneMappingExposure = a.expo * (1 - 0.45 * dark) * (el >= STRIKE && el < STRIKE + 0.25 ? 1.9 : 1);
+      // le symbole apparaît, tourne lentement face à la caméra puis se dissout en étincelles
+      const appear = clamp((el - SHOW) / 0.5), dissolve = clamp((el - 2.1) / 0.6);
+      a.sigil.material.opacity = appear * (1 - dissolve);
+      a.sigil.scale.setScalar(0.6 + appear * 0.4 + dissolve * 0.3);
+      a.sigil.lookAt(this.camera.position.x, a.sigil.position.y, this.camera.position.z);
+      a.sparks.children.forEach((sp) => {
+        const v = sp.userData.v, k = dissolve;
+        sp.position.set(v.x * k, v.y * k - 1.2 * k * k, v.z * k);
+        sp.material.opacity = el >= 2.1 ? 0.95 * (1 - clamp((el - 2.5) / 0.5)) : 0;
+      });
+      // le rayon frappe la cible d'en haut
+      const beam = el >= STRIKE ? 1 - clamp((el - STRIKE - 0.5) / 0.6) : 0;
+      a.beam.material.opacity = 0.55 * beam; a.core.material.opacity = 0.95 * beam;
+      a.beam.scale.set(0.6 + beam * 0.6, 1, 0.6 + beam * 0.6);
+      a.core.scale.set(1 + Math.sin(t * 40) * 0.2, 1, 1 + Math.sin(t * 40) * 0.2);
+      const wave = clamp((el - STRIKE) / 0.7);
+      a.ring.material.opacity = el >= STRIKE ? 0.85 * (1 - wave) : 0; a.ring.scale.setScalar(1 + wave * 4);
+      a.light.intensity = 9 * beam + (appear * (1 - dissolve)) * 2;
+      if (el >= STRIKE && el < STRIKE + 0.3) { this.shakeUntil = t + 0.05; this.shakeAmp = 0.12; }
+      if (el >= a.duration) { this.renderer.toneMappingExposure = a.expo; this.endShot(a); }
+    }
+    // Roi noir : une main d'ombre géante sort du sol derrière lui, passe par-dessus et écrase la cible
+    tickEmperorHand(c, a, el, t, M) {
+      const T = this.THREE, clamp = (x) => Math.max(0, Math.min(1, x)), smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+      const RISE = 0.35, SWING = 1.15, SLAM = 1.55, SINK = 2.1, WALK = a.duration - 0.6;
+      if (!a.hand) {
+        const shade = new T.MeshStandardMaterial({ color: 0x120818, emissive: 0x3a1066, emissiveIntensity: 0.55, roughness: 0.7, transparent: true, opacity: 0.92 });
+        const hand = new T.Group();
+        const palm = new T.Mesh(new T.BoxGeometry(1.0, 0.22, 1.1), shade); hand.add(palm);
+        [-0.36, -0.12, 0.12, 0.36].forEach((x, i) => {
+          const f = new T.Mesh(new T.BoxGeometry(0.2, 0.18, 0.75 + (i === 1 || i === 2 ? 0.12 : 0)), shade);
+          f.position.set(x, 0, 0.88 + (i === 1 || i === 2 ? 0.06 : 0)); hand.add(f);
+        });
+        const thumb = new T.Mesh(new T.BoxGeometry(0.22, 0.18, 0.55), shade); thumb.position.set(0.62, 0, 0.25); thumb.rotation.y = -0.7; hand.add(thumb);
+        const wrist = new T.Mesh(new T.CylinderGeometry(0.42, 0.5, 1.6, 12), shade); wrist.rotation.x = Math.PI / 2; wrist.position.z = -1.2; hand.add(wrist);
+        // halo violet autour de la main
+        const aura = new T.Mesh(new T.SphereGeometry(1.25, 16, 12), new T.MeshBasicMaterial({ color: 0x9b4dff, transparent: true, opacity: 0.18, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }));
+        aura.scale.set(0.9, 0.35, 1.4); aura.position.z = 0.1; hand.add(aura);
+        a.hand = this.fx(a, hand); a.shade = shade; a.handAura = aura;
+        // empreinte de main laissée sur la case
+        const print = new T.Group();
+        const ink = new T.MeshBasicMaterial({ color: 0x1a0b26, transparent: true, opacity: 0, depthWrite: false });
+        const pp = new T.Mesh(new T.PlaneGeometry(0.42, 0.44), ink); pp.rotation.x = -Math.PI / 2; print.add(pp);
+        [-0.15, -0.05, 0.05, 0.15].forEach((x, i) => { const f = new T.Mesh(new T.PlaneGeometry(0.08, 0.3 + (i === 1 || i === 2 ? 0.05 : 0)), ink); f.rotation.x = -Math.PI / 2; f.position.set(x, 0, 0.36); print.add(f); });
+        const th = new T.Mesh(new T.PlaneGeometry(0.08, 0.22), ink); th.rotation.x = -Math.PI / 2; th.rotation.z = 0.8; th.position.set(0.27, 0, 0.12); print.add(th);
+        print.position.set(a.target.x, 0.024, a.target.z); print.rotation.y = Math.atan2(a.dir.x, a.dir.z);
+        a.print = this.fx(a, print); a.ink = ink;
+        a.dust = this.fx(a, new T.Mesh(new T.RingGeometry(0.3, 0.6, 40), new T.MeshBasicMaterial({ color: 0x8a6fb0, transparent: true, opacity: 0, depthWrite: false, side: T.DoubleSide })));
+        a.dust.rotation.x = -Math.PI / 2; a.dust.position.set(a.target.x, 0.05, a.target.z);
+        a.light = this.fx(a, new T.PointLight(0xa45bff, 0, 7, 2));
+      }
+      this.kingStance(c, a, el, t, M, WALK);
+      const yaw = Math.atan2(a.dir.x, a.dir.z);
+      const behind = { x: a.from.x - a.dir.x * 1.3, z: a.from.z - a.dir.z * 1.3 };
+      const hand = a.hand;
+      hand.visible = el >= RISE && el < SINK + 0.9;
+      if (el < SWING) {
+        // la main sort du sol derrière le roi, paume vers l'avant, doigts vers le ciel
+        const u = smooth((el - RISE) / (SWING - RISE));
+        hand.position.set(behind.x, -1.6 + u * 4.1, behind.z);
+        hand.rotation.set(-Math.PI / 2 + 0.2, yaw, 0);
+      } else if (el < SLAM) {
+        // elle bascule par-dessus le roi et s'abat sur la cible
+        const u = smooth((el - SWING) / (SLAM - SWING));
+        hand.position.set(behind.x + (a.target.x - behind.x) * u, 2.5 + Math.sin(u * Math.PI) * 1.2 - u * 2.3, behind.z + (a.target.z - behind.z) * u);
+        hand.rotation.set(-Math.PI / 2 + 0.2 + u * (Math.PI / 2 - 0.2), yaw, 0);
+      } else {
+        // posée à plat sur la case, puis elle s'enfonce dans le sol
+        const k = smooth((el - SINK) / 0.8);
+        hand.position.set(a.target.x - a.dir.x * 0.45, 0.2 - k * 1.4, a.target.z - a.dir.z * 0.45);
+        hand.rotation.set(0, yaw, 0);
+      }
+      a.shade.opacity = 0.92 * (1 - clamp((el - SINK - 0.3) / 0.6));
+      a.handAura.material.opacity = 0.18 + Math.abs(Math.sin(t * 6)) * 0.1;
+      a.light.position.set(hand.position.x, Math.max(0.5, hand.position.y + 0.6), hand.position.z);
+      a.light.intensity = hand.visible ? 3 + (el >= SLAM && el < SLAM + 0.3 ? 6 : 0) : 0;
+      // impact : tremblement, poussière et empreinte de main
+      const hit = clamp((el - SLAM) / 0.8);
+      a.dust.material.opacity = el >= SLAM ? 0.7 * (1 - hit) : 0; a.dust.scale.setScalar(1 + hit * 3.5);
+      a.ink.opacity = el >= SLAM ? 0.75 * (1 - clamp((el - a.duration + 0.8) / 0.8)) : 0;
+      if (el >= SLAM && el < SLAM + 0.35) { this.shakeUntil = t + 0.05; this.shakeAmp = 0.22; }
+      if (el >= a.duration) this.endShot(a);
+    }
+    // Victime d'un roi : foudroyée et dissoute en lumière (roi blanc) ou écrasée à plat (roi noir)
+    tickKingVictim(d, a, c, el, t, M) {
+      const p = a.target, hitAt = a.style === 'judgment' ? 1.55 : 1.55;
+      c.holder.position.set(p.x, 0, p.z);
+      c.holder.rotation.y = Math.atan2(-a.dir.x, -a.dir.z);
+      if (el < hitAt) { M.animate(c.parts, t, 'guard', 1); return true; }
+      M.animate(c.parts, t, 'ko', 1);
+      const k = Math.max(0, Math.min(1, (el - hitAt) / 1.0));
+      if (a.style === 'judgment') {
+        if (!d.tint) {
+          d.tint = [];
+          c.parts.root.traverse((o) => { if (o.isMesh && o.material && o.material.color && o.material.blending !== this.THREE.AdditiveBlending) { o.material = o.material.clone(); d.tint.push(o.material); } });
+        }
+        const gold = new this.THREE.Color(0xffe08a);
+        d.tint.forEach((m) => m.color.lerp(gold, 0.08));
+        c.holder.position.y = k * 0.6;
+        c.parts.root.scale.set(d.base * (1 - k), d.base * (1 + k * 0.6) * (1 - k * 0.9), d.base * (1 - k));
+      } else {
+        c.parts.root.scale.set(d.base * (1 + k * 0.5), d.base * Math.max(0.08, 1 - Math.min(1, (el - hitAt) / 0.15) * 0.92), d.base * (1 + k * 0.5));
+      }
+      if (k >= 1) {
+        c.holder.visible = false;
+        if (d.tint && !d.tintFreed) { d.tint.forEach((m) => m.dispose()); d.tintFreed = true; }
+      }
+      return el < a.duration;
+    }
     // Cible des flammes de la dame : elle se tord dans le brasier puis se consume et disparaît
     tickFlamelineVictim(d, a, c, el, t, M) {
       const arrive = 0.45 + a.travel, p = a.target;
@@ -4167,6 +4330,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (a.style === 'orb') return this.tickOrbVictim(d, a, c, el, t, M);
       if (a.style === 'fireroll') return this.tickFirerollVictim(d, a, c, el, t, M);
       if (a.style === 'flameline') return this.tickFlamelineVictim(d, a, c, el, t, M);
+      if (a.style === 'judgment' || a.style === 'emperorhand') return this.tickKingVictim(d, a, c, el, t, M);
       if (a.style === 'enpassant') return this.tickEnPassantVictim(d, a, c, el, t, M);
       if (a.style === 'tunnel-eat') {
         if (el < 1.55) { c.holder.position.set(a.target.x, 0, a.target.z); return true; }
@@ -4390,6 +4554,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const s = c && c.fx ? c : c && c.anim && c.anim.shot;
       if (!s) return;
       if (s.sky && s.style === 'flameline') { this.renderer.toneMappingExposure = s.sky.exposure; s.sky = null; }
+      if (s.expo != null) { this.renderer.toneMappingExposure = s.expo; s.expo = null; }
       if (s.sky) this.restoreSky(s);
       for (const o of s.fx || []) {
         this.scene.remove(o);
