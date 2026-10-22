@@ -2852,6 +2852,8 @@
   }
   async function pushProgress() {
     if (!ON || !ON.user || !progressDirty || progressPushing) return;
+    // on n'envoie que la progression qui appartient au compte connecté
+    if (store.get('onlineSynced', null) !== ON.user.uid) return;
     // le drapeau n'est levé qu'une fois l'envoi confirmé par le serveur (hors connexion, l'envoi attend)
     progressPushing = true;
     const rev = progressRev;
@@ -2887,7 +2889,40 @@
       if (scr === 'train') renderTrain();
     });
   }
+  // Chaque compte garde ses propres données : la progression locale appartient au compte « onlineSynced »
+  // (ou à un joueur sans compte si ce champ est vide) et n'est jamais donnée à un autre compte.
+  function wipeLocalProgress() {
+    replaceLocal({ settings: store.get('settings', {}) });
+    progressDirty = false; rawSet('progressDirty', false); rawSet('progressAt', 0); rawSet('progressEditAt', 0);
+  }
+  // progression pas encore envoyée d'un compte (hors connexion) : mise de côté pour ce seul compte
+  const backupKey = (uid) => `cavalierbackup.${uid}`;
+  function backupFor(uid) { try { localStorage.setItem(backupKey(uid), JSON.stringify(localProgress())); } catch { /* stockage plein */ } }
+  let syncingUid = null;
   async function syncAfterLogin(user, profile) {
+    // l'événement de connexion peut arriver deux fois : une seule synchronisation à la fois par compte
+    if (syncingUid === user.uid) return;
+    syncingUid = user.uid;
+    try { await syncAfterLoginNow(user, profile); } finally { syncingUid = null; }
+  }
+  async function syncAfterLoginNow(user, profile) {
+    const owner = store.get('onlineSynced', null);
+    if (owner && owner !== user.uid) {
+      // données d'un autre compte sur cet appareil : mises de côté pour lui, jamais reprises par ce compte
+      if (progressDirty) backupFor(owner);
+      wipeLocalProgress(); rawSet('onlineSynced', null);
+    }
+    let backup = null;
+    try { backup = JSON.parse(localStorage.getItem(backupKey(user.uid)) || 'null'); } catch { backup = null; }
+    if (backup) {
+      // progression de ce compte restée sur l'appareil après une déconnexion hors ligne : on la renvoie
+      localStorage.removeItem(backupKey(user.uid));
+      replaceLocal({ ...backup, settings: store.get('settings', backup.settings || {}) });
+      rawSet('onlineSynced', user.uid); rawSet('progressEditAt', Date.now());
+      progressDirty = true; await pushProgress();
+      location.reload();
+      return;
+    }
     const local = localProgress();
     let cloud = null;
     try { cloud = await ON.loadProgress(); } catch { cloud = null; }
@@ -2919,6 +2954,7 @@
   }
   async function onUserChange(user, profile) {
     rawSet('onlineSession', !!user);
+    clearTimeout(pushSoon); // un envoi prévu pour l'ancien compte ne part pas vers le nouveau
     if (user) await ON.loadAdminEmail();
     // compte suspendu par l'administrateur : déconnexion
     if (user && profile && profile.banned) {
@@ -3026,7 +3062,7 @@
         <button id="acc-logout" class="btn ghost wide" type="button">${L('Se déconnecter', 'Sign out')}</button>
         <p id="acc-msg" class="ed-error" role="status"></p>
         <details class="danger-zone"><summary>${L('Supprimer mon compte', 'Delete my account')}</summary>
-          <p class="level-help">${L('Ton profil, ton pseudo, ta progression en ligne et tes invitations seront effacés définitivement. Les parties déjà jouées restent dans l’historique de tes adversaires. La progression enregistrée sur cet appareil est conservée.', 'Your profile, nickname, online progress and invitations will be erased for good. Games already played stay in your opponents’ history. Progress saved on this device is kept.')}</p>
+          <p class="level-help">${L('Ton profil, ton pseudo, ta progression en ligne et tes invitations seront effacés définitivement. Les parties déjà jouées restent dans l’historique de tes adversaires. Cet appareil repart ensuite de zéro.', 'Your profile, nickname, online progress and invitations will be erased for good. Games already played stay in your opponents’ history. This device then starts from scratch.')}</p>
           ${field('acc-del-pw', L('Mot de passe, pour confirmer', 'Password, to confirm'), 'password', '', 'autocomplete="current-password"')}
           <button id="acc-delete" class="btn danger wide" type="button">${L('Supprimer définitivement mon compte', 'Delete my account permanently')}</button>
         </details>`;
@@ -3052,7 +3088,7 @@
     const v = (id) => ($(id) ? $(id).value : '');
     if (t.dataset.mode) { accountMode = t.dataset.mode; renderAccount(); return; }
     if (t.id === 'acc-go') {
-      if (accountMode === 'signup') accountAction(async () => { justSignedUp = true; await ON.signUp(v('acc-pseudo'), v('acc-email'), v('acc-pw'), estimatedElo()); }, L('Compte créé, bienvenue !', 'Account created, welcome!'));
+      if (accountMode === 'signup') accountAction(async () => { justSignedUp = true; await ON.signUp(v('acc-pseudo'), v('acc-email'), v('acc-pw'), store.get('onlineSynced', null) ? 600 : estimatedElo()); }, L('Compte créé, bienvenue !', 'Account created, welcome!'));
       else accountAction(() => ON.signIn(v('acc-email'), v('acc-pw')), L('Connecté !', 'Signed in!'));
     }
     // mot de passe oublié : un lien de renouvellement est envoyé par e-mail
@@ -3067,12 +3103,22 @@
       const pw = v('acc-del-pw');
       if (!pw) { accMsg(L('Indique ton mot de passe pour confirmer.', 'Enter your password to confirm.')); return; }
       modal({ title: L('Supprimer ton compte ?', 'Delete your account?'), text: L('Cette action est définitive : ton profil, ton pseudo et ta progression en ligne seront effacés.', 'This cannot be undone: your profile, nickname and online progress will be erased.'), actions: [
-        { label: L('Supprimer', 'Delete'), primary: true, onClick: () => accountAction(async () => { await ON.deleteAccount(pw); rawSet('onlineSynced', null); }, L('Ton compte a été supprimé.', 'Your account has been deleted.')) },
+        { label: L('Supprimer', 'Delete'), primary: true, onClick: () => accountAction(async () => { await ON.deleteAccount(pw); wipeLocalProgress(); rawSet('onlineSynced', null); location.reload(); }, L('Ton compte a été supprimé.', 'Your account has been deleted.')) },
         { label: L('Annuler', 'Cancel'), ghost: true },
       ] });
       return;
     }
-    if (t.id === 'acc-logout') accountAction(async () => { await pushProgress(); await ON.signOut(); rawSet('onlineSynced', null); }, L('Déconnecté.', 'Signed out.'));
+    if (t.id === 'acc-logout') accountAction(async () => {
+      const uid = ON.user && ON.user.uid;
+      await pushProgress();
+      // ce qui n'a pas pu partir (hors connexion) est gardé pour ce compte seulement
+      if (progressDirty && uid && store.get('onlineSynced', null) === uid) backupFor(uid);
+      await ON.signOut();
+      // l'appareil redevient vierge : rien de ce compte ne passe au suivant
+      if (store.get('onlineSynced', null)) wipeLocalProgress();
+      rawSet('onlineSynced', null);
+      location.reload();
+    }, L('Déconnecté.', 'Signed out.'));
   });
   function openAccount() { returnTo = 'home'; renderAccount(); show('account'); if (ON) ON.load().catch(() => accMsg(L('Impossible de joindre le serveur. Vérifie ta connexion.', 'Cannot reach the server. Check your connection.'))); }
   $('btn-account').onclick = openAccount;
