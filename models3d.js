@@ -636,7 +636,8 @@
       const p = skeleton({ shirt: '#1d1d26', pants: '#17171e', belt: '#c9a227', sleeve: '#2b2b36', shoes: '#2b2b36', emblem: '#1d1d26', face: { eye: '#222' } });
       blackHair(p.head, 2);
       for (let i = 0; i < 6; i++) p.head.add(mesh(geo('dot', () => new T.SphereGeometry(0.012, 6, 4)), mat('#b8735a'), (i % 3 - 1) * 0.04, 0.33 + (i < 3 ? 0 : 0.03), 0.08 - (i < 3 ? 0 : 0.03)));
-      shuriken(p, { metal: '#f2c230', hub: '#2a4fa8' }); p.weapon = 'fist';
+      p.weapon = 'fist';
+      // fou noir : seulement le sabre dans le dos (plus de shuriken)
       backKatana(p, { saya: '#1b1b24', guard: '#c9a227', wrap: '#2a4fa8' });
       aura(p, '#ffffff', 1);
       return p;
