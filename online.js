@@ -215,6 +215,12 @@ window.Online = (function () {
     const snap = await f.getDocs(f.query(f.collection(f.db, 'games'), f.where('players', 'array-contains', user.uid)));
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   }
+  // Grade des parties en ligne : points gagnés en victoire, perdus en défaite (inchangés en cas de nulle)
+  async function setGrade(pts) {
+    if (!user) return;
+    const f = await load();
+    try { await f.updateDoc(f.doc(f.db, 'users', user.uid), { gradePts: pts }); if (profile) profile.gradePts = pts; } catch { /* hors ligne */ }
+  }
   async function setElo(elo) {
     if (!user) return;
     const f = await load();
@@ -268,7 +274,7 @@ window.Online = (function () {
   async function listPlayers() {
     const f = await load();
     const snap = await f.getDocs(f.query(f.collection(f.db, 'users'), f.orderBy('lastSeen', 'desc'), f.limit(150)));
-    return snap.docs.filter((d) => !d.data().admin && !d.data().banned).map((d) => { const u = d.data(); return { uid: d.id, pseudo: u.pseudo, elo: u.elo || 600, lastSeen: u.lastSeen || 0, summary: u.summary ? { level: u.summary.level, title: u.summary.title } : null }; });
+    return snap.docs.filter((d) => !d.data().admin && !d.data().banned).map((d) => { const u = d.data(); return { uid: d.id, pseudo: u.pseudo, elo: u.elo || 600, lastSeen: u.lastSeen || 0, gradePts: u.gradePts || 0, summary: u.summary ? { level: u.summary.level, title: u.summary.title } : null }; });
   }
   // Chat coupé avec certains joueurs
   async function setMuted(list) {
@@ -608,7 +614,7 @@ window.Online = (function () {
     signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos, publishSummary, getProfile, myTournaments,
     presence, listPlayers, setMuted, sendChat, myGames, deleteAccount,
     isAdmin, isAdminEmail, sendVerification, refreshVerification, adminData, adminSetBanned, adminDeleteUser, adminDeleteTournament, markAdmin, loadAdminEmail, setAdminEmail, getAdminEmail,
-    saveProgress, loadProgress, watchProgress, requestTakeback, answerTakeback, offerDraw, answerDraw, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
+    saveProgress, loadProgress, watchProgress, setGrade, requestTakeback, answerTakeback, offerDraw, answerDraw, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
     createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,
   };
 })();

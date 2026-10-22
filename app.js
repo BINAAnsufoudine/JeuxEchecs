@@ -1115,6 +1115,7 @@
         arch.push({ id: Date.now(), gameId: cfg.online.id, moves: game.uciList(), result: result.result, reason: result.reason, white: g.whiteName, black: g.blackName, whiteElo: g.whiteElo, blackElo: g.blackElo, color: cfg.playerColor, tc: g.tc });
         store.set('onlineArchive', arch.slice(-50));
         onlineReward(outcome, !!g.tournamentId);
+        updateGrade(outcome, cfg.playerColor === 'w' ? g.black : g.white);
       }
     } else if (cfg.mode !== 'local' && cfg.fen) archiveGame();
     else if (cfg.mode !== 'local') {
@@ -2217,7 +2218,7 @@
     countPuzzle();
     store.set('coach', c);
     if (it.personal) touchMistake(it.personal.id, clean);
-    if (it.id) { const st = store.get('pzdone', {}); if (clean && st[it.id] !== 's') { reward(5, 10, L('Problème résolu', 'Puzzle solved')); questEvent('puzzle'); } st[it.id] = clean ? 's' : 'f'; store.set('pzdone', st); }
+    if (it.id) { const st = store.get('pzdone', {}); if (clean && st[it.id] !== 's') { reward(5, 10, L('Problème résolu', 'Puzzle solved')); questEvent('puzzle'); countMode('puzzle'); } st[it.id] = clean ? 's' : 'f'; store.set('pzdone', st); }
     refreshCoachProgram();
     return { validated, level: row.level, ok: row.ok, pending: row.pending };
   }
@@ -3437,7 +3438,7 @@
     const won = BADGES.filter((b) => b.ok(s));
     const pct = (w, d, l) => { const t = w + d + l; return t ? `${Math.round((100 * (w + d / 2)) / t)} %` : '–'; };
     const fr = s.frame ? ` frame-${escHtml(s.frame)}` : '';
-    let html = `<div class="profile-head">${who.photo ? `<img class="profile-photo big${fr}" src="${who.photo}" alt="">` : `<span class="profile-photo big placeholder${fr}">♞</span>`}<div><b>${escHtml(who.name)}</b>${s.title ? `<em class="player-title">« ${escHtml(s.title)} »</em>` : ''}<span>${s.level ? `${L('Niveau', 'Level')} ${s.level} · ` : ''}Elo ${L('estimé', 'est.')} ${s.elo}</span>${won.length ? `<span class="profile-badges-line">${won.slice(-6).map((b) => b.icon).join(' ')}</span>` : ''}</div></div>`;
+    let html = `<div class="profile-head">${who.photo ? `<img class="profile-photo big${fr}" src="${who.photo}" alt="">` : `<span class="profile-photo big placeholder${fr}">♞</span>`}<div><b>${escHtml(who.name)}</b>${s.title ? `<em class="player-title">« ${escHtml(s.title)} »</em>` : ''}<span>${s.level ? `${L('Niveau', 'Level')} ${s.level} · ` : ''}Elo ${L('estimé', 'est.')} ${s.elo}</span>${who.grade != null ? `<span class="grade-line">${gradeLabel(who.grade)} · ${gradeOf(who.grade).pts} ${L('pts', 'pts')}${gradeOf(who.grade).next ? L(` (prochain : ${gradeOf(who.grade).nextName} à ${gradeOf(who.grade).next})`, ` (next: ${gradeOf(who.grade).nextName} at ${gradeOf(who.grade).next})`) : ''}</span>` : ''}${won.length ? `<span class="profile-badges-line">${won.slice(-6).map((b) => b.icon).join(' ')}</span>` : ''}</div></div>`;
     html += `<h3 class="train-h">${L('Grades', 'Ranks')} (${won.length}/${BADGES.length})</h3><div class="badge-grid">${BADGES.map((b) => `<div class="badge${b.ok(s) ? ' on' : ''}" title="${escHtml(b.desc)}"><span class="badge-icon">${b.icon}</span><b>${escHtml(b.name)}</b><small>${escHtml(b.desc)}</small></div>`).join('')}</div>`;
     const card = (title, rows) => `<div class="stat-card"><h4>${title}</h4>${rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>`;
     html += `<h3 class="train-h">${L('Statistiques', 'Statistics')}</h3><div class="stat-cards">
@@ -3466,7 +3467,7 @@
         try { tours = await ON.myTournaments(); } catch { tours = []; }
         payBadges(localSummary(tours));
         const s = localSummary(tours);
-        body.innerHTML = profileHtml(s, { name: p.name || L('Joueur', 'Player'), photo: p.photo });
+        body.innerHTML = profileHtml(s, { name: p.name || L('Joueur', 'Player'), photo: p.photo, grade: (ON.profile && ON.profile.gradePts) || 0 });
         body.insertAdjacentHTML('afterbegin', `<button class="btn primary profile-shop" type="button">🌾 ${L('Boutique et quêtes', 'Shop and quests')}</button>`);
         body.querySelector('.profile-shop').onclick = openShop;
         try { h2hGames = await ON.myGames(); body.insertAdjacentHTML('beforeend', opponentsHtml(h2hGames, ON.user.uid)); } catch { /* hors ligne */ }
@@ -3480,7 +3481,7 @@
       const u = await ON.getProfile(uid);
       if (!u) { body.innerHTML = `<p class="level-help">${L('Profil introuvable.', 'Profile not found.')}</p>`; return; }
       const s = u.summary || { ai: { win: 0, draw: 0, loss: 0, best: 0 }, online: { win: 0, draw: 0, loss: 0, opponents: 0 }, tour: { played: 0, wins: 0, second: 0, third: 0 }, pz: 0, mates: 0, ends: 0, openings: 0, dailyBest: 0, elo: u.elo || 600 };
-      body.innerHTML = profileHtml({ ...s, elo: u.elo || s.elo }, { name: u.pseudo, photo: u.photo }) + (u.summary ? '' : `<p class="level-help">${L('Ce joueur n\'a pas encore publié ses statistiques.', 'This player has not published their statistics yet.')}</p>`);
+      body.innerHTML = profileHtml({ ...s, elo: u.elo || s.elo }, { name: u.pseudo, photo: u.photo, grade: u.gradePts || 0 }) + (u.summary ? '' : `<p class="level-help">${L('Ce joueur n\'a pas encore publié ses statistiques.', 'This player has not published their statistics yet.')}</p>`);
       if (ON.user) {
         const me = ON.user.uid;
         h2hGames = (await ON.myGames()).filter((g) => g.players.includes(uid) && g.white !== g.black);
@@ -3530,6 +3531,72 @@
   document.addEventListener('click', (e) => { const el = e.target.closest('[data-profile]'); if (el) { e.preventDefault(); openProfile(el.dataset.profile); } });
   /* ---------- Récompenses : grains de blé 🌾, niveau du joueur, quêtes du jour, boutique de Sissa ---------- */
   const xpFor = (lvl) => 100 + 40 * (lvl - 1); // expérience pour passer du niveau lvl au suivant
+  /* ---------- Grade des parties en ligne entre humains ---------- */
+  // Points de grade : + en victoire (beaucoup contre un adversaire de grade plus fort, peu contre un plus faible),
+  // − en défaite, inchangés en cas de nulle
+  const GRADES = [
+    [0, '⚪', L('Apprenti', 'Apprentice')], [100, '🟢', 'Genin'], [250, '🔵', 'Chûnin'], [450, '🟣', 'Jônin'],
+    [700, '🟠', 'Sannin'], [1000, '🔴', 'Kage'], [1400, '👑', L('Légende', 'Legend')],
+  ];
+  function gradeOf(pts) {
+    pts = Math.max(0, pts || 0);
+    let i = 0; while (i < GRADES.length - 1 && pts >= GRADES[i + 1][0]) i++;
+    const next = GRADES[i + 1];
+    return { pts, icon: GRADES[i][1], name: GRADES[i][2], next: next ? next[0] : null, nextName: next ? next[2] : null };
+  }
+  const gradeLabel = (pts) => { const g = gradeOf(pts); return `${g.icon} ${g.name}`; };
+  function gradeDelta(outcome, mine, opp) {
+    if (outcome === 'draw') return 0;
+    const diff = (opp || 0) - (mine || 0);
+    if (outcome === 'win') return Math.round(Math.max(3, Math.min(45, 20 + diff / 12)));
+    return -Math.round(Math.max(5, Math.min(30, 15 - diff / 15)));
+  }
+  async function updateGrade(outcome, oppUid) {
+    if (!ON || !ON.user) return;
+    let opp = 0;
+    try { const u = await ON.getProfile(oppUid); opp = (u && u.gradePts) || 0; } catch { /* grade adverse inconnu */ }
+    const mine = (ON.profile && ON.profile.gradePts) || 0, delta = gradeDelta(outcome, mine, opp);
+    if (!delta) { rewardPop(L('Nulle : grade inchangé', 'Draw: rank unchanged')); return; }
+    const before = gradeOf(mine), after = gradeOf(mine + delta), applied = after.pts - before.pts;
+    if (!applied) { rewardPop(L('Défaite : ton grade est déjà au plus bas', 'Loss: your rank is already at its lowest')); return; }
+    await ON.setGrade(after.pts);
+    rewardPop(L(`Grade : ${applied > 0 ? '+' : ''}${applied} points (${after.pts})`, `Rank: ${applied > 0 ? '+' : ''}${applied} points (${after.pts})`), true);
+    if (after.name !== before.name) setTimeout(() => rewardPop(after.pts > before.pts ? L(`Nouveau grade : ${after.icon} ${after.name} !`, `New rank: ${after.icon} ${after.name}!`) : L(`Grade perdu : ${after.icon} ${after.name}`, `Rank lost: ${after.icon} ${after.name}`), true), 900);
+  }
+
+  /* ---------- Paliers de récompenses par mode ---------- */
+  const TIERS_MODE = [[1, '🥉', L('Bronze', 'Bronze'), 20], [5, '🥈', L('Argent', 'Silver'), 50], [15, '🥇', L('Or', 'Gold'), 120], [40, '💠', L('Platine', 'Platinum'), 300], [100, '💎', L('Diamant', 'Diamond'), 700]];
+  function modeList() {
+    return [
+      ['ai', '🤖', L('Victoires contre l’ordinateur', 'Wins against the computer')],
+      ['online', '🌐', L('Parties en ligne', 'Online games')],
+      ['tournament', '🏆', L('Parties de tournoi', 'Tournament games')],
+      ['puzzle', '🧩', L('Problèmes résolus', 'Puzzles solved')],
+      ['lesson', '📘', L('Leçons terminées', 'Lessons finished')],
+      ['daily', '📅', L('Défis du jour réussis', 'Daily challenges won')],
+    ];
+  }
+  function modeTier(n) { let i = -1; while (i < TIERS_MODE.length - 1 && n >= TIERS_MODE[i + 1][0]) i++; return i; }
+  function countMode(mode) {
+    const w = walletState();
+    w.counts = w.counts || {};
+    const before = modeTier(w.counts[mode] || 0);
+    w.counts[mode] = (w.counts[mode] || 0) + 1;
+    const after = modeTier(w.counts[mode]);
+    store.set('wallet', w);
+    if (after > before) {
+      const tier = TIERS_MODE[after], name = (modeList().find((m) => m[0] === mode) || [])[2] || '';
+      setTimeout(() => reward(tier[3], tier[3], L(`Palier ${tier[2]} ${tier[1]} · ${name}`, `${tier[2]} tier ${tier[1]} · ${name}`)), 600);
+    }
+  }
+  function tiersHtml() {
+    const counts = walletState().counts || {};
+    return `<h3 class="train-h">${L('Paliers par mode', 'Tiers by mode')}</h3><div class="tier-list">${modeList().map(([id, icon, name]) => {
+      const n = counts[id] || 0, i = modeTier(n), next = TIERS_MODE[i + 1];
+      const from = i >= 0 ? TIERS_MODE[i][0] : 0, pct = next ? Math.round(((n - from) / (next[0] - from)) * 100) : 100;
+      return `<div class="tier-row"><span class="tier-icon">${icon}</span><div class="tier-main"><b>${name}</b><span class="xp-bar"><i style="width:${pct}%"></i></span><small>${n}${next ? ` / ${next[0]} · ${L('prochain', 'next')} : ${next[1]} ${next[2]} (+${next[3]} 🌾)` : L(' · tous les paliers atteints', ' · all tiers reached')}</small></div><span class="tier-medals">${TIERS_MODE.map((tr, k) => `<i class="${k <= i ? 'on' : ''}" title="${tr[2]}">${tr[1]}</i>`).join('')}</span></div>`;
+    }).join('')}</div>`;
+  }
   function walletState() { return Object.assign({ wheat: 0, xp: 0, owned: [], frame: null, title: null, firstWin: '', badgesPaid: [] }, store.get('wallet', {})); }
   function levelOf(xp) { let l = 1; while (l < 50 && xp >= xpFor(l)) { xp -= xpFor(l); l++; } return { level: l, into: xp, need: xpFor(l) }; }
   function rewardPop(text, big) {
@@ -3591,6 +3658,7 @@
   function gameReward(outcome, level, mate) {
     const w = walletState(), day = questState().day;
     questEvent('play_ai');
+    if (outcome === 'win') countMode('ai');
     if (outcome === 'win') {
       reward(10 + 2 * level + (mate ? 5 : 0), 20 + 2 * level, L('Victoire', 'Win'));
       if (w.firstWin !== day) { const w2 = walletState(); w2.firstWin = day; store.set('wallet', w2); reward(20, 20, L('Première victoire du jour', 'First win of the day')); }
@@ -3604,11 +3672,13 @@
     else if (outcome === 'draw') reward(15 + bonus, 30, L('Nulle', 'Draw'));
     else reward(8 + bonus, 20, L('Partie jouée', 'Game played'));
     questEvent('online');
+    countMode(tournament ? 'tournament' : 'online');
   }
   function lessonReward(key) {
     const first = !trainDone()[key];
     reward(first ? 25 : 5, first ? 40 : 10, L('Leçon terminée', 'Lesson finished'));
     questEvent('lesson');
+    countMode('lesson');
   }
   // Boutique de Sissa : objets uniquement visuels, achetés avec le blé gagné
   function shopItems() {
@@ -3646,6 +3716,7 @@
         return `<div class="shop-item${used ? ' on' : ''}">${it.preview}<b>${it.name}</b>${btn}</div>`;
       }).join('')}</div>`;
     };
+    html += tiersHtml();
     html += section('theme', L('Plateaux', 'Boards')) + section('frame', L('Cadres de photo', 'Photo frames')) + section('title', L('Titres', 'Titles'));
     $('shop-body').innerHTML = html;
   }
@@ -3696,7 +3767,7 @@
     const muted = mutedList().includes(p.uid), q = playersQuery.toLowerCase();
     const hide = !suggested && q && !String(p.pseudo || '').toLowerCase().includes(q);
     return `<div class="replay-row player-row" data-name="${escHtml(String(p.pseudo || '').toLowerCase())}"${hide ? ' hidden' : ''}>
-      <button type="button" class="btn replay-item" data-profile="${p.uid}"><strong><i class="on-dot${isConnected(p) ? ' on' : ''}"></i>${escHtml(p.pseudo || '?')} (${p.elo})${p.summary && p.summary.title ? ` <em class="player-title">« ${escHtml(p.summary.title)} »</em>` : ''}</strong><span>${p.summary && p.summary.level ? `${L('Niveau', 'Level')} ${p.summary.level} · ` : ''}${lastSeenLabel(p)}${muted ? L(' · chat coupé', ' · chat muted') : ''}</span></button>
+      <button type="button" class="btn replay-item" data-profile="${p.uid}"><strong><i class="on-dot${isConnected(p) ? ' on' : ''}"></i>${escHtml(p.pseudo || '?')} (${p.elo})${p.summary && p.summary.title ? ` <em class="player-title">« ${escHtml(p.summary.title)} »</em>` : ''}</strong><span>${gradeLabel(p.gradePts)} · ${p.summary && p.summary.level ? `${L('Niveau', 'Level')} ${p.summary.level} · ` : ''}${lastSeenLabel(p)}${muted ? L(' · chat coupé', ' · chat muted') : ''}</span></button>
       <button class="btn primary" data-invite-uid="${p.uid}">${L('Inviter', 'Invite')}</button>
       <button class="btn ghost" data-mute="${p.uid}" title="${muted ? L('Réactiver le chat avec ce joueur', 'Unmute chat with this player') : L('Couper le chat avec ce joueur', 'Mute chat with this player')}" aria-label="${muted ? L('Réactiver le chat', 'Unmute chat') : L('Couper le chat', 'Mute chat')}">${muted ? '🔇' : '💬'}</button>
     </div>`;
@@ -4083,7 +4154,7 @@
         st.streak = st.last === yesterday ? (st.streak || 0) + 1 : 1;
         st.best = Math.max(st.best || 0, st.streak); st.last = todayKey(); st.finished = true;
         toast(L(`Défi du jour réussi ! Série : ${st.streak} jour${st.streak > 1 ? 's' : ''}.`, `Daily challenge complete! Streak: ${st.streak} day${st.streak === 1 ? '' : 's'}.`));
-        setTimeout(() => { reward(40 + 5 * Math.min(st.streak, 10), 50, L('Défi du jour', 'Daily challenge')); questEvent('daily'); }, 50);
+        setTimeout(() => { reward(40 + 5 * Math.min(st.streak, 10), 50, L('Défi du jour', 'Daily challenge')); questEvent('daily'); countMode('daily'); }, 50);
       } else if (!clean) toast(L('Pas du premier coup : ce problème te sera reproposé aujourd\'hui.', 'Not at the first try: this puzzle will come back today.'));
       else toast(L(`Bravo ! ${okCount} sur 3 aujourd'hui.`, `Well done! ${okCount} out of 3 today.`));
       store.set('daily', st);
