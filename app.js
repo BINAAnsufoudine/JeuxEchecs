@@ -2397,7 +2397,8 @@
     pz.failed = true;
     hint = null;
     pz.misses = (pz.misses || 0) + 1;
-    say(L('Regarde bien ce coup, je te le montre.', 'Watch this move carefully, I will show you.'));
+    const spokenMove = openingSpeechLine(window.Chess.toFen(game.state), [u])[0];
+    say(L('Regarde bien ce coup, je te le montre.', 'Watch this move carefully, I will show you.'), '', spokenMove);
     commit(window.Chess.sqIndex(u.slice(0, 2)), window.Chess.sqIndex(u.slice(2, 4)), u[4]);
   };
   $('pz-next').onclick = () => {
@@ -2514,11 +2515,12 @@
         pzButtons();
         return;
       }
-      const spokenMove = step.demoSpeech && step.demoSpeech[session.demoIndex];
-      const speech = spokenMove ? speak(spokenMove) : Promise.resolve();
       const color = game.state.turn;
       const played = game.playUci(uci);
       if (!played) { session.demoIndex++; advance(); return; }
+      const spokenMove = step.demoSpeech && step.demoSpeech[session.demoIndex]
+        || openingMoveSpeech(played.san, color, uci);
+      const speech = speak(spokenMove);
       session.demoIndex++;
       if (step.annotateRelations) {
         const dynamic = openingArrowsForMove(uci, game.state, color, played);
