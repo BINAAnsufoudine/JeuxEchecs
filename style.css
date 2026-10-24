@@ -135,8 +135,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .sq .dot { position: absolute; width: 30%; height: 30%; border-radius: 50%; background: rgba(20, 30, 25, 0.28); pointer-events: none; z-index: 2; }
 .sq .ring { position: absolute; inset: 4%; border-radius: 50%; border: 5px solid rgba(20, 30, 25, 0.28); pointer-events: none; z-index: 2; }
 .coord { position: absolute; font-size: clamp(8px, 1.8vw, 12px); font-weight: 700; opacity: 0.8; pointer-events: none; z-index: 1; }
-.coord.f { right: 3px; bottom: 1px; }
-.coord.r { left: 3px; top: 1px; }
+.coord.f.top { left: 50%; top: 1px; transform: translateX(-50%); }
+.coord.f.bottom { left: 50%; bottom: 1px; transform: translateX(-50%); }
+.coord.r.left { left: 3px; top: 50%; transform: translateY(-50%); }
+.coord.r.right { right: 3px; top: 50%; transform: translateY(-50%); }
 .sq.l .coord { color: var(--dark); }
 .sq.d .coord { color: var(--light); }
 

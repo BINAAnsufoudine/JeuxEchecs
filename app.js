@@ -873,8 +873,11 @@
       cell.setAttribute('aria-label', sqName(sq) + (p ? ' ' + p : ''));
       if (settings.coords) {
         const row = i >> 3, col = i & 7;
-        if (row === 7) cell.insertAdjacentHTML('beforeend', `<span class="coord f">${sqName(sq)[0]}</span>`);
-        if (col === 0) cell.insertAdjacentHTML('beforeend', `<span class="coord r">${sqName(sq)[1]}</span>`);
+        const name = sqName(sq);
+        if (row === 0) cell.insertAdjacentHTML('beforeend', `<span class="coord f top">${name[0]}</span>`);
+        if (row === 7) cell.insertAdjacentHTML('beforeend', `<span class="coord f bottom">${name[0]}</span>`);
+        if (col === 0) cell.insertAdjacentHTML('beforeend', `<span class="coord r left">${name[1]}</span>`);
+        if (col === 7) cell.insertAdjacentHTML('beforeend', `<span class="coord r right">${name[1]}</span>`);
       }
       if (p) {
         const pc = document.createElement('span');
