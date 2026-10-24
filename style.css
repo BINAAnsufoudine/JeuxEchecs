@@ -380,6 +380,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .minimap .mini-coord.rank.right { right: 1px; }
 .minimap button.last { box-shadow: inset 0 0 0 40px rgba(246, 210, 80, 0.55); }
 .minimap button.sel { box-shadow: inset 0 0 0 3px #4fc3f7; }
+.minimap button.hint-piece { box-shadow: inset 0 0 0 3px #24c8ff, inset 0 0 14px rgba(36,200,255,0.9); z-index: 2; }
+.minimap button.hint-piece b { transform: scale(1.2); filter: drop-shadow(0 0 5px #00cfff) drop-shadow(0 0 3px #fff); }
 .minimap button.target::after { content: ""; position: absolute; width: 32%; height: 32%; border-radius: 50%; background: rgba(20,30,25,0.45); pointer-events: none; }
 .minimap button.target.capture::after { width: 78%; height: 78%; background: transparent; border: 2px solid rgba(20,30,25,0.5); }
 .minimap button.mate-fire::after { content: '🔥'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: clamp(8px, 2.8vw, 16px); background: rgba(255,75,12,0.42); animation: mate-flame 0.7s ease-in-out infinite alternate; z-index: 1; pointer-events: none; }

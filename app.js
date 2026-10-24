@@ -635,7 +635,7 @@
 
   // Petit échiquier 2D en haut à droite : la position exacte, en icônes
   const MINI = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
-  function renderMinimap(board, last, selectedSq = -1, targets = [], mateFire = [], arrows = []) {
+  function renderMinimap(board, last, selectedSq = -1, targets = [], mateFire = [], arrows = [], hintMark = null) {
     const el = $('minimap');
     let html = '';
     for (let i = 0; i < 64; i++) {
@@ -644,10 +644,11 @@
       const dark = ((sq >> 3) + (sq & 7)) % 2 === 1;
       const lit = last && (last.from === sq || last.to === sq);
       const selected = selectedSq === sq;
+      const hinted = hintMark && hintMark.from === sq && !!p;
       const target = targets.some((m) => m.to === sq);
       const capture = target && (!!p || targets.some((m) => m.to === sq && m.flag === 'ep'));
       const coords = `${row === 0 ? `<span class="mini-coord file top ${dark ? 'd' : 'l'}">${name[0]}</span>` : ''}${row === 7 ? `<span class="mini-coord file bottom ${dark ? 'd' : 'l'}">${name[0]}</span>` : ''}${col === 0 ? `<span class="mini-coord rank left ${dark ? 'd' : 'l'}">${name[1]}</span>` : ''}${col === 7 ? `<span class="mini-coord rank right ${dark ? 'd' : 'l'}">${name[1]}</span>` : ''}`;
-      html += `<button type="button" class="${dark ? 'd' : 'l'}${lit ? ' last' : ''}${selected ? ' sel' : ''}${mateFire.includes(sq) ? ' mate-fire' : ''}${target ? ` target${capture ? ' capture' : ''}` : ''}" data-sq="${sq}" aria-label="${name} ${p ? pieceName(p) : mateFire.includes(sq) ? L('case vide en feu', 'empty square on fire') : L('case vide', 'empty square')}"${selected ? ' aria-pressed="true"' : ''}>${p ? `<b class="${p === p.toUpperCase() ? 'w' : 'k'}">${MINI[p.toLowerCase()]}</b>` : ''}${coords}</button>`;
+      html += `<button type="button" class="${dark ? 'd' : 'l'}${lit ? ' last' : ''}${selected ? ' sel' : ''}${hinted ? ' hint-piece' : ''}${mateFire.includes(sq) ? ' mate-fire' : ''}${target ? ` target${capture ? ' capture' : ''}` : ''}" data-sq="${sq}" aria-label="${name} ${p ? pieceName(p) : mateFire.includes(sq) ? L('case vide en feu', 'empty square on fire') : L('case vide', 'empty square')}"${selected ? ' aria-pressed="true"' : ''}>${p ? `<b class="${p === p.toUpperCase() ? 'w' : 'k'}">${MINI[p.toLowerCase()]}</b>` : ''}${coords}</button>`;
     }
     el.innerHTML = html + arrowsSvg(arrows);
   }
@@ -855,7 +856,7 @@
       const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
       b3d.update({ board: s.board, selected, targets, last, check: checkSq, mateFire, mateUltimate, hint, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext, outcome: shown ? shown.result : null, arrows, ply: pz ? null : game.history.length });
       animateNext = false;
-      renderMinimap(s.board, last, selected, targets, mateFire, arrows);
+      renderMinimap(s.board, last, selected, targets, mateFire, arrows, hint);
       return;
     }
     const frag = document.createDocumentFragment();
