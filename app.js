@@ -4261,13 +4261,32 @@
   // Ouvertures : révision espacée (1, 3, 7, 14 puis 30 jours) ; une erreur la fait revenir vite
   const OPEN_GAPS = [1, 3, 7, 14, 30];
   const openingsSR = () => store.get('openingsSR', {});
-  function openingStats(opening) {
+  function openingEvidence(opening) {
     const line = trainLine(null, [], opening.san)?.line;
-    if (!line || !line.length) return null;
+    if (!line || !line.length) return { line: [], eligible: [], used: [] };
     const threshold = Math.min(8, line.length);
-    const analyzed = store.get('archive', []).filter((g) => !g.fen && g.analysed && g.moves && g.moves.length >= 12 && g.color === opening.color);
-    const eligible = analyzed.filter((g) => g.moves.length >= threshold);
+    const eligible = store.get('archive', []).filter((g) => !g.fen && g.analysed && g.moves && g.moves.length >= Math.max(12, threshold) && g.color === opening.color);
     const used = eligible.filter((g) => line.slice(0, threshold).every((move, i) => g.moves[i] === move));
+    return { line, eligible, used };
+  }
+  function openingMistakes(opening) {
+    const { line, used } = openingEvidence(opening);
+    if (!line.length || !used.length) return [];
+    const mistakes = store.get('mistakes', []), found = [];
+    for (const g of used.slice().reverse()) {
+      for (const m of mistakes.filter((x) => x.date === g.id)) {
+        const prefix = `${g.id}-`, ply = String(m.id).startsWith(prefix) ? Number(String(m.id).slice(prefix.length)) : NaN;
+        if (!Number.isInteger(ply) || ply < 0 || ply >= line.length || (ply % 2 === 0 ? 'w' : 'b') !== opening.color || !m.fen || !m.line || !m.line[0]) continue;
+        const badMove = uciOf(m), goodMove = m.line[0];
+        if (badMove) found.push({ mistake: m, badMove, goodMove });
+      }
+      if (found.length >= 3) break;
+    }
+    return found.slice(0, 3);
+  }
+  function openingStats(opening) {
+    const { line, eligible, used } = openingEvidence(opening);
+    if (!line.length) return null;
     if (!eligible.length || !used.length) return { usage: eligible.length ? 0 : null, mastery: null };
     const mistakes = store.get('mistakes', []);
     let playerMoves = 0, cleanMoves = 0;
@@ -4296,10 +4315,20 @@
       { text: `${o.name}. ${o.text} ${L('Les coups à retenir', 'The moves to remember')} : ${moves.trim()}.`, fen: demo.fen, demoMoves: demo.line,
         demoStartText: L('Regarde les déplacements de cette ouverture…', 'Watch the moves in this opening…'),
         demoDoneText: L('Observe bien les déplacements : tu vas maintenant rejouer cette ouverture de mémoire.', 'Watch the moves closely: now you will replay this opening from memory.') },
-      { text: L(`Rejoue de mémoire les coups des ${sideName(o.color)}. Les réponses adverses se jouent seules.`, `Replay ${sideName(o.color)}'s moves from memory. The opponent's replies are played for you.`), fen: x.fen, line: x.line, theme: 'tactique',
-        why: L('Ouverture rejouée en entier !', 'Opening replayed in full!'),
-        wrong: L(`Ce n'est pas le coup de la ${o.name.toLowerCase()}. Réessaie, ou demande un indice.`, `That is not the ${o.name} move. Try again, or ask for a hint.`) },
     ];
+    for (const { mistake: m, badMove, goodMove } of openingMistakes(o)) {
+      const goodSan = (() => { try { return new Game(m.fen).playUci(goodMove).san; } catch { return goodMove; } })();
+      const arrow = (uci, color) => ({ from: window.Chess.sqIndex(uci.slice(0, 2)), to: window.Chess.sqIndex(uci.slice(2, 4)), color });
+      steps.push({ text: L(`Dans ta partie du ${fmtDate(m.date)}, au coup ${m.move}, tu as joué ${m.played}. Regarde ce coup joué.`, `In your game on ${fmtDate(m.date)}, on move ${m.move}, you played ${m.played}. Watch that move.`), fen: m.fen, demoMoves: [badMove], arrows: [arrow(badMove, 'red')],
+        demoStartText: L('Voici le coup joué dans ta partie…', 'Here is the move played in your game…'),
+        demoDoneText: L('Ce coup a été signalé par l’analyse. Regarde la correction.', 'The analysis flagged this move. Now look at the correction.') });
+      steps.push({ text: L(`Le meilleur coup était ${goodSan}.`, `The best move was ${goodSan}.`), fen: m.fen, demoMoves: [goodMove], arrows: [arrow(goodMove, 'green')],
+        demoStartText: L('La flèche montre le bon coup…', 'The arrow shows the right move…'),
+        demoDoneText: L('Garde ce coup en mémoire.', 'Remember this move.') });
+    }
+    steps.push({ text: L(`Rejoue de mémoire les coups des ${sideName(o.color)}. Les réponses adverses se jouent seules.`, `Replay ${sideName(o.color)}'s moves from memory. The opponent's replies are played for you.`), fen: x.fen, line: x.line, theme: 'tactique',
+        why: L('Ouverture rejouée en entier !', 'Opening replayed in full!'),
+        wrong: L(`Ce n'est pas le coup de la ${o.name.toLowerCase()}. Réessaie, ou demande un indice.`, `That is not the ${o.name} move. Try again, or ask for a hint.`) });
     startTrainer({ title: o.name, theme: 'tactique', resume: `open:${o.id}` }, steps, () => {
       const sr = openingsSR(), row = sr[o.id] || { stage: 0 };
       const clean = !pz.failed && !pz.misses;
