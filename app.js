@@ -4329,7 +4329,14 @@
     startTrainer({ title: m.name, theme: 'mat', resume: `mate:${m.id}` }, steps, () => { lessonReward(`mate:${m.id}`); markTrain(`mate:${m.id}`); leavePuzzle(); });
   }
   function startEndgame(e) {
-    const steps = e.steps.map((text) => ({ text, fen: e.fen }));
+    const examples = {
+      kqk: [['d1d4'], ['e1f2']],
+      krk: [['a1a5'], ['e1e2']],
+      kbbk: [['c1e3'], ['e1d2']],
+      lucena: [['c1c4'], ['c1c8']],
+      philidor: [['a6e6'], ['a6a1']],
+    };
+    const steps = e.steps.map((text, i) => ({ text, fen: e.fen, demoMoves: (examples[e.id] || [])[i] }));
     steps.push({ text: e.goal === 'draw'
       ? L(`À toi : tu joues les ${sideName(e.color)} contre l'ordinateur au plus haut niveau. Obtiens la nulle. Appuie sur « Terminer » pour commencer.`, `Your turn: you play ${sideName(e.color)} against the computer at its highest level. Get the draw. Press "Finish" to start.`)
       : L(`À toi : tu joues les ${sideName(e.color)} contre l'ordinateur au plus haut niveau. Donne le mat. Appuie sur « Terminer » pour commencer.`, `Your turn: you play ${sideName(e.color)} against the computer at its highest level. Deliver mate. Press "Finish" to start.`), fen: e.fen });
