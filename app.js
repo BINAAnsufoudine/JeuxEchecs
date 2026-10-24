@@ -116,6 +116,7 @@
     if (id === 'problems') renderProblems();
     if (id === 'champions') renderChampions();
     updateCoachDockForScreen(id);
+    if (id === 'program' && settings.voice) speak(`${$('program-text').textContent} ${$('program-focus').textContent}`);
     if (desktopShell) document.getElementById(id)?.scrollTo(0, 0);
     else window.scrollTo(0, 0);
   }
@@ -2189,6 +2190,10 @@
     replayButton.hidden = !tts;
     replayButton.textContent = settings.voice ? '🔊' : '🔇';
     replayButton.setAttribute('aria-label', settings.voice ? L('Couper la voix', 'Mute the voice') : L('Activer la voix', 'Turn the voice on'));
+    const programButton = $('program-voice');
+    programButton.hidden = !tts;
+    programButton.textContent = settings.voice ? '🔊' : '🔇';
+    programButton.setAttribute('aria-label', settings.voice ? L('Couper la voix', 'Mute the voice') : L('Activer la voix', 'Turn the voice on'));
   }
   $('pz-voice').onclick = () => {
     settings.voice = !settings.voice; store.set('settings', settings); voiceButton(); renderCoachDock();
@@ -2197,6 +2202,10 @@
   $('rp-voice').onclick = () => {
     settings.voice = !settings.voice; store.set('settings', settings); voiceButton(); renderCoachDock();
     if (settings.voice) speak($('rp-comment').innerText); else hush();
+  };
+  $('program-voice').onclick = () => {
+    settings.voice = !settings.voice; store.set('settings', settings); voiceButton(); renderCoachDock();
+    if (settings.voice) speak(`${$('program-text').textContent} ${$('program-focus').textContent}`); else hush();
   };
   voiceButton();
   function say(text, mood = '', voiceText = text) {

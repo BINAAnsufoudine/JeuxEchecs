@@ -89,9 +89,12 @@
     <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Programme personnalisé</h2></header>
     <div class="program-view">
       <section class="coach-program" aria-labelledby="program-title">
-        <div class="coach-program-head"><div><span class="coach-kicker">Programme personnalisé</span><h2 id="program-title">Avec Maître Sissa</h2></div><span id="program-badge" class="coach-program-badge"></span></div>
-        <p id="program-text"></p>
-        <p id="program-focus" class="coach-program-focus"></p>
+        <div class="program-coach">
+          <div class="program-coach-identity"><strong>Maître Sissa</strong><div class="program-coach-portrait"><img src="sissa/sissa-face.jpg" alt="Maître Sissa"><button type="button" class="legend-link" data-legend>La légende de Sissa</button></div></div>
+          <div class="program-coach-message"><div class="program-coach-head"><div><span class="coach-kicker">Programme personnalisé</span><h2 id="program-title">Avec Maître Sissa</h2></div><span id="program-badge" class="coach-program-badge"></span></div>
+            <div class="program-coach-bubble"><button class="mini" id="program-voice" type="button" aria-label="Couper la voix">🔊</button><p id="program-text"></p><p id="program-focus" class="coach-program-focus"></p></div>
+          </div>
+        </div>
         <div class="coach-program-actions"><button id="program-continue" class="btn primary">Continuer mon entraînement</button><button id="program-game" class="btn ghost">Partie coachée</button></div>
       </section>
     </div>

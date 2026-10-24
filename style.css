@@ -59,6 +59,18 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .coach-program-actions .btn { min-width: 0; padding: 10px 8px; font-size: 0.84rem; }
 .program-view { width: min(960px, 100%); margin: 0 auto; }
 .program-view .coach-program { width: 100%; max-width: none; }
+.program-coach { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 10px; align-items: start; }
+.program-coach-identity { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.program-coach-identity strong { color: var(--accent); font-size: 0.86rem; }
+.program-coach-portrait { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.program-coach-portrait img { width: 64px; height: 96px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)); }
+.program-coach-portrait .legend-link { font-size: 0.66rem; line-height: 1.2; }
+.program-coach-message { min-width: 0; }
+.program-coach-bubble { position: relative; margin-top: 8px; padding: 8px 38px 8px 12px; border-radius: 14px 14px 14px 4px; background: var(--surface); line-height: 1.5; }
+.program-coach-bubble > .mini { position: absolute; top: 6px; right: 6px; }
+.program-coach-bubble p { margin: 0; }
+.program-coach-bubble .coach-program-focus { margin-top: 8px; }
+.program-coach-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .profile-edit { border: 1px solid var(--surface-2); background: transparent; border-radius: 10px; padding: 7px 10px; flex: none; }
 .profile-name-input { width: 100%; border: 1px solid var(--surface-2); border-radius: 10px; padding: 11px 12px; background: var(--surface); color: var(--text); font: inherit; }
 
