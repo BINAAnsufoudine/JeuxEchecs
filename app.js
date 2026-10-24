@@ -196,6 +196,26 @@
     $('program-badge').textContent = plan.badge;
     $('program-text').textContent = plan.text;
     $('program-focus').textContent = plan.focus;
+    $('program-progress').innerHTML = coachProgressSummary();
+  }
+
+  function coachProgressSummary() {
+    const c = loadCoach();
+    const completed = LESSONS.filter((lesson) => store.get('lessonsDone', {})[lesson.theme]).length;
+    const recentRows = PZ_KEYS.map((key) => c.themes[key] && Array.isArray(c.themes[key].recent) ? c.themes[key].recent : []);
+    const n = c.games >= 2 && recentRows.length ? Math.min(5, Math.floor(c.games / 2), ...recentRows.map((row) => row.length)) : 0;
+    let trend = L('Joue et fais analyser quelques parties : je pourrai ensuite comparer tes progrès.', 'Play a few games and have them analysed so I can track your progress.');
+    if (n > 0) {
+      const older = recentRows.reduce((sum, row) => sum + row.slice(-2 * n, -n).reduce((a, b) => a + b, 0), 0) / n;
+      const latest = recentRows.reduce((sum, row) => sum + row.slice(-n).reduce((a, b) => a + b, 0), 0) / n;
+      const delta = Math.abs(older - latest);
+      trend = delta < 0.05
+        ? L(`Sur tes ${n} dernières parties analysées, le nombre de fautes par partie reste stable.`, `Across your last ${n} analysed games, mistakes per game are steady.`)
+        : latest < older
+          ? L(`Bravo, tu progresses : environ ${NUM(delta)} faute${delta >= 1.5 ? 's' : ''} de moins par partie sur tes ${n} dernières parties analysées.`, `You’re improving: about ${NUM(delta)} fewer mistake${delta >= 1.5 ? 's' : ''} per game across your last ${n} analysed games.`)
+          : L(`Point à travailler : environ ${NUM(delta)} faute${delta >= 1.5 ? 's' : ''} de plus par partie sur tes ${n} dernières parties analysées.`, `Focus area: about ${NUM(delta)} more mistake${delta >= 1.5 ? 's' : ''} per game across your last ${n} analysed games.`);
+    }
+    return `<p>${trend}</p><p class="pz-cap">${L(`Leçons terminées : ${completed}/${LESSONS.length}.`, `Lessons completed: ${completed}/${LESSONS.length}.`)}</p>`;
   }
 
   function renderCoachDock() {
@@ -1739,10 +1759,10 @@
     // ne retient que les difficultés qui dépassent réellement le seuil demandé.
     return c.games ? recurringThemes(c) : PZ_KEYS.slice(0, 3);
   }
-  function pickPuzzle(k, level) {
+  function pickPuzzle(k, level, includePersonal = true) {
     const now = Date.now();
     const due = (m) => m.reviewAt ?? ((m.last || 0) + 600000);
-    const mine = store.get('mistakes', []).filter((m) => m.theme === k && !m.solved && due(m) <= now).sort((a, b) => due(a) - due(b))[0];
+    const mine = includePersonal ? store.get('mistakes', []).filter((m) => m.theme === k && !m.solved && due(m) <= now).sort((a, b) => due(a) - due(b))[0] : null;
     if (mine) return personalItem(mine);
     const st = store.get('pzdone', {});
     let pool = BANK.filter((p) => p.theme === k && st[p.id] !== 's');
@@ -1788,7 +1808,7 @@
     const it = pickPuzzle(act.theme, row.level);
     if (!it) { toast(L('Aucun problème disponible pour ce thème.', 'No puzzle available for this theme.')); return leavePuzzle(); }
     pz = { kind: 'path', idx: 0, item: it };
-    store.set('openLesson', { key: 'program', title: L(`Problème : ${PZ[act.theme] ? PZ[act.theme].name : ''}`, `Puzzle: ${PZ[act.theme] ? PZ[act.theme].name : ''}`), idx: 0, total: 1, at: Date.now() });
+    store.set('openLesson', { key: 'program', title: L(`Problème : ${PZ[act.theme] ? PZ[act.theme].name : ''}`, `Puzzle: ${PZ[act.theme] ? PZ[act.theme].name : ''}`), idx: 0, total: 1, puzzleId: it.id || null, personalId: it.personal && it.personal.id, theme: act.theme, level: row.level, at: Date.now() });
     enterPuzzleMode();
     loadItem(it);
   }
@@ -2307,7 +2327,7 @@
   // Libellé du bouton du bas pendant un cours, et la phrase de l'entraîneur qui invite à l'utiliser
   function lessonNextLabel() {
     const lastStep = pz.idx >= pz.steps.length - 1;
-    return lastStep ? (pz.lesson && (pz.lesson.tip || pz.lesson.champion || pz.lesson.onDone) ? L('Terminer', 'Finish') : L('Aux problèmes', 'To the puzzles')) : L('Continuer', 'Continue');
+    return lastStep ? (pz.lesson && (pz.lesson.tip || pz.lesson.champion || pz.lesson.onDone || pz.lesson.resume) ? L('Terminer', 'Finish') : L('Aux problèmes', 'To the puzzles')) : L('Continuer', 'Continue');
   }
   const lessonCue = () => L(`Appuie sur « ${lessonNextLabel()} » en bas de l'écran ${pz.idx >= pz.steps.length - 1 ? 'pour terminer' : 'pour la suite'}.`, `Press “${lessonNextLabel()}” at the bottom of the screen ${pz.idx >= pz.steps.length - 1 ? 'to finish' : 'to go on'}.`);
   const busyDelay = (min) => Math.max(min, (b3d ? b3d.busyLeftMs() : 0) + 250);
@@ -2362,9 +2382,16 @@
     setPzStatus('good', clean ? L('Résolu du premier coup !', 'Solved on the first try!') : L('Résolu, avec un peu d\'aide.', 'Solved, with a little help.'));
     if (pz.kind === 'lesson') {
       const st = pz.steps[pz.idx];
-      const lessonLevel = themeRow(loadCoach(), pz.lesson.theme).level;
-      if (!pz.lesson.noRating) countPuzzle();
-      say(`${st.why || L('Exactement ! Tu as trouvé.', 'Exactly! You found it.')} ${lessonCue()}`, 'happy');
+      if (st.adaptive) {
+        const r = recordPuzzle(pz.item, clean);
+        const feedback = clean
+          ? r.pending ? L('Très bien : ton niveau est prêt à être confirmé dans une partie.', 'Very good: your level is ready to be confirmed in a game.') : L(`Très bien : ${r.ok}/${LEVEL_SET} réussites vers le niveau suivant.`, `Very good: ${r.ok}/${LEVEL_SET} successes toward the next level.`)
+          : L('Tu as trouvé avec de l’aide. Le prochain exercice sera ajusté à tes résultats.', 'You found it with help. The next exercise will adjust to your results.');
+        say(`${st.why || L('Exactement ! Tu as trouvé.', 'Exactly! You found it.')} ${feedback} ${lessonCue()}`, 'happy');
+      } else {
+        if (!pz.lesson.noRating) countPuzzle();
+        say(`${st.why || L('Exactement ! Tu as trouvé.', 'Exactly! You found it.')} ${lessonCue()}`, 'happy');
+      }
       if (st.mistake) touchMistake(st.mistake, clean);
     } else {
       const r = recordPuzzle(pz.item, clean);
@@ -2444,7 +2471,7 @@
   $('btn-theme-back').onclick = () => show('problems');
 
   /* Leçons guidées par l'entraîneur */
-  function startLesson(k) {
+  function startLesson(k, options = {}) {
     const lesson = lessonOf(k);
     const c = loadCoach(), row = c.themes[k];
     const steps = lesson.steps.slice();
@@ -2462,26 +2489,43 @@
     }
     steps.push({ text: L(`${PZ[k].tip} Passons aux problèmes : à chaque réussite, le niveau monte.`, `${PZ[k].tip} On to the puzzles: each success raises the level.`) });
     addPrincipleExamples(steps);
-    pz = { kind: 'lesson', lesson: { ...lesson, resume: `lesson:${k}` }, steps, idx: 0 };
+    const currentLevel = themeRow(c, k).level;
+    const challengeLevel = Math.min(MAX_LEVEL, currentLevel + 1);
+    const challenge = options.puzzleId && BANK.find((p) => p.id === options.puzzleId && p.theme === k)
+      || pickPuzzle(k, challengeLevel, false);
+    if (challenge && challenge.line && challenge.line.length) steps.push({
+      ...challenge,
+      text: currentLevel < MAX_LEVEL
+        ? L(`Défi adapté : essaie un exercice un niveau au-dessus de ton niveau actuel (${challengeLevel}).`, `Level-up challenge: try a puzzle one level above your current level (${challengeLevel}).`)
+        : L(`Défi adapté : voici un exercice de niveau avancé (${challengeLevel}).`, `Level-up challenge: here is an advanced puzzle (level ${challengeLevel}).`),
+      level: challenge.level || challengeLevel, adaptive: true,
+    });
+    const title = options.daily ? L(`Leçon du jour · ${lesson.title}`, `Lesson of the day · ${lesson.title}`) : lesson.title;
+    pz = { kind: 'lesson', lesson: { ...lesson, title, resume: `lesson:${k}`, daily: !!options.daily, adaptivePuzzleId: challenge && challenge.id }, steps, idx: 0 };
     enterPuzzleMode();
     loadLessonStep();
   }
   // Leçon ou problème ouvert : retenu pour l'écran « Reprendre » jusqu'à ce qu'il soit terminé
   function trackOpenLesson() {
     if (!pz || !pz.lesson || !pz.lesson.resume) return;
-    store.set('openLesson', { key: pz.lesson.resume, title: pz.lesson.title, idx: pz.idx, total: pz.steps.length, at: Date.now() });
+    store.set('openLesson', { key: pz.lesson.resume, title: pz.lesson.title, idx: pz.idx, total: pz.steps.length, daily: pz.lesson.daily, puzzleId: pz.lesson.adaptivePuzzleId, at: Date.now() });
   }
   const clearOpenLesson = () => { if (store.get('openLesson', null)) store.set('openLesson', null); };
   function resumeOpenLesson() {
     const ol = store.get('openLesson', null); if (!ol) return;
     const [kind, id] = ol.key.split(':');
-    if (kind === 'program') { show('problems'); nextActivity(); return; }
+    if (kind === 'program') {
+      const mistake = ol.personalId && store.get('mistakes', []).find((m) => m.id === ol.personalId);
+      const savedPuzzle = mistake ? personalItem(mistake) : BANK.find((p) => p.id === ol.puzzleId);
+      if (savedPuzzle) { pz = { kind: 'path', idx: 0, item: savedPuzzle }; enterPuzzleMode(); loadItem(savedPuzzle); return; }
+      show('problems'); nextActivity(); return;
+    }
     if (kind === 'mate') startMateLesson(TR.MATES.find((x) => x.id === id));
     else if (kind === 'end') startEndgame(TR.ENDGAMES.find((x) => x.id === id));
     else if (kind === 'open') startOpening(TR.OPENINGS.find((x) => x.id === id));
     else if (kind === 'famous') startFamous(TR.FAMOUS.find((x) => x.id === id));
     else if (kind === 'daily') startDaily(Number(id) || 0);
-    else if (kind === 'lesson') startLesson(id);
+    else if (kind === 'lesson') startLesson(id, { daily: !!ol.daily, puzzleId: ol.puzzleId });
     else return;
     // reprise à l'étape où l'on s'était arrêté
     if (pz && pz.steps && ol.idx > 0 && ol.idx < pz.steps.length) { pz.idx = ol.idx; loadLessonStep(); }
@@ -2492,7 +2536,7 @@
     // Tous les parcours d'apprentissage qui rejouent ou font jouer une ligne
     // affichent les relations tactiques à chaque coup, comme les ouvertures.
     if (st.line && st.line.length || st.demoMoves && st.demoMoves.length) st.annotateRelations = true;
-    const it = { theme: st.theme || pz.lesson.theme, level: 1, fen: st.fen, line: st.line, alts: st.alts };
+    const it = { id: st.id, personal: st.personal, rating: st.rating, theme: st.theme || pz.lesson.theme, level: st.level || 1, fen: st.fen, line: st.line, alts: st.alts };
     Object.assign(pz, { item: it, step: 0, failed: false, done: !st.line && !st.demoMoves?.length, locked: !!st.demoMoves?.length, demoIndex: 0 });
     if (st.fen) setPosition(st.fen);
     else if (!game) setPosition('4k3/8/8/8/8/8/8/4K3 w - - 0 1');
@@ -4544,21 +4588,49 @@
     });
   }
   let trainSection = 'daily';
-  const TRAIN_TITLES = L({ daily: 'Défi du jour', mates: 'Les mats', endgames: 'Finales de base', openings: 'Ouvertures', famous: 'Devine le coup' },
-    { daily: 'Daily challenge', mates: 'Checkmates', endgames: 'Basic endgames', openings: 'Openings', famous: 'Guess the move' });
+  const TRAIN_TITLES = L({ lesson: 'Leçon du jour', daily: 'Défi du jour', mates: 'Les mats', endgames: 'Finales de base', openings: 'Ouvertures', famous: 'Devine le coup' },
+    { lesson: 'Lesson of the day', daily: 'Daily challenge', mates: 'Checkmates', endgames: 'Basic endgames', openings: 'Openings', famous: 'Guess the move' });
   const TRAIN_HELP = L({
+    lesson: 'Découvre une notion un peu au-dessus de ton niveau actuel. Les leçons déjà terminées ne sont pas reproposées ; un exercice adapté à ton niveau suit l’explication.',
     daily: 'Trois problèmes par jour. Ceux que tu ne trouves pas du premier coup te sont reproposés dans la journée. Réussis les trois pour prolonger ta série.',
     mates: 'Choisis le mat que tu veux apprendre : Maître Sissa te le montre, puis tu le trouves toi-même.',
     endgames: 'Apprends la méthode, puis joue la position contre l\'ordinateur au plus haut niveau.',
     openings: 'Découvre les coups d\'une ouverture, puis rejoue-les de mémoire. Elles reviennent à réviser au bon moment.',
     famous: 'Prends la place d\'un champion dans sa partie la plus célèbre et devine ses coups.',
   }, {
+    lesson: 'Discover a concept just above your current level. Completed lessons will not be repeated; an exercise adapted to your level follows the explanation.',
     daily: 'Three puzzles a day. The ones you miss at the first try come back later the same day. Solve all three to extend your streak.',
     mates: 'Choose the mate you want to learn: Master Sissa shows it to you, then you find it yourself.',
     endgames: 'Learn the method, then play the position against the computer at its highest level.',
     openings: 'Discover the moves of an opening, then replay them from memory. They come back for review at the right time.',
     famous: 'Take a champion\'s place in their most famous game and guess their moves.',
   });
+  function dailyLessonOfDay() {
+    const now = new Date(), date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const completed = store.get('lessonsDone', {});
+    const available = LESSONS.filter((lesson) => !completed[lesson.theme]);
+    if (!available.length) return null;
+    const open = store.get('openLesson', null);
+    const openTheme = open && /^lesson:/.test(open.key || '') ? open.key.slice('lesson:'.length) : null;
+    const inProgress = available.find((lesson) => lesson.theme === openTheme);
+    if (inProgress) return inProgress;
+    const saved = store.get('dailyLesson', null);
+    if (saved && saved.date === date) {
+      const same = available.find((lesson) => lesson.theme === saved.theme);
+      if (same) return same;
+    }
+    const dayNumber = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 86400000);
+    const lesson = available[dayNumber % available.length];
+    store.set('dailyLesson', { date, theme: lesson.theme });
+    return lesson;
+  }
+  function startDailyLesson() {
+    const lesson = dailyLessonOfDay();
+    if (!lesson) return toast(L('Tu as terminé toutes les leçons disponibles. Retrouve les thèmes à retravailler dans ton programme personnalisé.', 'You have completed all available lessons. Find themes to revisit in your personalized plan.'));
+    const open = store.get('openLesson', null);
+    if (open && open.key === `lesson:${lesson.theme}`) return resumeOpenLesson();
+    startLesson(lesson.theme, { daily: true });
+  }
   function renderTrain(section = trainSection) {
     trainSection = section;
     $('train-title').textContent = TRAIN_TITLES[section];
@@ -4566,6 +4638,14 @@
     const item = (key, title, sub, extra = '') => `<button type="button" class="btn replay-item" data-train="${key}"><strong>${escHtml(title)}${extra}</strong><span>${escHtml(sub)}</span></button>`;
     const ok = ' ✓';
     let html = `<p class="level-help">${TRAIN_HELP[section]}</p>`;
+    if (section === 'lesson') {
+      const lesson = dailyLessonOfDay();
+      const completed = LESSONS.filter((entry) => store.get('lessonsDone', {})[entry.theme]).length;
+      const open = store.get('openLesson', null), inProgress = lesson && open && open.key === `lesson:${lesson.theme}`;
+      html += lesson
+        ? `<div class="replay-items"><button type="button" class="btn replay-item" data-train="lesson-day"><strong>📘 ${escHtml(lesson.title)}</strong><span>${escHtml(PZ[lesson.theme].name)} · ${inProgress ? L(`À reprendre · étape ${open.idx + 1}/${open.total}`, `Resume · step ${open.idx + 1}/${open.total}`) : L('Nouvelle notion', 'New concept')} · ${L(`Notions terminées : ${completed}/${LESSONS.length}`, `Completed concepts: ${completed}/${LESSONS.length}`)}</span></button></div>`
+        : `<p class="level-help">${L('Tu as terminé toutes les notions disponibles. Elles restent dans ton programme personnalisé pour les révisions.', 'You have completed every available concept. They remain in your personalized plan for review.')}</p>`;
+    }
     if (section === 'daily') {
       const label = { ok: L('trouvé du premier coup', 'found at the first try'), retry: L('à refaire', 'to try again') };
       html += `<p class="level-help">${L(`Série en cours : ${d.streak || 0} jour${(d.streak || 0) > 1 ? 's' : ''} · record : ${d.best || 0}`, `Current streak: ${d.streak || 0} day${(d.streak || 0) === 1 ? '' : 's'} · best: ${d.best || 0}`)}</p>`;
@@ -4589,6 +4669,7 @@
   $('train-body').addEventListener('click', (e) => {
     const b = e.target.closest('[data-train]'); if (!b) return;
     const [kind, id] = b.dataset.train.split(':');
+    if (kind === 'lesson-day') return startDailyLesson();
     if (kind === 'daily') return startDaily(Number(id) || 0);
     if (kind === 'mate') return startMateLesson(TR.MATES.find((x) => x.id === id));
     if (kind === 'end') return startEndgame(TR.ENDGAMES.find((x) => x.id === id));
@@ -4891,6 +4972,11 @@
   function renderReview(rv, cur) {
     // Le panneau du maître fait partie de l'écran replay, même avant le calcul d'analyse.
     $('rp-review').hidden = !replay;
+    $('rp-filter-label').textContent = L('Filtrer', 'Filter');
+    $('rp-filter').setAttribute('aria-label', L('Filtrer la transcription', 'Filter the move list'));
+    $('rp-filter').innerHTML = `<option value="all">${L('Tous les coups', 'All moves')}</option><option value="faults">${L('Fautes', 'Mistakes')}</option><option value="excellent">${L('Très bons coups', 'Excellent moves')}</option><option value="brilliant">${L('Coups brillants', 'Brilliant moves')}</option>`;
+    $('rp-filter').disabled = !(replay && replay.review);
+    $('rp-filter').value = replay && replay.filter || 'all';
     if (!reviewing) {
       const btn = $('rp-analyse');
       btn.disabled = false;
@@ -4967,6 +5053,11 @@
       .then((r) => { mine.review = r; mine.showReview = true; })
       .catch(() => toast(L("L'analyse n'a pas pu être lancée sur cet appareil.", 'The analysis could not start on this device.')))
       .finally(() => { reviewing = false; if (replay) render(); });
+  };
+  $('rp-filter').onchange = () => {
+    if (!replay) return;
+    replay.filter = $('rp-filter').value;
+    render();
   };
   const jumpToSevere = (dir) => {
     if (!replay || !replay.review) return;
@@ -5223,6 +5314,16 @@
       li.innerHTML = `<span class="n">${i / 2 + 1}.</span>${cell(i)} ${cell(i + 1)}`;
       ol.appendChild(li);
     }
+    const wanted = replay.filter === 'faults' ? new Set(BAD)
+      : replay.filter === 'excellent' ? new Set(['excellent'])
+        : replay.filter === 'brilliant' ? new Set(['brilliant']) : null;
+    if (wanted && replay.review) [...ol.children].forEach((li) => {
+      const hasWantedMove = [...li.querySelectorAll('[data-ply]')].some((span) => {
+        const mark = replay.review.marks[Number(span.dataset.ply) - 1];
+        return mark && wanted.has(mark[0]);
+      });
+      li.hidden = !hasWantedMove;
+    });
     renderReview(rv, cur);
     const current = ol.querySelector('.cur');
     if (current) current.scrollIntoView({ block: 'nearest' });

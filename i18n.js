@@ -22,6 +22,8 @@
     'Elo estimé : 600': 'Estimated Elo: 600',
     'Modifier': 'Edit',
     'Programme personnalisé': 'Personal training plan',
+    'Leçon du jour': 'Lesson of the day',
+    'Mes progrès avec Maître Sissa': 'My progress with Master Sissa',
     'Avec Maître Sissa': 'With Master Sissa',
     'Continuer le programme': 'Continue the plan',
     'Continuer mon entraînement': 'Continue my training',

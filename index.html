@@ -46,6 +46,7 @@
       <div class="menu-group">
         <button id="btn-train-menu" class="btn primary" type="button" aria-expanded="false" aria-controls="train-submenu">Apprendre</button>
         <div id="train-submenu" class="menu-submenu" hidden>
+          <button class="btn" data-train-section="lesson">Leçon du jour</button>
           <button class="btn" data-train-section="daily">Défi du jour</button>
           <button class="btn" data-train-section="mates">Les mats</button>
           <button class="btn" data-train-section="endgames">Finales de base</button>
@@ -97,6 +98,7 @@
         </div>
         <div class="coach-program-actions"><button id="program-continue" class="btn primary">Continuer mon entraînement</button><button id="program-game" class="btn ghost">Partie coachée</button></div>
       </section>
+      <section class="coach-progress panel" aria-labelledby="program-progress-title"><h3 id="program-progress-title">Mes progrès avec Maître Sissa</h3><div id="program-progress"></div></section>
     </div>
   </section>
 
@@ -174,6 +176,7 @@
           <div class="rp-tools rp-review-nav">
             <button class="mini" id="rp-prevbad">◀ Faute</button>
             <button class="mini" id="rp-nextbad">Faute ▶</button>
+            <label class="rp-filter-label" for="rp-filter"><span id="rp-filter-label">Filtrer</span><select id="rp-filter" class="mini" aria-label="Filtrer la transcription"></select></label>
           </div>
           <div id="rp-acc" class="rp-acc"></div>
           <svg id="rp-graph" class="rp-graph" viewBox="0 0 200 64" preserveAspectRatio="none" role="img" aria-label="Courbe d'avantage"></svg>
