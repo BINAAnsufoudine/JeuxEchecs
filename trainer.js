@@ -198,7 +198,7 @@ window.TRAINER = (function () {
     ] },
     { id: 'notation', title: L('Lire les coups', 'Reading chess moves'), description: L('Le vocabulaire et la notation des coups', 'Chess vocabulary and move notation'), steps: [
       { text: L('Une partie alterne les coups des Blancs et des Noirs. Les cases sont nommées avec une lettre et un chiffre, par exemple e4. Dans la notation, C signifie cavalier, F fou, T tour, D dame et R roi. Un pion n’a pas de lettre.', 'A game alternates White and Black moves. Squares are named with a letter and a number, such as e4. In notation, N means knight, B bishop, R rook, Q queen, and K king. A pawn has no letter.' ) },
-      { text: L('Quelques mots utiles : développement = sortir ses pièces ; centre = les cases e4, d4, e5 et d5 ; échange = capture suivie d’une reprise ; finale = la dernière phase de la partie, avec moins de pièces.', 'Useful terms: development means bringing pieces out; the centre is e4, d4, e5 and d5; an exchange is a capture followed by a recapture; the endgame is the final phase, with fewer pieces.') },
+      { text: L('Quelques mots utiles : développement = sortir ses pièces ; centre = les cases e4, d4, e5 et d5 ; échange = capture suivie d’une reprise ; finale = la dernière phase de la partie, avec moins de pièces.', 'Useful terms: development means bringing pieces out; the centre is e4, d4, e5 and d5; an exchange is a capture followed by a recapture; the endgame is the final phase, with fewer pieces.'), fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', marks: ['e4', 'd4', 'e5', 'd5'] },
     ] },
   ];
 
