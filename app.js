@@ -205,7 +205,7 @@
     $('coach-dock-panel').hidden = !coachDockOpen;
     $('coach-dock-message').textContent = coachMessage || coachPlan().text;
     const champ = activeChampion();
-    dock.querySelector('.coach-dock-head strong').textContent = coachName();
+    $('coach-dock-name').textContent = coachName();
     showCoachFace($('coach-dock-img'));
     const role = champ ? champ.reign : L('Coach d’échecs', 'Chess coach');
     $('coach-dock-status').textContent = coachMood || (settings.voice ? `${role} · ${L('voix active', 'voice on')}` : role);
