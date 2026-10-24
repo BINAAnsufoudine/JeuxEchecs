@@ -4902,6 +4902,14 @@
           { index: speechText.indexOf(label), run: () => animateUndoMistake(cur) },
           { index: speechText.lastIndexOf(best), run: () => animateRecommendedMove(cur, mark[2]) },
         ];
+      } else if (mark[0] === 'brilliant') {
+        const explanation = L('Tu as trouvé un sacrifice tactique : la pièce offerte ne peut pas être prise sans conséquence, et le moteur confirme que c’est le meilleur coup.', 'You found a tactical sacrifice: taking the offered piece comes at a cost, and the engine confirms this is the best move.');
+        text += `<br>${explanation}`;
+        speechText = L(`Au coup ${Math.ceil(cur / 2)}, tu as joué ${replay.sans[cur - 1]} : coup brillant ! ${explanation}`, `On move ${Math.ceil(cur / 2)}, you played ${replay.sans[cur - 1]}: brilliant move! ${explanation}`);
+      } else if (mark[0] === 'excellent') {
+        const explanation = L('Très bonne décision : tu as trouvé le meilleur coup ou une suite presque aussi précise.', 'Excellent decision: you found the best move or a continuation that is almost as precise.');
+        text += `<br>${explanation}`;
+        speechText = L(`Au coup ${Math.ceil(cur / 2)}, tu as joué ${replay.sans[cur - 1]} : très bon coup ! ${explanation}`, `On move ${Math.ceil(cur / 2)}, you played ${replay.sans[cur - 1]}: very good move! ${explanation}`);
       }
     }
     $('rp-comment').innerHTML = text;
