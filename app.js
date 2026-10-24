@@ -2397,7 +2397,7 @@
         if (!pz.lesson.noRating) countPuzzle();
         const tutorial = pz.lesson.resume && pz.lesson.resume.startsWith('tutorial:');
         const autoTutorial = tutorial && pz.idx === pz.steps.length - 1;
-        const speech = say(`${st.why || L('Exactement ! Tu as trouvé.', 'Exactly! You found it.')} ${autoTutorial ? L('La suite arrive automatiquement.', 'The next step will start automatically.') : lessonCue()}`, 'happy');
+        const speech = say(`${st.why || L('Exactement ! Tu as trouvé.', 'Exactly! You found it.')} ${autoTutorial ? L('Notion terminée.', 'Topic complete.') : lessonCue()}`, 'happy');
         if (autoTutorial) scheduleTutorialAdvance(speech, pz, pz.idx, st.text.length);
       }
       if (st.mistake) touchMistake(st.mistake, clean);
@@ -2554,7 +2554,9 @@
     marks = st.marks ? st.marks.map((s) => window.Chess.sqIndex(s)) : null;
     $('puzzle-title').textContent = pz.lesson.title;
     $('pz-count').textContent = L(`Étape ${pz.idx + 1} / ${pz.steps.length}`, `Step ${pz.idx + 1} / ${pz.steps.length}`);
-    const narration = say(st.line ? st.text : `${st.text} ${lessonCue()}`, '', st.demoIntroText);
+    const tutorialArrival = pz.lesson.resume && pz.lesson.resume.startsWith('tutorial:') && pz.idx === 0;
+    const stepText = st.line ? st.text : `${st.text} ${lessonCue()}`;
+    const narration = say(`${tutorialArrival ? `${pz.lesson.title}. ` : ''}${stepText}`, '', st.demoIntroText);
     setPzStatus('', st.line ? L('À toi de jouer', 'Your move') : '');
     renderBoard();
     pzButtons();
