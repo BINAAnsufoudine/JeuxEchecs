@@ -1493,9 +1493,10 @@
     return n ? Math.round(opp / n + (400 * score) / n) : null;
   }
   function skillOf(row, base) {
-    const games = row.recent.length;
+    const recent = row.recent.slice(-10);
+    const games = recent.length;
     if (!games || base === null) return { value: base || 800, data: false };
-    const avg = row.recent.reduce((x, y) => x + y, 0) / games; // fautes par partie dans ce thème
+    const avg = recent.reduce((x, y) => x + y, 0) / games; // fautes par partie dans ce thème
     const r = base + 150 - Math.min(500, avg * 300);
     return { value: Math.round(Math.max(100, Math.min(3000, r)) / 10) * 10, data: true };
   }
@@ -1636,7 +1637,7 @@
       const row = themeRow(c, k), n = Math.min(3, count[k] || 0);
       row.score = Math.round((0.85 * row.score + 0.15 * n) * 1000) / 1000;
       row.hist = row.hist.concat(row.score).slice(-30);
-      row.recent = row.recent.concat(n).slice(-10);
+      row.recent = row.recent.concat(n).slice(-20);
       row.errors += n;
       // L'analyse confirme le niveau validé en problèmes, ou le fait reprendre
       if (row.pending) {
@@ -1715,15 +1716,15 @@
     const saved = store.get('problemPrefs', {});
     const games = Number(saved.games), threshold = Number(saved.threshold);
     return {
-      games: Number.isInteger(games) ? Math.max(1, Math.min(10, games)) : 10,
+      games: Number.isInteger(games) ? Math.max(1, Math.min(20, games)) : 10,
       threshold: Number.isInteger(threshold) ? Math.max(1, Math.min(99, threshold)) : 70,
     };
   }
   function openProblemSettings() {
     const prefs = problemPreferences(), body = document.createElement('div');
     body.className = 'pz-settings';
-    body.innerHTML = `<label class="field-label" for="pz-pref-games">${L('Nombre de parties récentes (1 à 10)', 'Recent games to analyse (1–10)')}</label>
-      <input class="profile-name-input" id="pz-pref-games" type="number" min="1" max="10" step="1" value="${prefs.games}">
+    body.innerHTML = `<label class="field-label" for="pz-pref-games">${L('Nombre de parties récentes (1 à 20)', 'Recent games to analyse (1–20)')}</label>
+      <input class="profile-name-input" id="pz-pref-games" type="number" min="1" max="20" step="1" value="${prefs.games}">
       <label class="field-label" for="pz-pref-threshold">${L('Seuil de récurrence (%)', 'Recurrence threshold (%)')}</label>
       <input class="profile-name-input" id="pz-pref-threshold" type="number" min="1" max="99" step="1" value="${prefs.threshold}">
       <small>${L('Un thème est proposé s’il revient dans plus que ce pourcentage des parties choisies. Trois priorités au maximum seront affichées.', 'A theme is suggested when it appears in more than this percentage of the selected games. At most three priorities will be shown.')}</small>`;
@@ -1731,8 +1732,8 @@
       { label: L('Enregistrer', 'Save'), primary: true, onClick: () => {
         const games = Number(body.querySelector('#pz-pref-games').value);
         const threshold = Number(body.querySelector('#pz-pref-threshold').value);
-        if (!Number.isInteger(games) || games < 1 || games > 10 || !Number.isInteger(threshold) || threshold < 1 || threshold > 99) {
-          toast(L('Choisis de 1 à 10 parties et un seuil de 1 à 99 %.', 'Choose 1–10 games and a threshold from 1–99%.'));
+        if (!Number.isInteger(games) || games < 1 || games > 20 || !Number.isInteger(threshold) || threshold < 1 || threshold > 99) {
+          toast(L('Choisis de 1 à 20 parties et un seuil de 1 à 99 %.', 'Choose 1–20 games and a threshold from 1–99%.'));
           return openProblemSettings();
         }
         store.set('problemPrefs', { games, threshold });
