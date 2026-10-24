@@ -4867,13 +4867,17 @@
     }
     $('rp-prevbad').disabled = $('rp-nextbad').disabled = false;
     $('rp-voice').disabled = false;
-    $('rp-acc').hidden = $('rp-graph').hidden = false;
-    const n = rv.ev.length, X = (i) => (n > 1 ? (i / (n - 1)) * 200 : 0), Y = (e) => 32 - Math.tanh(e / 400) * 30;
-    const pts = rv.ev.map((e, i) => `${X(i).toFixed(1)},${Y(e).toFixed(1)}`).join(' L');
-    let svg = `<path class="g-area" d="M0,64 L${pts} L${X(n - 1).toFixed(1)},64 Z"/><line class="g-mid" x1="0" x2="200" y1="32" y2="32"/>`;
-    rv.marks.forEach((m, i) => { if (isSevere(m)) svg += `<line class="g-bad" x1="${X(i + 1).toFixed(1)}" x2="${X(i + 1).toFixed(1)}" y1="54" y2="64"/>`; });
-    svg += `<line class="g-cur" x1="${X(cur).toFixed(1)}" x2="${X(cur).toFixed(1)}" y1="0" y2="64"/>`;
-    $('rp-graph').innerHTML = svg;
+    const hasGraph = Array.isArray(rv.ev) && rv.ev.length > 1 && rv.ev.every(Number.isFinite);
+    $('rp-acc').hidden = false;
+    $('rp-graph').hidden = !hasGraph;
+    if (hasGraph) {
+      const n = rv.ev.length, X = (i) => (i / (n - 1)) * 200, Y = (e) => 32 - Math.tanh(e / 400) * 30;
+      const pts = rv.ev.map((e, i) => `${X(i).toFixed(1)},${Y(e).toFixed(1)}`).join(' L');
+      let svg = `<path class="g-area" d="M0,64 L${pts} L${X(n - 1).toFixed(1)},64 Z"/><line class="g-mid" x1="0" x2="200" y1="32" y2="32"/>`;
+      rv.marks.forEach((m, i) => { if (isSevere(m)) svg += `<line class="g-bad" x1="${X(i + 1).toFixed(1)}" x2="${X(i + 1).toFixed(1)}" y1="54" y2="64"/>`; });
+      svg += `<line class="g-cur" x1="${X(cur).toFixed(1)}" x2="${X(cur).toFixed(1)}" y1="0" y2="64"/>`;
+      $('rp-graph').innerHTML = svg;
+    }
     const who = rv.accuracy;
     $('rp-acc').innerHTML = `${rv.opening ? `<b>${escHtml(rv.opening)}</b><br>` : ''}${L('Précision : Blancs', 'Accuracy: White')} ${who.w == null ? '–' : who.w + ' %'} · ${L('Noirs', 'Black')} ${who.b == null ? '–' : who.b + ' %'}`;
     const mark = rv.marks[cur - 1];
