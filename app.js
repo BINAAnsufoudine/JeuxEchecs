@@ -1711,16 +1711,47 @@
   // Chaque niveau d'un thème : quelques problèmes à réussir, puis l'analyse de tes parties confirme
   const LEVEL_SET = 3;
   const MAX_LEVEL = 9;
-  // Ne proposer que les thèmes qui reviennent dans plus de 70 % des dix
-  // dernières parties analysées, avec trois priorités au maximum.
+  function problemPreferences() {
+    const saved = store.get('problemPrefs', {});
+    const games = Number(saved.games), threshold = Number(saved.threshold);
+    return {
+      games: Number.isInteger(games) ? Math.max(1, Math.min(10, games)) : 10,
+      threshold: Number.isInteger(threshold) ? Math.max(1, Math.min(99, threshold)) : 70,
+    };
+  }
+  function openProblemSettings() {
+    const prefs = problemPreferences(), body = document.createElement('div');
+    body.className = 'pz-settings';
+    body.innerHTML = `<label class="field-label" for="pz-pref-games">${L('Nombre de parties récentes (1 à 10)', 'Recent games to analyse (1–10)')}</label>
+      <input class="profile-name-input" id="pz-pref-games" type="number" min="1" max="10" step="1" value="${prefs.games}">
+      <label class="field-label" for="pz-pref-threshold">${L('Seuil de récurrence (%)', 'Recurrence threshold (%)')}</label>
+      <input class="profile-name-input" id="pz-pref-threshold" type="number" min="1" max="99" step="1" value="${prefs.threshold}">
+      <small>${L('Un thème est proposé s’il revient dans plus que ce pourcentage des parties choisies. Trois priorités au maximum seront affichées.', 'A theme is suggested when it appears in more than this percentage of the selected games. At most three priorities will be shown.')}</small>`;
+    modal({ title: L('Réglages des problèmes', 'Puzzle settings'), body, actions: [
+      { label: L('Enregistrer', 'Save'), primary: true, onClick: () => {
+        const games = Number(body.querySelector('#pz-pref-games').value);
+        const threshold = Number(body.querySelector('#pz-pref-threshold').value);
+        if (!Number.isInteger(games) || games < 1 || games > 10 || !Number.isInteger(threshold) || threshold < 1 || threshold > 99) {
+          toast(L('Choisis de 1 à 10 parties et un seuil de 1 à 99 %.', 'Choose 1–10 games and a threshold from 1–99%.'));
+          return openProblemSettings();
+        }
+        store.set('problemPrefs', { games, threshold });
+        renderProblems();
+      } },
+      { label: L('Annuler', 'Cancel'), ghost: true },
+    ] });
+  }
+  // Ne proposer que les thèmes qui dépassent le seuil choisi dans les parties
+  // récentes analysées, avec trois priorités au maximum.
   function recurringThemes(c) {
+    const prefs = problemPreferences();
     return PZ_KEYS.map((key) => {
       const row = c.themes[key];
       if (!row || !Array.isArray(row.recent) || !row.recent.length) return null;
-      const recent = row.recent.slice(-10);
+      const recent = row.recent.slice(-prefs.games);
       const affected = recent.filter((n) => n > 0).length;
       const rate = affected / recent.length;
-      return rate > 0.7 ? { key, row, rate, affected, sample: recent.length } : null;
+      return rate > prefs.threshold / 100 ? { key, row, rate, affected, sample: recent.length } : null;
     }).filter(Boolean)
       .sort((a, b) => b.rate - a.rate || b.affected - a.affected || (b.row.score || 0) - (a.row.score || 0) || b.row.errors - a.row.errors)
       .slice(0, 3)
@@ -1757,7 +1788,7 @@
     let act = peekActivity();
     if (act.type === 'none') return modal({
       title: L('Aucune erreur récurrente', 'No recurring mistakes'),
-      text: L('Aucun thème ne revient dans plus de 70 % de tes dix dernières parties analysées. Continue à jouer : les leçons et problèmes ciblés apparaîtront dès qu’une difficulté récurrente se confirme.', 'No theme appears in more than 70% of your last ten analysed games. Keep playing: focused lessons and puzzles will appear as soon as a recurring weakness is confirmed.'),
+      text: L(`Aucun thème ne revient dans plus de ${problemPreferences().threshold} % de tes ${problemPreferences().games} dernières parties analysées. Continue à jouer : les leçons et problèmes ciblés apparaîtront dès qu’une difficulté récurrente se confirme.`, `No theme appears in more than ${problemPreferences().threshold}% of your last ${problemPreferences().games} analysed games. Keep playing: focused lessons and puzzles will appear as soon as a recurring weakness is confirmed.`),
       actions: [
         { label: L('Jouer une partie', 'Play a game'), primary: true, onClick: () => { setup.mode = 'ai'; renderSetup(); returnTo = 'problems'; show('setup'); } },
         { label: L('Fermer', 'Close'), ghost: true },
@@ -1787,13 +1818,14 @@
   const lessonOf = (k) => LESSONS.find((x) => x.theme === k);
   function card(k, row, rank, now) {
     const [cls, label] = themeStatus(row);
-    const recent = row.recent.reduce((a, b) => a + b, 0);
+    const prefs = problemPreferences();
+    const recent = row.recent.slice(-prefs.games).reduce((a, b) => a + b, 0);
     const width = Math.min(100, Math.round((row.score / 0.6) * 100));
     const color = cls === 'hot' ? 'var(--danger)' : cls === 'warm' ? 'var(--accent)' : '#6ebe82';
     const done = store.get('lessonsDone', {})[k];
     return `<button class="pz-card${now ? ' now' : ''}" data-theme="${k}"><span class="ico">${PZ[k].icon}</span>
       <span class="t">${rank ? `${rank}. ` : ''}${PZ[k].name}</span><span class="chip ${cls}">${label}</span>
-      <span class="d">${row.recent.length ? L(`${recent} faute${recent > 1 ? 's' : ''} ${row.recent.length > 1 ? `sur tes ${row.recent.length} dernières parties` : 'dans ta dernière partie'} · `, `${recent} mistake${recent === 1 ? '' : 's'} ${row.recent.length > 1 ? `in your last ${row.recent.length} games` : 'in your last game'} · `) : ''}${L('Leçon', 'Lesson')} ${done ? '✓' : L('à faire', 'to do')} · ${L('Niveau', 'Level')} ${row.level} ${levelState(row)} ${trendOf(row)}</span>
+      <span class="d">${row.recent.length ? L(`${recent} faute${recent > 1 ? 's' : ''} ${Math.min(row.recent.length, prefs.games) > 1 ? `sur tes ${Math.min(row.recent.length, prefs.games)} dernières parties` : 'dans ta dernière partie'} · `, `${recent} mistake${recent === 1 ? '' : 's'} ${Math.min(row.recent.length, prefs.games) > 1 ? `in your last ${Math.min(row.recent.length, prefs.games)} games` : 'in your last game'} · `) : ''}${L('Leçon', 'Lesson')} ${done ? '✓' : L('à faire', 'to do')} · ${L('Niveau', 'Level')} ${row.level} ${levelState(row)} ${trendOf(row)}</span>
       <span class="bar2"><i style="width:${Math.max(4, width)}%;background:${color}"></i></span></button>`;
   }
   /* ---------- Astuces solutions : les motifs d'erreur qui reviennent dans tes parties ---------- */
@@ -1976,6 +2008,7 @@
   const levelState = (row) => row.pending ? L('· validé, à confirmer en partie', '· validated, to confirm in a game') : `· ${row.ok}/${LEVEL_SET}`;
   function renderProblems() {
     const c = loadCoach();
+    const prefs = problemPreferences();
     const pending = store.get('archive', []).filter((x) => !x.analysed).length;
     const mistakes = store.get('mistakes', []);
     const captureNotes = store.get('captureNotes', []).slice(-8).reverse();
@@ -2008,14 +2041,14 @@
         return `<article class="capture-note ${x.kind}"><b>${title}</b><small>${detail}</small></article>`;
       }).join('');
     }
-    const nextLabel = next.type === 'none' ? L('Aucune erreur ne dépasse 70 % sur les dix dernières parties.', 'No mistake exceeds 70% in the last ten games.') : next.type === 'wait' ? L('Joue une partie pour confirmer tes niveaux', 'Play a game to confirm your levels') : next.type === 'lesson' ? L(`Leçon : ${lessonOf(next.theme).title}`, `Lesson: ${lessonOf(next.theme).title}`) : L(`Problèmes : ${PZ[next.theme].name} · niveau ${themeRow(c, next.theme).level} (${themeRow(c, next.theme).ok}/${LEVEL_SET})`, `Puzzles: ${PZ[next.theme].name} · level ${themeRow(c, next.theme).level} (${themeRow(c, next.theme).ok}/${LEVEL_SET})`);
+    const nextLabel = next.type === 'none' ? L(`Aucune erreur ne dépasse ${prefs.threshold} % sur les ${prefs.games} dernières parties.`, `No mistake exceeds ${prefs.threshold}% in the last ${prefs.games} games.`) : next.type === 'wait' ? L('Joue une partie pour confirmer tes niveaux', 'Play a game to confirm your levels') : next.type === 'lesson' ? L(`Leçon : ${lessonOf(next.theme).title}`, `Lesson: ${lessonOf(next.theme).title}`) : L(`Problèmes : ${PZ[next.theme].name} · niveau ${themeRow(c, next.theme).level} (${themeRow(c, next.theme).ok}/${LEVEL_SET})`, `Puzzles: ${PZ[next.theme].name} · level ${themeRow(c, next.theme).level} (${themeRow(c, next.theme).ok}/${LEVEL_SET})`);
     html += `<button class="btn primary wide" id="pz-go">${L('Continuer mon entraînement', 'Continue my training')}</button><p class="pz-next">${L('Prochaine étape', 'Next step')} · ${nextLabel}</p>`;
     const tips = tipMotifs();
     if (tips.length) html += `<h3 class="pz-section">${L('Astuces solutions', 'Solution tips')}</h3><p class="pz-cap">${L(`Les erreurs qui reviennent dans tes parties, expliquées par ${COACH}.`, `The mistakes that keep coming back in your games, explained by ${COACH}.`)}</p>` + tips.map(tipCard).join('');
     html += `<h3 class="pz-section">${c.games ? L('Ton programme, par priorité', 'Your plan, by priority') : L('Programme de départ', 'Starter plan')}</h3>`;
     html += order.length
       ? order.map((k, i) => card(k, themeRow(c, k), i + 1, k === next.theme)).join('')
-      : `<p class="pz-cap">${L('Aucun thème ne dépasse le seuil de récurrence. Tes priorités apparaîtront quand une même difficulté reviendra dans plus de 70 % de tes dix dernières parties analysées.', 'No theme is above the recurrence threshold. Your priorities will appear when the same weakness occurs in more than 70% of your last ten analysed games.')}</p>`;
+      : `<p class="pz-cap">${L(`Aucun thème ne dépasse le seuil de récurrence. Tes priorités apparaîtront quand une même difficulté reviendra dans plus de ${prefs.threshold} % de tes ${prefs.games} dernières parties analysées.`, `No theme is above the recurrence threshold. Your priorities will appear when the same weakness occurs in more than ${prefs.threshold}% of your last ${prefs.games} analysed games.`)}</p>`;
     if (!c.games && acquired.length) html += `<h3 class="pz-section">${L('Thèmes acquis', 'Mastered themes')}</h3>` + acquired.slice(0, 3).map((k) => card(k, c.themes[k], 0)).join('');
     const body = $('problems-body');
     body.innerHTML = html;
@@ -2038,10 +2071,11 @@
   function renderTheme() {
     const k = themeOpen, c = loadCoach(), row = themeRow(c, k), info = PZ[k];
     const mine = store.get('mistakes', []).filter((m) => m.theme === k).reverse();
-    const recent = row.recent.reduce((a, b) => a + b, 0);
+    const prefs = problemPreferences();
+    const recent = row.recent.slice(-prefs.games).reduce((a, b) => a + b, 0);
     $('theme-title').textContent = info.name;
     let html = `<p style="color:var(--muted)">${row.errors ? info.short : L('Pas encore de faute de ce type dans tes parties.', 'No mistake of this kind in your games yet.')} ${row.errors ? `<span class="chip ${themeStatus(row)[0]}">${themeStatus(row)[1]}</span> ${trendOf(row)}` : ''}</p>`;
-    html += `<div class="pz-stats"><div><b>${recent}</b><span>${L('fautes (10 dernières parties)', 'mistakes (last 10 games)')}</span></div><div><b>${row.level}</b><span>${L('niveau', 'level')} / ${MAX_LEVEL}<br>${row.pending ? L('à confirmer en partie', 'to confirm in a game') : L(`${row.ok}/${LEVEL_SET} réussis`, `${row.ok}/${LEVEL_SET} solved`)}</span></div><div><b>${row.solved}</b><span>${L('problèmes réussis', 'puzzles solved')}</span></div></div>`;
+    html += `<div class="pz-stats"><div><b>${recent}</b><span>${L(`fautes (${prefs.games} dernières parties max.)`, `mistakes (last ${prefs.games} games max.)`)}</span></div><div><b>${row.level}</b><span>${L('niveau', 'level')} / ${MAX_LEVEL}<br>${row.pending ? L('à confirmer en partie', 'to confirm in a game') : L(`${row.ok}/${LEVEL_SET} réussis`, `${row.ok}/${LEVEL_SET} solved`)}</span></div><div><b>${row.solved}</b><span>${L('problèmes réussis', 'puzzles solved')}</span></div></div>`;
     html += spark(row.hist);
     html += `<p class="pz-tip">${info.tip}</p>`;
     if (mine.length) {
@@ -2650,6 +2684,7 @@
   if ($('btn-champions')) $('btn-champions').onclick = () => { returnTo = 'home'; show('champions'); };
 
   $('btn-problems').onclick = () => { returnTo = 'home'; show('problems'); };
+  $('btn-problem-settings').onclick = openProblemSettings;
   Object.defineProperty(window, 'cavalierPz', { get: () => pz }); // pour les tests
   $('coach-img').src = 'sissa/sissa-face.jpg'; $('coach-img').classList.add('photo');
   /* ---------- La légende de Sissa : le maître raconte lui-même, en slides ---------- */

@@ -63,6 +63,7 @@
     'Fermer le menu': 'Close the menu',
     'Ouvrir le menu': 'Open the menu',
     'Retour': 'Back',
+    'Paramètres des problèmes': 'Puzzle settings',
     'Adversaire': 'Opponent',
     'Ordinateur': 'Computer',
     'Commencer': 'Start',
