@@ -620,7 +620,7 @@
 
   // Petit échiquier 2D en haut à droite : la position exacte, en icônes
   const MINI = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
-  function renderMinimap(board, last, selectedSq = -1, targets = [], mateFire = [], arrows = [], hintMark = null) {
+  function renderMinimap(board, last, selectedSq = -1, targets = [], mateFire = [], arrows = [], hintMark = null, tutorialStars = []) {
     const el = $('minimap');
     let html = '';
     for (let i = 0; i < 64; i++) {
@@ -633,7 +633,8 @@
       const target = targets.some((m) => m.to === sq);
       const capture = target && (!!p || targets.some((m) => m.to === sq && m.flag === 'ep'));
       const coords = `${row === 0 ? `<span class="mini-coord file top ${dark ? 'd' : 'l'}">${name[0]}</span>` : ''}${row === 7 ? `<span class="mini-coord file bottom ${dark ? 'd' : 'l'}">${name[0]}</span>` : ''}${col === 0 ? `<span class="mini-coord rank left ${dark ? 'd' : 'l'}">${name[1]}</span>` : ''}${col === 7 ? `<span class="mini-coord rank right ${dark ? 'd' : 'l'}">${name[1]}</span>` : ''}`;
-      html += `<button type="button" class="${dark ? 'd' : 'l'}${lit ? ' last' : ''}${selected ? ' sel' : ''}${hinted ? ' hint-piece' : ''}${mateFire.includes(sq) ? ' mate-fire' : ''}${target ? ` target${capture ? ' capture' : ''}` : ''}" data-sq="${sq}" aria-label="${name} ${p ? pieceName(p) : mateFire.includes(sq) ? L('case vide en feu', 'empty square on fire') : L('case vide', 'empty square')}"${selected ? ' aria-pressed="true"' : ''}>${p ? `<b class="${p === p.toUpperCase() ? 'w' : 'k'}">${MINI[p.toLowerCase()]}</b>` : ''}${coords}</button>`;
+      const star = tutorialStars.includes(sq);
+      html += `<button type="button" class="${dark ? 'd' : 'l'}${lit ? ' last' : ''}${selected ? ' sel' : ''}${hinted ? ' hint-piece' : ''}${mateFire.includes(sq) ? ' mate-fire' : ''}${star ? ' tutorial-star' : ''}${target ? ` target${capture ? ' capture' : ''}` : ''}" data-sq="${sq}" aria-label="${name} ${star ? L('étoile à récupérer', 'star to collect') : p ? pieceName(p) : mateFire.includes(sq) ? L('case vide en feu', 'empty square on fire') : L('case vide', 'empty square')}"${selected ? ' aria-pressed="true"' : ''}>${p ? `<b class="${p === p.toUpperCase() ? 'w' : 'k'}">${MINI[p.toLowerCase()]}</b>` : ''}${star ? '<span class="mini-tutorial-star">★</span>' : ''}${coords}</button>`;
     }
     el.innerHTML = html + arrowsSvg(arrows);
   }
@@ -857,12 +858,13 @@
       }
     }
     const lessonStep = pz && pz.kind === 'lesson' ? pz.steps[pz.idx] : null;
+    const tutorialStars = lessonStep && lessonStep.stars ? lessonStep.stars.map((square) => window.Chess.sqIndex(square)) : [];
     const arrows = replay ? replayArrows() : (lessonStep && lessonStep.arrows ? lessonStep.arrows : (!pz && cfg && cfg.mode === 'coach' ? coachArrows : []));
     if (b3d) {
       const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
       b3d.update({ board: s.board, selected, targets, last, check: checkSq, mateFire, mateUltimate, hint, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext, outcome: shown ? shown.result : null, arrows, ply: pz ? null : game.history.length });
       animateNext = false;
-      renderMinimap(s.board, last, selected, targets, mateFire, arrows, hint);
+      renderMinimap(s.board, last, selected, targets, mateFire, arrows, hint, tutorialStars);
       return;
     }
     const frag = document.createDocumentFragment();
@@ -880,8 +882,10 @@
       if (hint && hint.from === sq) cell.classList.add('hint-from');
       if (hint && hint.to === sq) cell.classList.add('hint-to');
       const p = s.board[sq];
+      if (tutorialStars.includes(sq)) cell.classList.add('tutorial-star');
       if (p && marks && marks.includes(sq)) cell.classList.add('coach-piece-mark');
       cell.setAttribute('aria-label', sqName(sq) + (p ? ' ' + p : ''));
+      if (tutorialStars.includes(sq)) cell.setAttribute('aria-label', `${sqName(sq)} · ${L('étoile à récupérer', 'star to collect')}`);
       if (settings.coords) {
         const row = i >> 3, col = i & 7;
         const name = sqName(sq);
@@ -2520,7 +2524,8 @@
       if (savedPuzzle) { pz = { kind: 'path', idx: 0, item: savedPuzzle }; enterPuzzleMode(); loadItem(savedPuzzle); return; }
       show('problems'); nextActivity(); return;
     }
-    if (kind === 'mate') startMateLesson(TR.MATES.find((x) => x.id === id));
+    if (kind === 'tutorial') startTutorial(TR.TUTORIALS.find((x) => x.id === id));
+    else if (kind === 'mate') startMateLesson(TR.MATES.find((x) => x.id === id));
     else if (kind === 'end') startEndgame(TR.ENDGAMES.find((x) => x.id === id));
     else if (kind === 'open') startOpening(TR.OPENINGS.find((x) => x.id === id));
     else if (kind === 'famous') startFamous(TR.FAMOUS.find((x) => x.id === id));
@@ -4381,7 +4386,7 @@
   }
 
   /* ---------- Apprendre : mats guidés, finales de base, ouvertures, parties célèbres, défi du jour ---------- */
-  const TR = window.TRAINER || { MATES: [], ENDGAMES: [], OPENINGS: [], FAMOUS: [] };
+  const TR = window.TRAINER || { MATES: [], ENDGAMES: [], OPENINGS: [], FAMOUS: [], TUTORIALS: [] };
   const DAY = 86400000;
   const todayKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   // Position de départ (fen et/ou coups déjà joués) et suite de coups en UCI ; null si une ligne ne se joue pas
@@ -4405,6 +4410,15 @@
     pz = { kind: 'lesson', lesson: { theme: 'mat', ...lesson, back: 'train', noRating: true, onDone }, steps, idx: 0, misses: 0 };
     enterPuzzleMode();
     loadLessonStep();
+  }
+  function startTutorial(chapter) {
+    if (!chapter) return;
+    const steps = chapter.steps.map((step) => ({ ...step, theme: 'mat' }));
+    startTrainer({ title: chapter.title, theme: 'mat', resume: `tutorial:${chapter.id}` }, steps, () => {
+      markTrain(`tutorial:${chapter.id}`);
+      toast(L(`Chapitre terminé : ${chapter.title}`, `Chapter complete: ${chapter.title}`));
+      leavePuzzle();
+    });
   }
   const sideName = (c) => (c === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black'));
 
@@ -4588,9 +4602,10 @@
     });
   }
   let trainSection = 'daily';
-  const TRAIN_TITLES = L({ lesson: 'Leçon du jour', daily: 'Défi du jour', mates: 'Les mats', endgames: 'Finales de base', openings: 'Ouvertures', famous: 'Devine le coup' },
-    { lesson: 'Lesson of the day', daily: 'Daily challenge', mates: 'Checkmates', endgames: 'Basic endgames', openings: 'Openings', famous: 'Guess the move' });
+  const TRAIN_TITLES = L({ tutorial: 'Tutoriel débutant', lesson: 'Leçon du jour', daily: 'Défi du jour', mates: 'Les mats', endgames: 'Finales de base', openings: 'Ouvertures', famous: 'Devine le coup' },
+    { tutorial: 'Beginner tutorial', lesson: 'Lesson of the day', daily: 'Daily challenge', mates: 'Checkmates', endgames: 'Basic endgames', openings: 'Openings', famous: 'Guess the move' });
   const TRAIN_HELP = L({
+    tutorial: 'Découvre les échecs à ton rythme : choisis librement un chapitre, apprends le vocabulaire et entraîne-toi sur l’échiquier. Chaque chapitre peut être repris quand tu veux.',
     lesson: 'Découvre une notion un peu au-dessus de ton niveau actuel. Les leçons déjà terminées ne sont pas reproposées ; un exercice adapté à ton niveau suit l’explication.',
     daily: 'Trois problèmes par jour. Ceux que tu ne trouves pas du premier coup te sont reproposés dans la journée. Réussis les trois pour prolonger ta série.',
     mates: 'Choisis le mat que tu veux apprendre : Maître Sissa te le montre, puis tu le trouves toi-même.',
@@ -4598,6 +4613,7 @@
     openings: 'Découvre les coups d\'une ouverture, puis rejoue-les de mémoire. Elles reviennent à réviser au bon moment.',
     famous: 'Prends la place d\'un champion dans sa partie la plus célèbre et devine ses coups.',
   }, {
+    tutorial: 'Discover chess at your own pace: choose any chapter, learn the vocabulary, and practise on the board. You can revisit each chapter whenever you like.',
     lesson: 'Discover a concept just above your current level. Completed lessons will not be repeated; an exercise adapted to your level follows the explanation.',
     daily: 'Three puzzles a day. The ones you miss at the first try come back later the same day. Solve all three to extend your streak.',
     mates: 'Choose the mate you want to learn: Master Sissa shows it to you, then you find it yourself.',
@@ -4638,6 +4654,7 @@
     const item = (key, title, sub, extra = '') => `<button type="button" class="btn replay-item" data-train="${key}"><strong>${escHtml(title)}${extra}</strong><span>${escHtml(sub)}</span></button>`;
     const ok = ' ✓';
     let html = `<p class="level-help">${TRAIN_HELP[section]}</p>`;
+    if (section === 'tutorial') html += `<div class="replay-items">${TR.TUTORIALS.map((chapter) => item(`tutorial:${chapter.id}`, chapter.title, `${chapter.description}${done[`tutorial:${chapter.id}`] ? L(' · Terminé', ' · Completed') : ''}`, done[`tutorial:${chapter.id}`] ? ok : '')).join('')}</div>`;
     if (section === 'lesson') {
       const lesson = dailyLessonOfDay();
       const completed = LESSONS.filter((entry) => store.get('lessonsDone', {})[entry.theme]).length;
@@ -4670,6 +4687,7 @@
     const b = e.target.closest('[data-train]'); if (!b) return;
     const [kind, id] = b.dataset.train.split(':');
     if (kind === 'lesson-day') return startDailyLesson();
+    if (kind === 'tutorial') return startTutorial(TR.TUTORIALS.find((x) => x.id === id));
     if (kind === 'daily') return startDaily(Number(id) || 0);
     if (kind === 'mate') return startMateLesson(TR.MATES.find((x) => x.id === id));
     if (kind === 'end') return startEndgame(TR.ENDGAMES.find((x) => x.id === id));

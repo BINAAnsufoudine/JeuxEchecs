@@ -23,6 +23,7 @@
     'Modifier': 'Edit',
     'Programme personnalisé': 'Personal training plan',
     'Leçon du jour': 'Lesson of the day',
+    'Tutoriel débutant': 'Beginner tutorial',
     'Mes progrès avec Maître Sissa': 'My progress with Master Sissa',
     'Avec Maître Sissa': 'With Master Sissa',
     'Continuer le programme': 'Continue the plan',
