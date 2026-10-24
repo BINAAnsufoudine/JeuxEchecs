@@ -1979,8 +1979,8 @@
       } catch { /* sans détail */ }
       const demoMoves = uci ? [uci, ...(m.kind === 'allowed' && m.punish ? [m.punish] : [])] : [];
       steps.push({ text: L(`Ta partie du ${fmtDate(m.date)}, coup ${m.move}. Tu as joué ${m.played}.${reply || ' Il y avait beaucoup mieux.'}`, `Your game of ${fmtDate(m.date)}, move ${m.move}. You played ${m.played}.${reply || ' There was much better.'}`), fen: m.fen, marks: [...new Set(marks)], demoMoves });
-      const best = m.line && m.line[0];
-      const arrows = best ? [{ from: window.Chess.sqIndex(best.slice(0, 2)), to: window.Chess.sqIndex(best.slice(2, 4)), color: 'green' }] : [];
+      const badMove = uciOf(m);
+      const arrows = badMove ? [{ from: window.Chess.sqIndex(badMove.slice(0, 2)), to: window.Chess.sqIndex(badMove.slice(2, 4)), color: 'red' }] : [];
       steps.push({ text: L('À toi : dans cette même position, trouve le bon coup.', 'Your turn: in this same position, find the right move.'), fen: m.fen, line: m.line, alts: m.alts, mistake: m.id,
         arrows, why: L(`Voilà la solution. ${t.solution}`, `That's the solution. ${t.solution}`), wrong: L(`Pas encore. ${t.solution}`, `Not yet. ${t.solution}`), hintText: L('Regarde la pièce en surbrillance : c\'est elle qui doit jouer.', 'Look at the highlighted piece: it is the one that must move.') });
     }
