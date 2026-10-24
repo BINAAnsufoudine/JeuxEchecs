@@ -134,6 +134,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.shadowTex = this.makeShadowTexture();
       this.flipped = null;
       this.boardKey = '';
+      this.boardTextureKey = '';
       this.elevation = 38;
       this.cameraTarget = new THREE.Vector3(0, 0.3, 0);
       this.captureCamera = null;
@@ -147,7 +148,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       let fails = 0, lost = false;
       const cv = this.renderer.domElement;
       cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); lost = true; });
-      cv.addEventListener('webglcontextrestored', () => { lost = false; this.boardKey = ''; this.resize(); });
+      cv.addEventListener('webglcontextrestored', () => { lost = false; this.boardTextureKey = ''; this.resize(); });
       const loop = (t) => {
         requestAnimationFrame(loop);
         if (lost) return;
@@ -174,8 +175,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const squareLight = terrain ? terrain.squares[0] : light;
       const squareDark = terrain ? terrain.squares[1] : dark;
       const key = light + dark + coords + flipped + (terrain ? terrain.name : '') + board.map((p) => p || '.').join('');
-      if (key === this.boardKey) return;
-      this.boardKey = key;
+      if (key === this.boardTextureKey) return;
+      this.boardTextureKey = key;
       const c = this.boardCanvas.getContext('2d');
       const cell = TEX / SIZE, off = BORDER * cell;
       const g = c.createLinearGradient(0, 0, TEX, TEX);
@@ -246,7 +247,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.hemi.color.setHex(terrain.sky);
       this.hemi.groundColor.setHex(terrain.ground);
       this.sun.color.setHex(terrain.kind === 'desert' || terrain.kind === 'steppe' || terrain.kind === 'beach' ? 0xffe1af : 0xffffff);
-      this.boardKey = '';
+      this.boardTextureKey = '';
       this.buildTerrain(terrain);
       this.buildAnimals(terrain);
       this.buildScenery(terrain);
@@ -270,7 +271,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.lightningLight.intensity = 0;
       this.weatherFlash = null;
       this.nextLightning = weather.lightning ? (this.lastT || 0) + 1.8 + Math.random() * 2.2 : 0;
-      this.boardKey = '';
+      this.boardTextureKey = '';
       this.buildWeather(weather);
     }
 
