@@ -759,8 +759,9 @@
     p.root.position.y = 0;
     p.root.position.z = 0;
     if (p.mountWings) {
-      const wingSpeed = state === 'knight-flight' ? 28 : 7;
-      const wingAmplitude = state === 'knight-flight' ? 0.48 : 0.28;
+      const active = !['idle', 'select', 'victory', 'kneel'].includes(state);
+      const wingSpeed = active ? 28 : 7;
+      const wingAmplitude = active ? 0.48 : 0.28;
       p.mountWings.forEach((w) => { w.rotation.z = w.userData.side * (0.12 + Math.sin(t * wingSpeed + p.phase) * wingAmplitude); });
     }
     if (p.mountLegs) p.mountLegs.forEach((leg, i) => { leg.rotation.x = Math.sin(t * 7 + i * Math.PI / 2) * 0.08; });
