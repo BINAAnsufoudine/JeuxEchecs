@@ -19,6 +19,7 @@
   // Textes fixes de la page d'accueil et des écrans (index.html)
   const PAGE = {
     'Ata Wawé · Échecs': 'Ata Wawé · Chess',
+    'Un échiquier, mille rencontres, une même passion.': 'One chessboard, a thousand encounters, one shared passion.',
     'Elo estimé : 600': 'Estimated Elo: 600',
     'Modifier': 'Edit',
     'Programme personnalisé': 'Personal training plan',
