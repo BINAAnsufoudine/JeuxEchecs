@@ -96,13 +96,13 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 @media (min-width: 900px) {
   #game .game-layout { display: grid; grid-template-columns: minmax(320px, 1fr) 76px minmax(160px, min(26vw, 320px)); grid-template-rows: auto auto auto; justify-content: center; align-items: start; gap: 8px 12px; }
   #game .board-col { grid-column: 1; grid-row: 1; width: auto; min-width: 0; }
-  #game .side-col { display: contents; }
-  #game .chat { grid-column: 3; grid-row: 1; width: 100%; margin-top: 0; }
-  #game .moves { grid-column: 3; grid-row: 2; width: 100%; max-height: 260px !important; }
+  #game .side-col { grid-column: 3; grid-row: 1 / span 3; display: flex; flex-direction: column; align-self: start; width: 100%; }
+  #game .moves { width: 100%; max-height: 260px !important; }
+  #game .chat { width: 100%; margin-top: 0; }
   #game .board-validation { grid-column: 1; grid-row: 2; width: 100%; display: flex; flex-direction: column; gap: 4px; }
   #game .board-controls { grid-column: 2; grid-row: 1 / span 2; width: 76px; }
   #game .actions { width: 100%; grid-template-columns: minmax(0, 1fr); }
-  #game .online-switch { grid-column: 3; grid-row: 3; width: 100%; }
+  #game .online-switch { width: 100%; }
 }
 .player { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; padding: 2px 4px; }
 .player .name { font-weight: 600; }
@@ -249,7 +249,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .replay-actions { grid-template-columns: repeat(3, 1fr); }
 .replay-bar { display: flex; flex-direction: column; gap: 8px; }
 @media (min-width: 900px) {
-  #game .replay-bar { grid-column: 2 / span 2; grid-row: 1 / span 3; align-self: start; width: 100%; }
+  #game .replay-bar { align-self: start; width: 100%; }
   #game .replay-bar .actions { grid-column: auto; grid-row: auto; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #game .game-layout:has(.replay-bar:not([hidden])) { grid-template-columns: minmax(320px, 1fr) 76px minmax(160px, min(26vw, 320px)); }
 }
