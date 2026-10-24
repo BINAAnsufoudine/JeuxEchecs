@@ -1172,6 +1172,13 @@
     const drillOk = drill && (drill.goal === 'draw' ? outcome === 'draw' : outcome === 'win');
     if (drillOk) { lessonReward(`end:${drill.id}`); const d = store.get('trainDone', {}); d[`end:${drill.id}`] = Date.now(); store.set('trainDone', d); }
     const snap = { moves: game.uciList(), cfg: { ...cfg }, result: result.result };
+    const replayTitle = cfg.mode === 'online' ? L('Partie en ligne', 'Online game')
+      : cfg.mode === 'local' ? L('Deux joueurs', 'Two players')
+        : cfg.mode === 'coach' ? L('Partie coachée', 'Coached game')
+          : cfg.fen ? L('Position libre', 'Custom position') : `${L('Contre ordinateur', 'Against computer')} · ${LEVEL_NAMES[cfg.level] || ''}`.trim();
+    const replayNames = cfg.mode === 'online' && onlineGame
+      ? { white: onlineGame.whiteName, black: onlineGame.blackName }
+      : sideNames(cfg);
     // L'analyse démarre tout de suite : le bilan est souvent prêt quand on l'ouvre
     if (cfg.mode !== 'local' && cfg.mode !== 'online' && snap.moves.length >= 8) requestReview(cfg.fen || window.Chess.START_FEN, snap.moves).catch(() => {});
     if (cfg.mode === 'local' && !replay) {
@@ -1189,6 +1196,7 @@
             : cfg.mode === 'online' ? [{ label: L('Jouer en ligne', 'Play online'), primary: true, onClick: () => { stopOnline(); renderOnline(); returnTo = 'home'; show('online'); } }] : [{ label: L('Rejouer', 'Play again'), primary: true, onClick: () => startGame({ ...cfg, playerColor: cfg.fen ? cfg.playerColor : randomColor() }) }]),
           ...(cfg.fen ? [{ label: L('Modifier la position', 'Edit the position'), onClick: () => openEditor(cfg.fen) }] : []),
           ...(cfg.mode !== 'local' && cfg.mode !== 'online' ? [{ label: L('Choisir un niveau', 'Choose a level'), onClick: () => { renderSetup(); returnTo = 'home'; show('setup'); } }] : []),
+          ...(snap.moves.length ? [{ label: L('Analyser', 'Analyse'), onClick: () => startReplay({ moves: snap.moves, fen: cfg.fen, result: snap.result, title: replayTitle, ...replayNames, flipped }, () => show('home')) }] : []),
           ...(snap.moves.length >= 8 ? [{ label: L('Bilan de Maître Sissa', 'Master Sissa’s review'), onClick: () => showBilan(snap) }] : []),
           { label: L('Voir le plateau', 'View the board'), ghost: true },
           { label: L('Accueil', 'Home'), ghost: true, onClick: () => show('home') },
