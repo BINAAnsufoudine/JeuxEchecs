@@ -2456,7 +2456,7 @@
       const uci = step.demoMoves[session.demoIndex];
       if (!uci) {
         session.locked = false; session.done = true;
-        setPzStatus('good', L('Démonstration terminée. Observe la flèche pour trouver le meilleur coup.', 'Demonstration complete. Follow the arrow to find the best move.'));
+        setPzStatus('good', step.demoDoneText || L('Démonstration terminée. Observe la flèche pour trouver le meilleur coup.', 'Demonstration complete. Follow the arrow to find the best move.'));
         pzButtons();
         return;
       }
@@ -2467,7 +2467,7 @@
       renderBoard();
       setTimeout(advance, Math.max(850, busyDelay(250)));
     };
-    setPzStatus('', L('Regarde les coups de ta partie…', 'Watch the moves from your game…'));
+    setPzStatus('', step.demoStartText || L('Regarde les coups de ta partie…', 'Watch the moves from your game…'));
     setTimeout(advance, 450);
   }
   function nextLessonStep() {
@@ -4264,11 +4264,14 @@
   function startOpening(o) {
     const pre = o.color === 'b' ? o.san.slice(0, 1) : [];
     const x = trainLine(null, pre, o.san.slice(pre.length));
-    if (!x) return;
+    const demo = trainLine(null, [], o.san);
+    if (!x || !demo) return;
     let moves = '';
     o.san.forEach((s, i) => { moves += (i % 2 ? '' : `${i / 2 + 1}. `) + s + ' '; });
     const steps = [
-      { text: `${o.name}. ${o.text} ${L('Les coups à retenir', 'The moves to remember')} : ${moves.trim()}.`, fen: window.Chess.START_FEN },
+      { text: `${o.name}. ${o.text} ${L('Les coups à retenir', 'The moves to remember')} : ${moves.trim()}.`, fen: demo.fen, demoMoves: demo.line,
+        demoStartText: L('Regarde les déplacements de cette ouverture…', 'Watch the moves in this opening…'),
+        demoDoneText: L('Observe bien les déplacements : tu vas maintenant rejouer cette ouverture de mémoire.', 'Watch the moves closely: now you will replay this opening from memory.') },
       { text: L(`Rejoue de mémoire les coups des ${sideName(o.color)}. Les réponses adverses se jouent seules.`, `Replay ${sideName(o.color)}'s moves from memory. The opponent's replies are played for you.`), fen: x.fen, line: x.line, theme: 'tactique',
         why: L('Ouverture rejouée en entier !', 'Opening replayed in full!'),
         wrong: L(`Ce n'est pas le coup de la ${o.name.toLowerCase()}. Réessaie, ou demande un indice.`, `That is not the ${o.name} move. Try again, or ask for a hint.`) },
