@@ -485,6 +485,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #game .rp-review-nav { display: flex; width: 100%; }
   #game .rp-review-nav .mini { flex: 1; min-height: 36px; }
   #game .moves { order: -1; width: min(100%, 560px); margin-top: -6px; }
+  #game .rp-acc, #game .rp-graph { order: -1; width: min(100%, 560px); }
   #game .board-col { order: 0; }
   #game .board-validation { order: 1; width: min(100%, 560px); display: flex; flex-direction: column; gap: 4px; }
   #game .board-controls { order: 2; width: min(100%, 560px); }
