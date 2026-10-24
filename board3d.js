@@ -2251,7 +2251,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           c.anim = null; c.holder.rotation.y = Math.atan2(dx, dz);
           const fuse = smooth(e / 0.8);
           if (e < 0.8) {
-            M.animate(c.parts, t, a.knightFlight ? 'knight-flight' : 'run');
+            M.animate(c.parts, t, 'run');
             c.parts.root.visible = true;
             c.parts.root.rotation.set(0, e * 14, 0);
             c.parts.root.scale.copy(u.actorBase.scale).multiplyScalar(1 - fuse * 0.85);
@@ -2981,7 +2981,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             const e = ease(u);
             c.holder.position.set(p0.x + (p1.x - p0.x) * e, 0, p0.z + (p1.z - p0.z) * e);
             turn(c, Math.atan2(p1.x - p0.x, p1.z - p0.z));
-            M.animate(c.parts, t, 'run');
+            M.animate(c.parts, t, a.knightFlight ? 'knight-flight' : 'run');
             const arc = Math.sin(Math.PI * u) * (leap ? a.high || 0.9 : 0.12);
             c.parts.root.position.y = arc;
             c.shadow.scale.setScalar(1 - arc * 0.4);
