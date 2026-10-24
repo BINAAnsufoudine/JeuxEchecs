@@ -849,7 +849,8 @@
         }
       }
     }
-    const arrows = replay ? replayArrows() : (!pz && cfg && cfg.mode === 'coach' ? coachArrows : []);
+    const lessonStep = pz && pz.kind === 'lesson' ? pz.steps[pz.idx] : null;
+    const arrows = replay ? replayArrows() : (lessonStep && lessonStep.arrows ? lessonStep.arrows : (!pz && cfg && cfg.mode === 'coach' ? coachArrows : []));
     if (b3d) {
       const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
       b3d.update({ board: s.board, selected, targets, last, check: checkSq, mateFire, mateUltimate, hint, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext, outcome: shown ? shown.result : null, arrows, ply: pz ? null : game.history.length });
@@ -1997,9 +1998,12 @@
           if (r2) { reply = L(` L'adversaire a répondu ${r2.san} : ${t.cons}.`, ` Your opponent replied ${r2.san}: ${t.cons}.`); marks.push(m.punish.slice(0, 2), m.punish.slice(2, 4)); }
         }
       } catch { /* sans détail */ }
-      steps.push({ text: L(`Ta partie du ${fmtDate(m.date)}, coup ${m.move}. Tu as joué ${m.played}.${reply || ' Il y avait beaucoup mieux.'}`, `Your game of ${fmtDate(m.date)}, move ${m.move}. You played ${m.played}.${reply || ' There was much better.'}`), fen: m.fen, marks: [...new Set(marks)] });
+      const demoMoves = uci ? [uci, ...(m.kind === 'allowed' && m.punish ? [m.punish] : [])] : [];
+      steps.push({ text: L(`Ta partie du ${fmtDate(m.date)}, coup ${m.move}. Tu as joué ${m.played}.${reply || ' Il y avait beaucoup mieux.'}`, `Your game of ${fmtDate(m.date)}, move ${m.move}. You played ${m.played}.${reply || ' There was much better.'}`), fen: m.fen, marks: [...new Set(marks)], demoMoves });
+      const best = m.line && m.line[0];
+      const arrows = best ? [{ from: window.Chess.sqIndex(best.slice(0, 2)), to: window.Chess.sqIndex(best.slice(2, 4)), color: 'green' }] : [];
       steps.push({ text: L('À toi : dans cette même position, trouve le bon coup.', 'Your turn: in this same position, find the right move.'), fen: m.fen, line: m.line, alts: m.alts, mistake: m.id,
-        why: L(`Voilà la solution. ${t.solution}`, `That's the solution. ${t.solution}`), wrong: L(`Pas encore. ${t.solution}`, `Not yet. ${t.solution}`), hintText: L('Regarde la pièce en surbrillance : c\'est elle qui doit jouer.', 'Look at the highlighted piece: it is the one that must move.') });
+        arrows, why: L(`Voilà la solution. ${t.solution}`, `That's the solution. ${t.solution}`), wrong: L(`Pas encore. ${t.solution}`, `Not yet. ${t.solution}`), hintText: L('Regarde la pièce en surbrillance : c\'est elle qui doit jouer.', 'Look at the highlighted piece: it is the one that must move.') });
     }
     steps.push({ text: L(`Retiens bien : ${t.solution.charAt(0).toLowerCase() + t.solution.slice(1)} Je surveille tes prochaines parties pour voir si ce motif disparaît.`, `Remember: ${t.solution.charAt(0).toLowerCase() + t.solution.slice(1)} I'll watch your next games to see if this pattern disappears.`) });
     pz = { kind: 'lesson', lesson: { theme: t.theme, title: t.title, tip: t.key, count: t.list.length }, steps, idx: 0 };
@@ -2425,7 +2429,7 @@
     trackOpenLesson();
     const st = pz.steps[pz.idx];
     const it = { theme: st.theme || pz.lesson.theme, level: 1, fen: st.fen, line: st.line, alts: st.alts };
-    Object.assign(pz, { item: it, step: 0, failed: false, done: !st.line, locked: false });
+    Object.assign(pz, { item: it, step: 0, failed: false, done: !st.line && !st.demoMoves?.length, locked: !!st.demoMoves?.length, demoIndex: 0 });
     if (st.fen) setPosition(st.fen);
     else if (!game) setPosition('4k3/8/8/8/8/8/8/4K3 w - - 0 1');
     selected = -1; hint = null;
@@ -2436,6 +2440,28 @@
     setPzStatus('', st.line ? L('À toi de jouer', 'Your move') : '');
     renderBoard();
     pzButtons();
+    if (st.demoMoves && st.demoMoves.length) playLessonDemo(st, pz.idx);
+  }
+  function playLessonDemo(step, index) {
+    const session = pz;
+    const advance = () => {
+      if (pz !== session || pz.idx !== index) return;
+      const uci = step.demoMoves[session.demoIndex];
+      if (!uci) {
+        session.locked = false; session.done = true;
+        setPzStatus('good', L('Démonstration terminée. Observe la flèche pour trouver le meilleur coup.', 'Demonstration complete. Follow the arrow to find the best move.'));
+        pzButtons();
+        return;
+      }
+      const played = game.playUci(uci);
+      if (!played) { session.demoIndex++; advance(); return; }
+      session.demoIndex++;
+      animateNext = true;
+      renderBoard();
+      setTimeout(advance, Math.max(850, busyDelay(250)));
+    };
+    setPzStatus('', L('Regarde les coups de ta partie…', 'Watch the moves from your game…'));
+    setTimeout(advance, 450);
   }
   function nextLessonStep() {
     if (pz.idx < pz.steps.length - 1) { pz.idx++; loadLessonStep(); return; }
