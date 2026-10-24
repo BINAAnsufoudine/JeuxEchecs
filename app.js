@@ -2556,7 +2556,10 @@
     $('pz-count').textContent = L(`Étape ${pz.idx + 1} / ${pz.steps.length}`, `Step ${pz.idx + 1} / ${pz.steps.length}`);
     const tutorialArrival = pz.lesson.resume && pz.lesson.resume.startsWith('tutorial:') && pz.idx === 0;
     const stepText = st.line ? st.text : `${st.text} ${lessonCue()}`;
-    const narration = say(`${tutorialArrival ? `${pz.lesson.title}. ` : ''}${stepText}`, '', st.demoIntroText);
+    const spokenText = tutorialArrival
+      ? `${pz.lesson.title}. ${st.demoIntroText || stepText}`
+      : st.demoIntroText;
+    const narration = say(`${tutorialArrival ? `${pz.lesson.title}. ` : ''}${stepText}`, '', spokenText);
     setPzStatus('', st.line ? L('À toi de jouer', 'Your move') : '');
     renderBoard();
     pzButtons();
