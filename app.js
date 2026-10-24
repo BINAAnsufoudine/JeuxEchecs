@@ -4802,11 +4802,11 @@
   }
 
   /* ---------- Analyse de partie, export PGN, lien de partage, bilan ---------- */
-  const REVIEW_LABELS = L({ best: 'Meilleur coup', good: 'Bon coup', inaccuracy: 'Imprécision', mistake: 'Erreur', blunder: 'Gaffe' }, { best: 'Best move', good: 'Good move', inaccuracy: 'Inaccuracy', mistake: 'Mistake', blunder: 'Blunder' });
-  const REVIEW_SIGN = { best: '', good: '', inaccuracy: '?!', mistake: '?', blunder: '??' };
+  const REVIEW_LABELS = L({ best: 'Meilleur coup', brilliant: 'Coup brillant', excellent: 'Très bon coup', good: 'Bon coup', inaccuracy: 'Imprécision', mistake: 'Erreur', blunder: 'Gaffe' }, { best: 'Best move', brilliant: 'Brilliant move', excellent: 'Very good move', good: 'Good move', inaccuracy: 'Inaccuracy', mistake: 'Mistake', blunder: 'Blunder' });
+  const REVIEW_SIGN = { best: '', brilliant: '!!', excellent: '!', good: '', inaccuracy: '?!', mistake: '?', blunder: '??' };
   const isSevere = (mark) => !!mark && (mark[0] === 'mistake' || mark[0] === 'blunder');
   const isFault = (mark) => !!mark && ['inaccuracy', 'mistake', 'blunder'].includes(mark[0]);
-  const reviewKey = (fen, moves) => `${fen}|${moves.join(' ')}`;
+  const reviewKey = (fen, moves) => `v2|${fen}|${moves.join(' ')}`;
   const loadReview = (k) => { const hit = store.get('reviews', []).find((x) => x.k === k); return hit ? hit.r : null; };
   const reviewJobs = new Map();
   let reviewing = false;
@@ -5168,9 +5168,9 @@
         if (ply < 1) return '<span>…</span>';
         if (ply > sans.length) return '';
         const mark = replay.review && replay.review.marks[ply - 1];
-        const bad = mark && BAD.includes(mark[0]);
-        const cls = [ply === cur ? 'cur' : '', bad ? `q-${mark[0]}` : ''].filter(Boolean).join(' ');
-        return `<span data-ply="${ply}"${cls ? ` class="${cls}"` : ''}>${escHtml(sans[ply - 1])}${bad ? REVIEW_SIGN[mark[0]] : ''}</span>`;
+        const tagged = mark && [...BAD, 'brilliant', 'excellent'].includes(mark[0]);
+        const cls = [ply === cur ? 'cur' : '', tagged ? `q-${mark[0]}` : ''].filter(Boolean).join(' ');
+        return `<span data-ply="${ply}"${cls ? ` class="${cls}"` : ''}>${escHtml(sans[ply - 1])}${tagged ? REVIEW_SIGN[mark[0]] : ''}</span>`;
       };
       const li = document.createElement('li');
       li.innerHTML = `<span class="n">${i / 2 + 1}.</span>${cell(i)} ${cell(i + 1)}`;

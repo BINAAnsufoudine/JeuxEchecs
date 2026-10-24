@@ -261,8 +261,14 @@
       let loss = (isMate(best.score) && best.score > 0 && !(isMate(ps) && ps > 0)) ? 1000 : Math.max(0, best.score - ps);
       if (!isMate(best.score) && best.score > 600 && ps > 600) loss = 0;
       const cls = (CLASSES.find(([limit]) => loss <= limit) || CLASSES[CLASSES.length - 1])[1];
+      let quality = sameAsBest || loss <= 15 ? 'excellent' : cls;
+      if (sameAsBest && VALUE[pm.piece.toLowerCase()] >= 300) {
+        const after = makeMove(s, pm);
+        const offeredPiece = legalMoves(after).some((reply) => reply.to === pm.to && reply.captured);
+        if (offeredPiece) quality = 'brilliant';
+      }
       ev.push(clampEval(ps * sign));
-      marks.push([sameAsBest ? 'best' : cls, Math.round(loss), toUci(best.m)]);
+      marks.push([quality, Math.round(loss), toUci(best.m)]);
       sums[s.turn][0] += 100 * Math.exp(-loss / 300); sums[s.turn][1]++;
       if (opts.onProgress) opts.onProgress(i + 1, played.length);
     }
