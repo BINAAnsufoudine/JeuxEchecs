@@ -302,7 +302,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .rp-review { display: flex; flex-direction: column; gap: 6px; }
 .rp-review[hidden] { display: none; }
 .rp-coach { display: flex; align-items: flex-start; gap: 8px; padding: 9px; border: 1px solid var(--surface-2); border-radius: 12px; background: var(--surface); }
-.rp-coach > img { width: 48px; height: 64px; flex: none; object-fit: contain; object-position: center; }
+.rp-coach-portrait { display: flex; flex: none; flex-direction: column; align-items: flex-start; gap: 2px; }
+.rp-coach-portrait > img { width: 48px; height: 64px; object-fit: contain; object-position: center; }
 .rp-coach-message { min-width: 0; flex: 1; padding: 9px 11px; border-radius: 10px; background: var(--surface-2); font-size: 0.8rem; line-height: 1.4; }
 .rp-coach-title { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 4px; }
 .rp-coach-title strong { color: var(--accent); }
@@ -331,6 +332,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .coach { display: flex; gap: 10px; align-items: flex-end; margin: 2px 0 10px; }
 .coach-identity { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; flex: none; }
 .coach-identity b { color: var(--accent); font-size: 0.86rem; }
+.coach-portrait, .rp-coach-portrait, .coach-dock-portrait { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.coach-portrait .legend-link, .rp-coach-portrait .legend-link, .coach-dock-portrait .legend-link { font-size: 0.66rem; line-height: 1.2; }
 .coach img { width: 64px; height: 96px; object-fit: contain; flex: none; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4)); transform-origin: bottom center; }
 .coach .bubble { position: relative; flex: 1; background: var(--surface); border-radius: 14px 14px 14px 4px; padding: 8px 12px; font-size: 0.93rem; line-height: 1.45; }
 .coach .bubble b { display: block; color: var(--accent); font-size: 0.78rem; letter-spacing: 0.03em; }
@@ -367,7 +370,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .coach-dock-dot { width: 8px; height: 8px; margin-left: 2px; border-radius: 50%; background: #78c98c; }
 .coach-dock-panel { width: 100%; padding: 12px; border: 1px solid rgba(255,255,255,0.16); border-radius: 12px; background: #1d2a24; box-shadow: 0 10px 30px rgba(0,0,0,0.42); }
 .coach-dock-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.coach-dock-head div { display: flex; flex-direction: column; }
+.coach-dock-head > div { display: flex; flex-direction: column; }
+.coach-dock-head .coach-dock-portrait { align-items: center; gap: 2px; }
+.coach-dock-head .coach-dock-copy { min-width: 0; }
 .coach-dock-head strong { color: var(--accent); font-size: 0.9rem; }
 .coach-dock-head span { color: var(--muted); font-size: 0.72rem; }
 .coach-dock-head .icon-btn { width: 34px; height: 34px; font-size: 1.25rem; }

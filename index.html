@@ -165,7 +165,7 @@
       <div class="side-col">
         <div id="rp-review" class="rp-review" hidden>
           <div class="rp-coach">
-            <img id="rp-coach-img" src="sissa/sissa-face.jpg" alt="Maître Sissa">
+            <div class="rp-coach-portrait"><img id="rp-coach-img" src="sissa/sissa-face.jpg" alt="Maître Sissa"><button type="button" class="legend-link" data-legend>La légende de Sissa</button></div>
             <div class="rp-coach-message"><div class="rp-coach-title"><strong>Maître Sissa</strong><button class="mini" id="rp-voice" type="button" aria-label="Couper la voix">🔊</button></div><div id="rp-comment" aria-live="polite"></div></div>
           </div>
           <div class="rp-tools rp-review-nav">
@@ -319,7 +319,7 @@
         <div id="pz-status" class="status" aria-live="polite"></div>
       </div>
       <aside class="learning-coach-slot" id="learning-coach-slot" aria-label="Maître ou champion">
-        <div class="coach" id="coach"><div class="coach-identity"><b>Maître Sissa</b><button type="button" class="legend-link" data-legend>(La légende de Sissa)</button><img id="coach-img" alt=""></div><div class="bubble"><button class="voice-btn" id="pz-voice" aria-label="Couper la voix">🔊</button><p id="pz-prompt"></p></div></div>
+        <div class="coach" id="coach"><div class="coach-identity"><b>Maître Sissa</b><div class="coach-portrait"><img id="coach-img" alt=""><button type="button" class="legend-link" data-legend>La légende de Sissa</button></div></div><div class="bubble"><button class="voice-btn" id="pz-voice" aria-label="Couper la voix">🔊</button><p id="pz-prompt"></p></div></div>
         <div class="side-col learning-controls">
           <div class="actions three">
             <button class="act" id="pz-hint"><span>✦</span>Indice</button>
@@ -395,7 +395,7 @@
 
   <aside id="coach-dock" class="coach-dock" hidden aria-label="Maître Sissa">
     <section id="coach-dock-panel" class="coach-dock-panel" hidden>
-      <header class="coach-dock-head"><img id="coach-dock-img" class="coach-dock-img" alt="" hidden><div><strong>Maître Sissa</strong> <button type="button" class="legend-link" data-legend>(La légende de Sissa)</button><span id="coach-dock-status">Coach d’échecs</span></div><button id="coach-dock-close" class="icon-btn" type="button" aria-label="Réduire le coach">−</button></header>
+      <header class="coach-dock-head"><div class="coach-dock-portrait"><img id="coach-dock-img" class="coach-dock-img" alt="" hidden><button type="button" class="legend-link" data-legend>La légende de Sissa</button></div><div class="coach-dock-copy"><strong>Maître Sissa</strong><span id="coach-dock-status">Coach d’échecs</span></div><button id="coach-dock-close" class="icon-btn" type="button" aria-label="Réduire le coach">−</button></header>
       <p id="coach-dock-message" aria-live="polite"></p>
       <div class="coach-dock-actions"><button id="coach-dock-voice" class="icon-btn" type="button" aria-label="Couper la voix">🔊</button></div>
     </section>
