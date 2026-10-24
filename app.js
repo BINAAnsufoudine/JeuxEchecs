@@ -2132,26 +2132,35 @@
   }
   if (tts) { pickVoice(); tts.onvoiceschanged = pickVoice; }
   // Fin de la parole suivie par nos propres événements (tts.speaking est peu fiable), avec un plafond de sécurité
-  let speechUntil = 0, lastUtterance = null;
+  let speechUntil = 0, lastUtterance = null, activeSpeechResolve = null;
   const speechBusy = () => !!(tts && settings.voice && speechUntil > performance.now());
   function speak(text) {
-    if (!tts || !settings.voice) return;
-    if (shoutU) { pendingSpeech = text; return; }
+    if (!tts || !settings.voice) return Promise.resolve();
+    if (shoutU) { pendingSpeech = text; return Promise.resolve(); }
+    if (activeSpeechResolve) { const finish = activeSpeechResolve; activeSpeechResolve = null; finish(); }
     tts.cancel();
     const u = new SpeechSynthesisUtterance(text.replace(/[«»]/g, ''));
     u.lang = LOCALE; if (frVoice) u.voice = frVoice;
     u.rate = 1.0; u.pitch = 0.9;
-    const done = () => { if (lastUtterance === u) { speechUntil = 0; if (game && !replay && !pz) renderActions(); } };
+    let resolveSpeech;
+    const finished = new Promise((resolve) => { resolveSpeech = resolve; activeSpeechResolve = resolve; });
+    const done = () => {
+      if (lastUtterance === u) { speechUntil = 0; if (game && !replay && !pz) renderActions(); }
+      if (activeSpeechResolve === resolveSpeech) activeSpeechResolve = null;
+      resolveSpeech();
+    };
     lastUtterance = u;
     u.onend = done; u.onerror = done;
     speechUntil = performance.now() + Math.min(45000, 3000 + text.length * 90);
     tts.speak(u);
+    return finished;
   }
-  const hush = () => { speechUntil = 0; shoutU = null; pendingSpeech = null; if (tts) tts.cancel(); };
+  const hush = () => { speechUntil = 0; shoutU = null; pendingSpeech = null; if (tts) tts.cancel(); if (activeSpeechResolve) { const finish = activeSpeechResolve; activeSpeechResolve = null; finish(); } };
   // Cri de technique : prononcé avant l'attaque ; la parole du coach attend la fin du cri
   let shoutU = null, pendingSpeech = null;
   function shout(name) {
     if (!tts || !settings.voice) return;
+    if (activeSpeechResolve) { const finish = activeSpeechResolve; activeSpeechResolve = null; finish(); }
     tts.cancel();
     const u = new SpeechSynthesisUtterance(name);
     u.lang = LOCALE; if (frVoice) u.voice = frVoice;
@@ -2177,17 +2186,18 @@
     if (settings.voice) speak($('pz-prompt').textContent); else hush();
   };
   voiceButton();
-  function say(text, mood = '') {
+  function say(text, mood = '', voiceText = text) {
     text = coachGreeting(text);
     const p = $('pz-prompt');
     p.textContent = text;
     $('coach').querySelector('.bubble b').textContent = coachName();
     showCoachFace($('coach-img'));
     coachMessage = text; coachMood = mood; renderCoachDock();
-    speak(text);
+    const speech = speak(voiceText);
     const box = $('coach');
     box.className = 'coach' + (mood ? ' ' + mood : '');
     void box.offsetWidth; box.classList.add('talk');
+    return speech;
   }
 
   /* Résolution (problèmes et étapes de leçon) */
@@ -2443,15 +2453,33 @@
     marks = st.marks ? st.marks.map((s) => window.Chess.sqIndex(s)) : null;
     $('puzzle-title').textContent = pz.lesson.title;
     $('pz-count').textContent = L(`Étape ${pz.idx + 1} / ${pz.steps.length}`, `Step ${pz.idx + 1} / ${pz.steps.length}`);
-    say(st.line ? st.text : `${st.text} ${lessonCue()}`);
+    const narration = say(st.line ? st.text : `${st.text} ${lessonCue()}`, '', st.demoIntroText);
     setPzStatus('', st.line ? L('À toi de jouer', 'Your move') : '');
     renderBoard();
     pzButtons();
-    if (st.demoMoves && st.demoMoves.length) playLessonDemo(st, pz.idx);
+    if (st.demoMoves && st.demoMoves.length) playLessonDemo(st, pz.idx, narration);
   }
-  function playLessonDemo(step, index) {
+  function openingMoveSpeech(san, color, uci) {
+    if (/^O-O(-O)?/.test(san)) return L(`${sideName(color)} : ${san.startsWith('O-O-O') ? 'grand roque' : 'petit roque'}.`, `${sideName(color)}: ${san.startsWith('O-O-O') ? 'queenside castling' : 'kingside castling'}.`);
+    const pieceKey = /^[KQRBN]/.test(san) ? san[0] : 'P';
+    const piece = L({ K: 'roi', Q: 'dame', R: 'tour', B: 'fou', N: 'cavalier', P: 'pion' }[pieceKey], { K: 'king', Q: 'queen', R: 'rook', B: 'bishop', N: 'knight', P: 'pawn' }[pieceKey]);
+    const destination = `${uci.slice(2, 3)} ${uci.slice(3, 4)}`;
+    const action = san.includes('x') ? L('prend', 'takes') : L('va en', 'to');
+    const suffix = san.includes('#') ? L(' échec et mat', ' checkmate') : san.includes('+') ? L(' échec', ' check') : '';
+    return L(`${sideName(color)} : ${piece} ${action} ${destination}${suffix}.`, `${sideName(color)}: ${piece} ${action} ${destination}${suffix}.`);
+  }
+  function openingSpeechLine(fen, moves) {
+    const position = new Game(fen), speech = [];
+    for (const uci of moves || []) {
+      const color = position.state.turn, move = position.playUci(uci);
+      if (!move) break;
+      speech.push(openingMoveSpeech(move.san, color, uci));
+    }
+    return speech;
+  }
+  function playLessonDemo(step, index, narration = Promise.resolve()) {
     const session = pz;
-    const advance = () => {
+    const advance = async () => {
       if (pz !== session || pz.idx !== index) return;
       const uci = step.demoMoves[session.demoIndex];
       if (!uci) {
@@ -2460,15 +2488,18 @@
         pzButtons();
         return;
       }
+      const spokenMove = step.demoSpeech && step.demoSpeech[session.demoIndex];
+      const speech = spokenMove ? speak(spokenMove) : Promise.resolve();
       const played = game.playUci(uci);
       if (!played) { session.demoIndex++; advance(); return; }
       session.demoIndex++;
       animateNext = true;
       renderBoard();
-      setTimeout(advance, Math.max(850, busyDelay(250)));
+      await Promise.all([speech, new Promise((resolve) => setTimeout(resolve, Math.max(850, busyDelay(250))))]);
+      advance();
     };
     setPzStatus('', step.demoStartText || L('Regarde les coups de ta partie…', 'Watch the moves from your game…'));
-    setTimeout(advance, 450);
+    Promise.resolve(narration).then(() => { if (pz === session && pz.idx === index) setTimeout(advance, 250); });
   }
   function nextLessonStep() {
     if (pz.idx < pz.steps.length - 1) { pz.idx++; loadLessonStep(); return; }
@@ -4313,16 +4344,18 @@
     o.san.forEach((s, i) => { moves += (i % 2 ? '' : `${i / 2 + 1}. `) + s + ' '; });
     const steps = [
       { text: `${o.name}. ${o.text} ${L('Les coups à retenir', 'The moves to remember')} : ${moves.trim()}.`, fen: demo.fen, demoMoves: demo.line,
+        demoSpeech: openingSpeechLine(demo.fen, demo.line),
+        demoIntroText: L(`${o.name}. ${o.text} Je vais te montrer les coups un par un.`, `${o.name}. ${o.text} I will show you the moves one by one.`),
         demoStartText: L('Regarde les déplacements de cette ouverture…', 'Watch the moves in this opening…'),
         demoDoneText: L('Observe bien les déplacements : tu vas maintenant rejouer cette ouverture de mémoire.', 'Watch the moves closely: now you will replay this opening from memory.') },
     ];
     for (const { mistake: m, badMove, goodMove } of openingMistakes(o)) {
       const goodSan = (() => { try { return new Game(m.fen).playUci(goodMove).san; } catch { return goodMove; } })();
       const arrow = (uci, color) => ({ from: window.Chess.sqIndex(uci.slice(0, 2)), to: window.Chess.sqIndex(uci.slice(2, 4)), color });
-      steps.push({ text: L(`Dans ta partie du ${fmtDate(m.date)}, au coup ${m.move}, tu as joué ${m.played}. Regarde ce coup joué.`, `In your game on ${fmtDate(m.date)}, on move ${m.move}, you played ${m.played}. Watch that move.`), fen: m.fen, demoMoves: [badMove], arrows: [arrow(badMove, 'red')],
+      steps.push({ text: L(`Dans ta partie du ${fmtDate(m.date)}, au coup ${m.move}, tu as joué ${m.played}. Regarde ce coup joué.`, `In your game on ${fmtDate(m.date)}, on move ${m.move}, you played ${m.played}. Watch that move.`), fen: m.fen, demoMoves: [badMove], demoSpeech: openingSpeechLine(m.fen, [badMove]), arrows: [arrow(badMove, 'red')],
         demoStartText: L('Voici le coup joué dans ta partie…', 'Here is the move played in your game…'),
         demoDoneText: L('Ce coup a été signalé par l’analyse. Regarde la correction.', 'The analysis flagged this move. Now look at the correction.') });
-      steps.push({ text: L(`Le meilleur coup était ${goodSan}.`, `The best move was ${goodSan}.`), fen: m.fen, demoMoves: [goodMove], arrows: [arrow(goodMove, 'green')],
+      steps.push({ text: L(`Le meilleur coup était ${goodSan}.`, `The best move was ${goodSan}.`), fen: m.fen, demoMoves: [goodMove], demoSpeech: openingSpeechLine(m.fen, [goodMove]), arrows: [arrow(goodMove, 'green')],
         demoStartText: L('La flèche montre le bon coup…', 'The arrow shows the right move…'),
         demoDoneText: L('Garde ce coup en mémoire.', 'Remember this move.') });
     }
