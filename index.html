@@ -163,6 +163,18 @@
         </div>
       </div>
       <div class="side-col">
+        <div id="rp-review" class="rp-review" hidden>
+          <div class="rp-coach">
+            <img id="rp-coach-img" src="sissa/sissa-face.jpg" alt="Maître Sissa">
+            <div class="rp-coach-message"><div class="rp-coach-title"><strong>Maître Sissa</strong><button class="mini" id="rp-voice" type="button" aria-label="Couper la voix">🔊</button></div><div id="rp-comment" aria-live="polite"></div></div>
+          </div>
+          <div class="rp-tools rp-review-nav">
+            <button class="mini" id="rp-prevbad">◀ Faute</button>
+            <button class="mini" id="rp-nextbad">Faute ▶</button>
+          </div>
+          <div id="rp-acc" class="rp-acc"></div>
+          <svg id="rp-graph" class="rp-graph" viewBox="0 0 200 64" preserveAspectRatio="none" role="img" aria-label="Courbe d'avantage"></svg>
+        </div>
         <ol id="moves" class="moves" aria-label="Coups joués"></ol>
         <div id="chat" class="chat" hidden>
           <div class="chat-head"><b>Chat</b><button id="chat-mute" class="mini" type="button"></button></div>
@@ -185,15 +197,6 @@
             <button class="mini" id="rp-analyse" aria-label="Analyser la partie">📈 Analyser</button>
             <button class="mini" id="rp-pgn" aria-label="Exporter en PGN">⬇ PGN / 📋</button>
             <button class="mini" id="rp-share" aria-label="Copier un lien de partage">🔗 Lien</button>
-          </div>
-          <div id="rp-review" class="rp-review" hidden>
-            <div id="rp-acc" class="rp-acc"></div>
-            <svg id="rp-graph" class="rp-graph" viewBox="0 0 200 64" preserveAspectRatio="none" role="img" aria-label="Courbe d'avantage"></svg>
-            <div id="rp-comment" class="rp-comment" aria-live="polite"></div>
-            <div class="rp-tools">
-              <button class="mini" id="rp-prevbad">◀ Faute</button>
-              <button class="mini" id="rp-nextbad">Faute ▶</button>
-            </div>
           </div>
         </div>
       </div>
@@ -312,17 +315,19 @@
     <header class="bar"><button class="icon-btn" id="btn-puzzle-back" aria-label="Retour">‹</button><h2 id="puzzle-title"></h2><span class="pz-count" id="pz-count"></span></header>
     <div class="game-layout">
       <div class="board-col">
-        <div class="coach" id="coach"><img id="coach-img" alt=""><div class="bubble"><b>Maître Sissa</b> <button type="button" class="legend-link" data-legend>(La légende de Sissa)</button><button class="voice-btn" id="pz-voice" aria-label="Couper la voix">🔊</button><p id="pz-prompt"></p></div></div>
         <div id="puzzle-slot"></div>
         <div id="pz-status" class="status" aria-live="polite"></div>
       </div>
-      <div class="side-col">
-        <div class="actions three">
-          <button class="act" id="pz-hint"><span>✦</span>Indice</button>
-          <button class="act" id="pz-solution"><span>👁︎</span>Solution</button>
-          <button class="act" id="pz-next"><span>→</span>Suivant</button>
+      <aside class="learning-coach-slot" id="learning-coach-slot" aria-label="Maître ou champion">
+        <div class="coach" id="coach"><div class="coach-identity"><b>Maître Sissa</b><button type="button" class="legend-link" data-legend>(La légende de Sissa)</button><img id="coach-img" alt=""></div><div class="bubble"><button class="voice-btn" id="pz-voice" aria-label="Couper la voix">🔊</button><p id="pz-prompt"></p></div></div>
+        <div class="side-col learning-controls">
+          <div class="actions three">
+            <button class="act" id="pz-hint"><span>✦</span>Indice</button>
+            <button class="act" id="pz-solution"><span>👁︎</span>Solution</button>
+            <button class="act" id="pz-next"><span>→</span>Suivant</button>
+          </div>
         </div>
-      </div>
+      </aside>
     </div>
   </section>
 
@@ -410,6 +415,7 @@
   <script src="i18n.js"></script>
   <script src="vendor/three.min.js"></script>
   <script src="engine.js"></script>
+  <script src="pgn.js"></script>
   <script src="search.js"></script>
   <script src="coach-core.js"></script>
   <script src="puzzles.js"></script>

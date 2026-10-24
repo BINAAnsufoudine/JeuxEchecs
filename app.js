@@ -64,6 +64,7 @@
   let thinking = false;
   let requestId = 0;
   let animateNext = false;
+  let replayAnimationOverride = null;
   let b3d = null;
   let coachDockOpen = false;
   let coachMessage = '';
@@ -431,45 +432,8 @@
     if (!store.get('archive', []).length) return toast(L('Aucune partie enregistrée pour le moment.', 'No saved games yet.'));
     saveFile(`cavalier-parties-${stamp()}.pgn`, gamesAsPgn());
   };
-  function parsePgnGame(text) {
-    const tags = {};
-    text.replace(/^\s*\[([A-Za-z0-9_]+)\s+"((?:\\.|[^"])*)"\]\s*$/gm, (_, key, value) => {
-      tags[key] = value.replace(/\\([\\"])/g, '$1');
-      return '';
-    });
-    const movetext = text.replace(/^\s*\[[^\r\n]*\]\s*$/gm, '').replace(/\{[^}]*\}/gs, '').replace(/;[^\r\n]*/g, '');
-    let clean = '', variationDepth = 0;
-    for (const char of movetext) {
-      if (char === '(') variationDepth++;
-      else if (char === ')' && variationDepth) variationDepth--;
-      else if (!variationDepth) clean += char;
-    }
-    const game = new Game();
-    let result = tags.Result || '*';
-    for (let token of clean.replace(/\$\d+/g, '').split(/\s+/)) {
-      token = token.replace(/^\d+\.(?:\.\.)?/, '').replace(/[!?]+$/g, '');
-      if (!token || /^(?:e\.p\.?|ep)$/i.test(token)) continue;
-      if (/^(?:1-0|0-1|1\/2-1\/2|\*)$/.test(token)) { result = token; break; }
-      if (!game.playSan(token)) return { error: token };
-    }
-    if (!game.history.length) return { error: L('aucun coup reconnu', 'no move recognised') };
-    if (!/^(?:1-0|0-1|1\/2-1\/2|\*)$/.test(result)) result = '*';
-    return { tags, moves: game.uciList(), result, status: game.status() };
-  }
-  function parsePgn(text) {
-    const source = text.replace(/^\uFEFF/, '').trim();
-    const starts = [...source.matchAll(/^\s*\[Event\s+/gm)].map((match) => match.index);
-    const chunks = starts.length > 1 ? starts.map((start, index) => source.slice(start, starts[index + 1] || source.length).trim()) : [source];
-    const games = [];
-    for (const chunk of chunks) {
-      const parsed = parsePgnGame(chunk);
-      if (parsed.error) return { error: parsed.error, games: [] };
-      games.push(parsed);
-    }
-    return { games };
-  }
   function loadPgn(text) {
-    const parsed = parsePgn(text);
+    const parsed = window.Pgn.parse(text);
     if (!parsed.games.length) return toast(L(`Le fichier PGN est invalide${parsed.error ? ` : ${parsed.error}` : '.'}`, `The PGN file is invalid${parsed.error ? `: ${parsed.error}` : '.'}`));
     const select = document.createElement('select');
     select.className = 'profile-name-input';
@@ -652,6 +616,27 @@
     }
     el.innerHTML = html + arrowsSvg(arrows);
   }
+  function animateMinimapMove(last) {
+    if (!last) return;
+    const animatePiece = (fromSq, toSq, piece) => {
+      const from = flipped ? 63 - fromSq : fromSq, to = flipped ? 63 - toSq : toSq;
+      const token = document.createElement('b');
+      token.className = `mini-move-replay-token ${colorOf(piece)}`;
+      token.textContent = MINI[piece.toLowerCase()];
+      token.style.left = `${(from & 7) * 12.5}%`;
+      token.style.top = `${(from >> 3) * 12.5}%`;
+      minimap.appendChild(token);
+      token.animate([
+        { transform: 'translate(0, 0)' },
+        { transform: `translate(${((to & 7) - (from & 7)) * 100}%, ${((to >> 3) - (from >> 3)) * 100}%)` },
+      ], { duration: 800, easing: 'cubic-bezier(.2,.75,.35,1)' }).onfinish = () => token.remove();
+    };
+    animatePiece(last.from, last.to, last.piece);
+    if (last.flag === 'castle') {
+      const kingside = last.to > last.from;
+      animatePiece(last.from + (kingside ? 3 : -4), last.from + (kingside ? 1 : -1), last.piece === 'K' ? 'R' : 'r');
+    }
+  }
   // Flèches de replay et de coach en SVG (plateau 2D et mini-carte)
   const ARROW_COLORS = { green: '#2ecc40', red: '#e53935', blue: '#2f7bff', violet: '#a855f7' };
   function arrowsSvg(arrows) {
@@ -805,7 +790,7 @@
     const el = $('board');
     if (!minimapMove && !minimapResize) placeMinimap();
     const s = game.state;
-    const last = game.lastMove();
+    const last = replayAnimationOverride || game.lastMove();
     const targets = marks ? marks.map((to) => ({ to })) : selected >= 0 ? game.movesFrom(selected) : [];
     const checkSq = game.inCheck() ? s.board.indexOf(s.turn === 'w' ? 'K' : 'k') : -1;
     const mateFire = [];
@@ -2132,19 +2117,39 @@
   }
   if (tts) { pickVoice(); tts.onvoiceschanged = pickVoice; }
   // Fin de la parole suivie par nos propres événements (tts.speaking est peu fiable), avec un plafond de sécurité
-  let speechUntil = 0, lastUtterance = null, activeSpeechResolve = null;
+  let speechUntil = 0, lastUtterance = null, activeSpeechResolve = null, activeSpeechCueCancel = null;
   const speechBusy = () => !!(tts && settings.voice && speechUntil > performance.now());
-  function speak(text) {
+  function speak(text, cue = null) {
     if (!tts || !settings.voice) return Promise.resolve();
-    if (shoutU) { pendingSpeech = text; return Promise.resolve(); }
+    if (shoutU) { pendingSpeech = { text, cue }; return Promise.resolve(); }
+    if (activeSpeechCueCancel) {
+      activeSpeechCueCancel(); activeSpeechCueCancel = null;
+      if (replay && replay.demoRestore) { restoreReplayDemo(); renderBoard(); }
+    }
     if (activeSpeechResolve) { const finish = activeSpeechResolve; activeSpeechResolve = null; finish(); }
     tts.cancel();
     const u = new SpeechSynthesisUtterance(text.replace(/[«»]/g, ''));
     u.lang = LOCALE; if (frVoice) u.voice = frVoice;
     u.rate = 1.0; u.pitch = 0.9;
+    const cues = (Array.isArray(cue) ? cue : cue ? [cue] : []).filter((item) => item.index >= 0);
+    const cueTimers = new Map(), firedCues = new Set();
+    const fireCue = (item) => {
+      if (firedCues.has(item)) return;
+      firedCues.add(item);
+      if (cueTimers.has(item)) { clearTimeout(cueTimers.get(item)); cueTimers.delete(item); }
+      if (firedCues.size === cues.length && activeSpeechCueCancel) activeSpeechCueCancel = null;
+      item.run();
+    };
+    if (cues.length) {
+      u.onboundary = (e) => cues.forEach((item) => { if (e.charIndex >= item.index) fireCue(item); });
+      cues.forEach((item) => cueTimers.set(item, setTimeout(() => fireCue(item), item.index * 85)));
+      activeSpeechCueCancel = () => { cueTimers.forEach(clearTimeout); cueTimers.clear(); };
+    }
     let resolveSpeech;
     const finished = new Promise((resolve) => { resolveSpeech = resolve; activeSpeechResolve = resolve; });
     const done = () => {
+      cueTimers.forEach(clearTimeout); cueTimers.clear();
+      if (activeSpeechCueCancel) activeSpeechCueCancel = null;
       if (lastUtterance === u) { speechUntil = 0; if (game && !replay && !pz) renderActions(); }
       if (activeSpeechResolve === resolveSpeech) activeSpeechResolve = null;
       resolveSpeech();
@@ -2155,7 +2160,7 @@
     tts.speak(u);
     return finished;
   }
-  const hush = () => { speechUntil = 0; shoutU = null; pendingSpeech = null; if (tts) tts.cancel(); if (activeSpeechResolve) { const finish = activeSpeechResolve; activeSpeechResolve = null; finish(); } };
+  const hush = () => { speechUntil = 0; shoutU = null; pendingSpeech = null; if (activeSpeechCueCancel) { activeSpeechCueCancel(); activeSpeechCueCancel = null; } if (tts) tts.cancel(); if (activeSpeechResolve) { const finish = activeSpeechResolve; activeSpeechResolve = null; finish(); } if (replay && replay.demoRestore) { restoreReplayDemo(); renderBoard(); } };
   // Cri de technique : prononcé avant l'attaque ; la parole du coach attend la fin du cri
   let shoutU = null, pendingSpeech = null;
   function shout(name) {
@@ -2168,7 +2173,7 @@
     const done = () => {
       if (shoutU !== u) return;
       shoutU = null; speechUntil = 0;
-      if (pendingSpeech) { const t = pendingSpeech; pendingSpeech = null; speak(t); }
+      if (pendingSpeech) { const t = pendingSpeech; pendingSpeech = null; speak(t.text, t.cue); }
     };
     shoutU = u; lastUtterance = u;
     u.onend = done; u.onerror = done;
@@ -2180,17 +2185,25 @@
     b.hidden = !tts;
     b.textContent = settings.voice ? '🔊' : '🔇';
     b.setAttribute('aria-label', settings.voice ? L('Couper la voix', 'Mute the voice') : L('Activer la voix', 'Turn the voice on'));
+    const replayButton = $('rp-voice');
+    replayButton.hidden = !tts;
+    replayButton.textContent = settings.voice ? '🔊' : '🔇';
+    replayButton.setAttribute('aria-label', settings.voice ? L('Couper la voix', 'Mute the voice') : L('Activer la voix', 'Turn the voice on'));
   }
   $('pz-voice').onclick = () => {
     settings.voice = !settings.voice; store.set('settings', settings); voiceButton(); renderCoachDock();
     if (settings.voice) speak($('pz-prompt').textContent); else hush();
+  };
+  $('rp-voice').onclick = () => {
+    settings.voice = !settings.voice; store.set('settings', settings); voiceButton(); renderCoachDock();
+    if (settings.voice) speak($('rp-comment').innerText); else hush();
   };
   voiceButton();
   function say(text, mood = '', voiceText = text) {
     text = coachGreeting(text);
     const p = $('pz-prompt');
     p.textContent = text;
-    $('coach').querySelector('.bubble b').textContent = coachName();
+    $('coach').querySelector('.coach-identity b').textContent = coachName();
     showCoachFace($('coach-img'));
     coachMessage = text; coachMood = mood; renderCoachDock();
     const speech = speak(voiceText);
@@ -2213,6 +2226,10 @@
     if (game && !pz) save();
     cancelAi();
     result = null;
+    const guided = !!(pz && pz.kind === 'lesson');
+    $('puzzle').classList.toggle('guided-learning', guided);
+    if (guided) $('learning-coach-slot').insertBefore($('coach'), $('learning-coach-slot').firstChild);
+    else $('puzzle').querySelector('.board-col').insertBefore($('coach'), $('puzzle-slot'));
     attachBoard('puzzle');
     if (!$('puzzle').classList.contains('active')) { randomScenery(); show('puzzle'); }
   }
@@ -2420,7 +2437,12 @@
     steps.unshift({ text: intro });
     // Dernière étape : une de tes propres erreurs sur ce thème
     const mine = store.get('mistakes', []).filter((m) => m.theme === k).pop();
-    if (mine) steps.push({ text: L(`Maintenant, ta propre partie du ${fmtDate(mine.date)}. Au coup ${mine.move}, tu as joué ${mine.played}. Avec ce que tu viens de voir, trouve le bon coup.`, `Now, your own game of ${fmtDate(mine.date)}. On move ${mine.move}, you played ${mine.played}. With what you have just seen, find the right move.`), fen: mine.fen, line: mine.line, alts: mine.alts, mistake: mine.id, why: L('Voilà le coup que tu cherchais. La prochaine fois, tu le verras pendant la partie.', "That's the move you were looking for. Next time, you'll see it during the game.") });
+    if (mine) {
+      const played = uciOf(mine);
+      if (played) steps.push({ text: L(`Regardons ta partie du ${fmtDate(mine.date)}, au coup ${mine.move} : tu as joué ${mine.played}.`, `Let's look at your game of ${fmtDate(mine.date)}, move ${mine.move}: you played ${mine.played}.`), fen: mine.fen,
+        demoMoves: [played], demoSpeech: openingSpeechLine(mine.fen, [played]), arrows: [{ from: window.Chess.sqIndex(played.slice(0, 2)), to: window.Chess.sqIndex(played.slice(2, 4)), color: 'red' }], annotateRelations: true });
+      steps.push({ text: L(`Avec ce que tu viens de voir, trouve le bon coup dans cette position.`, `Now find the right move in this position.`), fen: mine.fen, line: mine.line, alts: mine.alts, mistake: mine.id, why: L('Voilà le coup que tu cherchais. La prochaine fois, tu le verras pendant la partie.', "That's the move you were looking for. Next time, you'll see it during the game.") });
+    }
     steps.push({ text: L(`${PZ[k].tip} Passons aux problèmes : à chaque réussite, le niveau monte.`, `${PZ[k].tip} On to the puzzles: each success raises the level.`) });
     addPrincipleExamples(steps);
     pz = { kind: 'lesson', lesson: { ...lesson, resume: `lesson:${k}` }, steps, idx: 0 };
@@ -2666,11 +2688,17 @@
     const m = ms.filter((x) => !x.solved).pop() || ms.pop();
     if (m) {
       const pr = ch.principles.find((p) => p.theme === m.theme);
-      return {
-        text: L(`Retour sur ta partie du ${fmtDate(m.date)}. Au coup ${m.move}, tu as joué ${m.played}. Souviens-toi : ${pr.title.toLowerCase()}. Joue ce coup comme je l'aurais joué.`, `Back to your game of ${fmtDate(m.date)}. On move ${m.move}, you played ${m.played}. Remember: ${pr.title.toLowerCase()}. Play this move as I would have.`),
-        fen: m.fen, line: m.line, alts: m.alts, mistake: m.id, theme: m.theme,
+      const played = uciOf(m), arrows = played ? [{ from: window.Chess.sqIndex(played.slice(0, 2)), to: window.Chess.sqIndex(played.slice(2, 4)), color: 'red' }] : [];
+      const steps = [];
+      if (played) steps.push({
+        text: L(`Retour sur ta partie du ${fmtDate(m.date)}. Au coup ${m.move}, tu as joué ${m.played}. Regarde ce coup et souviens-toi : ${pr.title.toLowerCase()}.`, `Back to your game of ${fmtDate(m.date)}. On move ${m.move}, you played ${m.played}. Watch this move and remember: ${pr.title.toLowerCase()}.`),
+        fen: m.fen, demoMoves: [played], demoSpeech: openingSpeechLine(m.fen, [played]), arrows, annotateRelations: true,
+      });
+      steps.push({ text: L(`À toi : dans cette même position, joue comme je l'aurais fait.`, `Your turn: in this same position, play as I would.`),
+        fen: m.fen, line: m.line, alts: m.alts, mistake: m.id, theme: m.theme, arrows,
         why: L(`Voilà mon coup. La prochaine fois que cette situation se présente, pense à : ${pr.title.toLowerCase()}.`, `That's my move. Next time this situation comes up, think: ${pr.title.toLowerCase()}.`),
-      };
+      });
+      return steps;
     }
     // Sans faute sur ces thèmes : la position de ta dernière partie où la situation-clé du champion est apparue
     const finaleChamp = ch.style.finale >= 0.8;
@@ -2678,9 +2706,13 @@
       if (g.fen || !g.color || !g.moves || g.moves.length < 16) continue;
       const G = new Game();
       for (let i = 0; i < g.moves.length; i++) {
-        if (!G.playUci(g.moves[i])) break;
+        const before = window.Chess.toFen(G.state), uci = g.moves[i];
+        if (!G.playUci(uci)) break;
         if ((finaleChamp ? isEndgameBoard(G.state.board) : i >= 15) && G.turn === g.color) {
-          return { text: L(`Retour sur ta partie du ${fmtDate(g.id)}, au coup ${Math.floor(i / 2) + 1}. ${finaleChamp ? ch.tips.finale : ch.tips.milieu} Observe la position et cherche mon plan.`, `Back to your game of ${fmtDate(g.id)}, move ${Math.floor(i / 2) + 1}. ${finaleChamp ? ch.tips.finale : ch.tips.milieu} Study the position and look for my plan.`), fen: window.Chess.toFen(G.state) };
+          const arrow = { from: window.Chess.sqIndex(uci.slice(0, 2)), to: window.Chess.sqIndex(uci.slice(2, 4)), color: 'red' };
+          return [{ text: L(`Retour sur ta partie du ${fmtDate(g.id)}, au coup ${Math.floor(i / 2) + 1}. Regarde le dernier coup joué.`, `Back to your game of ${fmtDate(g.id)}, move ${Math.floor(i / 2) + 1}. Watch the last move.`),
+            fen: before, demoMoves: [uci], demoSpeech: openingSpeechLine(before, [uci]), arrows: [arrow], annotateRelations: true },
+          { text: L(`${finaleChamp ? ch.tips.finale : ch.tips.milieu} Observe la position obtenue et cherche mon plan.`, `${finaleChamp ? ch.tips.finale : ch.tips.milieu} Study the resulting position and look for my plan.`), fen: window.Chess.toFen(G.state) }];
         }
       }
     }
@@ -2703,7 +2735,7 @@
       }
     });
     const mine = championPersonalStep(ch);
-    if (mine) steps.push(mine);
+    if (mine) steps.push(...mine);
     const level = championGameLevel();
     steps.push({ text: L(`Tu connais maintenant mes idées. Pour les appliquer, affronte-moi dans une partie au niveau ${LEVEL_NAMES[level]} : je jouerai contre toi et je te rappellerai mes principes quand la situation se présentera.`, `You now know my ideas. To apply them, face me in a game at level ${LEVEL_NAMES[level]}: I will play against you and remind you of my principles when the situation arises.`) });
     pz = { kind: 'lesson', lesson: { title: L(`Le cours de ${name}`, `${name}'s course`), theme: ch.principles[0].theme, champion: ch.id }, steps, idx: 0 };
@@ -4762,6 +4794,10 @@
         out.push({ from: m.from, to: m.to, color });
       }
     }
+    const mark = replay.showReview && replay.review && replay.review.marks[replay.index - 1];
+    if (mark && ['inaccuracy', 'mistake', 'blunder'].includes(mark[0]) && mark[2]) {
+      out.push({ from: window.Chess.sqIndex(mark[2].slice(0, 2)), to: window.Chess.sqIndex(mark[2].slice(2, 4)), color: 'blue' });
+    }
     return out;
   }
 
@@ -4830,13 +4866,30 @@
     $('rp-acc').innerHTML = `${rv.opening ? `<b>${escHtml(rv.opening)}</b><br>` : ''}${L('Précision : Blancs', 'Accuracy: White')} ${who.w == null ? '–' : who.w + ' %'} · ${L('Noirs', 'Black')} ${who.b == null ? '–' : who.b + ' %'}`;
     const mark = rv.marks[cur - 1];
     let text = L(`Position de départ · évaluation ${fmtEval(rv.ev[0] || 0)}`, `Starting position · evaluation ${fmtEval(rv.ev[0] || 0)}`);
+    let speechText = '', speechCues = [];
     if (mark) {
       text = `<b>${escHtml(replay.sans[cur - 1])}${REVIEW_SIGN[mark[0]]}</b> — ${REVIEW_LABELS[mark[0]]} · ${L('évaluation', 'evaluation')} ${fmtEval(rv.ev[cur])}`;
       if (['inaccuracy', 'mistake', 'blunder'].includes(mark[0])) {
-        text += `<br>${L('Meilleur coup :', 'Best move:')} <b>${escHtml(sanOfBest(replay.fen, replay.moves, cur - 1, mark[2]))}</b> (${L('perte', 'loss')} ≈ ${NUM(mark[1] / 100)})`;
+        const explanation = L(
+          { inaccuracy: 'Une meilleure suite était disponible.', mistake: 'Ce coup détériore nettement la position.', blunder: 'Cette gaffe entraîne une forte dégradation de la position.' }[mark[0]],
+          { inaccuracy: 'A better continuation was available.', mistake: 'This move significantly worsens the position.', blunder: 'This blunder causes a major deterioration in the position.' }[mark[0]],
+        );
+        const best = sanOfBest(replay.fen, replay.moves, cur - 1, mark[2]);
+        const loss = NUM(mark[1] / 100), pawn = P(mark[1] / 100, 'pion', 'pions', 'pawn', 'pawns');
+        text += `<br>${explanation} ${L('Perte estimée', 'Estimated loss')}: ≈ ${loss} ${pawn}.<br>${L('Meilleur coup :', 'Best move:')} <strong class="rp-best-move">${escHtml(best)}</strong>`;
+        speechText = L(`Au coup ${Math.ceil(cur / 2)}, tu as joué ${replay.sans[cur - 1]} : ${REVIEW_LABELS[mark[0]].toLowerCase()}. ${explanation} Le meilleur coup était ${best}. Perte estimée : ${loss} ${pawn}.`, `On move ${Math.ceil(cur / 2)}, you played ${replay.sans[cur - 1]}: ${REVIEW_LABELS[mark[0]].toLowerCase()}. ${explanation} The best move was ${best}. Estimated loss: ${loss} ${pawn}.`);
+        const label = REVIEW_LABELS[mark[0]].toLowerCase();
+        speechCues = [
+          { index: speechText.indexOf(label), run: () => animateUndoMistake(cur) },
+          { index: speechText.lastIndexOf(best), run: () => animateRecommendedMove(cur, mark[2]) },
+        ];
       }
     }
     $('rp-comment').innerHTML = text;
+    if (replay.lastSpokenReviewPly !== cur) {
+      replay.lastSpokenReviewPly = cur;
+      if (speechText) speak(speechText, speechCues);
+    }
   }
   $('rp-analyse').onclick = () => {
     if (!replay || reviewing) return;
@@ -4998,6 +5051,7 @@
   }
 
   function startReplay(entry, back) {
+    if (replay) restoreReplayDemo();
     cancelAi(); stopReplayPlay();
     pz = null; marks = null;
     attachBoard('game');
@@ -5016,8 +5070,60 @@
     show('game');
     gotoPly(0);
   }
+  function restoreReplayDemo() {
+    if (!replay || !replay.demoRestore) return;
+    if (replay.demoTimer) clearTimeout(replay.demoTimer);
+    game = replay.demoRestore.game; result = replay.demoRestore.result;
+    replay.demoRestore = null; replay.demoTimer = null; animateNext = false; replayAnimationOverride = null;
+  }
+  function animateUndoMistake(ply) {
+    if (!replay || replay.index !== ply || !replay.showReview) return;
+    restoreReplayDemo();
+    const saved = { game, result }, wrong = game.lastMove();
+    if (!wrong) return;
+    const before = new Game(replay.fen);
+    for (let i = 0; i < ply - 1; i++) if (!before.playUci(replay.moves[i])) return;
+    replay.demoRestore = saved;
+    game = saved.game; result = saved.result; animateNext = false;
+    renderBoard();
+    game = before; result = null;
+    const reverse = { ...wrong, from: wrong.to, to: wrong.from, captured: null, flag: null, promo: null };
+    replayAnimationOverride = reverse; animateNext = true;
+    renderBoard();
+    replayAnimationOverride = null;
+    animateMinimapMove(reverse);
+    const wait = Math.max(1200, speechUntil - performance.now() + 500);
+    replay.demoTimer = setTimeout(() => {
+      if (replay && replay.demoRestore === saved) { restoreReplayDemo(); renderBoard(); }
+    }, wait);
+  }
+  function animateRecommendedMove(ply, uci) {
+    if (!replay || replay.index !== ply || !replay.showReview || !uci) return;
+    const staged = !!replay.demoRestore;
+    const saved = replay.demoRestore || { game, result };
+    if (replay.demoTimer) clearTimeout(replay.demoTimer);
+    replay.demoTimer = null;
+    if (!staged) {
+      const demo = new Game(replay.fen);
+      for (let i = 0; i < ply - 1; i++) if (!demo.playUci(replay.moves[i])) return;
+      replay.demoRestore = saved;
+      game = demo; result = null; animateNext = false;
+      renderBoard();
+    }
+    if (!game.playUci(uci)) {
+      restoreReplayDemo(); renderBoard(); return;
+    }
+    animateNext = true;
+    renderBoard();
+    animateMinimapMove(game.lastMove());
+    const wait = Math.max(950, (b3d ? b3d.busyLeftMs() : 0) + 150);
+    replay.demoTimer = setTimeout(() => {
+      if (replay && replay.demoRestore === saved) { restoreReplayDemo(); renderBoard(); }
+    }, wait);
+  }
   function gotoPly(n, animate = false) {
     if (!replay) return;
+    restoreReplayDemo();
     n = Math.max(0, Math.min(replay.moves.length, n));
     game = new Game(replay.fen);
     for (let i = 0; i < n; i++) game.playUci(replay.moves[i]);
@@ -5067,13 +5173,18 @@
   function exitReplay() {
     const back = replay && replay.back;
     stopReplayPlay();
+    restoreReplayDemo();
     replay = null; game = null;
     setReplayUi(false);
     if (back) back(); else show('home');
   }
   $('rp-flip').onclick = () => { flipped = !flipped; render(); };
   const navigate = (n, animate = false) => {
-    if (!replay || animBusy()) return;
+    if (!replay) return;
+    const wasDemoing = !!replay.demoRestore;
+    restoreReplayDemo();
+    if (wasDemoing) renderBoard();
+    if (animBusy()) return;
     stopReplayPlay();
     gotoPly(n, animate);
   };
@@ -5092,7 +5203,8 @@
       gotoPly(replay.index + 1, true);
       if (replay.index >= replay.moves.length) { stopReplayPlay(); return; }
       const busy = b3d ? b3d.busyLeftMs() : 0;
-      replayTimer = setTimeout(tick, Math.max(2200, busy + 700));
+      const speech = Math.max(0, speechUntil - performance.now());
+      replayTimer = setTimeout(tick, Math.max(2200, busy + 700, speech + 400));
     };
     replayTimer = setTimeout(tick, 600);
   };
@@ -5158,7 +5270,7 @@
       if (err) return toast(err);
       entries.push({ kind: 'fen', title: L('Position FEN', 'FEN position'), fen, moves: [], result: '*' });
     } else {
-      const parsed = parsePgn(src);
+      const parsed = window.Pgn.parse(src);
       if (!parsed.games.length) return toast(L(`PGN invalide${parsed.error ? ` : ${parsed.error}` : '.'}`, `Invalid PGN${parsed.error ? `: ${parsed.error}` : '.'}`));
       for (const g of parsed.games) {
         entries.push({ kind: 'pgn', title: `${g.tags.White || L('Blancs', 'White')} – ${g.tags.Black || L('Noirs', 'Black')}`, white: g.tags.White, black: g.tags.Black, event: g.tags.Event || '', date: g.tags.Date || '', moves: g.moves, result: g.result !== '*' ? g.result : g.status.over ? g.status.result : '*' });
