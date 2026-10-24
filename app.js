@@ -1713,6 +1713,7 @@
   // Chaque niveau d'un thème : quelques problèmes à réussir, puis l'analyse de tes parties confirme
   const LEVEL_SET = 3;
   const MAX_LEVEL = 9;
+  let problemSettingsOpen = false;
   function problemPreferences() {
     const saved = store.get('problemPrefs', {});
     const games = Number(saved.games), threshold = Number(saved.threshold);
@@ -1720,28 +1721,6 @@
       games: Number.isInteger(games) ? Math.max(1, Math.min(20, games)) : 10,
       threshold: Number.isInteger(threshold) ? Math.max(1, Math.min(99, threshold)) : 70,
     };
-  }
-  function openProblemSettings() {
-    const prefs = problemPreferences(), body = document.createElement('div');
-    body.className = 'pz-settings';
-    body.innerHTML = `<label class="field-label" for="pz-pref-games">${L('Nombre de parties récentes (1 à 20)', 'Recent games to analyse (1–20)')}</label>
-      <input class="profile-name-input" id="pz-pref-games" type="number" min="1" max="20" step="1" value="${prefs.games}">
-      <label class="field-label" for="pz-pref-threshold">${L('Seuil de récurrence (%)', 'Recurrence threshold (%)')}</label>
-      <input class="profile-name-input" id="pz-pref-threshold" type="number" min="1" max="99" step="1" value="${prefs.threshold}">
-      <small>${L('Un thème est proposé s’il revient dans plus que ce pourcentage des parties choisies. Trois priorités au maximum seront affichées.', 'A theme is suggested when it appears in more than this percentage of the selected games. At most three priorities will be shown.')}</small>`;
-    modal({ title: L('Réglages des problèmes', 'Puzzle settings'), body, actions: [
-      { label: L('Enregistrer', 'Save'), primary: true, onClick: () => {
-        const games = Number(body.querySelector('#pz-pref-games').value);
-        const threshold = Number(body.querySelector('#pz-pref-threshold').value);
-        if (!Number.isInteger(games) || games < 1 || games > 20 || !Number.isInteger(threshold) || threshold < 1 || threshold > 99) {
-          toast(L('Choisis de 1 à 20 parties et un seuil de 1 à 99 %.', 'Choose 1–20 games and a threshold from 1–99%.'));
-          return openProblemSettings();
-        }
-        store.set('problemPrefs', { games, threshold });
-        renderProblems();
-      } },
-      { label: L('Annuler', 'Cancel'), ghost: true },
-    ] });
   }
   // Ne proposer que les thèmes qui dépassent le seuil choisi dans les parties
   // récentes analysées, avec trois priorités au maximum.
@@ -2025,6 +2004,16 @@
     else html += L(`<b>${c.games}</b> partie${c.games > 1 ? 's' : ''} analysée${c.games > 1 ? 's' : ''} · <b>${mistakes.length}</b> faute${mistakes.length > 1 ? 's' : ''} relevée${mistakes.length > 1 ? 's' : ''}`, `<b>${c.games}</b> game${c.games === 1 ? '' : 's'} analysed · <b>${mistakes.length}</b> mistake${mistakes.length === 1 ? '' : 's'} found`);
     if (pending) html += L(`<br>Analyse en cours : ${pending} partie${pending > 1 ? 's' : ''} en attente…`, `<br>Analysis running: ${pending} game${pending === 1 ? '' : 's'} waiting…`);
     html += '</div>';
+    if (problemSettingsOpen) html += `<section class="pz-settings" aria-label="${L('Réglages des problèmes', 'Puzzle settings')}">
+      <h3>${L('Réglages des problèmes', 'Puzzle settings')}</h3>
+      <label class="field-label" for="pz-pref-games">${L('Nombre de parties récentes (1 à 20)', 'Recent games to analyse (1–20)')}</label>
+      <input class="profile-name-input" id="pz-pref-games" type="number" min="1" max="20" step="1" value="${prefs.games}">
+      <label class="field-label" for="pz-pref-threshold">${L('Seuil de récurrence (%)', 'Recurrence threshold (%)')}</label>
+      <input class="profile-name-input" id="pz-pref-threshold" type="number" min="1" max="99" step="1" value="${prefs.threshold}">
+      <small>${L('Un thème est proposé s’il revient dans plus que ce pourcentage des parties choisies. Trois priorités au maximum seront affichées.', 'A theme is suggested when it appears in more than this percentage of the selected games. At most three priorities will be shown.')}</small>
+      <p id="pz-pref-error" class="pz-pref-error" role="alert"></p>
+      <div class="pz-pref-actions"><button class="btn primary" id="pz-pref-save" type="button">${L('Enregistrer', 'Save')}</button><button class="btn ghost" id="pz-pref-cancel" type="button">${L('Annuler', 'Cancel')}</button></div>
+    </section>`;
     if (captureNotes.length) {
       const pieceNames = L({ p: 'un pion', n: 'un cavalier', b: 'un fou', r: 'une tour', q: 'une dame', k: 'un roi' }, { p: 'a pawn', n: 'a knight', b: 'a bishop', r: 'a rook', q: 'a queen', k: 'a king' });
       const pawns = (cp) => `${NUM(Math.abs(cp) / 100)} ${P(Math.abs(cp) >= 200 ? 2 : 1, 'pion', 'pions', 'pawn', 'pawns')}`;
@@ -2060,6 +2049,21 @@
     body.querySelectorAll('[data-theme]').forEach((b) => (b.onclick = () => openTheme(b.dataset.theme)));
     body.querySelectorAll('[data-tip]').forEach((b) => (b.onclick = () => startTip(b.dataset.tip)));
     $('pz-go').onclick = nextActivity;
+    $('btn-problem-settings').onclick = () => { problemSettingsOpen = !problemSettingsOpen; renderProblems(); };
+    const savePrefs = body.querySelector('#pz-pref-save');
+    if (savePrefs) savePrefs.onclick = () => {
+      const games = Number(body.querySelector('#pz-pref-games').value);
+      const threshold = Number(body.querySelector('#pz-pref-threshold').value);
+      if (!Number.isInteger(games) || games < 1 || games > 20 || !Number.isInteger(threshold) || threshold < 1 || threshold > 99) {
+        body.querySelector('#pz-pref-error').textContent = L('Choisis de 1 à 20 parties et un seuil de 1 à 99 %.', 'Choose 1–20 games and a threshold from 1–99%.');
+        return;
+      }
+      store.set('problemPrefs', { games, threshold });
+      problemSettingsOpen = false;
+      renderProblems();
+    };
+    const cancelPrefs = body.querySelector('#pz-pref-cancel');
+    if (cancelPrefs) cancelPrefs.onclick = () => { problemSettingsOpen = false; renderProblems(); };
     analyseNext();
   }
 
@@ -2711,7 +2715,6 @@
   if ($('btn-champions')) $('btn-champions').onclick = () => { returnTo = 'home'; show('champions'); };
 
   $('btn-problems').onclick = () => { returnTo = 'home'; show('problems'); };
-  $('btn-problem-settings').onclick = openProblemSettings;
   Object.defineProperty(window, 'cavalierPz', { get: () => pz }); // pour les tests
   $('coach-img').src = 'sissa/sissa-face.jpg'; $('coach-img').classList.add('photo');
   /* ---------- La légende de Sissa : le maître raconte lui-même, en slides ---------- */
