@@ -2448,6 +2448,9 @@
   function loadLessonStep() {
     trackOpenLesson();
     const st = pz.steps[pz.idx];
+    // Tous les parcours d'apprentissage qui rejouent ou font jouer une ligne
+    // affichent les relations tactiques à chaque coup, comme les ouvertures.
+    if (st.line && st.line.length || st.demoMoves && st.demoMoves.length) st.annotateRelations = true;
     const it = { theme: st.theme || pz.lesson.theme, level: 1, fen: st.fen, line: st.line, alts: st.alts };
     Object.assign(pz, { item: it, step: 0, failed: false, done: !st.line && !st.demoMoves?.length, locked: !!st.demoMoves?.length, demoIndex: 0 });
     if (st.fen) setPosition(st.fen);
