@@ -1034,9 +1034,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           this.tutorialStarMaterial = new T.MeshBasicMaterial({ color: 0xffd33f, side: T.DoubleSide, transparent: true, opacity: 0.96, depthWrite: false, toneMapped: false });
         }
         for (const sq of o.tutorialStars) {
-          const p = this.sqToPos(sq), star = new T.Mesh(this.tutorialStarGeometry, this.tutorialStarMaterial);
+          const occupied = !!o.board[sq], p = this.sqToPos(sq), star = new T.Mesh(this.tutorialStarGeometry, this.tutorialStarMaterial);
           star.rotation.x = -Math.PI / 2;
-          star.position.set(p.x, o.board[sq] ? 1.15 : 0.065, p.z);
+          star.position.set(p.x + (occupied ? 0.31 : 0), 0.065, p.z + (occupied ? 0.31 : 0));
+          if (occupied) star.scale.setScalar(0.4);
           star.renderOrder = 5;
           this.overlay.add(star);
         }
