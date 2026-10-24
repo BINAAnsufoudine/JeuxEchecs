@@ -858,7 +858,7 @@
       }
     }
     const lessonStep = pz && pz.kind === 'lesson' ? pz.steps[pz.idx] : null;
-    const tutorialStars = lessonStep && lessonStep.stars ? lessonStep.stars.map((square) => window.Chess.sqIndex(square)) : [];
+    const tutorialStars = lessonStep && !pz.done && lessonStep.stars ? lessonStep.stars.map((square) => window.Chess.sqIndex(square)) : [];
     const arrows = replay ? replayArrows() : (lessonStep && lessonStep.arrows ? lessonStep.arrows : (!pz && cfg && cfg.mode === 'coach' ? coachArrows : []));
     if (b3d) {
       const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
@@ -2397,6 +2397,7 @@
         say(`${st.why || L('Exactement ! Tu as trouvé.', 'Exactly! You found it.')} ${lessonCue()}`, 'happy');
       }
       if (st.mistake) touchMistake(st.mistake, clean);
+      if (pz.lesson.resume && pz.lesson.resume.startsWith('tutorial:') && st.stars) renderBoard();
     } else {
       const r = recordPuzzle(pz.item, clean);
       say(r.validated ? L(`Bravo ! Niveau ${r.level} validé en problèmes. Joue maintenant une partie : si mon analyse voit que tu ne refais plus cette faute, tu passes au niveau ${r.level + 1}.`, `Well done! Level ${r.level} validated in puzzles. Now play a game: if my analysis sees you no longer make this mistake, you move up to level ${r.level + 1}.`)
@@ -4654,7 +4655,7 @@
     const item = (key, title, sub, extra = '') => `<button type="button" class="btn replay-item" data-train="${key}"><strong>${escHtml(title)}${extra}</strong><span>${escHtml(sub)}</span></button>`;
     const ok = ' ✓';
     let html = `<p class="level-help">${TRAIN_HELP[section]}</p>`;
-    if (section === 'tutorial') html += `<div class="replay-items">${TR.TUTORIALS.map((chapter) => item(`tutorial:${chapter.id}`, chapter.title, `${chapter.description}${done[`tutorial:${chapter.id}`] ? L(' · Terminé', ' · Completed') : ''}`, done[`tutorial:${chapter.id}`] ? ok : '')).join('')}</div>`;
+    if (section === 'tutorial') html += `<div class="replay-items">${TR.TUTORIALS.map((chapter) => { const exercises = chapter.steps.filter((step) => step.line && step.line.length).length; return item(`tutorial:${chapter.id}`, chapter.title, `${chapter.description} · ${exercises} ${L('exercices', 'exercises')}${done[`tutorial:${chapter.id}`] ? L(' · Terminé', ' · Completed') : ''}`, done[`tutorial:${chapter.id}`] ? ok : ''); }).join('')}</div>`;
     if (section === 'lesson') {
       const lesson = dailyLessonOfDay();
       const completed = LESSONS.filter((entry) => store.get('lessonsDone', {})[entry.theme]).length;
