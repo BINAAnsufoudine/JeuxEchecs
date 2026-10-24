@@ -862,7 +862,7 @@
     const arrows = replay ? replayArrows() : (lessonStep && lessonStep.arrows ? lessonStep.arrows : (!pz && cfg && cfg.mode === 'coach' ? coachArrows : []));
     if (b3d) {
       const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
-      b3d.update({ board: s.board, selected, targets, last, check: checkSq, mateFire, mateUltimate, hint, tutorialStars, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext, outcome: shown ? shown.result : null, arrows, ply: pz ? null : game.history.length });
+      b3d.update({ board: s.board, selected, targets, marks, last, check: checkSq, mateFire, mateUltimate, hint, tutorialStars, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext, outcome: shown ? shown.result : null, arrows, ply: pz ? null : game.history.length });
       animateNext = false;
       renderMinimap(s.board, last, selected, targets, mateFire, arrows, hint, tutorialStars);
       return;
@@ -876,6 +876,7 @@
       cell.dataset.sq = sq;
       cell.setAttribute('role', 'gridcell');
       if (last && (last.from === sq || last.to === sq)) cell.classList.add('last');
+      if (marks && marks.includes(sq)) cell.classList.add('coach-square-mark');
       if (sq === selected) cell.classList.add('sel');
       if (sq === checkSq) cell.classList.add('check');
       if (mateFire.includes(sq)) cell.classList.add('mate-fire');
