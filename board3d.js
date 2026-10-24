@@ -114,6 +114,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
       this.overlay = new THREE.Group();
       this.scene.add(this.overlay);
+      this.tutorialStarGeometry = null;
+      this.tutorialStarMaterial = null;
       this.pieces = new THREE.Group();
       this.scene.add(this.pieces);
       this.mateFireGroup = new THREE.Group();
@@ -1019,6 +1021,26 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
       this.overlay.clear();
       this.ply = o.ply == null ? null : o.ply;
+      if (o.tutorialStars && o.tutorialStars.length) {
+        if (!this.tutorialStarGeometry) {
+          const shape = new T.Shape(), outer = 0.39, inner = 0.17;
+          for (let i = 0; i < 10; i++) {
+            const angle = -Math.PI / 2 + i * Math.PI / 5, radius = i % 2 ? inner : outer;
+            const x = Math.cos(angle) * radius, y = Math.sin(angle) * radius;
+            if (!i) shape.moveTo(x, y); else shape.lineTo(x, y);
+          }
+          shape.closePath();
+          this.tutorialStarGeometry = new T.ShapeGeometry(shape);
+          this.tutorialStarMaterial = new T.MeshBasicMaterial({ color: 0xffd33f, side: T.DoubleSide, transparent: true, opacity: 0.96, depthWrite: false, toneMapped: false });
+        }
+        for (const sq of o.tutorialStars) {
+          const p = this.sqToPos(sq), star = new T.Mesh(this.tutorialStarGeometry, this.tutorialStarMaterial);
+          star.rotation.x = -Math.PI / 2;
+          star.position.set(p.x, o.board[sq] ? 1.15 : 0.065, p.z);
+          star.renderOrder = 5;
+          this.overlay.add(star);
+        }
+      }
       if (this.boardCracks && this.boardCracks.length) {
         this.boardCracks = this.boardCracks.filter((c) => {
           if (this.ply != null && c.ply != null && this.ply >= c.ply) return true;
