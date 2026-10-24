@@ -2422,6 +2422,7 @@
     const mine = store.get('mistakes', []).filter((m) => m.theme === k).pop();
     if (mine) steps.push({ text: L(`Maintenant, ta propre partie du ${fmtDate(mine.date)}. Au coup ${mine.move}, tu as joué ${mine.played}. Avec ce que tu viens de voir, trouve le bon coup.`, `Now, your own game of ${fmtDate(mine.date)}. On move ${mine.move}, you played ${mine.played}. With what you have just seen, find the right move.`), fen: mine.fen, line: mine.line, alts: mine.alts, mistake: mine.id, why: L('Voilà le coup que tu cherchais. La prochaine fois, tu le verras pendant la partie.', "That's the move you were looking for. Next time, you'll see it during the game.") });
     steps.push({ text: L(`${PZ[k].tip} Passons aux problèmes : à chaque réussite, le niveau monte.`, `${PZ[k].tip} On to the puzzles: each success raises the level.`) });
+    addPrincipleExamples(steps);
     pz = { kind: 'lesson', lesson: { ...lesson, resume: `lesson:${k}` }, steps, idx: 0 };
     enterPuzzleMode();
     loadLessonStep();
@@ -2474,6 +2475,17 @@
     const action = san.includes('x') ? L('prend', 'takes') : L('va en', 'to');
     const suffix = san.includes('#') ? L(' échec et mat', ' checkmate') : san.includes('+') ? L(' échec', ' check') : '';
     return L(`${sideName(color)} : ${piece} ${action} ${destination}${suffix}.`, `${sideName(color)}: ${piece} ${action} ${destination}${suffix}.`);
+  }
+  function addPrincipleExamples(steps) {
+    for (let i = 0; i < steps.length - 1; i++) {
+      const explanation = steps[i], exercise = steps[i + 1];
+      if (!explanation.fen || explanation.line || explanation.demoMoves?.length || !exercise.fen || !exercise.line?.length) continue;
+      if (explanation.fen !== exercise.fen) continue;
+      // L'explication est suivie d'un exemple bref, puis l'étape suivante
+      // demande au joueur de retrouver lui-même la séquence.
+      explanation.demoMoves = exercise.line.slice(0, Math.min(4, exercise.line.length));
+    }
+    return steps;
   }
   function openingSpeechLine(fen, moves) {
     const position = new Game(fen), speech = [];
@@ -4296,6 +4308,7 @@
   const trainDone = () => store.get('trainDone', {});
   const markTrain = (key, value = Date.now()) => { const d = trainDone(); d[key] = value; store.set('trainDone', d); };
   function startTrainer(lesson, steps, onDone) {
+    addPrincipleExamples(steps);
     pz = { kind: 'lesson', lesson: { theme: 'mat', ...lesson, back: 'train', noRating: true, onDone }, steps, idx: 0, misses: 0 };
     enterPuzzleMode();
     loadLessonStep();
