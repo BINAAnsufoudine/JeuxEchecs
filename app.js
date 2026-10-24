@@ -4807,13 +4807,35 @@
   const isSevere = (mark) => !!mark && (mark[0] === 'mistake' || mark[0] === 'blunder');
   const isFault = (mark) => !!mark && ['inaccuracy', 'mistake', 'blunder'].includes(mark[0]);
   const reviewKey = (fen, moves) => `v2|${fen}|${moves.join(' ')}`;
-  const loadReview = (k) => { const hit = store.get('reviews', []).find((x) => x.k === k); return hit ? hit.r : null; };
+  const loadReview = (k, fen, moves) => {
+    const reviews = store.get('reviews', []);
+    let hit = reviews.find((x) => x.k === k);
+    const legacyKey = k.startsWith('v2|') ? k.slice(3) : k;
+    if (!hit) hit = reviews.find((x) => x.k === legacyKey);
+    if (!hit) return null;
+    const review = hit.r;
+    // Reuse older saved analyses; promote exact engine choices to positive labels
+    // and identify sound piece offers without making the user run the analysis again.
+    if (hit.k === legacyKey && Array.isArray(review.marks) && Array.isArray(moves)) {
+      const gameAtMove = new Game(fen);
+      review.marks.forEach((mark, i) => {
+        const played = moves[i] && gameAtMove.playUci(moves[i]);
+        if (mark && mark[0] === 'best') {
+          mark[0] = 'excellent';
+          const last = gameAtMove.lastMove();
+          const pieceValue = last && ({ p: 100, n: 320, b: 330, r: 500, q: 900 }[last.piece.toLowerCase()] || 0);
+          if (played && last && pieceValue >= 300 && window.Chess.legalMoves(gameAtMove.state).some((reply) => reply.to === last.to && reply.captured)) mark[0] = 'brilliant';
+        }
+      });
+    }
+    return review;
+  };
   const reviewJobs = new Map();
   let reviewing = false;
 
   // Une seule analyse par partie à la fois ; les demandes simultanées partagent le même calcul
   function requestReview(fen, moves, onProgress) {
-    const k = reviewKey(fen, moves), cached = loadReview(k);
+    const k = reviewKey(fen, moves), cached = loadReview(k, fen, moves);
     if (cached) return Promise.resolve(cached);
     let job = reviewJobs.get(k);
     if (!job) {
@@ -5086,7 +5108,7 @@
     const probe = new Game(fen), sans = [];
     for (const u of entry.moves || []) { const r = probe.playUci(u); if (!r) break; sans.push(r.san); }
     replay = { moves: (entry.moves || []).slice(0, sans.length), sans, fen, index: 0, title: entry.title || L('Partie', 'Game'), result: entry.result || '*', back, white: entry.white, black: entry.black, event: entry.event, date: entry.date };
-    replay.review = loadReview(reviewKey(fen, replay.moves));
+    replay.review = loadReview(reviewKey(fen, replay.moves), fen, replay.moves);
     replay.showReview = !!replay.review;
     cfg = { mode: 'local', playerColor: 'w', level: 1 };
     result = null; selected = -1; hint = null;
