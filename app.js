@@ -4805,6 +4805,7 @@
   const REVIEW_LABELS = L({ best: 'Meilleur coup', good: 'Bon coup', inaccuracy: 'Imprécision', mistake: 'Erreur', blunder: 'Gaffe' }, { best: 'Best move', good: 'Good move', inaccuracy: 'Inaccuracy', mistake: 'Mistake', blunder: 'Blunder' });
   const REVIEW_SIGN = { best: '', good: '', inaccuracy: '?!', mistake: '?', blunder: '??' };
   const isSevere = (mark) => !!mark && (mark[0] === 'mistake' || mark[0] === 'blunder');
+  const isFault = (mark) => !!mark && ['inaccuracy', 'mistake', 'blunder'].includes(mark[0]);
   const reviewKey = (fen, moves) => `${fen}|${moves.join(' ')}`;
   const loadReview = (k) => { const hit = store.get('reviews', []).find((x) => x.k === k); return hit ? hit.r : null; };
   const reviewJobs = new Map();
@@ -4858,9 +4859,11 @@
     }
     if (!rv) {
       $('rp-comment').textContent = replay
-        ? L('Lance l’analyse de la partie pour que je commente les coups et repère les fautes.', 'Analyse the game to hear my comments and find mistakes.')
+        ? replay.review
+          ? L('Analyse masquée. Appuie sur « Analyser » pour afficher mes commentaires.', 'Analysis hidden. Tap “Analyse” to show my comments.')
+          : L('Lance l’analyse de la partie pour que je commente les coups et repère les fautes.', 'Analyse the game to hear my comments and find mistakes.')
         : '';
-      $('rp-prevbad').disabled = $('rp-nextbad').disabled = true;
+      $('rp-prevbad').disabled = $('rp-nextbad').disabled = !(replay && replay.review);
       $('rp-voice').disabled = !replay;
       $('rp-acc').hidden = $('rp-graph').hidden = true;
       return;
@@ -4920,7 +4923,7 @@
   };
   const jumpToSevere = (dir) => {
     if (!replay || !replay.review) return;
-    for (let p = replay.index + dir; p >= 1 && p <= replay.moves.length; p += dir) if (isSevere(replay.review.marks[p - 1])) return navigate(p);
+    for (let p = replay.index + dir; p >= 1 && p <= replay.moves.length; p += dir) if (isFault(replay.review.marks[p - 1])) return navigate(p);
     toast(dir > 0 ? L('Plus de faute après ce coup.', 'No more mistakes after this move.') : L('Plus de faute avant ce coup.', 'No more mistakes before this move.'));
   };
   $('rp-nextbad').onclick = () => jumpToSevere(1);

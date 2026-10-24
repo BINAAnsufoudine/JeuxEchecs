@@ -317,9 +317,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .rp-graph .g-bad { stroke: #e53935; stroke-width: 2; vector-effect: non-scaling-stroke; }
 .rp-acc, .rp-comment { font-size: 0.76rem; color: var(--muted); line-height: 1.35; }
 .rp-comment b { color: var(--accent); }
-.moves span.q-inaccuracy { box-shadow: inset 0 -2px 0 #f5d142; }
-.moves span.q-mistake { box-shadow: inset 0 -2px 0 #ff9f1c; }
-.moves span.q-blunder { box-shadow: inset 0 -2px 0 #e53935; }
+.moves span.q-inaccuracy { box-shadow: inset 0 -3px 0 #f5d142; text-decoration: underline; text-decoration-color: #f5d142; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.moves span.q-mistake { box-shadow: inset 0 -3px 0 #ff9f1c; text-decoration: underline; text-decoration-color: #ff9f1c; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.moves span.q-blunder { box-shadow: inset 0 -3px 0 #e53935; text-decoration: underline; text-decoration-color: #e53935; text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .arrows-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
 #board { position: relative; }
 .replay-items { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
