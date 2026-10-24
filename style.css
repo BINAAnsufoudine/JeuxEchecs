@@ -132,6 +132,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .sq.mate-fire::after { content: '🔥'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: clamp(22px, 7vw, 46px); background: radial-gradient(circle, rgba(255,75,12,0.48), rgba(255,20,0,0.12) 70%); animation: mate-flame 0.7s ease-in-out infinite alternate; z-index: 2; pointer-events: none; }
 @keyframes mate-flame { from { filter: brightness(0.88); transform: scale(0.92); } to { filter: brightness(1.25); transform: scale(1.06); } }
 .sq.hint-from, .sq.hint-to { box-shadow: inset 0 0 0 4px #4aa3df; }
+.sq.coach-piece-mark .pc { filter: drop-shadow(0 0 7px #ffd54f) drop-shadow(0 0 3px #ff9800); transform: scale(1.16); }
 .sq .dot { position: absolute; width: 30%; height: 30%; border-radius: 50%; background: rgba(20, 30, 25, 0.28); pointer-events: none; z-index: 2; }
 .sq .ring { position: absolute; inset: 4%; border-radius: 50%; border: 5px solid rgba(20, 30, 25, 0.28); pointer-events: none; z-index: 2; }
 .coord { position: absolute; font-size: clamp(8px, 1.8vw, 12px); font-weight: 700; opacity: 0.8; pointer-events: none; z-index: 1; }

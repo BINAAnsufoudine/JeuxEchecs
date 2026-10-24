@@ -873,6 +873,7 @@
       if (hint && hint.from === sq) cell.classList.add('hint-from');
       if (hint && hint.to === sq) cell.classList.add('hint-to');
       const p = s.board[sq];
+      if (p && marks && marks.includes(sq)) cell.classList.add('coach-piece-mark');
       cell.setAttribute('aria-label', sqName(sq) + (p ? ' ' + p : ''));
       if (settings.coords) {
         const row = i >> 3, col = i & 7;
