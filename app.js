@@ -2284,8 +2284,9 @@
     const st = game.status();
     const mated = st.over && st.reason === 'mat';
     const good = uci === expected || mated || (pz.step === 0 && it.alts && it.alts.includes(uci));
-    renderBoard();
     const lessonStep = pz.kind === 'lesson' ? pz.steps[pz.idx] : null;
+    if (lessonStep && lessonStep.annotateRelations) lessonStep.arrows = openingArrowsForMove(uci, game.state, colorOf(res.move.piece), res);
+    renderBoard();
     if (!good) {
       pz.failed = true; pz.locked = true; pz.misses = (pz.misses || 0) + 1;
       sounds.lose();
@@ -2308,9 +2309,11 @@
     pzButtons();
     setTimeout(() => {
       if (!pz || pz.item !== it) return;
-      const r = game.playUci(it.line[pz.step]);
+      const replyUci = it.line[pz.step], replyColor = game.state.turn;
+      const r = game.playUci(replyUci);
       pz.step++;
       pz.hintLevel = 0;
+      if (r && lessonStep && lessonStep.annotateRelations) lessonStep.arrows = openingArrowsForMove(replyUci, game.state, replyColor, r);
       animateNext = true; pz.locked = false;
       if (r) (r.move.captured ? sounds.capture : sounds.move)();
       if (r && game.inCheck() && pz.kind !== 'lesson') shout(game.status().over ? L('Échec et mat !', 'Checkmate!') : L('Échec !', 'Check!'));
@@ -2477,8 +2480,28 @@
     }
     return speech;
   }
+  function openingArrowsForMove(uci, state, color, move) {
+    const from = window.Chess.sqIndex(uci.slice(0, 2)), to = window.Chess.sqIndex(uci.slice(2, 4));
+    const arrows = [{ from, to, color: move.move.captured ? 'red' : 'green' }];
+    const owned = { ...state, turn: color };
+    for (const attack of window.Chess.pseudoMoves(owned)) {
+      const target = state.board[attack.to];
+      if (attack.from === to && target && colorOf(target) !== color) arrows.push({ from: attack.from, to: attack.to, color: 'red' });
+    }
+    if (state.board[to]) {
+      const board = state.board.slice();
+      board[to] = color === 'w' ? 'p' : 'P';
+      const defenseState = { ...state, board, turn: color };
+      for (const defense of window.Chess.pseudoMoves(defenseState)) {
+        if (defense.to === to && defense.from !== to && colorOf(state.board[defense.from]) === color) arrows.push({ from: defense.from, to, color: 'blue' });
+      }
+    }
+    const seen = new Set();
+    return arrows.filter((arrow) => { const key = `${arrow.from}-${arrow.to}-${arrow.color}`; if (seen.has(key)) return false; seen.add(key); return true; });
+  }
   function playLessonDemo(step, index, narration = Promise.resolve()) {
     const session = pz;
+    const baseArrows = step.arrows || [];
     const advance = async () => {
       if (pz !== session || pz.idx !== index) return;
       const uci = step.demoMoves[session.demoIndex];
@@ -2490,9 +2513,14 @@
       }
       const spokenMove = step.demoSpeech && step.demoSpeech[session.demoIndex];
       const speech = spokenMove ? speak(spokenMove) : Promise.resolve();
+      const color = game.state.turn;
       const played = game.playUci(uci);
       if (!played) { session.demoIndex++; advance(); return; }
       session.demoIndex++;
+      if (step.annotateRelations) {
+        const dynamic = openingArrowsForMove(uci, game.state, color, played);
+        step.arrows = [...baseArrows, ...dynamic].filter((arrow, i, all) => all.findIndex((other) => other.from === arrow.from && other.to === arrow.to && other.color === arrow.color) === i);
+      }
       animateNext = true;
       renderBoard();
       await Promise.all([speech, new Promise((resolve) => setTimeout(resolve, Math.max(850, busyDelay(250))))]);
@@ -4343,23 +4371,23 @@
     let moves = '';
     o.san.forEach((s, i) => { moves += (i % 2 ? '' : `${i / 2 + 1}. `) + s + ' '; });
     const steps = [
-      { text: `${o.name}. ${o.text} ${L('Les coups à retenir', 'The moves to remember')} : ${moves.trim()}.`, fen: demo.fen, demoMoves: demo.line,
+      { text: `${o.name}. ${o.text} ${L('Les coups à retenir', 'The moves to remember')} : ${moves.trim()}.`, fen: demo.fen, demoMoves: demo.line, annotateRelations: true,
         demoSpeech: openingSpeechLine(demo.fen, demo.line),
-        demoIntroText: L(`${o.name}. ${o.text} Je vais te montrer les coups un par un.`, `${o.name}. ${o.text} I will show you the moves one by one.`),
+        demoIntroText: L(`${o.name}. ${o.text} Je vais te montrer les coups un par un. La flèche verte suit le déplacement, les rouges montrent les attaques et les bleues les défenses.`, `${o.name}. ${o.text} I will show you the moves one by one. The green arrow follows the move, red arrows show attacks and blue arrows show defenses.`),
         demoStartText: L('Regarde les déplacements de cette ouverture…', 'Watch the moves in this opening…'),
         demoDoneText: L('Observe bien les déplacements : tu vas maintenant rejouer cette ouverture de mémoire.', 'Watch the moves closely: now you will replay this opening from memory.') },
     ];
     for (const { mistake: m, badMove, goodMove } of openingMistakes(o)) {
       const goodSan = (() => { try { return new Game(m.fen).playUci(goodMove).san; } catch { return goodMove; } })();
       const arrow = (uci, color) => ({ from: window.Chess.sqIndex(uci.slice(0, 2)), to: window.Chess.sqIndex(uci.slice(2, 4)), color });
-      steps.push({ text: L(`Dans ta partie du ${fmtDate(m.date)}, au coup ${m.move}, tu as joué ${m.played}. Regarde ce coup joué.`, `In your game on ${fmtDate(m.date)}, on move ${m.move}, you played ${m.played}. Watch that move.`), fen: m.fen, demoMoves: [badMove], demoSpeech: openingSpeechLine(m.fen, [badMove]), arrows: [arrow(badMove, 'red')],
+      steps.push({ text: L(`Dans ta partie du ${fmtDate(m.date)}, au coup ${m.move}, tu as joué ${m.played}. Regarde ce coup joué.`, `In your game on ${fmtDate(m.date)}, on move ${m.move}, you played ${m.played}. Watch that move.`), fen: m.fen, demoMoves: [badMove], demoSpeech: openingSpeechLine(m.fen, [badMove]), arrows: [arrow(badMove, 'red')], annotateRelations: true,
         demoStartText: L('Voici le coup joué dans ta partie…', 'Here is the move played in your game…'),
         demoDoneText: L('Ce coup a été signalé par l’analyse. Regarde la correction.', 'The analysis flagged this move. Now look at the correction.') });
-      steps.push({ text: L(`Le meilleur coup était ${goodSan}.`, `The best move was ${goodSan}.`), fen: m.fen, demoMoves: [goodMove], demoSpeech: openingSpeechLine(m.fen, [goodMove]), arrows: [arrow(goodMove, 'green')],
+      steps.push({ text: L(`Le meilleur coup était ${goodSan}.`, `The best move was ${goodSan}.`), fen: m.fen, demoMoves: [goodMove], demoSpeech: openingSpeechLine(m.fen, [goodMove]), arrows: [arrow(goodMove, 'green')], annotateRelations: true,
         demoStartText: L('La flèche montre le bon coup…', 'The arrow shows the right move…'),
         demoDoneText: L('Garde ce coup en mémoire.', 'Remember this move.') });
     }
-    steps.push({ text: L(`Rejoue de mémoire les coups des ${sideName(o.color)}. Les réponses adverses se jouent seules.`, `Replay ${sideName(o.color)}'s moves from memory. The opponent's replies are played for you.`), fen: x.fen, line: x.line, theme: 'tactique',
+    steps.push({ text: L(`Rejoue de mémoire les coups des ${sideName(o.color)}. Les réponses adverses se jouent seules.`, `Replay ${sideName(o.color)}'s moves from memory. The opponent's replies are played for you.`), fen: x.fen, line: x.line, theme: 'tactique', annotateRelations: true,
         why: L('Ouverture rejouée en entier !', 'Opening replayed in full!'),
         wrong: L(`Ce n'est pas le coup de la ${o.name.toLowerCase()}. Réessaie, ou demande un indice.`, `That is not the ${o.name} move. Try again, or ask for a hint.`) });
     startTrainer({ title: o.name, theme: 'tactique', resume: `open:${o.id}` }, steps, () => {
