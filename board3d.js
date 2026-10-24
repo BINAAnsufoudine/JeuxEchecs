@@ -1640,10 +1640,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         }
         u.energyLight = new T.PointLight(0xd9f2ff, 0, 12, 2); u.energyLight.position.set(u.target.x, 4.5, u.target.z); this.scene.add(u.energyLight);
       } else if (kind === 'q') {
-        u.banshee = this.makeBlackBanshee(); actor.holder.add(u.banshee);
-        u.bansheeBaseScale = this.formScaleMatchingActor(actor, u.banshee);
+        u.blackQueenBall = this.makeBlackQueenBall(); actor.holder.add(u.blackQueenBall);
+        u.blackQueenBallBaseScale = this.formScaleMatchingActor(actor, u.blackQueenBall);
         u.floatH = new T.Box3().setFromObject(actor.parts.root).getSize(new T.Vector3()).y * 0.95; // flotte à hauteur des têtes
-        u.banshee.scale.setScalar(0.06); actor.parts.root.visible = false;
+        u.blackQueenBall.scale.setScalar(0.06); actor.parts.root.visible = false;
         const flameVictims = (u.flameSquares || [])
           .map((sq) => this.chars.get(sq))
           .filter((piece) => piece && piece !== king && piece.piece === piece.piece.toUpperCase());
@@ -1799,6 +1799,18 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
       banshee.userData.wisps = banshee.children.filter((child) => child.geometry && child.geometry.type === 'ConeGeometry');
       return banshee;
+    }
+
+    makeBlackQueenBall() {
+      const T = this.THREE, ball = new T.Group();
+      const shell = new T.MeshStandardMaterial({ color: 0x100b18, roughness: 0.45, metalness: 0.2, emissive: 0x35104a, emissiveIntensity: 1.2 });
+      const core = new T.MeshBasicMaterial({ color: 0x9b42c4, transparent: true, opacity: 0.7, blending: T.AdditiveBlending, depthWrite: false });
+      const inner = new T.MeshBasicMaterial({ color: 0xe2b0ff, transparent: true, opacity: 0.5, blending: T.AdditiveBlending, depthWrite: false });
+      ball.add(new T.Mesh(new T.SphereGeometry(0.5, 24, 18), shell));
+      const glow = new T.Mesh(new T.SphereGeometry(0.4, 20, 16), core); glow.scale.set(1, 0.88, 1); ball.add(glow);
+      const heart = new T.Mesh(new T.SphereGeometry(0.24, 16, 12), inner); ball.add(heart);
+      ball.userData.glow = glow; ball.userData.heart = heart;
+      return ball;
     }
 
     makeWhiteAngel() {
@@ -2016,10 +2028,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         if (c === actor) {
           c.anim = null; c.holder.position.set(queenPos.x, 0, queenPos.z); c.parts.root.visible = false;
           const grow = smooth(e / 0.9);
-          u.banshee.scale.setScalar(0.06 + grow * u.bansheeBaseScale);
-          u.banshee.position.y = grow * u.floatH + Math.sin(t * 3.2) * 0.1;
-          u.banshee.rotation.y = Math.sin(t * 1.3) * 0.14;
-          u.banshee.userData.wisps.forEach((w, i) => { w.rotation.z = (i % 2 ? -1 : 1) * (0.18 + Math.sin(t * 7 + i) * 0.22); });
+          u.blackQueenBall.scale.setScalar(0.06 + grow * u.blackQueenBallBaseScale);
+          u.blackQueenBall.position.y = 0.55 + Math.sin(t * 3.2) * 0.1;
+          u.blackQueenBall.rotation.set(t * 1.8, t * 2.2, t * 1.4);
+          u.blackQueenBall.userData.glow.material.opacity = 0.55 + Math.abs(Math.sin(t * 8)) * 0.3;
+          u.blackQueenBall.userData.heart.material.opacity = 0.35 + Math.abs(Math.sin(t * 11)) * 0.4;
           if (u.fireLight) u.fireLight.intensity = 1.1 + Math.abs(Math.sin(t * 8)) * 1.8;
           if (u.columnLight) u.columnLight.intensity = 1.4 + Math.abs(Math.sin(t * 11)) * 3.2;
         } else if (c === king) {
@@ -2649,9 +2662,9 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         u.fox.parent.remove(u.fox);
         u.fox.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material && !Array.isArray(o.material)) o.material.dispose(); });
       }
-      if (u.banshee && u.banshee.parent) {
-        u.banshee.parent.remove(u.banshee);
-        u.banshee.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material && !Array.isArray(o.material)) o.material.dispose(); });
+      if (u.blackQueenBall && u.blackQueenBall.parent) {
+        u.blackQueenBall.parent.remove(u.blackQueenBall);
+        u.blackQueenBall.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material && !Array.isArray(o.material)) o.material.dispose(); });
       }
       for (const model of [u.angel, u.susanoo, u.phoenix]) if (model && model.parent) {
         model.parent.remove(model);
