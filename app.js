@@ -116,6 +116,11 @@
     if (id === 'problems') renderProblems();
     if (id === 'champions') renderChampions();
     updateCoachDockForScreen(id);
+    // Le même échiquier est déplacé entre les écrans de jeu et d’apprentissage.
+    // Redessine-le à chaque ouverture depuis l’état courant pour enlever tout
+    // repère visuel résiduel (coups, flèches, cases marquées ou étoiles).
+    if ((id === 'game' || id === 'puzzle') && game) renderBoard();
+    if (id === 'editor') renderEdBoard();
     if (id === 'program' && settings.voice) speak(`${$('program-text').textContent} ${$('program-focus').textContent}`);
     if (desktopShell) document.getElementById(id)?.scrollTo(0, 0);
     else window.scrollTo(0, 0);
