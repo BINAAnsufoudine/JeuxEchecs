@@ -283,7 +283,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #puzzle.guided-learning .pz-prompt { text-align: left; }
   #game .replay-bar { align-self: start; width: 100%; }
   #game .replay-bar .actions { grid-column: auto; grid-row: auto; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #game .game-layout:has(.replay-bar:not([hidden])) { grid-template-columns: minmax(320px, 1.2fr) minmax(250px, 1fr); column-gap: 0; }
+  #game .game-layout:has(.replay-bar:not([hidden])) { grid-template-columns: minmax(320px, 1.2fr) minmax(250px, 1fr); column-gap: 8px; }
   #game .game-tools:has(.replay-bar:not([hidden])) { grid-template-columns: minmax(0, 1fr); }
   #game .game-tools:has(.replay-bar:not([hidden])) .side-col { grid-column: 1; }
 }
