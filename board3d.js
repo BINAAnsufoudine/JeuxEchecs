@@ -1070,7 +1070,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (o.selected >= 0) mark(o.selected, 0x4fc3f7, 0.55);
       if (o.check >= 0) mark(o.check, 0xff3b30, 0.6);
       if (o.hint) { mark(o.hint.from, 0x7c4dff, 0.5); mark(o.hint.to, 0x7c4dff, 0.5); }
-      if (o.marks) for (const sq of o.marks) mark(sq, 0xffc928, 0.48);
+      if (o.marks) for (const sq of o.marks) mark(sq, 0x35a9ff, 0.52);
       if (o.showMoves) for (const t of o.targets) {
         const p = this.sqToPos(t.to);
         const capture = !!o.board[t.to] || t.flag === 'ep';
