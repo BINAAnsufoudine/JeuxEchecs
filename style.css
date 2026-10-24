@@ -151,6 +151,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .pc.b { color: #22201c; -webkit-text-stroke: 0.6px #000; text-shadow: 0 2px 2px rgba(0,0,0,0.25); }
 @media (min-width: 900px) { .pc { font-size: min(5.6vw, 64px, calc((100vh - 140px) / 8 * 0.82)); } }
 .pc.drag { position: fixed; z-index: 50; pointer-events: none; width: auto; height: auto; transform: translate(-50%, -60%) scale(1.15); }
+.pc.move-replay-token { position: absolute; z-index: 6; pointer-events: none; }
 .sq.ghost .pc { opacity: 0.3; }
 
 .status { text-align: center; color: var(--muted); min-height: 1.5em; margin-top: 6px; font-weight: 500; }

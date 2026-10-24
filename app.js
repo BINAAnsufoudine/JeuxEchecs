@@ -594,7 +594,7 @@
         const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
         b3d.update({ board: s.board, selected: -1, targets: [], last: game.lastMove(), check: game.inCheck() ? s.board.indexOf(s.turn === 'w' ? 'K' : 'k') : -1, mateFire: [], mateUltimate: null, hint: null, flipped, showMoves: settings.showMoves, coords: settings.coords, light: th.light, dark: th.dark, animate: false, outcome: null, arrows: [], ply: game.history.length });
       }
-      if (game.playUci(entryLastMove)) animateNext = !!b3d;
+      if (game.playUci(entryLastMove)) animateNext = true;
     }
     if (conf.mode === 'coach') {
       coachDockOpen = false;
@@ -888,6 +888,32 @@
       frag.appendChild(cell);
     }
     el.replaceChildren(frag);
+    if (animateNext && last) {
+      animateNext = false;
+      const animatePiece = (from, to, piece) => {
+        const fromView = displayToBoard(from), toView = displayToBoard(to);
+        const fromRow = fromView >> 3, fromCol = fromView & 7;
+        const toRow = toView >> 3, toCol = toView & 7;
+        const target = el.querySelector(`.sq[data-sq="${to}"] .pc`);
+        if (target) target.style.visibility = 'hidden';
+        const token = document.createElement('span');
+        token.className = `pc ${colorOf(piece)} move-replay-token`;
+        token.textContent = glyph(piece);
+        token.style.left = `${fromCol * 12.5}%`;
+        token.style.top = `${fromRow * 12.5}%`;
+        el.appendChild(token);
+        const animation = token.animate([
+          { transform: 'translate(0, 0)' },
+          { transform: `translate(${(toCol - fromCol) * 100}%, ${(toRow - fromRow) * 100}%)` },
+        ], { duration: 800, easing: 'cubic-bezier(.2,.75,.35,1)' });
+        animation.onfinish = () => { token.remove(); if (target) target.style.visibility = ''; };
+      };
+      animatePiece(last.from, last.to, last.piece);
+      if (last.flag === 'castle') {
+        const kingside = last.to > last.from;
+        animatePiece(last.from + (kingside ? 3 : -4), last.from + (kingside ? 1 : -1), last.piece === 'K' ? 'R' : 'r');
+      }
+    } else animateNext = false;
     if (arrows.length) el.insertAdjacentHTML('beforeend', arrowsSvg(arrows));
   }
 
