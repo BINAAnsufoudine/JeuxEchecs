@@ -1255,6 +1255,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (this.effects) { this.effects.forEach((fx) => fx.end()); this.effects = []; }
       for (const c of this.chars.values()) {
         const a = c.anim;
+        if (a && a.to) c.holder.position.set(a.to.x, 0, a.to.z);
         this.endToss(c);
         if (a && a.knightAttack) this.endShot(a.knightAttack);
         if (a && a.toss && a.toss.proj) {
@@ -1265,6 +1266,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         c.anim = null;
         c.holder.visible = true;
         c.parts.root.visible = true;
+        c.parts.root.position.set(0, 0, 0);
+        c.parts.root.rotation.set(0, 0, 0);
         if (c.parts.riderRoot) c.parts.riderRoot.visible = true;
         if (c.shadow) { c.shadow.visible = true; c.shadow.scale.setScalar(1); }
       }
