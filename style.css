@@ -413,8 +413,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #game .confirm-bar { order: 1; width: min(100%, 560px); }
   #game .auto-confirm { order: 2; width: min(100%, 560px); }
   #game .actions { order: 3; width: min(100%, 560px); }
-  #game .online-switch { order: 4; width: min(100%, 560px); }
-  #game .chat { order: 5; width: min(100%, 560px); }
+  #game .chat { order: 4; width: min(100%, 560px); }
+  #game .online-switch { order: 5; width: min(100%, 560px); }
   #game .replay-bar { order: 4; width: min(100%, 560px); }
   .moves { max-height: 76px; min-height: 38px; font-size: 0.85rem; padding: 6px; }
   .actions { gap: 5px; }
