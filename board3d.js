@@ -138,6 +138,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.elevation = 38;
       this.cameraTarget = new THREE.Vector3(0, 0.3, 0);
       this.captureCamera = null;
+      this.attackCamera = null;
 
       this.raycaster = new THREE.Raycaster();
       this.bindInput();
@@ -867,6 +868,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     // Toute action du joueur sur la vue reprend la main sur les caméras automatiques (prise, mat)
     takeCamera() {
       this.captureCamera = null;
+      this.attackCamera = null;
       if (this.mateUltimate && this.mateUltimate.camera) this.mateUltimate.camera.released = true;
     }
 
@@ -918,6 +920,66 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         this.camera.position.lerpVectors(c.restorePosition, c.endPosition, u);
         this.cameraTarget.lerpVectors(c.restoreTarget, c.endTarget, u);
         if (u >= 1) this.captureCamera = null;
+      }
+      this.camera.lookAt(this.cameraTarget);
+    }
+
+    // Cadre l'attaque à distance, puis suit l'attaquant depuis l'arrière jusqu'à sa cible.
+    startAttackCamera(actor, from, to, now) {
+      const dx = to.x - from.x, dz = to.z - from.z;
+      const length = Math.hypot(dx, dz) || 1;
+      const dir = { x: dx / length, z: dz / length };
+      const radius = Math.max(8.5, Math.min(12, length + 4));
+      const side = { x: -dir.z, z: dir.x };
+      const center = new this.THREE.Vector3((from.x + to.x) * 0.5, 0.85, (from.z + to.z) * 0.5);
+      const widePosition = new this.THREE.Vector3(from.x - dir.x * radius + side.x * 1.5, 0.45 + radius * 0.64, from.z - dir.z * radius + side.z * 1.5);
+      const wideTarget = center;
+      this.captureCamera = null;
+      this.attackCamera = {
+        start: now,
+        holdUntil: Math.max(now + 1.2, this.busyUntil || now),
+        actor, dir, side, radius,
+        fromPosition: this.camera.position.clone(),
+        fromTarget: this.cameraTarget.clone(),
+        widePosition, wideTarget,
+      };
+    }
+
+    tickAttackCamera(t) {
+      const c = this.attackCamera;
+      if (!c) return;
+      const smooth = (u) => { u = Math.max(0, Math.min(1, u)); return u * u * (3 - 2 * u); };
+      if (t <= c.holdUntil) {
+        const approach = smooth((t - c.start) / 0.5);
+        if (approach < 1) {
+          this.camera.position.lerpVectors(c.fromPosition, c.widePosition, approach);
+          this.cameraTarget.lerpVectors(c.fromTarget, c.wideTarget, approach);
+        } else {
+          const p = c.actor.holder.position;
+          const followPosition = new this.THREE.Vector3(
+            p.x - c.dir.x * 7.5 + c.side.x * 1.2,
+            5.4,
+            p.z - c.dir.z * 7.5 + c.side.z * 1.2,
+          );
+          const followTarget = new this.THREE.Vector3(p.x + c.dir.x * 2.4, 0.85, p.z + c.dir.z * 2.4);
+          this.camera.position.lerp(followPosition, 0.16);
+          this.cameraTarget.lerp(followTarget, 0.2);
+        }
+      } else {
+        if (!c.restoreStart) {
+          c.restoreStart = t;
+          c.restorePosition = this.camera.position.clone();
+          c.restoreTarget = this.cameraTarget.clone();
+          const yaw = this.viewYaw(), sn = Math.sin(yaw), cs = Math.cos(yaw);
+          const radius = 13.31 * (this.zoom || 1), elevation = this.elevation * Math.PI / 180;
+          const horizontal = radius * Math.cos(elevation);
+          c.endPosition = new this.THREE.Vector3(horizontal * sn, 0.3 + radius * Math.sin(elevation), horizontal * cs);
+          c.endTarget = new this.THREE.Vector3(0.45 * sn, 0.3, 0.45 * cs);
+        }
+        const u = smooth((t - c.restoreStart) / 0.55);
+        this.camera.position.lerpVectors(c.restorePosition, c.endPosition, u);
+        this.cameraTarget.lerpVectors(c.restoreTarget, c.endTarget, u);
+        if (u >= 1) this.attackCamera = null;
       }
       this.camera.lookAt(this.cameraTarget);
     }
@@ -1012,6 +1074,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         c.anim = Object.assign({ from: a, to: b, t0: now, dur: 0.35 + dist * 0.09 }, extra);
         c.holder.position.set(a.x, 0, a.z);
       };
+      let attackCameraStarted = false;
       if (o.animate && o.last) {
         const m = o.last;
         const white = m.piece === m.piece.toUpperCase();
@@ -1095,6 +1158,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           else if (kind === 'n' && !duel) mover.anim.dur = 0.16 + Math.hypot(mover.anim.to.x - mover.anim.from.x, mover.anim.to.z - mover.anim.from.z) * 0.035; // déplacement éclair
           if (duel) mover.anim.dur = duel.approach;
           if (toss || shot) { mover.anim.t0 = now + EXR; mover.anim.pre = now; } // la cible tire d'abord
+          const followAttack = (shot || toss || knightAttack) && Math.hypot(mover.anim.to.x - mover.anim.from.x, mover.anim.to.z - mover.anim.from.z) > 2;
           this.busyUntil = now + mover.anim.dur + (duel ? duel.len + 0.35 : 0) + (toss ? EXR + toss.runStart : 0) + (shot ? EXR + shot.runStart : 0) + (knightAttack ? 0.35 : 0);
           // laisse la victime embrochée finir d'être éjectée avant tout autre coup
           if (toss) this.busyUntil = Math.max(this.busyUntil, now + EXR + toss.impact + 0.2 + 2.4);
@@ -1105,6 +1169,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             const at = Math.max(now + mover.anim.dur, (this.busyUntil || now) - 0.35);
             this.addPromotionFx(mover, this.sqToPos(m.to), at);
             this.busyUntil = Math.max(this.busyUntil, at + 2.0);
+          }
+          if (followAttack) {
+            this.startAttackCamera(mover, mover.anim.from, mover.anim.to, now);
+            attackCameraStarted = true;
           }
         }
         if (m.flag === 'castle') {
@@ -1140,7 +1208,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         c.watch = seen == null ? null : this.sqToPos(seen);
       }
       this.chars = next;
-      if (capture && capture.victim) this.startCaptureCamera(capture.from, capture.to, capture.victim, now);
+      if (capture && capture.victim && !attackCameraStarted) this.startCaptureCamera(capture.from, capture.to, capture.victim, now);
       // Pièce liée au moment de prendre : sa technique est plus puissante (onde d'énergie, éclat, tremblement renforcé)
       if (capture && capture.victim && o.last && (this.ropes || []).some(([a, b]) => a === o.last.from || b === o.last.from)) {
         const d = this.dying.find((x) => x.c === capture.victim);
@@ -1212,6 +1280,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
       this.captureScars = [];
       this.captureCamera = null;
+      this.attackCamera = null;
       if (this.spark) this.spark.visible = false;
       this.shakeUntil = 0;
       this.busyUntil = 0;
@@ -1254,6 +1323,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const T = this.THREE, kind = u.piece.toLowerCase();
       const actor = u.actor, king = u.king;
       this.captureCamera = null;
+      this.attackCamera = null;
       const yaw = this.viewYaw(), radius = 18.5, elevation = 48 * Math.PI / 180;
       const horizontal = radius * Math.cos(elevation);
       const actionPos = this.sqToPos(u.attackerTo);
@@ -3102,6 +3172,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.tickDayNight(t, dt);
       this.tickCaptureScars(t);
       this.tickCaptureCamera(t);
+      this.tickAttackCamera(t);
       this.tickMateCamera(t);
       // tremblement de l'image au lancer et à l'impact
       if (this.shakeUntil > t) { const a = (this.shakeAmp || 0.05) * (this.powerUntil > t ? 1.7 : 1); this.scene.position.set((Math.random() - 0.5) * a, (Math.random() - 0.5) * a, (Math.random() - 0.5) * a); }
