@@ -4436,6 +4436,9 @@
   function startTutorial(chapter) {
     if (!chapter) return;
     const steps = chapter.steps.map((step) => ({ ...step, theme: 'mat' }));
+    // Chaque notion repart de sa position de départ ; aucune pièce ni marque
+    // du chapitre précédent ne doit rester sur le plateau.
+    steps[0] = { ...steps[0], fen: steps[0].fen || window.Chess.START_FEN };
     startTrainer({ title: chapter.title, theme: 'mat', resume: `tutorial:${chapter.id}` }, steps, () => {
       markTrain(`tutorial:${chapter.id}`);
       const chapterIndex = TR.TUTORIALS.indexOf(chapter);
