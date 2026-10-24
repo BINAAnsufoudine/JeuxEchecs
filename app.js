@@ -4261,6 +4261,30 @@
   // Ouvertures : révision espacée (1, 3, 7, 14 puis 30 jours) ; une erreur la fait revenir vite
   const OPEN_GAPS = [1, 3, 7, 14, 30];
   const openingsSR = () => store.get('openingsSR', {});
+  function openingStats(opening) {
+    const line = trainLine(null, [], opening.san)?.line;
+    if (!line || !line.length) return null;
+    const threshold = Math.min(8, line.length);
+    const analyzed = store.get('archive', []).filter((g) => !g.fen && g.analysed && g.moves && g.moves.length >= 12 && g.color === opening.color);
+    const eligible = analyzed.filter((g) => g.moves.length >= threshold);
+    const used = eligible.filter((g) => line.slice(0, threshold).every((move, i) => g.moves[i] === move));
+    if (!eligible.length || !used.length) return { usage: eligible.length ? 0 : null, mastery: null };
+    const mistakes = store.get('mistakes', []);
+    let playerMoves = 0, cleanMoves = 0;
+    for (const g of used) {
+      const plies = Math.min(line.length, g.moves.length);
+      for (let ply = 0; ply < plies; ply++) {
+        if ((ply % 2 === 0 ? 'w' : 'b') !== opening.color) continue;
+        playerMoves++;
+        const madeMistake = mistakes.some((m) => m.date === g.id && Number(String(m.id).slice(String(g.id).length + 1)) === ply);
+        if (!madeMistake) cleanMoves++;
+      }
+    }
+    return {
+      usage: Math.round(used.length / eligible.length * 100),
+      mastery: playerMoves ? Math.round(cleanMoves / playerMoves * 100) : null,
+    };
+  }
   function startOpening(o) {
     const pre = o.color === 'b' ? o.san.slice(0, 1) : [];
     const x = trainLine(null, pre, o.san.slice(pre.length));
@@ -4389,7 +4413,10 @@
     if (section === 'endgames') html += `<div class="replay-items">${TR.ENDGAMES.map((e) => item(`end:${e.id}`, e.name, e.goal === 'draw' ? L('Défends et obtiens la nulle contre l\'ordinateur', 'Defend and draw against the computer') : L('Donne le mat contre l\'ordinateur', 'Deliver mate against the computer'), done[`end:${e.id}`] ? ok : '')).join('')}</div>`;
     if (section === 'openings') html += `<div class="replay-items">${TR.OPENINGS.map((o) => {
       const r = sr[o.id], due = r && r.due <= now;
-      const sub = `${L('Avec les', 'With')} ${sideName(o.color)} · ${!r ? L('nouvelle', 'new') : due ? L('à réviser', 'to review') : L(`révision dans ${Math.max(1, Math.round((r.due - now) / DAY))} j`, `review in ${Math.max(1, Math.round((r.due - now) / DAY))} d`)}`;
+      const stats = openingStats(o);
+      const usage = stats && stats.usage != null ? `${stats.usage} %` : '—';
+      const mastery = stats && stats.mastery != null ? `${stats.mastery} %` : '—';
+      const sub = `${L('Avec les', 'With')} ${sideName(o.color)} · ${!r ? L('nouvelle', 'new') : due ? L('à réviser', 'to review') : L(`révision dans ${Math.max(1, Math.round((r.due - now) / DAY))} j`, `review in ${Math.max(1, Math.round((r.due - now) / DAY))} d`)} · ${L(`Utilisation ${usage} · Maîtrise ${mastery}`, `Used ${usage} · Mastery ${mastery}`)}`;
       return item(`open:${o.id}`, o.name, sub, r && r.stage && !due ? ok : '');
     }).join('')}</div>`;
     if (section === 'famous') html += `<div class="replay-items">${TR.FAMOUS.map((f) => item(`famous:${f.id}`, f.name, `${f.players}${done[`famous:${f.id}`] != null ? L(` · record : ${done[`famous:${f.id}`]} coups trouvés`, ` · best: ${done[`famous:${f.id}`]} moves found`) : ''}`)).join('')}</div>`;
