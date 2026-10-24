@@ -478,13 +478,13 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   .side-col { width: min(100%, 560px); gap: 7px; }
   #game .game-tools { display: contents; }
   #game .side-col { display: contents; }
-  #game .rp-review { order: -2; display: flex; width: min(100%, 560px); align-self: center; gap: 7px; margin-bottom: -6px; }
+  #game .rp-review { order: -2; display: flex; width: min(100%, 560px); align-self: center; gap: 7px; margin-bottom: 0; }
   #game .rp-coach { width: 100%; box-sizing: border-box; padding: 8px; }
   #game .rp-coach > img { width: 52px; height: 68px; }
   #game .rp-coach-message { font-size: 0.82rem; }
   #game .rp-review-nav { display: flex; width: 100%; }
   #game .rp-review-nav .mini { flex: 1; min-height: 36px; }
-  #game .moves { order: -1; width: min(100%, 560px); }
+  #game .moves { order: -1; width: min(100%, 560px); margin-top: -6px; }
   #game .board-col { order: 0; }
   #game .board-validation { order: 1; width: min(100%, 560px); display: flex; flex-direction: column; gap: 4px; }
   #game .board-controls { order: 2; width: min(100%, 560px); }
