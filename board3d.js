@@ -1153,9 +1153,14 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         if (mover && landed !== m.piece) { this.pieces.remove(mover.holder); mover = null; } // promotion
         if (!mover && landed) mover = this.makeChar(landed);
         if (mover) {
-          moveChar(mover, m.from, m.to, { leap: false, duel, toss, shot, knightAttack });
+          const knightLeap = kind === 'n' && !duel && !toss && !shot && !knightAttack;
+          moveChar(mover, m.from, m.to, {
+            leap: knightLeap,
+            high: knightLeap ? (white ? 1.05 : 2.25) : undefined,
+            duel, toss, shot, knightAttack,
+          });
           if (knightAttack) mover.anim.dur = knightAttack.duration;
-          else if (kind === 'n' && !duel) mover.anim.dur = 0.16 + Math.hypot(mover.anim.to.x - mover.anim.from.x, mover.anim.to.z - mover.anim.from.z) * 0.035; // déplacement éclair
+          else if (knightLeap) mover.anim.dur = (white ? 0.38 : 0.68) + Math.hypot(mover.anim.to.x - mover.anim.from.x, mover.anim.to.z - mover.anim.from.z) * (white ? 0.045 : 0.07);
           if (duel) mover.anim.dur = duel.approach;
           if (toss || shot) { mover.anim.t0 = now + EXR; mover.anim.pre = now; } // la cible tire d'abord
           const followAttack = (shot || toss || knightAttack) && Math.hypot(mover.anim.to.x - mover.anim.from.x, mover.anim.to.z - mover.anim.from.z) > 2;
