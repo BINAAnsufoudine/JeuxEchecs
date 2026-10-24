@@ -4849,13 +4849,25 @@
   const fmtEval = (e) => (Math.abs(e) >= 1500 ? (e > 0 ? L('mat pour les Blancs', 'mate for White') : L('mat pour les Noirs', 'mate for Black')) : `${e > 0 ? '+' : ''}${NUM(e / 100)}`);
 
   function renderReview(rv, cur) {
-    $('rp-review').hidden = !rv;
+    const mobileReplay = !!(replay && window.matchMedia('(max-width: 899px)').matches);
+    $('rp-review').hidden = !rv && !mobileReplay;
     if (!reviewing) {
       const btn = $('rp-analyse');
       btn.disabled = false;
       btn.textContent = !replay.review ? L('📈 Analyser', '📈 Analyse') : replay.showReview ? L('📈 Masquer', '📈 Hide') : L('📈 Analyse', '📈 Analysis');
     }
-    if (!rv) return;
+    if (!rv) {
+      $('rp-comment').textContent = replay
+        ? L('Lance l’analyse de la partie pour que je commente les coups et repère les fautes.', 'Analyse the game to hear my comments and find mistakes.')
+        : '';
+      $('rp-prevbad').disabled = $('rp-nextbad').disabled = true;
+      $('rp-voice').disabled = !replay;
+      $('rp-acc').hidden = $('rp-graph').hidden = true;
+      return;
+    }
+    $('rp-prevbad').disabled = $('rp-nextbad').disabled = false;
+    $('rp-voice').disabled = false;
+    $('rp-acc').hidden = $('rp-graph').hidden = false;
     const n = rv.ev.length, X = (i) => (n > 1 ? (i / (n - 1)) * 200 : 0), Y = (e) => 32 - Math.tanh(e / 400) * 30;
     const pts = rv.ev.map((e, i) => `${X(i).toFixed(1)},${Y(e).toFixed(1)}`).join(' L');
     let svg = `<path class="g-area" d="M0,64 L${pts} L${X(n - 1).toFixed(1)},64 Z"/><line class="g-mid" x1="0" x2="200" y1="32" y2="32"/>`;
