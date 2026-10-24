@@ -585,6 +585,7 @@
     $('terrain-name').textContent = randomScenery(terrainId, weatherId);
     flipped = flip !== undefined ? flip : conf.mode !== 'local' && conf.playerColor === 'b';
     selected = -1; hint = null; animateNext = false;
+    let resumeLastMove = false;
     const drillOf = conf.drill && window.TRAINER && window.TRAINER.ENDGAMES.find((x) => x.id === conf.drill);
     $('game-title').textContent = conf.mode === 'online' ? (conf.online.tournament ? `${conf.online.tournament} · ${L('ronde', 'round')} ${conf.online.round}` : `${L('En ligne', 'Online')} · ${TC_LABELS[conf.online.tc] || ''}`) : (drillOf ? `${drillOf.name} · ` : conf.fen ? L('Position libre · ', 'Custom position · ') : '') + (conf.mode === 'local' ? L('Deux joueurs', 'Two players') : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`);
     show('game');
@@ -594,7 +595,7 @@
         const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
         b3d.update({ board: s.board, selected: -1, targets: [], last: game.lastMove(), check: game.inCheck() ? s.board.indexOf(s.turn === 'w' ? 'K' : 'k') : -1, mateFire: [], mateUltimate: null, hint: null, flipped, showMoves: settings.showMoves, coords: settings.coords, light: th.light, dark: th.dark, animate: false, outcome: null, arrows: [], ply: game.history.length });
       }
-      if (game.playUci(entryLastMove)) animateNext = !!b3d;
+      if (game.playUci(entryLastMove)) resumeLastMove = !!b3d;
     }
     if (conf.mode === 'coach') {
       coachDockOpen = false;
@@ -604,6 +605,18 @@
       setCoachMessage(champ ? L(`Je suis ${champ.name}, et c'est moi ton adversaire. Je te rappellerai mes principes quand la situation se présentera.`, `I am ${champ.name}, and I am your opponent. I will remind you of my principles when the situation arises.`) : L(`Nous allons jouer une partie à ton niveau. Je commenterai les idées et te laisserai chercher les coups.${focus}`, `We are going to play a game at your level. I will comment on the ideas and let you find the moves.${focus}`), 'happy');
     }
     render();
+    // Laisse d'abord le plateau se caler sur
+    // la position chargée, puis rejoue visuellement le dernier coup au frame suivant.
+    if (resumeLastMove && game.history.length) {
+      const resumedGame = game;
+      requestAnimationFrame(() => {
+        if (game !== resumedGame || !cfg) return;
+        const last = game.lastMove();
+        if (!last) return;
+        animateNext = true;
+        renderBoard();
+      });
+    }
     save();
     if (conf.mode === 'online') {
       toast(L(`Tu joues les ${conf.playerColor === 'w' ? 'Blancs' : 'Noirs'}`, `You play ${conf.playerColor === 'w' ? 'White' : 'Black'}`));
