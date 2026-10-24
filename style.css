@@ -99,9 +99,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #game .side-col { display: contents; }
   #game .chat { grid-column: 2; grid-row: 1; width: 100%; margin-top: 0; }
   #game .moves { grid-column: 2; grid-row: 2; width: 100%; max-height: 260px !important; }
-  #game .confirm-bar { grid-column: 1; grid-row: 2; width: 100%; }
-  #game .auto-confirm { grid-column: 1; grid-row: 3; width: 100%; }
-  #game .actions { grid-column: 1; grid-row: 4; width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #game .board-controls { grid-column: 1; grid-row: 2; width: 100%; display: flex; flex-direction: column; gap: 4px; }
+  #game .confirm-bar { width: 100%; }
+  #game .auto-confirm { width: 100%; }
+  #game .actions { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   #game .online-switch { grid-column: 2; grid-row: 3; width: 100%; }
 }
 .player { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; padding: 2px 4px; }
@@ -380,10 +381,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #home .menu .btn { text-align: left; padding: 13px 16px; font-size: 0.98rem; }
   .screen.active:not(#home) { position: fixed; z-index: 10; inset: 0 0 0 var(--desktop-menu-width); width: auto; min-height: 0; padding: 24px clamp(24px, 4vw, 56px); overflow: auto; background: var(--bg); }
   #game .bar { width: min(1220px, 100%); margin: 0 auto 8px; }
-  #game .game-layout { width: min(1220px, 100%); margin: 0 auto; justify-content: center; align-items: center; gap: clamp(18px, 2vw, 32px); }
+  #game .game-layout { width: min(1220px, 100%); margin: 0 auto; justify-content: center; align-items: start; gap: clamp(18px, 2vw, 32px); }
   #game .board-col { flex: 0 1 min(58vw, calc(100vh - 176px), 680px); width: min(58vw, calc(100vh - 176px), 680px); min-width: 420px; }
   #game .moves { max-height: 92px !important; }
-  #game .actions { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  #game .actions { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   #game .act { flex-direction: row; justify-content: flex-start; gap: 10px; padding: 9px 12px; text-align: left; font-size: 0.88rem; }
   #game .act span { min-width: 24px; text-align: center; }
   .panel { width: min(680px, 100%); }
@@ -410,9 +411,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #game .side-col { display: contents; }
   #game .moves { order: -1; width: min(100%, 560px); }
   #game .board-col { order: 0; }
-  #game .confirm-bar { order: 1; width: min(100%, 560px); }
-  #game .auto-confirm { order: 2; width: min(100%, 560px); }
-  #game .actions { order: 3; width: min(100%, 560px); }
+  #game .board-controls { order: 1; width: min(100%, 560px); display: flex; flex-direction: column; gap: 4px; }
+  #game .confirm-bar, #game .auto-confirm, #game .actions { width: 100%; }
   #game .chat { order: 4; width: min(100%, 560px); }
   #game .online-switch { order: 5; width: min(100%, 560px); }
   #game .replay-bar { order: 4; width: min(100%, 560px); }
