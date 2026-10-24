@@ -4849,8 +4849,8 @@
   const fmtEval = (e) => (Math.abs(e) >= 1500 ? (e > 0 ? L('mat pour les Blancs', 'mate for White') : L('mat pour les Noirs', 'mate for Black')) : `${e > 0 ? '+' : ''}${NUM(e / 100)}`);
 
   function renderReview(rv, cur) {
-    const mobileReplay = !!(replay && window.matchMedia('(max-width: 899px)').matches);
-    $('rp-review').hidden = !rv && !mobileReplay;
+    // Le panneau du maître fait partie de l'écran replay, même avant le calcul d'analyse.
+    $('rp-review').hidden = !replay;
     if (!reviewing) {
       const btn = $('rp-analyse');
       btn.disabled = false;
