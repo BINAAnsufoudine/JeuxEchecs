@@ -2276,6 +2276,7 @@
   }
   function leavePuzzle() {
     hush();
+    if (pz && pz.autoAdvanceTimer) clearTimeout(pz.autoAdvanceTimer);
     const back = pz && pz.lesson && pz.lesson.back ? pz.lesson.back : pz && pz.lesson && pz.lesson.champion ? 'champions' : 'problems';
     pz = null; marks = null; game = null;
     if (back === 'train') renderTrain();
@@ -2394,7 +2395,9 @@
         say(`${st.why || L('Exactement ! Tu as trouvé.', 'Exactly! You found it.')} ${feedback} ${lessonCue()}`, 'happy');
       } else {
         if (!pz.lesson.noRating) countPuzzle();
-        say(`${st.why || L('Exactement ! Tu as trouvé.', 'Exactly! You found it.')} ${lessonCue()}`, 'happy');
+        const autoTutorial = pz.lesson.resume && pz.lesson.resume.startsWith('tutorial:');
+        const speech = say(`${st.why || L('Exactement ! Tu as trouvé.', 'Exactly! You found it.')} ${autoTutorial ? L('La suite arrive automatiquement.', 'The next step will start automatically.') : lessonCue()}`, 'happy');
+        if (autoTutorial) scheduleTutorialAdvance(speech, pz, pz.idx, st.text.length);
       }
       if (st.mistake) touchMistake(st.mistake, clean);
       if (pz.lesson.resume && pz.lesson.resume.startsWith('tutorial:') && st.stars) renderBoard();
@@ -2550,11 +2553,13 @@
     marks = st.marks ? st.marks.map((s) => window.Chess.sqIndex(s)) : null;
     $('puzzle-title').textContent = pz.lesson.title;
     $('pz-count').textContent = L(`Étape ${pz.idx + 1} / ${pz.steps.length}`, `Step ${pz.idx + 1} / ${pz.steps.length}`);
-    const narration = say(st.line ? st.text : `${st.text} ${lessonCue()}`, '', st.demoIntroText);
+    const autoTutorial = pz.lesson.resume && pz.lesson.resume.startsWith('tutorial:');
+    const narration = say(st.line ? st.text : `${st.text} ${autoTutorial ? L('Observe les flèches. La suite arrive automatiquement.', 'Follow the arrows. The next step will start automatically.') : lessonCue()}`, '', st.demoIntroText);
     setPzStatus('', st.line ? L('À toi de jouer', 'Your move') : '');
     renderBoard();
     pzButtons();
     if (st.demoMoves && st.demoMoves.length) playLessonDemo(st, pz.idx, narration);
+    else if (autoTutorial && !st.line) scheduleTutorialAdvance(narration, pz, pz.idx, st.text.length);
   }
   function openingMoveSpeech(san, color, uci) {
     if (/^O-O(-O)?/.test(san)) return L(`${sideName(color)} : ${san.startsWith('O-O-O') ? 'grand roque' : 'petit roque'}.`, `${sideName(color)}: ${san.startsWith('O-O-O') ? 'queenside castling' : 'kingside castling'}.`);
@@ -2635,7 +2640,18 @@
     setPzStatus('', step.demoStartText || L('Regarde les coups de ta partie…', 'Watch the moves from your game…'));
     Promise.resolve(narration).then(() => { if (pz === session && pz.idx === index) setTimeout(advance, 250); });
   }
+  function scheduleTutorialAdvance(speech, session, index, textLength = 0) {
+    Promise.resolve(speech).then(() => {
+      if (pz !== session || pz.idx !== index || !session.done) return;
+      const delay = tts && settings.voice ? 1200 : Math.max(3000, Math.min(5500, textLength * 32));
+      session.autoAdvanceTimer = setTimeout(() => {
+        session.autoAdvanceTimer = null;
+        if (pz === session && pz.idx === index && session.done) nextLessonStep();
+      }, delay);
+    });
+  }
   function nextLessonStep() {
+    if (pz.autoAdvanceTimer) { clearTimeout(pz.autoAdvanceTimer); pz.autoAdvanceTimer = null; }
     if (pz.idx < pz.steps.length - 1) { pz.idx++; loadLessonStep(); return; }
     if (pz.lesson.resume) clearOpenLesson();
     if (pz.lesson.onDone) return pz.lesson.onDone();
@@ -4407,7 +4423,7 @@
   const trainDone = () => store.get('trainDone', {});
   const markTrain = (key, value = Date.now()) => { const d = trainDone(); d[key] = value; store.set('trainDone', d); };
   function startTrainer(lesson, steps, onDone) {
-    addPrincipleExamples(steps);
+    if (!lesson.resume || !lesson.resume.startsWith('tutorial:')) addPrincipleExamples(steps);
     pz = { kind: 'lesson', lesson: { theme: 'mat', ...lesson, back: 'train', noRating: true, onDone }, steps, idx: 0, misses: 0 };
     enterPuzzleMode();
     loadLessonStep();
