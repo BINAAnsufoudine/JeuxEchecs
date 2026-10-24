@@ -1157,6 +1157,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           moveChar(mover, m.from, m.to, {
             leap: knightLeap,
             high: knightLeap ? (white ? 1.05 : 2.25) : undefined,
+            knightFlight: knightLeap && !white,
             duel, toss, shot, knightAttack,
           });
           if (knightAttack) mover.anim.dur = knightAttack.duration;
@@ -2250,7 +2251,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           c.anim = null; c.holder.rotation.y = Math.atan2(dx, dz);
           const fuse = smooth(e / 0.8);
           if (e < 0.8) {
-            M.animate(c.parts, t, 'run');
+            M.animate(c.parts, t, a.knightFlight ? 'knight-flight' : 'run');
             c.parts.root.visible = true;
             c.parts.root.rotation.set(0, e * 14, 0);
             c.parts.root.scale.copy(u.actorBase.scale).multiplyScalar(1 - fuse * 0.85);

@@ -745,7 +745,7 @@
   }
 
   /* Pose du personnage à l'instant t (secondes).
-     state : idle | select | run | punch | guard | cast | ko | victory | kneel
+     state : idle | select | run | knight-flight | punch | guard | cast | ko | victory | kneel
      punch : k compte les coups (partie entière = numéro du coup, partie décimale = avancement) */
   function animate(p, t, state = 'idle', k = 0) {
     const ph = t + p.phase;
@@ -758,7 +758,11 @@
     p.legL.rotation.set(0, 0, 0); p.legR.rotation.set(0, 0, 0);
     p.root.position.y = 0;
     p.root.position.z = 0;
-    if (p.mountWings) p.mountWings.forEach((w) => { w.rotation.z = w.userData.side * (0.12 + Math.sin(t * 7 + p.phase) * 0.28); });
+    if (p.mountWings) {
+      const wingSpeed = state === 'knight-flight' ? 28 : 7;
+      const wingAmplitude = state === 'knight-flight' ? 0.48 : 0.28;
+      p.mountWings.forEach((w) => { w.rotation.z = w.userData.side * (0.12 + Math.sin(t * wingSpeed + p.phase) * wingAmplitude); });
+    }
     if (p.mountLegs) p.mountLegs.forEach((leg, i) => { leg.rotation.x = Math.sin(t * 7 + i * Math.PI / 2) * 0.08; });
     const hit = Math.floor(k), e = k - hit, swing = Math.sin(Math.min(1, e) * Math.PI);
     setWall(p, 0); setFlame(p, 0, t);
@@ -774,7 +778,7 @@
       p.root.position.y = hop * 0.12;
       p.armL.rotation.z = -2.4 + hop * 0.3; p.armR.rotation.z = 2.4 - hop * 0.3; // bras levés, prêt au combat
       p.legL.rotation.x = -hop * 0.4; p.legR.rotation.x = hop * 0.2;
-    } else if (state === 'run') {
+    } else if (state === 'run' || state === 'knight-flight') {
       const s = Math.sin(t * (p.fast ? 26 : 18));
       p.legL.rotation.x = s * 0.8; p.legR.rotation.x = -s * 0.8;
       p.armL.rotation.x = 0.9; p.armR.rotation.x = 0.9; // course ninja, bras en arrière
