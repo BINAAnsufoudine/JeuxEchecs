@@ -575,16 +575,27 @@
     pz = null; marks = null;
     attachBoard('game');
     game = new Game(conf.fen || undefined);
-    for (const u of uciMoves) if (!game.playUci(u)) break;
+    const entryLastMove = uciMoves.length ? uciMoves[uciMoves.length - 1] : null;
+    let entryPrefixValid = true;
+    const entryPrefix = entryLastMove ? uciMoves.slice(0, -1) : uciMoves;
+    for (const u of entryPrefix) if (!game.playUci(u)) { entryPrefixValid = false; break; }
     cfg = conf;
     if (cfg.mode === 'coach') cfg.coachTheme = coachPlan().theme;
     result = res;
     $('terrain-name').textContent = randomScenery(terrainId, weatherId);
     flipped = flip !== undefined ? flip : conf.mode !== 'local' && conf.playerColor === 'b';
-    selected = -1; hint = null;
+    selected = -1; hint = null; animateNext = false;
     const drillOf = conf.drill && window.TRAINER && window.TRAINER.ENDGAMES.find((x) => x.id === conf.drill);
     $('game-title').textContent = conf.mode === 'online' ? (conf.online.tournament ? `${conf.online.tournament} · ${L('ronde', 'round')} ${conf.online.round}` : `${L('En ligne', 'Online')} · ${TC_LABELS[conf.online.tc] || ''}`) : (drillOf ? `${drillOf.name} · ` : conf.fen ? L('Position libre · ', 'Custom position · ') : '') + (conf.mode === 'local' ? L('Deux joueurs', 'Two players') : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`);
     show('game');
+    if (entryLastMove && entryPrefixValid) {
+      if (b3d) {
+        const s = game.state;
+        const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
+        b3d.update({ board: s.board, selected: -1, targets: [], last: game.lastMove(), check: game.inCheck() ? s.board.indexOf(s.turn === 'w' ? 'K' : 'k') : -1, mateFire: [], mateUltimate: null, hint: null, flipped, showMoves: settings.showMoves, coords: settings.coords, light: th.light, dark: th.dark, animate: false, outcome: null, arrows: [], ply: game.history.length });
+      }
+      if (game.playUci(entryLastMove)) animateNext = !!b3d;
+    }
     if (conf.mode === 'coach') {
       coachDockOpen = false;
       coachHintLevel = 0;
