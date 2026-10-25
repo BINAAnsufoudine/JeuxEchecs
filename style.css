@@ -241,6 +241,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .theme-training-level { color: var(--accent); font-size: 0.82rem; font-weight: 700; white-space: nowrap; }
 .theme-training-progress { margin: 8px 0 12px; color: var(--muted); font-size: 0.85rem; }
 .theme-training-card > .btn { margin-top: 4px; }
+.path-continue { margin-bottom: 16px; }
 .path-adventure-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .path-adventure-heading h3 { margin: 0 0 4px; font-size: 1.12rem; }
 .path-adventure-heading .pz-cap { margin: 0; }
