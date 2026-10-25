@@ -4418,11 +4418,11 @@
     return `${value} ${units[scale.index]}`;
   }
   const NATURE_GRADES = [
-    { name: L('Graine de riz', 'Rice seed'), icon: '🌾' }, { name: L('Germe', 'Sprout'), icon: '🌱' },
-    { name: L('Petite pousse', 'Young shoot'), icon: '🌿' }, { name: L('Bourgeon tropical', 'Tropical bud'), icon: '🌷' },
-    { name: L('Fleur tropicale', 'Tropical flower'), icon: '🌺' }, { name: L('Jardinier en herbe', 'Novice gardener'), icon: '🧑🏾‍🌾' },
-    { name: L('Gardien du potager', 'Garden keeper'), icon: '🥕' }, { name: L('Gardien du verger', 'Orchard keeper'), icon: '🥭' },
-    { name: L('Protecteur de la forêt', 'Forest guardian'), icon: '🌴' }, { name: L('Gardien du baobab', 'Baobab guardian'), icon: '🌳' },
+    { name: L('Étudiant de l’Académie', 'Academy student'), icon: '📜' }, { name: L('Genin', 'Genin'), icon: '🥷' },
+    { name: L('Genin confirmé', 'Senior Genin'), icon: '🌀' }, { name: L('Chûnin', 'Chunin'), icon: '🎯' },
+    { name: L('Chûnin d’élite', 'Elite Chunin'), icon: '⚔️' }, { name: L('Jônin', 'Jonin'), icon: '🛡️' },
+    { name: L('Jônin spécial', 'Special Jonin'), icon: '🥷' }, { name: L('ANBU', 'ANBU'), icon: '🎭' },
+    { name: L('Kage', 'Kage'), icon: '🏯' }, { name: L('Hokage', 'Hokage'), icon: '👑' },
   ];
   const GARDEN_PLANTS = [
     { name: L('Riz', 'Rice'), icon: '🌱' }, { name: L('Bananier', 'Banana tree'), icon: '🍌' },
@@ -4444,7 +4444,7 @@
       ['Plage', 'Beach', '🏖️'], ['Crabe de sable', 'Sand crab', '🦀'], ['Récif corallien', 'Coral reef', '🪸'], ['Poissons tropicaux', 'Tropical fish', '🐠'], ['Lagon turquoise', 'Turquoise lagoon', '🐟'], ['Tortue marine', 'Sea turtle', '🐢'], ['Dauphins', 'Dolphins', '🐬'], ['Mer ouverte', 'Open sea', '🌊'], ['Grand océan Indien', 'Great Indian Ocean', '🌊'], ['Baleine majestueuse', 'Majestic whale', '🐋'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
     { id: 'ninjas', name: L('Ninjas', 'Ninjas'), icon: '🥷', unlockGrade: 1, items: [
-      ['Apprenti ninja', 'Ninja apprentice', '🥷'], ['Éclaireur du dojo', 'Dojo scout', '👣'], ['Disciple du shuriken', 'Shuriken disciple', '✴️'], ['Shinobi confirmé', 'Skilled shinobi', '🥷'], ['Maître du katana', 'Katana master', '⚔️'], ['Ombre furtive', 'Silent shadow', '🌘'], ['Gardien du dojo', 'Dojo guardian', '⛩️'], ['Maître ninja', 'Ninja master', '🗡️'], ['Protecteur de la forêt', 'Forest protector', '🌲'], ['Légende des ninjas', 'Ninja legend', '🏆'],
+      ['Étudiant de l’Académie', 'Academy student', '📜'], ['Genin', 'Genin', '🥷'], ['Genin confirmé', 'Senior Genin', '🌀'], ['Chûnin', 'Chunin', '🎯'], ['Chûnin d’élite', 'Elite Chunin', '⚔️'], ['Jônin', 'Jonin', '🛡️'], ['Jônin spécial', 'Special Jonin', '🥷'], ['ANBU', 'ANBU', '🎭'], ['Kage', 'Kage', '🏯'], ['Hokage', 'Hokage', '👑'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
   ];
   const NATURE_COLLECTION_ORDER = ['ninjas', 'plants', 'land', 'birds', 'ocean'];
