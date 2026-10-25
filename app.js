@@ -4324,7 +4324,7 @@
       return `<div class="tier-row"><span class="tier-icon">${icon}</span><div class="tier-main"><b>${name}</b><span class="xp-bar"><i style="width:${pct}%"></i></span><small>${n}${next ? ` / ${next[0]} · ${L('prochain', 'next')} : ${next[1]} ${next[2]} (+${riceAmount(next[3], true)})` : L(' · tous les paliers atteints', ' · all tiers reached')}</small></div><span class="tier-medals">${TIERS_MODE.map((tr, k) => `<i class="${k <= i ? 'on' : ''}" title="${tr[2]}">${tr[1]}</i>`).join('')}</span></div>`;
     }).join('')}</div>`;
   }
-  function walletState() { return Object.assign({ wheat: 0, xp: 0, owned: [], frame: null, title: null, firstWin: '', badgesPaid: [] }, store.get('wallet', {})); }
+  function walletState() { return Object.assign({ wheat: 0, pearls: 0, leaves: 0, meat: 0, xp: 0, owned: [], frame: null, title: null, firstWin: '', badgesPaid: [] }, store.get('wallet', {})); }
   function levelOf(xp) { let l = 1; while (l < 50 && xp >= xpFor(l)) { xp -= xpFor(l); l++; } return { level: l, into: xp, need: xpFor(l) }; }
   const RICE_PER_KG = 40000;
   const RICE_UNITS = [
@@ -4370,8 +4370,8 @@
   const NATURE_COLLECTIONS = [
     { id: 'plants', name: L('Plantes', 'Plants'), icon: '🌱', unlockGrade: 1, items: GARDEN_PLANTS },
     { id: 'land', name: L('Animaux terrestres', 'Land animals'), icon: '🐒', unlockGrade: 2, items: [
-      ['Basse-cour', 'Farmyard', '🐓'], ['Gecko du jardin', 'Garden gecko', '🦎'], ['Tortue terrestre', 'Land tortoise', '🐢'], ['Lémurien', 'Lemur', '🐒'], ['Singes joueurs', 'Playful monkeys', '🐵'], ['Okapi', 'Okapi', '🦓'], ['Éléphant de forêt', 'Forest elephant', '🐘'], ['Panthère', 'Panther', '🐆'], ['Cœur de la jungle', 'Heart of the jungle', '🌴'], ['Gardien de la jungle', 'Jungle guardian', '🦍'],
-    ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
+      ['Basse-cour', 'Farmyard', '🐓', 'leaves'], ['Gecko du jardin', 'Garden gecko', '🦎', 'meat'], ['Tortue terrestre', 'Land tortoise', '🐢', 'leaves'], ['Lémurien', 'Lemur', '🐒', 'leaves'], ['Singes joueurs', 'Playful monkeys', '🐵', 'leaves'], ['Okapi', 'Okapi', '🦓', 'leaves'], ['Éléphant de forêt', 'Forest elephant', '🐘', 'leaves'], ['Panthère', 'Panther', '🐆', 'meat'], ['Cœur de la jungle', 'Heart of the jungle', '🌴', 'leaves'], ['Gardien de la jungle', 'Jungle guardian', '🦍', 'leaves'],
+    ].map(([fr, en, icon, currency]) => ({ name: L(fr, en), icon, currency })) },
     { id: 'birds', name: L('Oiseaux tropicaux', 'Tropical birds'), icon: '🦜', unlockGrade: 4, items: [
       ['Oiseaux du jardin', 'Garden birds', '🐦'], ['Colibri', 'Hummingbird', '🐦'], ['Perroquet', 'Parrot', '🦜'], ['Perruche colorée', 'Colourful parakeet', '🦜'], ['Martin-pêcheur', 'Kingfisher', '🐤'], ['Calao', 'Hornbill', '🦤'], ['Aigle pêcheur', 'Fish eagle', '🦅'], ['Vol au-dessus des palmiers', 'Flight over the palms', '🌴'], ['Forêt profonde', 'Deep forest', '🌳'], ['Grand nid tropical', 'Great tropical nest', '🪺'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
@@ -4380,6 +4380,24 @@
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
   ];
   let activeNatureCollection = store.get('natureCollection', 'plants');
+  function natureCurrency(grade = adventureGrade(levelOf(walletState().xp).level)) {
+    if (activeNatureCollection === 'ocean') return { key: 'pearls', icon: '🦪', name: L('Perles', 'Pearls'), unit: L('perles', 'pearls') };
+    if (activeNatureCollection === 'land') {
+      const item = NATURE_COLLECTIONS.find((entry) => entry.id === 'land').items[Math.max(0, Math.min(9, grade - 1))];
+      return item.currency === 'meat'
+        ? { key: 'meat', icon: '🥩', name: L('Morceaux de viande', 'Meat pieces'), unit: L('morceaux de viande', 'meat pieces') }
+        : { key: 'leaves', icon: '🍃', name: L('Feuilles', 'Leaves'), unit: L('feuilles', 'leaves') };
+    }
+    return { key: 'wheat', icon: '🍚', name: L('Grains de riz', 'Rice grains'), unit: L('grains de riz', 'rice grains') };
+  }
+  function natureCurrencyAmount(currency, amount, compact = false) {
+    if (currency.key === 'wheat') return riceAmount(amount, compact);
+    return `${Math.floor(Number(amount) || 0).toLocaleString(LOCALE)} ${currency.unit}${compact ? ` ${currency.icon}` : ''}`;
+  }
+  function currentNatureBalance(wallet, grade) {
+    const currency = natureCurrency(grade);
+    return { currency, amount: Number(wallet[currency.key]) || 0 };
+  }
   function adventureGrade(level) { return Math.min(10, Math.floor((Math.max(1, level) - 1) / 5) + 1); }
   function xpAtLevel(level) { let total = 0; for (let n = 1; n < level; n++) total += xpFor(n); return total; }
   function adventureProgress(totalXp, grade) {
@@ -4398,13 +4416,15 @@
   function reward(wheat, xp, why) {
     const w = walletState(), before = levelOf(w.xp).level;
     const beforeGrade = adventureGrade(before);
-    w.wheat += wheat; w.xp += xp;
+    w.xp += xp;
     const after = levelOf(w.xp).level;
     const afterGrade = adventureGrade(after);
-    if (after > before) w.wheat += 50 * (after - before);
+    const rewardCurrency = natureCurrency(afterGrade);
+    w[rewardCurrency.key] = (Number(w[rewardCurrency.key]) || 0) + wheat;
+    if (after > before) w[rewardCurrency.key] += 50 * (after - before);
     store.set('wallet', w);
-    rewardPop(`${why ? `${why} · ` : ''}+${riceAmount(wheat, true)} · +${xp} XP`);
-    if (after > before) { rewardPop(L(`Niveau ${after} atteint ! +${riceAmount(50 * (after - before), true)}`, `Level ${after} reached! +${riceAmount(50 * (after - before), true)}`), true); sounds.win(); }
+    rewardPop(`${why ? `${why} · ` : ''}+${natureCurrencyAmount(rewardCurrency, wheat, true)} · +${xp} XP`);
+    if (after > before) { rewardPop(L(`Niveau ${after} atteint ! +${natureCurrencyAmount(rewardCurrency, 50 * (after - before), true)}`, `Level ${after} reached! +${natureCurrencyAmount(rewardCurrency, 50 * (after - before), true)}`), true); sounds.win(); }
     if (afterGrade > beforeGrade) {
       const plant = GARDEN_PLANTS[afterGrade - 1];
       setTimeout(() => rewardPop(L(`Grade ${afterGrade}/10 ! ${plant.icon} ${plant.name} rejoint ton jardin.`, `Rank ${afterGrade}/10! ${plant.icon} ${plant.name} joins your garden.`), true), 800);
@@ -4492,11 +4512,15 @@
     const w = walletState(), lv = levelOf(w.xp), q = questState();
     const done = q.ids.filter((id) => q.claimed[id]).length;
     const grade = adventureGrade(lv.level), gradeInfo = NATURE_GRADES[grade - 1], gradePct = adventureProgress(w.xp, grade);
-    $('home-rewards').innerHTML = `<span class="lvl-badge">${gradeInfo.icon} ${grade}/10</span><span class="xp-bar" title="${L('Progression du grade', 'Rank progress')}"><i style="width:${gradePct}%"></i></span><span>${riceCompact(w.wheat)}</span><span>🎯 ${done}/3</span>`;
+    const balance = currentNatureBalance(w, grade);
+    $('home-rewards').setAttribute('aria-label', L(`Grade nature, ${balance.currency.name} et quêtes du jour`, `Nature rank, ${balance.currency.name}, and daily quests`));
+    $('home-rewards').innerHTML = `<span class="lvl-badge">${gradeInfo.icon} ${grade}/10</span><span class="xp-bar" title="${L('Progression du grade', 'Rank progress')}"><i style="width:${gradePct}%"></i></span><span>${natureCurrencyAmount(balance.currency, balance.amount, true)}</span><span>🎯 ${done}/3</span>`;
     const activeCollection = NATURE_COLLECTIONS.find((item) => item.id === activeNatureCollection) || NATURE_COLLECTIONS[0];
     if (grade < activeCollection.unlockGrade) activeNatureCollection = 'plants';
     const collection = NATURE_COLLECTIONS.find((item) => item.id === activeNatureCollection) || NATURE_COLLECTIONS[0];
     $('home-garden-grade').textContent = L(`Grade ${grade} sur 10 · ${gradeInfo.name}`, `Rank ${grade} of 10 · ${gradeInfo.name}`);
+    $('home-currency-name').textContent = balance.currency.name;
+    $('home-currency-icon').textContent = balance.currency.key === 'wheat' ? '🧺' : balance.currency.icon;
     $('home-garden-badge').textContent = `${gradeInfo.icon} ${grade} / 10`;
     const currentItem = collection.items[grade - 1];
     $('home-garden-title').textContent = collection.id === 'plants' && grade === 10 ? L('Ton grand baobab est là !', 'Your great baobab is here!') : L(`${currentItem.name} rejoint ta collection !`, `${currentItem.name} joins your collection!`);
@@ -4520,24 +4544,28 @@
         : nextCollection
           ? L(`Prochaine collection au grade ${nextCollection.unlockGrade} : ${nextCollection.icon} ${nextCollection.name}`, `Next collection at rank ${nextCollection.unlockGrade}: ${nextCollection.icon} ${nextCollection.name}`)
           : L('Tu as découvert toute cette collection ! Choisis-en une autre.', 'You discovered this whole collection! Choose another one.');
-    const rice = riceScale(w.wheat), nextRice = rice.next;
-    $('home-rice-amount').textContent = riceAmount(w.wheat);
-    $('home-rice-conversion').textContent = L('40 000 grains de riz ≈ 1 kg.', '40,000 rice grains ≈ 1 kg.');
-    $('home-rice-progress-bar').style.width = `${rice.progress}%`;
-    $('home-rice-next').textContent = nextRice
-      ? L(`Prochain changement d’unité : ${riceAmount(nextRice.value)}.`, `Next unit change: ${riceAmount(nextRice.value)}.`)
-      : L('Une réserve digne de la légende de Sissa !', 'A reserve worthy of the legend of Sissa!');
+    $('home-rice-amount').textContent = natureCurrencyAmount(balance.currency, balance.amount);
+    if (balance.currency.key === 'wheat') {
+      const rice = riceScale(balance.amount), nextRice = rice.next;
+      $('home-rice-conversion').textContent = L('40 000 grains de riz ≈ 1 kg.', '40,000 rice grains ≈ 1 kg.');
+      $('home-rice-progress-bar').style.width = `${rice.progress}%`;
+      $('home-rice-next').textContent = nextRice ? L(`Prochain changement d’unité : ${riceAmount(nextRice.value)}.`, `Next unit change: ${riceAmount(nextRice.value)}.`) : L('Une réserve digne de la légende de Sissa !', 'A reserve worthy of the legend of Sissa!');
+    } else {
+      $('home-rice-conversion').textContent = L('Gagne cette monnaie en réussissant des défis.', 'Earn this currency by completing challenges.');
+      $('home-rice-progress-bar').style.width = `${(balance.amount % 100) || (balance.amount ? 100 : 0)}%`;
+      $('home-rice-next').textContent = L(`Monnaie de la collection « ${collection.name} ».`, `Currency for the “${collection.name}” collection.`);
+    }
     $('home-quest-count').textContent = L(`${done} sur 3 accomplies`, `${done} of 3 complete`);
     const nextQuestId = q.ids.find((id) => !q.claimed[id]);
     if (nextQuestId) {
       const def = questList().find((item) => item.id === nextQuestId), progress = Math.min(def.goal, q.prog[nextQuestId] || 0);
       $('home-quest-icon').textContent = ({ puzzle: '🧩', lesson: '📘', daily: '🌞', online: '♟️', win_ai: '🏆', play_ai: '♟️', mate_ai: '👑', opening: '🌱' })[nextQuestId] || '🎯';
       $('home-quest-title').textContent = def.text;
-      $('home-quest-copy').textContent = L(`Progression ${progress}/${def.goal} · récompense : ${riceAmount(30, true)}.`, `Progress ${progress}/${def.goal} · reward: ${riceAmount(30, true)}.`);
+      $('home-quest-copy').textContent = L(`Progression ${progress}/${def.goal} · récompense : ${natureCurrencyAmount(balance.currency, 30, true)}.`, `Progress ${progress}/${def.goal} · reward: ${natureCurrencyAmount(balance.currency, 30, true)}.`);
     } else {
       $('home-quest-icon').textContent = q.chest ? '✅' : '🎁';
       $('home-quest-title').textContent = q.chest ? L('Toutes les quêtes sont réussies !', 'All quests complete!') : L('Le coffre des quêtes est prêt !', 'Your quest chest is ready!');
-      $('home-quest-copy').textContent = q.chest ? L('Tes prochaines quêtes arrivent demain.', 'New quests arrive tomorrow.') : L(`Ouvre le coffre : ${riceAmount(60, true)} t’attendent.`, `Open the chest: ${riceAmount(60, true)} are waiting.`);
+      $('home-quest-copy').textContent = q.chest ? L('Tes prochaines quêtes arrivent demain.', 'New quests arrive tomorrow.') : L(`Ouvre le coffre : ${natureCurrencyAmount(balance.currency, 60, true)} t’attendent.`, `Open the chest: ${natureCurrencyAmount(balance.currency, 60, true)} are waiting.`);
     }
     $('home-player-photo').className = 'profile-photo' + (w.frame ? ` frame-${w.frame}` : '');
     $('home-player-title').hidden = !w.title; $('home-player-title').textContent = w.title ? `« ${titleName(w.title)} »` : '';
@@ -4545,9 +4573,10 @@
   function renderShop() {
     const w = walletState(), lv = levelOf(w.xp), q = questState(), defs = questList();
     const natureGrade = adventureGrade(lv.level), natureInfo = NATURE_GRADES[natureGrade - 1];
-    let html = `<div class="shop-head"><span class="lvl-badge big">${natureInfo.icon} ${L('Grade', 'Rank')} ${natureGrade}/10</span><div class="shop-xp"><span class="xp-bar"><i style="width:${adventureProgress(w.xp, natureGrade)}%"></i></span><small>${lv.level >= 50 ? L('Grand baobab atteint', 'Great baobab reached') : `${natureInfo.name} · ${lv.into} / ${lv.need} XP`}</small></div><span class="shop-rice">🍚 ${riceAmount(w.wheat)}</span></div>`;
-    html += `<p class="level-help">${L('Gagne des grains de riz et de l’expérience dans tous les modes : parties, problèmes, leçons, défi du jour, parties en ligne et tournois. Chaque niveau gagné rapporte 50 grains de riz.', 'Earn rice grains and experience in every mode: games, puzzles, lessons, daily challenge, online games and tournaments. Each level gained gives 50 rice grains.')}</p>`;
-    html += `<h3 class="train-h">${L('Quêtes du jour', 'Daily quests')}</h3><div class="quest-list">${q.ids.map((id) => { const d = defs.find((x) => x.id === id); const p = Math.min(d.goal, q.prog[id] || 0); return `<div class="quest${q.claimed[id] ? ' done' : ''}"><span>${q.claimed[id] ? '✅' : '🎯'} ${d.text}</span><b>${p}/${d.goal} · ${riceAmount(30, true)}</b></div>`; }).join('')}<div class="quest${q.chest ? ' done' : ''}"><span>${q.chest ? '✅' : '🎁'} ${L('Coffre : finir les trois quêtes', 'Chest: finish all three quests')}</span><b>${riceAmount(60, true)}</b></div></div>`;
+    const currency = currentNatureBalance(w, natureGrade);
+    let html = `<div class="shop-head"><span class="lvl-badge big">${natureInfo.icon} ${L('Grade', 'Rank')} ${natureGrade}/10</span><div class="shop-xp"><span class="xp-bar"><i style="width:${adventureProgress(w.xp, natureGrade)}%"></i></span><small>${lv.level >= 50 ? L('Grand baobab atteint', 'Great baobab reached') : `${natureInfo.name} · ${lv.into} / ${lv.need} XP`}</small></div><span class="shop-rice">${currency.currency.icon} ${natureCurrencyAmount(currency.currency, currency.amount)}</span></div>`;
+    html += `<p class="level-help">${L(`Gagne des ${currency.currency.unit} et de l’expérience dans tous les modes : parties, problèmes, leçons, défi du jour, parties en ligne et tournois. Chaque niveau gagné rapporte 50 ${currency.currency.unit}.`, `Earn ${currency.currency.unit} and experience in every mode: games, puzzles, lessons, daily challenge, online games and tournaments. Each level gives 50 ${currency.currency.unit}.`)}</p>`;
+    html += `<h3 class="train-h">${L('Quêtes du jour', 'Daily quests')}</h3><div class="quest-list">${q.ids.map((id) => { const d = defs.find((x) => x.id === id); const p = Math.min(d.goal, q.prog[id] || 0); return `<div class="quest${q.claimed[id] ? ' done' : ''}"><span>${q.claimed[id] ? '✅' : '🎯'} ${d.text}</span><b>${p}/${d.goal} · ${natureCurrencyAmount(currency.currency, 30, true)}</b></div>`; }).join('')}<div class="quest${q.chest ? ' done' : ''}"><span>${q.chest ? '✅' : '🎁'} ${L('Coffre : finir les trois quêtes', 'Chest: finish all three quests')}</span><b>${natureCurrencyAmount(currency.currency, 60, true)}</b></div></div>`;
     const section = (kind, title) => {
       const items = shopItems().filter((x) => x.kind === kind);
       return `<h3 class="train-h">${title}</h3><div class="shop-grid">${items.map((it) => {
@@ -4556,7 +4585,7 @@
         const btn = used ? `<button class="btn" data-shop-off="${it.id}">${kind === 'theme' ? L('Utilisé', 'In use') : L('Retirer', 'Remove')}</button>`
           : have ? `<button class="btn primary" data-shop-use="${it.id}">${L('Utiliser', 'Use')}</button>`
           : locked ? `<button class="btn" disabled>${L(`Niveau ${it.lvl}`, `Level ${it.lvl}`)}</button>`
-          : `<button class="btn${w.wheat >= it.price ? ' primary' : ''}" data-shop-buy="${it.id}" ${w.wheat >= it.price ? '' : 'disabled'}>${riceAmount(it.price, true)}</button>`;
+          : `<button class="btn${currency.amount >= it.price ? ' primary' : ''}" data-shop-buy="${it.id}" ${currency.amount >= it.price ? '' : 'disabled'}>${natureCurrencyAmount(currency.currency, it.price, true)}</button>`;
         return `<div class="shop-item${used ? ' on' : ''}">${it.preview}<b>${it.name}</b>${btn}</div>`;
       }).join('')}</div>`;
     };
@@ -4573,8 +4602,9 @@
     const w = walletState();
     const id = b.dataset.shopBuy || b.dataset.shopUse || b.dataset.shopOff, it = shopItems().find((x) => x.id === id);
     if (b.dataset.shopBuy) {
-      if (w.wheat < it.price || owns(id)) return;
-      w.wheat -= it.price; w.owned.push(id); store.set('wallet', w);
+      const grade = adventureGrade(levelOf(w.xp).level), currency = currentNatureBalance(w, grade);
+      if (currency.amount < it.price || owns(id)) return;
+      w[currency.currency.key] = currency.amount - it.price; w.owned.push(id); store.set('wallet', w);
       rewardPop(L(`${it.name} acheté !`, `${it.name} bought!`), true);
     }
     if (b.dataset.shopBuy || b.dataset.shopUse) {
