@@ -688,12 +688,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .ed-error { color: #ff8a7a; min-height: 1.2em; margin: 14px 0 0; }
 
 @media (min-width: 900px) {
-  #editor.active { overflow: hidden; }
-  #editor-body.editor { width: min(1440px, 100%); max-width: none; flex: 1; min-height: 0; }
-  .ed-layout { height: 100%; grid-template-columns: minmax(320px, 1.35fr) minmax(300px, 0.85fr); gap: clamp(16px, 2vw, 28px); }
-  .ed-board-column { display: flex; flex-direction: column; min-height: 0; }
-  .ed-board-wrap { width: min(100%, calc(100dvh - 260px)); max-height: calc(100dvh - 260px); flex: 0 1 auto; margin: 6px auto 0; }
-  .ed-controls-column { max-height: calc(100dvh - 150px); overflow-y: auto; overscroll-behavior: contain; }
+  #editor-body.editor { width: min(1180px, 100%); max-width: none; }
+  .ed-layout { grid-template-columns: minmax(320px, 1.15fr) minmax(300px, 0.85fr); gap: clamp(16px, 2vw, 28px); }
 }
 
 /* Apprendre */
