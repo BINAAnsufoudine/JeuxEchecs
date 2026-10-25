@@ -1482,11 +1482,6 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           f.position.copy(dir).multiplyScalar(0.6); f.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), dir);
           u.ball.add(f); u.ballSpikes.push(f);
         }
-        // La boule qui remplace la Tour garde l'encombrement de son modèle normal.
-        actor.parts.root.updateWorldMatrix(true, true);
-        const rookBounds = new T.Box3().setFromObject(actor.parts.root);
-        const rookSize = rookBounds.getSize(new T.Vector3());
-        u.ballBaseScale = Math.max(rookSize.x, rookSize.y, rookSize.z) / 1.7 || 0.7;
         // Le trou laissé par l'impact, les fissures du plateau et les flammes noires qui y brûlent
         u.crater = new T.Group(); u.crater.position.set(u.target.x, 0, u.target.z); u.crater.visible = false; u.fx.add(u.crater);
         const hole = new T.Mesh(new T.CircleGeometry(0.62, 28), new T.MeshBasicMaterial({ color: 0x020102 }));
@@ -2534,7 +2529,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         const ballOn = e > leap + 0.3 && e < impact;
         u.ball.visible = ballOn;
         u.ball.position.set(pos.x, pos.y + 0.6, pos.z);
-        u.ball.scale.setScalar(Math.max(0.01, smooth((e - leap - 0.3) / 0.3) * (u.ballBaseScale || 0.7)));
+        u.ball.scale.setScalar(Math.max(0.01, smooth((e - leap - 0.3) / 0.3)));
         u.ball.rotation.set(t * 4, t * 3, 0);
         u.ballSpikes.forEach((f, i) => { f.scale.y = 0.7 + Math.abs(Math.sin(t * 17 + i)) * 0.6; });
         // impact : onde de choc, trou, fissures, fumée et flammes noires
