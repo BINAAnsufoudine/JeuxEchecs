@@ -1878,6 +1878,7 @@
   const MAX_LEVEL = 9;
   let problemSettingsOpen = false;
   let themeTrainingOpen = false;
+  let problemsSection = 'program';
   const themeTrainingPrefs = () => Object.assign({ themes: [], rating: 1, solvedTotal: 0, bestStreak: 0 }, store.get('themeTraining', {}));
   function problemPreferences() {
     const saved = store.get('problemPrefs', {});
@@ -2200,10 +2201,16 @@
     else html += L(`<b>${c.games}</b> partie${c.games > 1 ? 's' : ''} analysée${c.games > 1 ? 's' : ''} · <b>${mistakes.length}</b> faute${mistakes.length > 1 ? 's' : ''} relevée${mistakes.length > 1 ? 's' : ''}`, `<b>${c.games}</b> game${c.games === 1 ? '' : 's'} analysed · <b>${mistakes.length}</b> mistake${mistakes.length === 1 ? '' : 's'} found`);
     if (pending) html += L(`<br>Analyse en cours : ${pending} partie${pending > 1 ? 's' : ''} en attente…`, `<br>Analysis running: ${pending} game${pending === 1 ? '' : 's'} waiting…`);
     html += '</div>';
+    const sections = [
+      ['program', L('Mon programme de progression', 'My progress plan')],
+      ['path', L('Parcours de problèmes', 'Puzzle path')],
+      ['themes', L('Problèmes par thème', 'Puzzles by theme')],
+    ];
+    html += `<nav class="problems-tabs" role="tablist" aria-label="${L('Rubriques des problèmes', 'Puzzle sections')}">${sections.map(([key, label]) => `<button class="problems-tab${problemsSection === key ? ' active' : ''}" type="button" role="tab" id="problems-tab-${key}" aria-selected="${problemsSection === key}" aria-controls="problems-section-content" data-problems-section="${key}">${label}</button>`).join('')}</nav><div class="problems-section-content" id="problems-section-content" role="tabpanel" aria-labelledby="problems-tab-${problemsSection}">`;
     const training = themeTrainingPrefs();
     const selectedThemes = Array.isArray(training.themes) ? training.themes : [];
-    html += `<section class="theme-training-card">
-      <div class="theme-training-head"><div><h3>${L('Parcours de problèmes par thèmes', 'Themed puzzle path')}</h3><p class="pz-cap">${L('Choisis un thème ou mélange-en plusieurs. Les exercices s’adaptent progressivement à tes réussites.', 'Choose one theme or mix several. Puzzles gradually adjust to your progress.')}</p></div><span class="theme-training-level">${L('Difficulté', 'Difficulty')} ${Math.round(training.rating)}/${MAX_LEVEL}</span></div>
+    if (problemsSection === 'path') html += `<section class="theme-training-card">
+      <div class="theme-training-head"><div><h3>${L('Parcours de problèmes', 'Puzzle path')}</h3><p class="pz-cap">${L('Choisis un thème ou mélange-en plusieurs. Les exercices s’adaptent progressivement à tes réussites.', 'Choose one theme or mix several. Puzzles gradually adjust to your progress.')}</p></div><span class="theme-training-level">${L('Difficulté', 'Difficulty')} ${Math.round(training.rating)}/${MAX_LEVEL}</span></div>
       <p class="theme-training-progress">${L(`${training.solvedTotal || 0} problèmes réussis · meilleure série : ${training.bestStreak || 0}`, `${training.solvedTotal || 0} puzzles solved · best streak: ${training.bestStreak || 0}`)}</p>
       <button class="btn ghost" type="button" id="theme-training-toggle" aria-expanded="${themeTrainingOpen}">${themeTrainingOpen ? L('Masquer les thèmes', 'Hide themes') : L('Choisir mes thèmes', 'Choose themes')}</button>
       ${themeTrainingOpen ? `<div class="theme-training-groups">${trainingTopicGroups.map((group) => `<section class="theme-training-group"><h4>${group.name}</h4><div class="theme-training-choices" role="group" aria-label="${group.name}">${group.topics.map((topic) => {
@@ -2216,7 +2223,12 @@
         <p class="pz-cap">${L('Les thèmes suivent les étiquettes de la base Lichess (CC0) ; le nombre indique les problèmes disponibles.', 'Themes follow the Lichess puzzle database tags (CC0); the number shows available puzzles.')}</p>
         <button class="btn primary wide" type="button" id="theme-training-start">${L('Commencer le parcours', 'Start the path')}</button>` : ''}
     </section>`;
-    if (problemSettingsOpen) html += `<section class="pz-settings" aria-label="${L('Réglages des problèmes', 'Puzzle settings')}">
+    if (problemsSection === 'themes') html += `<div class="problem-theme-catalog"><p class="pz-cap">${L('Choisis un thème pour t’entraîner. La couleur indique ta maîtrise estimée à partir des problèmes résolus et de tes parties analysées.', 'Choose a theme to practise. The color shows estimated mastery from solved puzzles and analysed games.')}</p>${trainingTopicGroups.map((group) => `<section class="theme-training-group"><h3>${group.name}</h3><div class="problem-theme-grid">${group.topics.map((topic) => {
+      const mastery = topicMastery(topic);
+      const masteryLabel = mastery.known ? `${L('Maîtrise', 'Mastery')} ${mastery.value}%` : mastery.text;
+      return `<button class="problem-theme-card mastery-${mastery.className}" type="button" data-training-topic="${topic.key}" title="${mastery.known ? `${mastery.solved}/${mastery.attempted} · ${mastery.analysisGames} ${L('analyses', 'analyses')}` : mastery.text}"><span class="problem-theme-icon">${topic.icon}</span><span class="problem-theme-name">${topic.name}</span><span class="problem-theme-count">${topic.puzzles.length} ${L('problèmes', 'puzzles')}</span><span class="theme-mastery">${masteryLabel}</span><span class="problem-theme-action">${L('S’entraîner', 'Practise')} ›</span></button>`;
+    }).join('')}</div></section>`).join('')}</div>`;
+    if (problemsSection === 'program' && problemSettingsOpen) html += `<section class="pz-settings" aria-label="${L('Réglages des problèmes', 'Puzzle settings')}">
       <h3>${L('Réglages des problèmes', 'Puzzle settings')}</h3>
       <label class="field-label" for="pz-pref-games">${L('Nombre de parties récentes (1 à 20)', 'Recent games to analyse (1–20)')}</label>
       <input class="profile-name-input" id="pz-pref-games" type="number" min="1" max="20" step="1" value="${prefs.games}">
@@ -2226,7 +2238,7 @@
       <p id="pz-pref-error" class="pz-pref-error" role="alert"></p>
       <div class="pz-pref-actions"><button class="btn primary" id="pz-pref-save" type="button">${L('Enregistrer', 'Save')}</button><button class="btn ghost" id="pz-pref-cancel" type="button">${L('Annuler', 'Cancel')}</button></div>
     </section>`;
-    if (captureNotes.length) {
+    if (problemsSection === 'program' && captureNotes.length) {
       const pieceNames = L({ p: 'un pion', n: 'un cavalier', b: 'un fou', r: 'une tour', q: 'une dame', k: 'un roi' }, { p: 'a pawn', n: 'a knight', b: 'a bishop', r: 'a rook', q: 'a queen', k: 'a king' });
       const pawns = (cp) => `${NUM(Math.abs(cp) / 100)} ${P(Math.abs(cp) >= 200 ? 2 : 1, 'pion', 'pions', 'pawn', 'pawns')}`;
       html += L('<h3 class="pz-section">Analyse de tes prises</h3><p class="pz-cap">Le moteur regarde si la prise garde son avantage, concède du contre-jeu ou fait manquer un meilleur coup.</p>', '<h3 class="pz-section">Your captures analysed</h3><p class="pz-cap">The engine checks whether the capture keeps its advantage, allows counterplay or misses a better move.</p>');
@@ -2247,6 +2259,7 @@
         return `<article class="capture-note ${x.kind}"><b>${title}</b><small>${detail}</small></article>`;
       }).join('');
     }
+    if (problemsSection === 'program') {
     const nextLabel = next.type === 'none' ? L(`Aucune erreur ne dépasse ${prefs.threshold} % sur les ${prefs.games} dernières parties.`, `No mistake exceeds ${prefs.threshold}% in the last ${prefs.games} games.`) : next.type === 'wait' ? L('Joue une partie pour confirmer tes niveaux', 'Play a game to confirm your levels') : next.type === 'lesson' ? L(`Leçon : ${lessonOf(next.theme).title}`, `Lesson: ${lessonOf(next.theme).title}`) : L(`Problèmes : ${PZ[next.theme].name} · niveau ${themeRow(c, next.theme).level} (${themeRow(c, next.theme).ok}/${LEVEL_SET})`, `Puzzles: ${PZ[next.theme].name} · level ${themeRow(c, next.theme).level} (${themeRow(c, next.theme).ok}/${LEVEL_SET})`);
     html += `<button class="btn primary wide" id="pz-go">${L('Continuer mon entraînement', 'Continue my training')}</button><p class="pz-next">${L('Prochaine étape', 'Next step')} · ${nextLabel}</p>`;
     const tips = tipMotifs();
@@ -2256,14 +2269,21 @@
       ? order.map((k, i) => card(k, themeRow(c, k), i + 1, k === next.theme)).join('')
       : `<p class="pz-cap">${L(`Aucun thème ne dépasse le seuil de récurrence. Tes priorités apparaîtront quand une même difficulté reviendra dans plus de ${prefs.threshold} % de tes ${prefs.games} dernières parties analysées.`, `No theme is above the recurrence threshold. Your priorities will appear when the same weakness occurs in more than ${prefs.threshold}% of your last ${prefs.games} analysed games.`)}</p>`;
     if (!c.games && acquired.length) html += `<h3 class="pz-section">${L('Thèmes acquis', 'Mastered themes')}</h3>` + acquired.slice(0, 3).map((k) => card(k, c.themes[k], 0)).join('');
+    }
+    html += '</div>';
     const body = $('problems-body');
     body.innerHTML = html;
-    body.querySelector('#theme-training-toggle').onclick = () => { themeTrainingOpen = !themeTrainingOpen; renderProblems(); };
+    body.querySelectorAll('[data-problems-section]').forEach((button) => { button.onclick = () => { problemsSection = button.dataset.problemsSection; renderProblems(); }; });
+    const themeToggle = body.querySelector('#theme-training-toggle');
+    if (themeToggle) themeToggle.onclick = () => { themeTrainingOpen = !themeTrainingOpen; renderProblems(); };
     const startThemes = body.querySelector('#theme-training-start');
     if (startThemes) startThemes.onclick = () => startThemeTraining([...body.querySelectorAll('[data-training-theme]:checked')].map((input) => input.value));
+    body.querySelectorAll('[data-training-topic]').forEach((button) => { button.onclick = () => startThemeTraining([button.dataset.trainingTopic]); });
     body.querySelectorAll('[data-theme]').forEach((b) => (b.onclick = () => openTheme(b.dataset.theme)));
     body.querySelectorAll('[data-tip]').forEach((b) => (b.onclick = () => startTip(b.dataset.tip)));
-    $('pz-go').onclick = nextActivity;
+    const go = body.querySelector('#pz-go');
+    if (go) go.onclick = nextActivity;
+    $('btn-problem-settings').hidden = problemsSection !== 'program';
     $('btn-problem-settings').onclick = () => { problemSettingsOpen = !problemSettingsOpen; renderProblems(); };
     const savePrefs = body.querySelector('#pz-pref-save');
     if (savePrefs) savePrefs.onclick = () => {

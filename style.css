@@ -231,6 +231,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 /* Problèmes */
 .pz-summary { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; margin: 4px 0 18px; color: var(--muted); }
 .pz-summary b { color: var(--text); }
+.problems-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 18px; position: sticky; top: 0; z-index: 3; padding: 6px 0; background: var(--bg); }
+.problems-tab { min-height: 44px; padding: 8px 10px; border: 1px solid var(--surface-2); border-radius: 12px; background: var(--surface); color: var(--muted); font: inherit; font-size: 0.88rem; font-weight: 650; line-height: 1.2; cursor: pointer; }
+.problems-tab.active { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); border-color: var(--accent); color: var(--text); }
+.problems-section-content { min-width: 0; }
 .theme-training-card { background: linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--accent) 9%, var(--surface))); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: var(--radius); padding: 14px 16px; margin: 4px 0 18px; }
 .theme-training-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .theme-training-head h3 { margin: 0; font-size: 1rem; }
@@ -253,6 +257,21 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .theme-training-choice.mastery-good .theme-mastery { background: rgba(110, 190, 130, 0.2); color: #8fd6a2; }
 .theme-training-choice.mastery-warm .theme-mastery { background: rgba(233, 185, 73, 0.2); color: var(--accent); }
 .theme-training-choice.mastery-poor .theme-mastery { background: rgba(224, 108, 91, 0.2); color: #f19a8c; }
+.problem-theme-catalog { display: grid; gap: 18px; }
+.problem-theme-catalog > .pz-cap { margin: 0; }
+.problem-theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 10px; margin-top: 8px; }
+.problem-theme-card { display: grid; grid-template-columns: 38px 1fr auto; grid-template-rows: auto auto auto; align-items: center; gap: 4px 10px; width: 100%; padding: 12px; border: 1px solid transparent; border-radius: 12px; background: var(--surface); color: var(--text); text-align: left; cursor: pointer; }
+.problem-theme-card.mastery-good { border-color: rgba(110, 190, 130, 0.38); }
+.problem-theme-card.mastery-warm { border-color: rgba(233, 185, 73, 0.42); }
+.problem-theme-card.mastery-poor { border-color: rgba(224, 108, 91, 0.45); }
+.problem-theme-icon { grid-row: span 3; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--surface-2); font-size: 1.25rem; }
+.problem-theme-name { min-width: 0; font-weight: 700; }
+.problem-theme-count { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
+.problem-theme-card .theme-mastery { grid-column: 2 / -1; justify-self: start; border-radius: 999px; padding: 3px 8px; background: var(--surface-2); color: var(--muted); font-size: 0.76rem; font-weight: 700; }
+.problem-theme-card.mastery-good .theme-mastery { background: rgba(110, 190, 130, 0.2); color: #8fd6a2; }
+.problem-theme-card.mastery-warm .theme-mastery { background: rgba(233, 185, 73, 0.2); color: var(--accent); }
+.problem-theme-card.mastery-poor .theme-mastery { background: rgba(224, 108, 91, 0.2); color: #f19a8c; }
+.problem-theme-action { grid-column: 2 / -1; color: var(--accent); font-size: 0.82rem; font-weight: 700; }
 .pz-settings { text-align: left; background: var(--surface); border: 1px solid var(--surface-2); border-radius: var(--radius); padding: 14px 16px; margin: 4px 0 18px; }
 .pz-settings h3 { margin: 0 0 8px; font-size: 1rem; }
 .pz-settings .field-label { margin: 14px 0 6px; }
@@ -261,6 +280,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .pz-pref-error { color: var(--danger) !important; margin: 8px 0 0 !important; }
 .pz-pref-actions { display: flex; gap: 8px; margin-top: 14px; }
 .pz-pref-actions .btn { flex: 1; padding: 10px; font-size: 0.95rem; }
+@media (max-width: 560px) { .problems-tabs { gap: 5px; } .problems-tab { padding: 7px 5px; min-height: 50px; font-size: 0.74rem; } .problem-theme-grid { grid-template-columns: 1fr; } }
 .pz-section { color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; margin: 22px 0 10px; }
 .pz-card { display: grid; grid-template-columns: 44px 1fr auto; gap: 4px 12px; align-items: center; width: 100%; text-align: left; background: var(--surface); border: 0; border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px; }
 .pz-card .ico { grid-row: span 3; width: 44px; height: 44px; border-radius: 12px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
