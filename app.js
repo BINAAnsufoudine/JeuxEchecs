@@ -3065,7 +3065,7 @@
     const base = Math.max(1, Math.min(9, Math.round((estimatedElo() - 400) / 200)));
     const target = championLevel === 'above' ? base + 1 : base;
     const done = store.get('pzdone', {});
-    let pool = BANK.filter((p) => p.theme === theme && !used.has(p.id));
+    let pool = BANK.filter((p) => p.theme === theme && p.line && p.line.length && !used.has(p.id));
     if (piece) { const same = pool.filter((p) => firstMover(p) === piece); if (same.length) pool = same; }
     if (!pool.length) return null;
     const dist = (p) => Math.abs((p.rating || p.level * 2) - target) + (done[p.id] ? 1.5 : 0);
@@ -3120,6 +3120,32 @@
     const steps = [{ text: L(`Bonjour, ${lc(ch.intro)} ${ch.origin} ${reign} Aujourd'hui, c'est moi qui te donne le cours : je vais t'apprendre à jouer comme moi.`, `Hello, ${ch.intro} ${ch.origin} ${reign} Today I am your teacher: I will teach you to play like me.`) }];
     ch.principles.forEach((p, i) => {
       steps.push({ text: L(`Principe ${i + 1} : ${p.title}. ${p.text}`, `Principle ${i + 1}: ${p.title}. ${p.text}`) });
+      const example = championPuzzle(p.theme, used, p.piece);
+      if (example) {
+        used.add(example.id);
+        const examplePosition = new Game(example.fen);
+        const exampleColor = examplePosition.state.turn;
+        example.line.forEach((uci, moveIndex) => {
+          const fen = window.Chess.toFen(examplePosition.state), color = examplePosition.state.turn;
+          const played = examplePosition.playUci(uci);
+          if (!played) return;
+          const moveLabel = `${Math.floor(moveIndex / 2) + 1}${moveIndex % 2 ? '…' : '.'} ${played.san}`;
+          const explanation = moveIndex === 0
+            ? L(`Voici comment j’applique « ${p.title} » : ${p.text}`, `Here is how I apply “${p.title}”: ${p.text}`)
+            : color === exampleColor
+              ? L(`Ce coup poursuit mon idée : ${lc(p.title)}.`, `This move continues my idea: ${lc(p.title)}.`)
+              : L('Observe la réponse adverse : elle montre pourquoi le coup précédent était important.', 'Watch the opponent’s reply: it shows why the previous move mattered.');
+          const finalExampleMove = moveIndex === example.line.length - 1;
+          steps.push({
+            text: L(`Exemple guidé · ${moveLabel}. ${explanation}`, `Guided example · ${moveLabel}. ${explanation}`),
+            fen, demoMoves: [uci], demoSpeech: openingSpeechLine(fen, [uci]), annotateRelations: true, syncDemoWithVoice: true,
+            demoStartText: L(`Regarde ${moveLabel} : les flèches montrent le coup, ses attaques et ses défenses.`, `Watch ${moveLabel}: the arrows show the move, its attacks and defenses.`),
+            demoDoneText: finalExampleMove
+              ? L(`Exemple terminé. À toi d’appliquer « ${p.title} » dans un nouveau problème : appuie sur Continuer.`, `Example complete. Now apply “${p.title}” in a new puzzle: press Continue.`)
+              : L('La suite de l’exemple arrive au prochain écran. Appuie sur Continuer.', 'The next part of the example is on the next screen. Press Continue.'),
+          });
+        });
+      }
       const it = championPuzzle(p.theme, used, p.piece);
       if (it) {
         used.add(it.id);
