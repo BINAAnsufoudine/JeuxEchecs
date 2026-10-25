@@ -4879,6 +4879,25 @@
         demoStartText: L('La flèche montre le bon coup…', 'The arrow shows the right move…'),
         demoDoneText: L('Garde ce coup en mémoire.', 'Remember this move.') });
     }
+    const examplePly = o.color === 'w' ? 0 : 1;
+    const exampleUci = demo.line[examplePly];
+    if (exampleUci) {
+      const examplePosition = new Game(demo.fen);
+      for (const uci of demo.line.slice(0, examplePly)) examplePosition.playUci(uci);
+      const exampleFen = window.Chess.toFen(examplePosition.state);
+      const exampleColor = examplePosition.state.turn;
+      const example = examplePosition.playUci(exampleUci);
+      if (example) {
+        const purpose = openingMovePurpose(o, exampleUci, example.san, exampleColor, new Game(exampleFen));
+        const label = `${Math.floor(examplePly / 2) + 1}${examplePly % 2 ? '…' : '.'} ${example.san}`;
+        steps.push({
+          text: L(`Petit exemple guidé : ${sideName(exampleColor)} joue ${label}. Ce coup sert à ${purpose.charAt(0).toLowerCase()}${purpose.slice(1)}`, `Simple guided example: ${sideName(exampleColor)} plays ${label}. The purpose is to ${purpose.charAt(0).toLowerCase()}${purpose.slice(1)}`),
+          fen: exampleFen, demoMoves: [exampleUci], demoSpeech: openingSpeechLine(exampleFen, [exampleUci]), annotateRelations: true,
+          demoStartText: L('Observe cet exemple simple et les flèches qui montrent le coup.', 'Watch this simple example and the arrows showing the move.'),
+          demoDoneText: L('Tu as vu le coup et son objectif. À toi de jouer maintenant : appuie sur Continuer.', 'You have seen the move and its purpose. Now it is your turn: press Continue.'),
+        });
+      }
+    }
     steps.push({ text: L(`Rejoue de mémoire les coups des ${sideName(o.color)}. Les réponses adverses se jouent seules.`, `Replay ${sideName(o.color)}'s moves from memory. The opponent's replies are played for you.`), fen: x.fen, line: x.line, theme: 'tactique', annotateRelations: true,
         why: L('Ouverture rejouée en entier !', 'Opening replayed in full!'),
         wrong: L(`Ce n'est pas le coup de la ${o.name.toLowerCase()}. Réessaie, ou demande un indice.`, `That is not the ${o.name} move. Try again, or ask for a hint.`) });
