@@ -2504,7 +2504,7 @@
     if (game && !pz) save();
     cancelAi();
     result = null;
-    const guided = !!(pz && pz.kind === 'lesson');
+    const guided = !!pz;
     $('puzzle').classList.toggle('guided-learning', guided);
     if (guided) $('learning-coach-slot').insertBefore($('coach'), $('learning-coach-slot').firstChild);
     else $('puzzle').querySelector('.board-col').insertBefore($('coach'), $('puzzle-slot'));
