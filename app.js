@@ -4417,13 +4417,24 @@
     const units = [L('🍚', '🍚'), L('kg 🍚', 'kg 🍚'), L('t 🍚', 't 🍚'), L('milliers t 🍚', 'thousand t 🍚'), L('millions t 🍚', 'million t 🍚'), L('milliards t 🍚', 'billion t 🍚')];
     return `${value} ${units[scale.index]}`;
   }
-  const NATURE_GRADES = [
-    { name: L('Étudiant de l’Académie', 'Academy student'), icon: '📜' }, { name: L('Genin', 'Genin'), icon: '🥷' },
-    { name: L('Genin confirmé', 'Senior Genin'), icon: '🌀' }, { name: L('Chûnin', 'Chunin'), icon: '🎯' },
-    { name: L('Chûnin d’élite', 'Elite Chunin'), icon: '⚔️' }, { name: L('Jônin', 'Jonin'), icon: '🛡️' },
-    { name: L('Jônin spécial', 'Special Jonin'), icon: '🥷' }, { name: L('ANBU', 'ANBU'), icon: '🎭' },
-    { name: L('Kage', 'Kage'), icon: '🏯' }, { name: L('Hokage', 'Hokage'), icon: '👑' },
-  ];
+  const NATURE_GRADE_PATHS = {
+    plants: [
+      ['Graine de riz', 'Rice seed', '🌾'], ['Germe', 'Sprout', '🌱'], ['Petite pousse', 'Young shoot', '🌿'], ['Bourgeon tropical', 'Tropical bud', '🌷'], ['Fleur tropicale', 'Tropical flower', '🌺'], ['Jardinier en herbe', 'Novice gardener', '🧑🏾‍🌾'], ['Gardien du potager', 'Garden keeper', '🥕'], ['Gardien du verger', 'Orchard keeper', '🥭'], ['Protecteur de la forêt', 'Forest guardian', '🌴'], ['Gardien du baobab', 'Baobab guardian', '🌳'],
+    ],
+    land: [
+      ['Explorateur de la basse-cour', 'Farmyard explorer', '🐓'], ['Ami du jardin', 'Garden friend', '🦎'], ['Protecteur des tortues', 'Tortoise protector', '🐢'], ['Compagnon des lémuriens', 'Lemur companion', '🐒'], ['Gardien des singes', 'Monkey guardian', '🐵'], ['Gardien des clairières', 'Glade guardian', '🦓'], ['Protecteur des éléphants', 'Elephant protector', '🐘'], ['Protecteur de la panthère', 'Panther protector', '🐆'], ['Gardien du cœur de la jungle', 'Heart of the jungle guardian', '🌴'], ['Légende de la jungle', 'Jungle legend', '🦍'],
+    ],
+    birds: [
+      ['Ami des oiseaux du jardin', 'Garden bird friend', '🐦'], ['Colibri agile', 'Swift hummingbird', '🐦'], ['Compagnon des perroquets', 'Parrot companion', '🦜'], ['Gardien des perruches', 'Parakeet guardian', '🦜'], ['Pêcheur du lagon', 'Lagoon fisher', '🐤'], ['Protecteur des calaos', 'Hornbill protector', '🦤'], ['Aigle pêcheur', 'Fish eagle', '🦅'], ['Maître du vol tropical', 'Master of tropical flight', '🌴'], ['Gardien de la forêt profonde', 'Deep forest guardian', '🌳'], ['Gardien du grand nid', 'Great nest guardian', '🪺'],
+    ],
+    ocean: [
+      ['Ami de la plage', 'Beach friend', '🏖️'], ['Gardien des crabes', 'Crab guardian', '🦀'], ['Explorateur du récif', 'Reef explorer', '🪸'], ['Gardien des poissons tropicaux', 'Tropical fish guardian', '🐠'], ['Protecteur du lagon', 'Lagoon protector', '🐟'], ['Ami des tortues marines', 'Sea turtle friend', '🐢'], ['Gardien des dauphins', 'Dolphin guardian', '🐬'], ['Explorateur de la mer ouverte', 'Open sea explorer', '🌊'], ['Maître de l’océan Indien', 'Master of the Indian Ocean', '🌊'], ['Gardien de la baleine', 'Whale guardian', '🐋'],
+    ],
+    ninjas: [
+      ['Étudiant de l’Académie', 'Academy student', '📜'], ['Genin', 'Genin', '🥷'], ['Genin confirmé', 'Senior Genin', '🌀'], ['Chûnin', 'Chunin', '🎯'], ['Chûnin d’élite', 'Elite Chunin', '⚔️'], ['Jônin', 'Jonin', '🛡️'], ['Jônin spécial', 'Special Jonin', '🥷'], ['ANBU', 'ANBU', '🎭'], ['Kage', 'Kage', '🏯'], ['Hokage', 'Hokage', '👑'],
+    ],
+  };
+  const natureGradesFor = (collectionId = activeNatureCollection) => (NATURE_GRADE_PATHS[collectionId] || NATURE_GRADE_PATHS.plants).map(([fr, en, icon]) => ({ name: L(fr, en), icon }));
   const GARDEN_PLANTS = [
     { name: L('Riz', 'Rice'), icon: '🌱' }, { name: L('Bananier', 'Banana tree'), icon: '🍌' },
     { name: L('Ananas', 'Pineapple'), icon: '🍍' }, { name: L('Manguier', 'Mango tree'), icon: '🥭' },
@@ -4601,21 +4612,34 @@
     countMode('lesson');
   }
   // Boutique de Sissa : objets visuels achetés avec les grains de riz gagnés
+  const SHOP_TITLE_PATHS = {
+    plants: [['plants-1', L('Jardinier en herbe', 'Novice gardener')], ['plants-2', L('Gardien du potager', 'Garden keeper')], ['plants-3', L('Gardien du verger', 'Orchard keeper')], ['plants-4', L('Protecteur de la forêt', 'Forest guardian')], ['plants-5', L('Gardien du baobab', 'Baobab guardian')]],
+    land: [['land-1', L('Explorateur de la basse-cour', 'Farmyard explorer')], ['land-2', L('Ami des herbivores', 'Herbivore friend')], ['land-3', L('Gardien des troupeaux', 'Herd guardian')], ['land-4', L('Protecteur des prédateurs', 'Predator protector')], ['land-5', L('Légende de la jungle', 'Jungle legend')]],
+    birds: [['birds-1', L('Ami des oiseaux', 'Bird friend')], ['birds-2', L('Éclaireur des palmiers', 'Palm scout')], ['birds-3', L('Gardien des perroquets', 'Parrot guardian')], ['birds-4', L('Maître du ciel tropical', 'Master of the tropical sky')], ['birds-5', L('Légende de la forêt', 'Forest legend')]],
+    ocean: [['ocean-1', L('Explorateur du rivage', 'Shore explorer')], ['ocean-2', L('Gardien du récif', 'Reef guardian')], ['ocean-3', L('Protecteur du lagon', 'Lagoon protector')], ['ocean-4', L('Maître des mers', 'Master of the seas')], ['ocean-5', L('Gardien de la baleine', 'Whale guardian')]],
+    ninjas: [['ecuyer', L('Genin', 'Genin')], ['chevalier', L('Chûnin', 'Chunin')], ['seigneur', L('Jônin', 'Jonin')], ['vizir', L('Kage', 'Kage')], ['roi', L('Hokage', 'Hokage')]],
+  };
+  function shopTitleItems() {
+    const prices = [80, 200, 400, 700, 1200], levels = [1, 5, 10, 20, 30];
+    return Object.entries(SHOP_TITLE_PATHS).flatMap(([collection, titles]) => titles.map(([key, name], i) => ({
+      id: `title:${key}`, kind: 'title', key, collection, name, price: prices[i], lvl: levels[i],
+      preview: `<span class="shop-title">« ${name} »</span>`,
+    })));
+  }
   function shopItems() {
     const out = [];
     for (const [k, th] of Object.entries(THEMES)) if (th.price) out.push({ id: `theme:${k}`, kind: 'theme', key: k, name: th.name, price: th.price, preview: `<span class="shop-board"><i style="background:${th.light}"></i><i style="background:${th.dark}"></i><i style="background:${th.dark}"></i><i style="background:${th.light}"></i></span>` });
     [['bronze', L('Cadre de bronze', 'Bronze frame'), 100], ['argent', L('Cadre d\'argent', 'Silver frame'), 250], ['or', L('Cadre d\'or', 'Gold frame'), 500], ['feu', L('Cadre de feu', 'Fire frame'), 800]]
       .forEach(([k, name, price]) => out.push({ id: `frame:${k}`, kind: 'frame', key: k, name, price, preview: `<span class="profile-photo shop-frame frame-${k}">♞</span>` }));
-    [['ecuyer', L('Genin', 'Genin'), 80, 1], ['chevalier', L('Chûnin', 'Chunin'), 200, 5], ['seigneur', L('Jônin', 'Jonin'), 400, 10], ['vizir', L('Kage', 'Kage'), 700, 20], ['roi', L('Hokage', 'Hokage'), 1200, 30]]
-      .forEach(([k, name, price, lvl]) => out.push({ id: `title:${k}`, kind: 'title', key: k, name, price, lvl, preview: `<span class="shop-title">« ${name} »</span>` }));
+    out.push(...shopTitleItems().filter((item) => item.collection === activeNatureCollection));
     return out;
   }
   const owns = (id) => { const it = id.startsWith('theme:') ? THEMES[id.slice(6)] : null; return (it && !it.price) || walletState().owned.includes(id); };
-  const titleName = (k) => { const it = shopItems().find((x) => x.id === `title:${k}`); return it ? it.name : ''; };
+  const titleName = (k) => { const it = shopTitleItems().find((x) => x.key === k); return it ? it.name : ''; };
   function renderHomeRewards() {
     const w = walletState(), lv = levelOf(w.xp), q = questState();
     const done = q.ids.filter((id) => q.claimed[id]).length;
-    const grade = adventureGrade(lv.level), gradeInfo = NATURE_GRADES[grade - 1], gradePct = adventureProgress(w.xp, grade);
+    const grade = adventureGrade(lv.level), gradeInfo = natureGradesFor()[grade - 1], gradePct = adventureProgress(w.xp, grade);
     const balance = currentNatureBalance(w, grade);
     $('home-rewards').setAttribute('aria-label', L(`Grade nature, ${balance.currency.name} et quêtes du jour`, `Nature rank, ${balance.currency.name}, and daily quests`));
     $('home-rewards').innerHTML = `<span class="lvl-badge">${gradeInfo.icon} ${grade}/10</span><span class="xp-bar" title="${L('Progression du grade', 'Rank progress')}"><i style="width:${gradePct}%"></i></span><span>${natureCurrencyAmount(balance.currency, balance.amount, true)}</span><span>🎯 ${done}/3</span>`;
@@ -4680,9 +4704,9 @@
   }
   function renderShop() {
     const w = walletState(), lv = levelOf(w.xp), q = questState(), defs = questList();
-    const natureGrade = adventureGrade(lv.level), natureInfo = NATURE_GRADES[natureGrade - 1];
+    const natureGrade = adventureGrade(lv.level), natureInfo = natureGradesFor()[natureGrade - 1];
     const currency = currentNatureBalance(w, natureGrade);
-    let html = `<div class="shop-head"><span class="lvl-badge big">${natureInfo.icon} ${L('Grade', 'Rank')} ${natureGrade}/10</span><div class="shop-xp"><span class="xp-bar"><i style="width:${adventureProgress(w.xp, natureGrade)}%"></i></span><small>${lv.level >= 50 ? L('Hokage atteint', 'Hokage achieved') : `${natureInfo.name} · ${lv.into} / ${lv.need} XP`}</small></div><span class="shop-rice">${currency.currency.icon} ${natureCurrencyAmount(currency.currency, currency.amount)}</span></div>`;
+    let html = `<div class="shop-head"><span class="lvl-badge big">${natureInfo.icon} ${L('Grade', 'Rank')} ${natureGrade}/10</span><div class="shop-xp"><span class="xp-bar"><i style="width:${adventureProgress(w.xp, natureGrade)}%"></i></span><small>${lv.level >= 50 ? L(`Palier maximal atteint : ${natureInfo.name}`, `Top rank reached: ${natureInfo.name}`) : `${natureInfo.name} · ${lv.into} / ${lv.need} XP`}</small></div><span class="shop-rice">${currency.currency.icon} ${natureCurrencyAmount(currency.currency, currency.amount)}</span></div>`;
     html += `<p class="level-help">${L(`Gagne des ${currency.currency.unit} et de l’expérience dans tous les modes : parties, problèmes, leçons, défi du jour, parties en ligne et tournois. Chaque niveau gagné rapporte 50 ${currency.currency.unit}.`, `Earn ${currency.currency.unit} and experience in every mode: games, puzzles, lessons, daily challenge, online games and tournaments. Each level gives 50 ${currency.currency.unit}.`)}</p>`;
     html += `<h3 class="train-h">${L('Quêtes du jour', 'Daily quests')}</h3><div class="quest-list">${q.ids.map((id) => { const d = defs.find((x) => x.id === id); const p = Math.min(d.goal, q.prog[id] || 0); return `<div class="quest${q.claimed[id] ? ' done' : ''}"><span>${q.claimed[id] ? '✅' : '🎯'} ${d.text}</span><b>${p}/${d.goal} · ${natureCurrencyAmount(currency.currency, 30, true)}</b></div>`; }).join('')}<div class="quest${q.chest ? ' done' : ''}"><span>${q.chest ? '✅' : '🎁'} ${L('Coffre : finir les trois quêtes', 'Chest: finish all three quests')}</span><b>${natureCurrencyAmount(currency.currency, 60, true)}</b></div></div>`;
     const section = (kind, title) => {
