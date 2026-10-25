@@ -1877,9 +1877,8 @@
   const LEVEL_SET = 3;
   const MAX_LEVEL = 9;
   let problemSettingsOpen = false;
-  let themeTrainingOpen = false;
   let problemsSection = 'program';
-  const themeTrainingPrefs = () => Object.assign({ themes: [], rating: 1, solvedTotal: 0, bestStreak: 0 }, store.get('themeTraining', {}));
+  const themeTrainingPrefs = () => Object.assign({ themes: [], rating: 1, solvedTotal: 0, attemptedTotal: 0, bestStreak: 0, topicStats: {}, route: [] }, store.get('themeTraining', {}));
   function problemPreferences() {
     const saved = store.get('problemPrefs', {});
     const games = Number(saved.games), threshold = Number(saved.threshold);
@@ -1962,13 +1961,13 @@
     enterPuzzleMode();
     loadItem(it);
   }
-  function startThemeTraining(themes) {
-    const selected = [...new Set(themes)].filter((key) => (PZ[key] || trainingTopic(key)) && trainingTopicPuzzles(key).length);
-    if (!selected.length) return toast(L('Choisis au moins un thème pour commencer.', 'Choose at least one theme to start.'));
+  function startThemeTraining(themes, mode = 'path') {
+    const requested = Array.isArray(themes) ? themes : ALL_TRAINING_TOPICS.map((topic) => topic.key);
+    const selected = [...new Set(requested)].filter((key) => (PZ[key] || trainingTopic(key)) && trainingTopicPuzzles(key).some((p) => p.line && p.line.length));
+    if (!selected.length) return toast(L('Aucun problème n’est disponible pour le moment.', 'No puzzles are available right now.'));
     const saved = themeTrainingPrefs();
-    saved.themes = selected;
     store.set('themeTraining', saved);
-    pz = { kind: 'themed', themeSession: { themes: selected, rating: Math.max(1, Math.min(MAX_LEVEL, Number(saved.rating) || 1)), solved: 0, cleanSolved: 0, streak: 0, used: [], lastTheme: '', currentTopic: '', index: 0 } };
+    pz = { kind: 'themed', themeSession: { mode, themes: selected, rating: Math.max(1, Math.min(MAX_LEVEL, Number(saved.rating) || 1)), solved: 0, cleanSolved: 0, streak: 0, used: [], lastTheme: '', currentTopic: '', index: 0 } };
     enterPuzzleMode();
     nextThemedPuzzle();
   }
@@ -2196,11 +2195,14 @@
     const order = pathOrder(c);
     const acquired = ranked(c).filter((k) => !isWeak(c.themes[k]));
     const next = peekActivity();
-    let html = '<div class="pz-summary">';
-    if (!c.games) html += L("Joue une partie contre l'ordinateur : je l'analyse et je construis ton programme, du point faible le plus fréquent au plus rare. En attendant, on commence par les bases.", 'Play a game against the computer: I analyse it and build your plan, from your most frequent weakness to the rarest. Meanwhile, we start with the basics.');
-    else html += L(`<b>${c.games}</b> partie${c.games > 1 ? 's' : ''} analysée${c.games > 1 ? 's' : ''} · <b>${mistakes.length}</b> faute${mistakes.length > 1 ? 's' : ''} relevée${mistakes.length > 1 ? 's' : ''}`, `<b>${c.games}</b> game${c.games === 1 ? '' : 's'} analysed · <b>${mistakes.length}</b> mistake${mistakes.length === 1 ? '' : 's'} found`);
-    if (pending) html += L(`<br>Analyse en cours : ${pending} partie${pending > 1 ? 's' : ''} en attente…`, `<br>Analysis running: ${pending} game${pending === 1 ? '' : 's'} waiting…`);
-    html += '</div>';
+    let html = '';
+    if (problemsSection === 'program') {
+      html += '<div class="pz-summary">';
+      if (!c.games) html += L("Joue une partie contre l'ordinateur : je l'analyse et je construis ton programme, du point faible le plus fréquent au plus rare. En attendant, on commence par les bases.", 'Play a game against the computer: I analyse it and build your plan, from your most frequent weakness to the rarest. Meanwhile, we start with the basics.');
+      else html += L(`<b>${c.games}</b> partie${c.games > 1 ? 's' : ''} analysée${c.games > 1 ? 's' : ''} · <b>${mistakes.length}</b> faute${mistakes.length > 1 ? 's' : ''} relevée${mistakes.length > 1 ? 's' : ''}`, `<b>${c.games}</b> game${c.games === 1 ? '' : 's'} analysed · <b>${mistakes.length}</b> mistake${mistakes.length === 1 ? '' : 's'} found`);
+      if (pending) html += L(`<br>Analyse en cours : ${pending} partie${pending > 1 ? 's' : ''} en attente…`, `<br>Analysis running: ${pending} game${pending === 1 ? '' : 's'} waiting…`);
+      html += '</div>';
+    }
     const sections = [
       ['program', L('Mon programme de progression', 'My progress plan')],
       ['path', L('Parcours de problèmes', 'Puzzle path')],
@@ -2208,21 +2210,36 @@
     ];
     html += `<nav class="problems-tabs" role="tablist" aria-label="${L('Rubriques des problèmes', 'Puzzle sections')}">${sections.map(([key, label]) => `<button class="problems-tab${problemsSection === key ? ' active' : ''}" type="button" role="tab" id="problems-tab-${key}" aria-selected="${problemsSection === key}" aria-controls="problems-section-content" data-problems-section="${key}">${label}</button>`).join('')}</nav><div class="problems-section-content" id="problems-section-content" role="tabpanel" aria-labelledby="problems-tab-${problemsSection}">`;
     const training = themeTrainingPrefs();
-    const selectedThemes = Array.isArray(training.themes) ? training.themes : [];
-    if (problemsSection === 'path') html += `<section class="theme-training-card">
-      <div class="theme-training-head"><div><h3>${L('Parcours de problèmes', 'Puzzle path')}</h3><p class="pz-cap">${L('Choisis un thème ou mélange-en plusieurs. Les exercices s’adaptent progressivement à tes réussites.', 'Choose one theme or mix several. Puzzles gradually adjust to your progress.')}</p></div><span class="theme-training-level">${L('Difficulté', 'Difficulty')} ${Math.round(training.rating)}/${MAX_LEVEL}</span></div>
-      <p class="theme-training-progress">${L(`${training.solvedTotal || 0} problèmes réussis · meilleure série : ${training.bestStreak || 0}`, `${training.solvedTotal || 0} puzzles solved · best streak: ${training.bestStreak || 0}`)}</p>
-      <button class="btn ghost" type="button" id="theme-training-toggle" aria-expanded="${themeTrainingOpen}">${themeTrainingOpen ? L('Masquer les thèmes', 'Hide themes') : L('Choisir mes thèmes', 'Choose themes')}</button>
-      ${themeTrainingOpen ? `<div class="theme-training-groups">${trainingTopicGroups.map((group) => `<section class="theme-training-group"><h4>${group.name}</h4><div class="theme-training-choices" role="group" aria-label="${group.name}">${group.topics.map((topic) => {
-        const mastery = topicMastery(topic);
-        const title = mastery.known
-          ? L(`Maîtrise estimée : ${mastery.value} % · ${mastery.solved}/${mastery.attempted} problèmes réussis · ${mastery.analysisGames} analyses`, `Estimated mastery: ${mastery.value}% · ${mastery.solved}/${mastery.attempted} puzzles solved · ${mastery.analysisGames} analyses`)
-          : mastery.text;
-        return `<label class="theme-training-choice mastery-${mastery.className}" title="${title}"><input type="checkbox" value="${topic.key}" data-training-theme ${selectedThemes.includes(topic.key) ? 'checked' : ''}><span>${topic.icon} ${topic.name} <small>(${topic.puzzles.length})</small></span><small class="theme-mastery">${mastery.known ? `${L('Maîtrise', 'Mastery')} ${mastery.value}%` : mastery.text}</small></label>`;
-      }).join('')}</div></section>`).join('')}</div>
-        <p class="pz-cap">${L('Les thèmes suivent les étiquettes de la base Lichess (CC0) ; le nombre indique les problèmes disponibles.', 'Themes follow the Lichess puzzle database tags (CC0); the number shows available puzzles.')}</p>
-        <button class="btn primary wide" type="button" id="theme-training-start">${L('Commencer le parcours', 'Start the path')}</button>` : ''}
-    </section>`;
+    if (problemsSection === 'path') {
+      const storedTraining = store.get('themeTraining', {});
+      const cleanSolved = Number(training.solvedTotal) || 0;
+      const attempts = Math.max(Number(training.attemptedTotal) || 0, cleanSolved);
+      const successRate = attempts ? `${Math.round((cleanSolved / attempts) * 100)}%` : '—';
+      const levelProgress = Math.max(0, Math.min(100, ((Number(training.rating) || 1) / MAX_LEVEL) * 100));
+      const route = Array.isArray(training.route) ? training.route.slice(-16) : [];
+      const visitedGroups = trainingTopicGroups.map((group) => ({ ...group, topics: group.topics.filter((topic) => (training.topicStats[topic.key]?.attempted || 0) > 0) })).filter((group) => group.topics.length);
+      const routeHtml = route.length ? `<ol class="theme-training-route">${route.map((step) => {
+        const topic = trainingTopic(step.topic);
+        return `<li class="${step.clean ? 'clean' : 'assisted'}" title="${topic ? topic.name : trainingTopicName(step.topic)} · ${step.clean ? L('résolu sans erreur', 'solved without mistakes') : L('résolu avec erreur', 'solved with a mistake')}"><span>${topic ? topic.icon : trainingTopicIcon(step.topic)}</span><small>${topic ? topic.name : trainingTopicName(step.topic)}</small></li>`;
+      }).join('')}</ol>` : `<p class="pz-cap">${attempts ? L('Le détail de ton chemin s’enregistrera à partir de tes prochains problèmes.', 'Detailed path tracking starts with your next puzzles.') : L('Ton chemin apparaîtra ici après tes premiers problèmes.', 'Your path will appear here after your first puzzles.')}</p>`;
+      const visitedHtml = visitedGroups.length ? `<h4 class="path-route-title">${L('Thèmes déjà parcourus', 'Themes visited')}</h4><div class="path-visited-topics">${visitedGroups.flatMap((group) => group.topics.map((topic) => {
+        const stats = training.topicStats[topic.key];
+        return `<span title="${stats.solved}/${stats.attempted} ${L('réussis sans erreur', 'solved without mistakes')}">${topic.icon} ${topic.name} <b>${stats.solved}/${stats.attempted}</b></span>`;
+      })).join('')}</div>` : '';
+      html += `<section class="theme-training-card path-dashboard">
+        <div class="theme-training-head"><div><h3>${L('Ton parcours de problèmes', 'Your puzzle path')}</h3><p class="pz-cap">${L('Tous les thèmes sont mélangés. Les problèmes sont choisis selon ton niveau et s’adaptent à tes résultats.', 'All themes are mixed. Puzzles are selected for your level and adapt to your results.')}</p></div></div>
+        <div class="path-progress-stats">
+          <div><strong>${attempts}</strong><span>${L('problèmes faits', 'puzzles completed')}</span></div>
+          <div><strong>${successRate}</strong><span>${L('réussite sans erreur', 'solved without mistakes')}</span></div>
+          <div><strong>${Math.round(training.rating)}/${MAX_LEVEL}</strong><span>${L('niveau actuel', 'current level')}</span></div>
+          <div><strong>${training.bestStreak || 0}</strong><span>${L('meilleure série', 'best streak')}</span></div>
+        </div>
+        <div class="path-level-progress" role="progressbar" aria-label="${L('Progression du niveau', 'Level progress')}" aria-valuemin="1" aria-valuemax="${MAX_LEVEL}" aria-valuenow="${Math.round(training.rating)}"><i style="width:${levelProgress}%"></i></div>
+        ${attempts ? `<p class="theme-training-progress">${L(`${cleanSolved} réussis sans erreur sur ${attempts} problèmes terminés.`, `${cleanSolved} solved without mistakes out of ${attempts} completed puzzles.`)}</p>` : `<p class="theme-training-progress">${storedTraining.solvedTotal ? L(`${cleanSolved} problèmes réussis. Le suivi du pourcentage commence à ta prochaine séance.`, `${cleanSolved} puzzles solved. Percentage tracking starts with your next session.`) : L('Les progrès et le pourcentage de réussite commenceront après le premier problème.', 'Progress and success rate will start after the first puzzle.')}</p>`}
+        <h4 class="path-route-title">${L('Chemin parcouru', 'Path so far')}</h4>${routeHtml}${visitedHtml}
+        <button class="btn primary wide" type="button" id="theme-training-start">${attempts ? L('Continuer le parcours', 'Continue the path') : L('Commencer le parcours', 'Start the path')}</button>
+      </section>`;
+    }
     if (problemsSection === 'themes') html += `<div class="problem-theme-catalog"><p class="pz-cap">${L('Choisis un thème pour t’entraîner. La couleur indique ta maîtrise estimée à partir des problèmes résolus et de tes parties analysées.', 'Choose a theme to practise. The color shows estimated mastery from solved puzzles and analysed games.')}</p>${trainingTopicGroups.map((group) => `<section class="theme-training-group"><h3>${group.name}</h3><div class="problem-theme-grid">${group.topics.map((topic) => {
       const mastery = topicMastery(topic);
       const masteryLabel = mastery.known ? `${L('Maîtrise', 'Mastery')} ${mastery.value}%` : mastery.text;
@@ -2274,11 +2291,9 @@
     const body = $('problems-body');
     body.innerHTML = html;
     body.querySelectorAll('[data-problems-section]').forEach((button) => { button.onclick = () => { problemsSection = button.dataset.problemsSection; renderProblems(); }; });
-    const themeToggle = body.querySelector('#theme-training-toggle');
-    if (themeToggle) themeToggle.onclick = () => { themeTrainingOpen = !themeTrainingOpen; renderProblems(); };
     const startThemes = body.querySelector('#theme-training-start');
-    if (startThemes) startThemes.onclick = () => startThemeTraining([...body.querySelectorAll('[data-training-theme]:checked')].map((input) => input.value));
-    body.querySelectorAll('[data-training-topic]').forEach((button) => { button.onclick = () => startThemeTraining([button.dataset.trainingTopic]); });
+    if (startThemes) startThemes.onclick = () => startThemeTraining();
+    body.querySelectorAll('[data-training-topic]').forEach((button) => { button.onclick = () => startThemeTraining([button.dataset.trainingTopic], 'topic'); });
     body.querySelectorAll('[data-theme]').forEach((b) => (b.onclick = () => openTheme(b.dataset.theme)));
     body.querySelectorAll('[data-tip]').forEach((b) => (b.onclick = () => startTip(b.dataset.tip)));
     const go = body.querySelector('#pz-go');
@@ -2504,7 +2519,9 @@
   function promptOf(it) {
     if (pz && pz.kind === 'themed') {
       const session = pz.themeSession;
-      const goal = LANG === 'en' ? 'Solve the puzzle to keep progressing through your selected themes.' : 'Résous le problème pour avancer parmi les thèmes choisis.';
+      const goal = session.mode === 'topic'
+        ? L('Résous ce problème pour progresser dans ce thème.', 'Solve this puzzle to progress in this theme.')
+        : L('Résous le problème pour avancer dans le parcours qui mélange tous les thèmes.', 'Solve the puzzle to keep progressing through the mixed-theme path.');
       return `${trainingTopicName(session.currentTopic || it.theme)} · ${L('difficulté', 'difficulty')} ${Math.round(session.rating)}/${MAX_LEVEL}. ${goal}`;
     }
     if (LANG === 'en') {
@@ -2534,7 +2551,7 @@
     marks = null;
     setPosition(it.fen);
     const row = themeRow(loadCoach(), it.theme);
-    $('puzzle-title').textContent = pz.kind === 'themed' ? L('Parcours par thèmes', 'Themed puzzle path') : PZ[it.theme].name;
+    $('puzzle-title').textContent = pz.kind === 'themed' ? (pz.themeSession.mode === 'topic' ? trainingTopicName(pz.themeSession.currentTopic) : L('Parcours de problèmes', 'Puzzle path')) : PZ[it.theme].name;
     $('pz-count').textContent = pz.kind === 'themed'
       ? `${L('Problème', 'Puzzle')} ${pz.themeSession.index} · ${trainingTopicName(pz.themeSession.currentTopic || it.theme)} · ${L('difficulté', 'difficulty')} ${Math.round(pz.themeSession.rating)}/${MAX_LEVEL}`
       : (it.personal ? L('Ta partie · ', 'Your game · ') : '') + `${L('Niveau', 'Level')} ${row.level} · ${row.pending ? L('révision', 'review') : `${Math.min(LEVEL_SET, row.ok + 1)}/${LEVEL_SET}`}`;
@@ -2627,14 +2644,28 @@
       const session = pz.themeSession, saved = themeTrainingPrefs();
       recordPuzzle(pz.item, clean);
       session.solved++;
+      const pathMode = session.mode !== 'topic';
+      if (pathMode) {
+        saved.attemptedTotal = Math.max(Number(saved.attemptedTotal) || 0, Number(saved.solvedTotal) || 0) + 1;
+        saved.topicStats = saved.topicStats || {};
+        const topicStats = saved.topicStats[session.currentTopic] || { attempted: 0, solved: 0 };
+        topicStats.attempted++;
+        if (clean) topicStats.solved++;
+        saved.topicStats[session.currentTopic] = topicStats;
+        saved.route = Array.isArray(saved.route) ? saved.route : [];
+        saved.route.push({ topic: session.currentTopic, clean });
+        saved.route = saved.route.slice(-24);
+      }
       if (clean) {
         session.cleanSolved++;
         session.streak++;
         session.rating = Math.min(MAX_LEVEL, session.rating + 0.4 + (session.streak % 3 === 0 ? 0.6 : 0));
-        reward(3, 5, L('Défi par thème réussi', 'Themed puzzle solved'));
-        saved.solvedTotal = (saved.solvedTotal || 0) + 1;
-        saved.bestStreak = Math.max(saved.bestStreak || 0, session.streak);
-        saved.rating = session.rating;
+        reward(3, 5, L(pathMode ? 'Défi du parcours réussi' : 'Problème du thème réussi', pathMode ? 'Puzzle path challenge solved' : 'Themed puzzle solved'));
+        if (pathMode) {
+          saved.solvedTotal = (saved.solvedTotal || 0) + 1;
+          saved.bestStreak = Math.max(saved.bestStreak || 0, session.streak);
+          saved.rating = session.rating;
+        }
         if (session.streak % 3 === 0) reward(15, 20, L(`${session.streak} problèmes de suite`, `${session.streak} puzzles in a row`));
         const praise = [L('Excellent ! Tu reconnais de mieux en mieux ce motif.', 'Excellent! You are recognising this pattern more and more.'), L('Très bien joué ! Ta régularité fait monter la difficulté.', 'Well played! Your consistency is raising the difficulty.'), L('Belle réussite ! Continue, tu prends confiance.', 'Great solve! Keep going; you are building confidence.')][(session.cleanSolved - 1) % 3];
         say(`${praise} ${L(`Série : ${session.streak}. Difficulté : ${Math.round(session.rating)} sur ${MAX_LEVEL}.`, `Streak: ${session.streak}. Difficulty: ${Math.round(session.rating)} out of ${MAX_LEVEL}.`)}`, 'happy');
@@ -2642,11 +2673,10 @@
       } else {
         session.streak = 0;
         session.rating = Math.max(1, session.rating - 0.25);
-        saved.rating = session.rating;
+        if (pathMode) saved.rating = session.rating;
         say(L(`Bien essayé. On reprend un défi adapté à la difficulté ${Math.round(session.rating)} : chaque tentative t’aide à progresser.`, `Good try. We’ll choose another challenge around difficulty ${Math.round(session.rating)}: every attempt helps you improve.`), 'happy');
         setPzStatus('good', L('La solution est trouvée. Continue à ton rythme.', 'Puzzle complete. Keep going at your own pace.'));
       }
-      saved.themes = session.themes;
       store.set('themeTraining', saved);
     } else {
       const r = recordPuzzle(pz.item, clean);
@@ -4915,7 +4945,7 @@
     if (id === 'stalemate' || id === 'draws' || id === 'castling') return startTutorial(TR.TUTORIALS.find((chapter) => chapter.id === id), false);
     if (id === 'mate-patterns') { renderTrain('mates'); show('train'); return; }
     if (id === 'openings') { renderTrain('openings'); show('train'); return; }
-    if (id === 'tactics') { themeTrainingOpen = true; renderProblems(); show('problems'); return; }
+    if (id === 'tactics') { problemsSection = 'themes'; renderProblems(); show('problems'); return; }
     if (id === 'blunders') { $('btn-program').click(); return; }
     if (id === 'strategy') return startTutorial(TR.TUTORIALS.find((chapter) => chapter.id === 'strategy'), false);
     if (id === 'master') { renderTrain('famous'); show('train'); }
