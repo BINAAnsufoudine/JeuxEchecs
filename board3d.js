@@ -38,7 +38,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
   class Board3D {
     constructor(container, onSquare) {
-      this.speed = 0.75;
+      this.reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      this.speed = this.reducedMotion ? 1.2 : 0.75;
       const THREE = root.THREE;
       if (!THREE) throw new Error('three.js absent');
       this.THREE = THREE;
@@ -150,8 +151,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       // La boucle ne doit jamais s'arrêter : une erreur ponctuelle ne fige plus l'affichage
       let fails = 0, lost = false;
       const cv = this.renderer.domElement;
-      cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); lost = true; });
-      cv.addEventListener('webglcontextrestored', () => { lost = false; this.boardTextureKey = ''; this.resize(); });
+      cv.addEventListener('webglcontextlost', (e) => { e.preventDefault(); lost = true; this.container.dispatchEvent(new CustomEvent('board3dcontext', { bubbles: true, detail: { lost: true } })); });
+      cv.addEventListener('webglcontextrestored', () => { lost = false; this.boardTextureKey = ''; this.resize(); this.container.dispatchEvent(new CustomEvent('board3dcontext', { bubbles: true, detail: { lost: false } })); });
       const loop = (t) => {
         requestAnimationFrame(loop);
         if (lost) return;

@@ -35,12 +35,16 @@
   };
 
   /* Stockage (peut être indisponible : navigation privée, etc.) */
+  let storageUnavailable = false;
   const store = {
     get(key, fallback) {
-      try { const v = localStorage.getItem('cavalier.' + key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+      let v;
+      try { v = localStorage.getItem('cavalier.' + key); } catch { storageUnavailable = true; return fallback; }
+      if (!v) return fallback;
+      try { return JSON.parse(v); } catch { return fallback; }
     },
-    set(key, value) { try { localStorage.setItem('cavalier.' + key, JSON.stringify(value)); } catch { /* ignoré */ } },
-    del(key) { try { localStorage.removeItem('cavalier.' + key); } catch { /* ignoré */ } },
+    set(key, value) { try { localStorage.setItem('cavalier.' + key, JSON.stringify(value)); return true; } catch { storageUnavailable = true; return false; } },
+    del(key) { try { localStorage.removeItem('cavalier.' + key); } catch { storageUnavailable = true; } },
   };
   const playerProfile = () => Object.assign({ name: '', nameAsked: false, rating: null, games: 0, puzzles: 0 }, store.get('player', {}));
 
@@ -397,6 +401,27 @@
     $('opt-voice').checked = settings.voice;
     $('opt-coach').checked = settings.coachEnabled;
     $('opt-lite').checked = settings.lite;
+    renderSyncStatus();
+  }
+  function renderSyncStatus(state) {
+    const el = $('sync-status');
+    if (!el) return;
+    if (storageUnavailable) {
+      el.className = 'sync-status error';
+      el.textContent = L('⚠ Le stockage de cet appareil est indisponible. Exporte ta progression pour la conserver.', '⚠ This device storage is unavailable. Export your progress to keep it safe.');
+      return;
+    }
+    const online = !!(ON && ON.user && store.get('onlineSynced', null) === ON.user.uid);
+    const key = state || (!online ? 'local' : !navigator.onLine ? 'offline' : progressDirty ? 'pending' : 'synced');
+    const labels = {
+      local: L('Progression enregistrée sur cet appareil. Exporte-la dans Réglages pour en garder une copie.', 'Progress saved on this device. Export it in Settings to keep a backup.'),
+      offline: L('Hors connexion : la progression reste en attente sur cet appareil.', 'Offline: progress is waiting on this device.'),
+      pending: L('Synchronisation de la progression en cours…', 'Syncing your progress…'),
+      synced: L('Progression synchronisée avec ton compte.', 'Progress synced with your account.'),
+      error: L('Synchronisation impossible pour le moment. Ta progression reste sur cet appareil et sera réessayée.', 'Sync is unavailable right now. Your progress stays on this device and will be retried.'),
+    };
+    el.className = `sync-status ${key}`;
+    el.textContent = labels[key] || labels.local;
   }
   function saveSettings() { store.set('settings', settings); applyTheme(); if (b3d) b3d.setLite(settings.lite); if (game) renderBoard(); voiceButton(); renderCoachProgram(); renderCoachDock(); if (!settings.voice) hush(); }
   [['opt-moves', 'showMoves'], ['opt-coords', 'coords'], ['opt-sound', 'sound'], ['opt-autoq', 'autoQueen'], ['opt-voice', 'voice'], ['opt-coach', 'coachEnabled'], ['opt-lite', 'lite']].forEach(([id, key]) => {
@@ -3528,22 +3553,35 @@
     for (const [k, v] of Object.entries(data || {})) rawSet(k, v);
   }
   async function pushProgress() {
-    if (!ON || !ON.user || !progressDirty || progressPushing) return;
+    if (!ON || !ON.user || !progressDirty || progressPushing) { renderSyncStatus(); return; }
     // on n'envoie que la progression qui appartient au compte connecté
-    if (store.get('onlineSynced', null) !== ON.user.uid) return;
+    if (store.get('onlineSynced', null) !== ON.user.uid) { renderSyncStatus('local'); return; }
+    if (!navigator.onLine) { renderSyncStatus('offline'); return; }
     // le drapeau n'est levé qu'une fois l'envoi confirmé par le serveur (hors connexion, l'envoi attend)
     progressPushing = true;
+    renderSyncStatus('pending');
     const rev = progressRev;
+    let failed = false;
     try {
       const at = Date.now();
       await ON.saveProgress(localProgress(), at, deviceId);
       rawSet('progressAt', at);
       if (rev === progressRev) { progressDirty = false; rawSet('progressDirty', false); }
-    } catch { /* nouvel essai plus tard */ }
+    } catch {
+      failed = true;
+      renderSyncStatus('error');
+    }
     progressPushing = false;
+    if (!progressDirty) renderSyncStatus('synced');
+    else {
+      renderSyncStatus(failed ? 'error' : 'pending');
+      clearTimeout(pushSoon);
+      pushSoon = setTimeout(() => pushProgress(), failed ? 10000 : 1500);
+    }
   }
   setInterval(pushProgress, 45000);
   window.addEventListener('online', () => pushProgress());
+  window.addEventListener('offline', () => renderSyncStatus('offline'));
   setInterval(() => { if (ON && ON.user && document.visibilityState === 'visible') ON.presence(); }, 60000);
   window.addEventListener('pagehide', pushProgress);
   // Après connexion : récupère la progression du compte, ou propose d'importer celle de l'appareil
@@ -3631,6 +3669,7 @@
   }
   async function onUserChange(user, profile) {
     rawSet('onlineSession', !!user);
+    renderSyncStatus();
     clearTimeout(pushSoon); // un envoi prévu pour l'ancien compte ne part pas vers le nouveau
     if (user) await ON.loadAdminEmail();
     // compte suspendu par l'administrateur : déconnexion
@@ -3655,7 +3694,7 @@
     if (inviteStop) { inviteStop(); inviteStop = null; }
     if (gamesStop) { gamesStop(); gamesStop = null; }
     if (user) {
-      syncAfterLogin(user, profile).finally(() => watchCloudProgress());
+      syncAfterLogin(user, profile).finally(() => { watchCloudProgress(); renderSyncStatus(); });
       ON.presence();
       let known = null;
       inviteStop = ON.watchInvites((all) => {
@@ -5973,6 +6012,12 @@
   });
 
   applyTheme();
+  $('board-wrap').addEventListener('board3dcontext', (e) => {
+    const lost = !!e.detail.lost;
+    $('board-wrap').classList.toggle('webgl-lost', lost);
+    if (lost) { renderBoard(); toast(L('La 3D a été interrompue. Tu peux continuer sur le plateau 2D.', '3D was interrupted. You can keep playing on the 2D board.')); }
+    else toast(L('Affichage 3D rétabli.', '3D display restored.'));
+  });
   try {
     b3d = new window.Board3D($('board-wrap'), tapSquare);
     $('board-wrap').classList.add('is3d');

@@ -132,6 +132,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .board-wrap { position: relative; width: 100%; max-width: 100%; aspect-ratio: 1; border-radius: 6px; overflow: hidden; box-shadow: 0 8px 28px rgba(0,0,0,0.35); }
 .board-wrap.is3d { box-shadow: none; border-radius: 18px; background: radial-gradient(ellipse at 50% 20%, #3c5a7a 0%, #1d2a24 75%); }
 .board-wrap.is3d #board { display: none; }
+.board-wrap.is3d.webgl-lost #board { display: grid; }
+.board-wrap.is3d.webgl-lost .board3d,
+.board-wrap.is3d.webgl-lost .minimap { display: none !important; }
 .board3d { display: block; width: 100%; height: 100%; touch-action: none; cursor: pointer; }
 .captured img { height: 26px; margin-right: -8px; vertical-align: middle; }
 .promo-choices .pc { font-size: clamp(38px, 12vw, 52px); }
@@ -318,6 +321,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .pz-settings input { width: 100%; }
 .pz-settings small { display: block; margin-top: 12px; color: var(--muted); }
 .pz-pref-error { color: var(--danger) !important; margin: 8px 0 0 !important; }
+.sync-status { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); color: var(--muted); font-size: .92rem; }
+.sync-status.synced { color: #79d995; }
+.sync-status.pending, .sync-status.offline { color: var(--accent); }
+.sync-status.error { color: var(--danger); }
 .pz-pref-actions { display: flex; gap: 8px; margin-top: 14px; }
 .pz-pref-actions .btn { flex: 1; padding: 10px; font-size: 0.95rem; }
 @media (max-width: 560px) { .problems-tabs { gap: 5px; } .problems-tab { padding: 7px 5px; min-height: 50px; font-size: 0.74rem; } .problem-theme-grid { grid-template-columns: 1fr; } .path-adventure-heading { align-items: flex-start; } .path-adventure-heading h3 { font-size: 1rem; } .path-level-badge { padding: 7px 8px; font-size: 0.76rem; } .path-progress-stats { gap: 5px; } .path-progress-stats > div { padding: 10px 7px; } .path-progress-stats span { font-size: 0.71rem; } .path-progress-stats strong { font-size: 1.02rem; } .path-stage { grid-template-columns: 40px minmax(0, 1fr); gap: 5px 8px; } .path-stage-marker { width: 38px; height: 38px; } .path-stages::before { left: 18px; } .path-stage-state { grid-column: 2; text-align: left; } .path-stage-progress { grid-column: 2; padding-right: 4px; } }
