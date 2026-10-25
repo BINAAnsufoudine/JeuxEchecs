@@ -153,7 +153,7 @@
     $('home-player-style').hidden = !style;
     if (style) {
       $('home-player-style').textContent = L(`Style : ${style.label}`, `Style: ${style.label}`);
-      $('home-player-style').title = L(`Le style qui revient le plus souvent : ${style.n} de tes ${style.games} dernières parties contre l'ordinateur.`, `Your most frequent style: ${style.n} of your last ${style.games} games against the computer.`);
+      $('home-player-style').title = L(`Style estimé sur ${style.games} de tes dernières parties contre l’ordinateur ou le maître.`, `Style estimated from ${style.games} of your latest games against the computer or the coach.`);
     }
     const oldStats = Object.values(store.get('stats', {}));
     const games = player.games || oldStats.reduce((sum, row) => sum + row.win + row.loss + row.draw, 0);
@@ -168,6 +168,7 @@
   function coachPlan() {
     const profile = playerProfile(), c = loadCoach();
     const mistakes = store.get('mistakes', []), puzzleDone = store.get('pzdone', {});
+    const phaseInfo = phaseDifficulty(mistakes);
     const now = Date.now();
     const dueReviews = mistakes.filter((item) => !item.solved && (item.reviewAt ?? ((item.last || 0) + 600000)) <= now).length;
     const rankedThemes = PZ_KEYS.map((key) => {
@@ -180,8 +181,8 @@
     const completedPuzzles = Object.keys(puzzleDone).length;
     if (!priority) return {
       badge: L('Départ', 'Start'), focus: L('Première étape', 'First step'),
-      text: L(`Je vais construire ton programme à partir de tes parties et de tes problèmes. Pour commencer, ${profile.name || 'joue'} une partie contre l’ordinateur ou lance les problèmes de base.`,
-        `I will build your training plan from your games and puzzles. To begin${profile.name ? `, ${profile.name},` : ','} play a game against the computer or start the basic puzzles.`),
+      text: L(`Je vais construire ton programme à partir de tes parties et de tes problèmes.${phaseInfo ? ` Je remarque aussi des difficultés ${phaseInfo.phrase} (${phaseInfo.errors} erreurs dans ${phaseInfo.games} parties analysées).` : ''} Pour commencer, ${profile.name || 'joue'} une partie contre l’ordinateur ou lance les problèmes de base.`,
+        `I will build your training plan from your games and puzzles.${phaseInfo ? ` I also notice most difficulties ${phaseInfo.phrase} (${phaseInfo.errors} mistakes across ${phaseInfo.games} analysed games).` : ''} To begin${profile.name ? `, ${profile.name},` : ','} play a game against the computer or start the basic puzzles.`),
       theme: null,
     };
     const row = priority.row, theme = PZ[priority.key];
@@ -191,11 +192,50 @@
     return {
       badge: L(`${c.games} partie${c.games === 1 ? '' : 's'} analysée${c.games === 1 ? '' : 's'} · ${completedPuzzles} problème${completedPuzzles === 1 ? '' : 's'}${dueReviews ? ` · ${dueReviews} révision${dueReviews > 1 ? 's' : ''} due${dueReviews > 1 ? 's' : ''}` : ''}`,
         `${c.games} game${c.games === 1 ? '' : 's'} analysed · ${completedPuzzles} puzzle${completedPuzzles === 1 ? '' : 's'}${dueReviews ? ` · ${dueReviews} review${dueReviews === 1 ? '' : 's'} due` : ''}`),
-      focus: L(`Priorité: ${theme.name} · ${row.errors} faute${row.errors > 1 ? 's' : ''} repérée${row.errors > 1 ? 's' : ''}`, `Priority: ${theme.name} · ${row.errors} mistake${row.errors === 1 ? '' : 's'} spotted`),
-      text: L(`${profile.name ? `${profile.name}, ` : ''}tes analyses montrent que ${theme.name.toLowerCase()} est le meilleur levier de progression.${puzzleText}${personalText}${reviewText} Je te propose une courte leçon, puis des exercices ciblés.`,
-        `${profile.name ? `${profile.name}, ` : ''}your analyses show that ${theme.name.toLowerCase()} is where you can improve the most.${puzzleText}${personalText}${reviewText} I suggest a short lesson, then targeted exercises.`),
+      focus: `${L(`Priorité: ${theme.name} · ${row.errors} faute${row.errors > 1 ? 's' : ''}`, `Priority: ${theme.name} · ${row.errors} mistake${row.errors === 1 ? '' : 's'}`)}${phaseInfo ? ` · ${phaseInfo.label}` : ''}`,
+      text: L(`${profile.name ? `${profile.name}, ` : ''}tes analyses montrent que ${theme.name.toLowerCase()} est le meilleur levier de progression.${phaseInfo ? ` Je remarque aussi des difficultés ${phaseInfo.phrase} (${phaseInfo.errors} erreurs dans ${phaseInfo.games} parties analysées).` : ''}${puzzleText}${personalText}${reviewText} Je te propose une courte leçon, puis des exercices ciblés.`,
+        `${profile.name ? `${profile.name}, ` : ''}your analyses show that ${theme.name.toLowerCase()} is where you can improve the most.${phaseInfo ? ` I also notice most difficulties ${phaseInfo.phrase} (${phaseInfo.errors} mistakes across ${phaseInfo.games} analysed games).` : ''}${puzzleText}${personalText}${reviewText} I suggest a short lesson, then targeted exercises.`),
       theme: priority.key,
     };
+  }
+
+  function phaseDifficulty(mistakes = store.get('mistakes', [])) {
+    const phases = { ouverture: { name: L('Ouverture', 'Opening'), phrase: L('pendant l’ouverture', 'during the opening'), moves: 0, errors: 0, games: new Set() }, milieu: { name: L('Milieu de jeu', 'Middlegame'), phrase: L('au milieu de jeu', 'during the middlegame'), moves: 0, errors: 0, games: new Set() }, finale: { name: L('Finale', 'Endgame'), phrase: L('en finale', 'during the endgame'), moves: 0, errors: 0, games: new Set() } };
+    const games = store.get('archive', []).filter((g) => ['ai', 'coach'].includes(g.mode) && !g.fen && g.color && Array.isArray(g.moves) && g.moves.length >= 12 && g.analysed).slice(-20);
+    if (!games.length) return null;
+    const phaseAt = (board, full = 1) => {
+      const values = { n: 320, b: 330, r: 500, q: 900 };
+      const material = board.reduce((sum, piece) => sum + (piece ? values[piece.toLowerCase()] || 0 : 0), 0);
+      return material <= 1700 ? 'finale' : full <= 12 ? 'ouverture' : 'milieu';
+    };
+    const gameIds = new Set(games.map((g) => g.id));
+    const phaseFor = (mistake) => {
+      if (phases[mistake.phase]) return mistake.phase;
+      try {
+        const state = new Game(mistake.fen).state;
+        return phaseAt(state.board, state.full);
+      } catch { return null; }
+    };
+    for (const g of games) {
+      const G = new Game();
+      for (const uci of g.moves) {
+        const current = G.state;
+        if (current.turn === g.color) {
+          const phase = phaseAt(current.board, current.full);
+          phases[phase].moves++;
+        }
+        if (!G.playUci(uci)) break;
+      }
+    }
+    for (const mistake of mistakes) if (gameIds.has(mistake.date)) {
+      const phase = phaseFor(mistake);
+      if (phase) { phases[phase].errors++; phases[phase].games.add(mistake.date); }
+    }
+    const ranked = Object.entries(phases).filter(([, p]) => p.errors >= 2 && p.games.size >= 2 && p.moves > 0)
+      .sort((a, b) => b[1].errors / b[1].moves - a[1].errors / a[1].moves || b[1].errors - a[1].errors);
+    if (!ranked.length) return null;
+    const [key, phase] = ranked[0];
+    return { name: phase.name, phrase: phase.phrase, errors: phase.errors, games: phase.games.size, label: L(`Difficulté : ${phase.name.toLowerCase()}`, `Focus: ${phase.name.toLowerCase()}`) };
   }
 
   function renderCoachProgram() {
@@ -1807,20 +1847,31 @@
     store.set('archive', arch.slice(-30));
     setTimeout(analyseNext, 1500);
   }
-  let aWorker = null, analysing = false;
+  let aWorker = null, analysing = false, styleBackfillsThisSession = 0;
   function analyseNext() {
     if (analysing) return;
-    const g = store.get('archive', []).find((x) => !x.analysed);
+    const archive = store.get('archive', []);
+    const g = archive.find((x) => !x.analysed) || (styleBackfillsThisSession < 3 ? archive.slice(-20).reverse().find((x) => !x.styleProfile && !x.styleProfileFailed && ['ai', 'coach'].includes(x.mode) && !x.fen && x.color && x.moves && x.moves.length >= 12) : null);
     if (!g) return explainPending();
+    const wasAnalysed = !!g.analysed;
+    if (wasAnalysed) styleBackfillsThisSession++;
     try { aWorker = aWorker || new Worker(`analyse-worker.js?lang=${LANG}`); } catch { return; }
     analysing = true;
     aWorker.onmessage = (e) => {
       analysing = false;
       const arch = store.get('archive', []);
       const row = arch.find((x) => x.id === g.id);
-      if (row) row.analysed = true;
+      if (row) {
+        row.analysed = true;
+        if (e.data.ok && e.data.profile) row.styleProfile = e.data.profile;
+        else if (wasAnalysed) row.styleProfileFailed = true;
+      }
       store.set('archive', arch);
-      if (e.data.ok) recordAnalysis(g, e.data.errors, e.data.captures || []);
+      if (e.data.ok && !wasAnalysed) recordAnalysis(g, e.data.errors, e.data.captures || []);
+      if (wasAnalysed && e.data.ok) {
+        refreshCoachProgram();
+        if (document.body.dataset.screen === 'home') refreshHome();
+      }
       if ($('problems').classList.contains('active')) renderProblems();
       analyseNext();
     };
@@ -1856,7 +1907,7 @@
       try { san = new Game(e.fen).playUci(e.played).san; } catch { /* coup brut */ }
       mistakes.push({
         id: `${g.id}-${e.ply}`, date: g.id, move: Math.floor(e.ply / 2) + 1,
-        theme: e.theme, fen: e.fen, played: san, line: e.line, alts: e.alts,
+        theme: e.theme, phase: e.phase, fen: e.fen, played: san, line: e.line, alts: e.alts,
         level: e.level, solved: false, tries: 0, last: 0, reviewStage: 0, reviewAt: Date.now(),
       });
     }
@@ -2966,8 +3017,19 @@
   // Plus que six pièces (hors rois et pions) sur l'échiquier : on est en finale
   const isEndgameBoard = (board) => board.filter((p) => p && !'kKpP'.includes(p)).length <= 6;
 
-  // Profil d'une partie contre l'ordinateur, de 0 à 1 sur chaque axe de style
+  // Profil basé sur les évaluations de l'analyse ; les parties historiques gardent un repli heuristique.
   function gameStyle(g) {
+    const p = g.styleProfile;
+    if (p && p.moves) {
+      const m = p.moves, unit = (x) => Math.max(0, Math.min(1, x));
+      return {
+        attaque: unit((p.checks / m) * 4 + (p.goodCaptures / m) * 0.8),
+        tactique: unit((p.tacticalMoves / m) * 3.5),
+        positionnel: unit((p.quietMoves ? p.accurateQuietMoves / p.quietMoves : 0) * 0.55 + (p.accuracy || 0) / 100 * 0.3 + (p.castling / m) * 0.15),
+        finale: unit(p.endgameMoves / m),
+        defense: unit((p.moves ? p.accurateEvasions / m : 0) * 8),
+      };
+    }
     const G = new Game();
     let moves = 0, checks = 0, captures = 0, quiet = 0, castled = 0, endgame = 0;
     for (const u of g.moves) {
@@ -2992,19 +3054,18 @@
       defense: unit((g.moves.length >= 50 && !lost ? 0.6 : 0) + castled * 0.4),
     };
   }
-  const styleGames = () => store.get('archive', []).filter((g) => !g.fen && g.color && g.moves && g.moves.length >= 12).slice(-20);
-  // Style du joueur : moyenne de ses dernières parties archivées
+  const styleGames = () => store.get('archive', []).filter((g) => ['ai', 'coach'].includes(g.mode) && !g.fen && g.color && g.moves && g.moves.length >= 12 && g.analysed).slice(-20);
+  // Pondère davantage les parties récentes et écarte les parties à deux joueurs / personnalisées.
   function playerStyle() {
     const games = styleGames();
-    if (!games.length) return null;
-    const avg = { games: games.length };
-    const all = games.map(gameStyle);
-    for (const k of Object.keys(STYLE_AXES)) avg[k] = all.reduce((sum, v) => sum + v[k], 0) / all.length;
+    if (games.length < 3) return null;
+    const avg = { games: games.length }, totalWeight = games.reduce((sum, _, i) => sum + Math.pow(0.88, games.length - 1 - i), 0);
+    for (const k of Object.keys(STYLE_AXES)) avg[k] = games.reduce((sum, g, i) => sum + gameStyle(g)[k] * Math.pow(0.88, games.length - 1 - i), 0) / totalWeight;
     return avg;
   }
-  // Nom d'un style ; une partie riche en fautes relevées par l'analyse est jugée impulsive
-  function styleLabel(v, errors) {
-    const impulsive = errors >= 2;
+  // L'impulsivité dépend de gaffes par nombre de coups, pas du nombre brut de fautes.
+  function styleLabel(v, errors, profile) {
+    const impulsive = profile && profile.moves ? profile.severe / profile.moves >= 0.08 : errors >= 2;
     if (v.attaque >= 0.6) return impulsive ? L('Attaquant impulsif', 'Impulsive attacker') : L('Joueur agressif', 'Aggressive player');
     if (v.tactique >= 0.6) return impulsive ? L('Chasseur de matériel', 'Material hunter') : L('Tacticien opportuniste', 'Opportunistic tactician');
     if (v.finale >= 0.6 && v.positionnel >= 0.5) return L('Joueur positionnel patient', 'Patient positional player');
@@ -3013,14 +3074,14 @@
     if (v.finale >= 0.6) return L('Finisseur méthodique', 'Methodical finisher');
     return impulsive ? L('Joueur spontané', 'Spontaneous player') : L('Joueur polyvalent', 'All-round player');
   }
-  // Style qui revient le plus souvent dans les parties jouées contre l'ordinateur (à égalité, le plus récent)
+  // Style qui revient le plus souvent dans les parties admissibles (à égalité, le plus récent).
   function dominantStyle() {
     const games = styleGames();
-    if (!games.length) return null;
+    if (games.length < 3) return null;
     const mistakes = store.get('mistakes', []);
     const count = new Map();
     games.forEach((g, i) => {
-      const label = styleLabel(gameStyle(g), mistakes.filter((m) => m.date === g.id).length);
+      const label = styleLabel(gameStyle(g), mistakes.filter((m) => m.date === g.id).length, g.styleProfile);
       const row = count.get(label) || { n: 0, last: 0 };
       row.n++; row.last = i; count.set(label, row);
     });

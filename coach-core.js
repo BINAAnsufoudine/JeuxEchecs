@@ -164,6 +164,7 @@
       states.push(makeMove(s, m));
     }
     const errors = [], captures = [];
+    const profile = { moves: 0, checks: 0, captures: 0, goodCaptures: 0, tacticalMoves: 0, quietMoves: 0, accurateQuietMoves: 0, evasions: 0, accurateEvasions: 0, endgameMoves: 0, openingMoves: 0, castling: 0, lossTotal: 0, inaccurate: 0, severe: 0 };
     let checked = 0;
     for (let i = 0; i < played.length; i++) {
       const s = states[i];
@@ -177,6 +178,26 @@
       const sameAsBest = toUci(best.m) === toUci(pm);
       const ps = sameAsBest ? best.score : moveScore(s, pm, depth, q, keys);
       const loss = (isMate(best.score) && best.score > 0 && !(isMate(ps) && ps > 0)) ? 1000 : best.score - ps;
+      const boundedLoss = Math.max(0, Math.min(1500, loss));
+      const givesCheck = inCheck(states[i + 1]);
+      const evasion = inCheck(s);
+      const ending = isEndgame(s.board);
+      profile.moves++;
+      profile.lossTotal += boundedLoss;
+      if (boundedLoss >= 150) profile.inaccurate++;
+      if (boundedLoss >= 320) profile.severe++;
+      if (givesCheck) profile.checks++;
+      if (pm.captured) profile.captures++;
+      if (evasion) { profile.evasions++; if (boundedLoss < 150) profile.accurateEvasions++; }
+      if (ending) profile.endgameMoves++;
+      else if (s.full <= 12) profile.openingMoves++;
+      if (pm.flag === 'castle') profile.castling++;
+      if (!pm.captured && !givesCheck) {
+        profile.quietMoves++;
+        if (boundedLoss < 60) profile.accurateQuietMoves++;
+      }
+      if (boundedLoss < 150 && (givesCheck || (pm.captured && boundedLoss < 80) || isFork(s, pm) || isPin(s, pm))) profile.tacticalMoves++;
+      if (pm.captured && boundedLoss < 80) profile.goodCaptures++;
       let insight = null;
       if (pm.captured) {
         insight = captureInsight(s, pm, best, ps, q);
@@ -193,12 +214,14 @@
       const sol = buildLine(s, { depth: depth + 1, q, margin: 150 });
       errors.push({
         ply: i, fen: toFen(s), played: toUci(pm), best: toUci(best.m), loss: Math.round(loss), theme,
+        phase: ending ? 'finale' : s.full <= 12 ? 'ouverture' : 'milieu',
         line: sol ? sol.line.map(toUci) : [toUci(best.m)],
         alts: sol ? [] : r.filter((x) => x.score >= best.score - 60).map((x) => toUci(x.m)),
         level: sol ? levelOf(sol.line, sol.score) : 1,
       });
     }
-    return { checked, errors, captures };
+    profile.accuracy = profile.moves ? Math.round(100 * Math.exp(-(profile.lossTotal / profile.moves) / 300)) : null;
+    return { checked, errors, captures, profile };
   }
 
   // Langue de l'interface (le worker charge aussi i18n.js)
