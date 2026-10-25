@@ -4460,7 +4460,7 @@
   ];
   const NATURE_COLLECTION_ORDER = ['ninjas', 'plants', 'land', 'birds', 'ocean'];
   NATURE_COLLECTIONS.sort((a, b) => NATURE_COLLECTION_ORDER.indexOf(a.id) - NATURE_COLLECTION_ORDER.indexOf(b.id));
-  const BUILT_NATURE_COLLECTION_IDS = new Set(['ninjas']);
+  const BUILT_NATURE_COLLECTION_IDS = new Set(['plants', 'land', 'birds', 'ocean', 'ninjas']);
   const AVAILABLE_NATURE_COLLECTIONS = NATURE_COLLECTIONS.filter((item) => BUILT_NATURE_COLLECTION_IDS.has(item.id));
   if (!store.get('natureNinjaDefaultMigrated', false)) {
     const previousCollection = store.get('natureCollection', null);
@@ -4653,7 +4653,7 @@
     const currentItem = collection.items[grade - 1];
     $('home-garden-title').textContent = collection.id === 'plants' && grade === 10 ? L('Ton grand baobab est là !', 'Your great baobab is here!') : L(`${currentItem.name} rejoint ta collection !`, `${currentItem.name} joins your collection!`);
     $('home-garden-copy').textContent = NATURE_PREVIEW_ALL_UNLOCKED
-      ? L('Toutes les étapes du thème Ninjas sont ouvertes à l’exploration !', 'Every Ninja theme stage is open to explore!')
+      ? L(`Toutes les étapes du thème ${collection.name} sont ouvertes à l’exploration !`, `Every ${collection.name} theme stage is open to explore!`)
       : collection.id === 'plants'
       ? L(`${grade}/10 plantes débloquées · gagne de l’expérience pour faire grandir ton jardin.`, `${grade}/10 plants unlocked · earn experience to grow your garden.`)
       : L(`${grade}/10 découvertes · les récompenses de tes défis ouvrent de nouveaux paysages.`, `${grade}/10 discoveries · challenge rewards reveal new places.`);
