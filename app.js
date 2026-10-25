@@ -3356,12 +3356,12 @@
     $('editor-body').innerHTML = `
       <div class="ed-layout">
         <div class="ed-board-column">
-          <div class="ed-board-wrap"><div id="ed-board" class="ed-board" role="grid" aria-label="${L('Échiquier à construire', 'Board to set up')}"></div></div>
-        </div>
-        <div class="ed-controls-column">
           <p class="level-help">${L('Choisis une pièce puis touche les cases pour la poser. Avec la main, touche une pièce puis sa nouvelle case pour la déplacer.', 'Pick a piece, then tap squares to place it. With the hand, tap a piece and then its new square to move it.')}</p>
           <div class="ed-palette">${tool('move', '✋', L('Déplacer', 'Move'))}${ED_PIECES.slice(0, 6).map((p) => tool(p, `<span class="pc w">${glyph(p)}</span>`, pieceName(p))).join('')}</div>
           <div class="ed-palette">${tool('erase', '⌫', L('Effacer', 'Erase'))}${ED_PIECES.slice(6).map((p) => tool(p, `<span class="pc b">${glyph(p)}</span>`, pieceName(p))).join('')}</div>
+          <div class="ed-board-wrap"><div id="ed-board" class="ed-board" role="grid" aria-label="${L('Échiquier à construire', 'Board to set up')}"></div></div>
+        </div>
+        <div class="ed-controls-column">
           <div class="ed-actions">
             <button type="button" class="btn" data-ed-act="start">${L('Position de départ', 'Starting position')}</button>
             <button type="button" class="btn" data-ed-act="clear">${L('Vider', 'Clear')}</button>
