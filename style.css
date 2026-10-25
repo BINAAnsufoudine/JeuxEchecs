@@ -241,22 +241,45 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .theme-training-level { color: var(--accent); font-size: 0.82rem; font-weight: 700; white-space: nowrap; }
 .theme-training-progress { margin: 8px 0 12px; color: var(--muted); font-size: 0.85rem; }
 .theme-training-card > .btn { margin-top: 4px; }
-.path-progress-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 14px 0; }
-.path-progress-stats > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 12px 10px; border-radius: 12px; background: var(--surface-2); }
+.path-adventure-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.path-adventure-heading h3 { margin: 0 0 4px; font-size: 1.12rem; }
+.path-adventure-heading .pz-cap { margin: 0; }
+.path-level-badge { flex: none; padding: 8px 11px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 22%, var(--surface-2)); color: var(--accent); font-weight: 800; white-space: nowrap; }
+.path-progress-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 14px 0; }
+.path-progress-stats > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 12px 10px; border-radius: 14px; background: var(--surface-2); }
 .path-progress-stats strong { color: var(--accent); font-size: 1.2rem; }
 .path-progress-stats span { color: var(--muted); font-size: 0.78rem; line-height: 1.25; }
-.path-level-progress { height: 8px; overflow: hidden; border-radius: 999px; background: var(--surface-2); }
-.path-level-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), #8fd6a2); transition: width 250ms ease; }
-.path-route-title { margin: 18px 0 8px; }
-.theme-training-route { display: flex; gap: 8px; overflow-x: auto; list-style: none; margin: 0 0 16px; padding: 4px 2px 10px; }
-.theme-training-route li { display: grid; justify-items: center; align-content: start; gap: 5px; flex: 0 0 74px; min-height: 68px; padding: 8px 5px; border: 1px solid var(--surface-2); border-radius: 11px; background: var(--surface-2); }
-.theme-training-route li.clean { border-color: rgba(110, 190, 130, 0.5); }
-.theme-training-route li.assisted { border-color: rgba(224, 108, 91, 0.48); }
-.theme-training-route li > span { font-size: 1.2rem; }
-.theme-training-route li > small { width: 100%; overflow: hidden; color: var(--muted); font-size: 0.65rem; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
-.path-visited-topics { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 16px; }
-.path-visited-topics > span { padding: 6px 9px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 0.78rem; }
-.path-visited-topics b { color: var(--text); margin-left: 4px; }
+.path-cheer { display: flex; align-items: center; gap: 10px; padding: 11px 13px; margin: 12px 0 20px; border-radius: 14px; background: color-mix(in srgb, #ed80a5 17%, var(--surface)); }
+.path-cheer > span { font-size: 1.55rem; }
+.path-cheer p { margin: 0; }
+.path-cheer strong, .path-cheer span { display: block; }
+.path-cheer > p > span { margin-top: 2px; color: var(--muted); font-size: 0.86rem; }
+.path-stage-heading { display: flex; align-items: end; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.path-stage-heading h4 { margin: 0; font-size: 1rem; }
+.path-stage-heading > span { color: var(--muted); font-size: 0.84rem; }
+.path-stage-intro { margin: 0 0 10px; color: var(--muted); font-size: 0.86rem; }
+.path-stages { position: relative; display: grid; gap: 5px; list-style: none; margin: 0; padding: 0; }
+.path-stages::before { position: absolute; top: 25px; bottom: 25px; left: 21px; width: 4px; border-radius: 4px; background: var(--surface-2); content: ""; }
+.path-stage { position: relative; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 7px 10px; min-height: 65px; padding: 8px; border-radius: 14px; }
+.path-stage.complete { background: color-mix(in srgb, #72c891 10%, var(--surface)); }
+.path-stage.current { background: color-mix(in srgb, var(--accent) 13%, var(--surface)); box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+.path-stage-marker { z-index: 1; display: grid; place-items: center; width: 42px; height: 42px; border: 2px solid var(--surface-2); border-radius: 50%; background: var(--surface); font-size: 1.2rem; }
+.path-stage.complete .path-stage-marker { border-color: #72c891; color: #72c891; font-weight: 900; }
+.path-stage.current .path-stage-marker { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 24%, var(--surface)); }
+.path-stage-content { min-width: 0; }
+.path-stage-name { display: block; font-weight: 800; }
+.path-stage-levels { color: var(--accent); font-size: 0.76rem; font-weight: 700; }
+.path-stage-content p { margin: 2px 0 0; color: var(--muted); font-size: 0.82rem; }
+.path-stage-state { color: var(--muted); font-size: 0.76rem; font-weight: 700; text-align: right; }
+.path-stage.complete .path-stage-state { color: #72c891; }
+.path-stage.current .path-stage-state { color: var(--accent); }
+.path-stage-progress { grid-column: 2 / -1; padding: 0 8px 4px 0; }
+.path-stage-progress-label { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 5px; font-size: 0.78rem; }
+.path-stage-progress-label span { color: var(--muted); }
+.path-stage-progress-label b { white-space: nowrap; }
+.path-stage-track { height: 8px; overflow: hidden; border-radius: 99px; background: var(--surface-2); }
+.path-stage-track i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #53b7dc, #b394f0); transition: width 250ms ease; }
+.path-streak-count { margin-top: 6px; color: var(--accent); font-size: 0.78rem; font-weight: 700; }
 .theme-training-groups { display: grid; gap: 14px; margin-top: 12px; }
 .theme-training-group h4 { margin: 0; color: var(--muted); font-size: 0.86rem; }
 .theme-training-group .theme-training-choices { margin: 6px 0 0; }
@@ -296,7 +319,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .pz-pref-error { color: var(--danger) !important; margin: 8px 0 0 !important; }
 .pz-pref-actions { display: flex; gap: 8px; margin-top: 14px; }
 .pz-pref-actions .btn { flex: 1; padding: 10px; font-size: 0.95rem; }
-@media (max-width: 560px) { .problems-tabs { gap: 5px; } .problems-tab { padding: 7px 5px; min-height: 50px; font-size: 0.74rem; } .problem-theme-grid { grid-template-columns: 1fr; } .path-progress-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .problems-tabs { gap: 5px; } .problems-tab { padding: 7px 5px; min-height: 50px; font-size: 0.74rem; } .problem-theme-grid { grid-template-columns: 1fr; } .path-adventure-heading { align-items: flex-start; } .path-adventure-heading h3 { font-size: 1rem; } .path-level-badge { padding: 7px 8px; font-size: 0.76rem; } .path-progress-stats { gap: 5px; } .path-progress-stats > div { padding: 10px 7px; } .path-progress-stats span { font-size: 0.71rem; } .path-progress-stats strong { font-size: 1.02rem; } .path-stage { grid-template-columns: 40px minmax(0, 1fr); gap: 5px 8px; } .path-stage-marker { width: 38px; height: 38px; } .path-stages::before { left: 18px; } .path-stage-state { grid-column: 2; text-align: left; } .path-stage-progress { grid-column: 2; padding-right: 4px; } }
 .pz-section { color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; margin: 22px 0 10px; }
 .pz-card { display: grid; grid-template-columns: 44px 1fr auto; gap: 4px 12px; align-items: center; width: 100%; text-align: left; background: var(--surface); border: 0; border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px; }
 .pz-card .ico { grid-row: span 3; width: 44px; height: 44px; border-radius: 12px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }

@@ -1878,7 +1878,7 @@
   const MAX_LEVEL = 9;
   let problemSettingsOpen = false;
   let problemsSection = 'program';
-  const themeTrainingPrefs = () => Object.assign({ themes: [], rating: 1, solvedTotal: 0, attemptedTotal: 0, bestStreak: 0, topicStats: {}, route: [] }, store.get('themeTraining', {}));
+  const themeTrainingPrefs = () => Object.assign({ themes: [], rating: 1, bestRating: 1, solvedTotal: 0, attemptedTotal: 0, bestStreak: 0, currentStreak: 0, topicStats: {}, route: [] }, store.get('themeTraining', {}));
   function problemPreferences() {
     const saved = store.get('problemPrefs', {});
     const games = Number(saved.games), threshold = Number(saved.threshold);
@@ -1967,7 +1967,7 @@
     if (!selected.length) return toast(L('Aucun problème n’est disponible pour le moment.', 'No puzzles are available right now.'));
     const saved = themeTrainingPrefs();
     store.set('themeTraining', saved);
-    pz = { kind: 'themed', themeSession: { mode, themes: selected, rating: Math.max(1, Math.min(MAX_LEVEL, Number(saved.rating) || 1)), solved: 0, cleanSolved: 0, streak: 0, used: [], lastTheme: '', currentTopic: '', index: 0 } };
+    pz = { kind: 'themed', themeSession: { mode, themes: selected, rating: Math.max(1, Math.min(MAX_LEVEL, Number(saved.rating) || 1)), solved: 0, cleanSolved: 0, streak: mode === 'path' ? Math.max(0, Number(saved.currentStreak) || 0) : 0, used: [], lastTheme: '', currentTopic: '', index: 0 } };
     enterPuzzleMode();
     nextThemedPuzzle();
   }
@@ -2215,28 +2215,36 @@
       const cleanSolved = Number(training.solvedTotal) || 0;
       const attempts = Math.max(Number(training.attemptedTotal) || 0, cleanSolved);
       const successRate = attempts ? `${Math.round((cleanSolved / attempts) * 100)}%` : '—';
-      const levelProgress = Math.max(0, Math.min(100, ((Number(training.rating) || 1) / MAX_LEVEL) * 100));
-      const route = Array.isArray(training.route) ? training.route.slice(-16) : [];
-      const visitedGroups = trainingTopicGroups.map((group) => ({ ...group, topics: group.topics.filter((topic) => (training.topicStats[topic.key]?.attempted || 0) > 0) })).filter((group) => group.topics.length);
-      const routeHtml = route.length ? `<ol class="theme-training-route">${route.map((step) => {
-        const topic = trainingTopic(step.topic);
-        return `<li class="${step.clean ? 'clean' : 'assisted'}" title="${topic ? topic.name : trainingTopicName(step.topic)} · ${step.clean ? L('résolu sans erreur', 'solved without mistakes') : L('résolu avec erreur', 'solved with a mistake')}"><span>${topic ? topic.icon : trainingTopicIcon(step.topic)}</span><small>${topic ? topic.name : trainingTopicName(step.topic)}</small></li>`;
-      }).join('')}</ol>` : `<p class="pz-cap">${attempts ? L('Le détail de ton chemin s’enregistrera à partir de tes prochains problèmes.', 'Detailed path tracking starts with your next puzzles.') : L('Ton chemin apparaîtra ici après tes premiers problèmes.', 'Your path will appear here after your first puzzles.')}</p>`;
-      const visitedHtml = visitedGroups.length ? `<h4 class="path-route-title">${L('Thèmes déjà parcourus', 'Themes visited')}</h4><div class="path-visited-topics">${visitedGroups.flatMap((group) => group.topics.map((topic) => {
-        const stats = training.topicStats[topic.key];
-        return `<span title="${stats.solved}/${stats.attempted} ${L('réussis sans erreur', 'solved without mistakes')}">${topic.icon} ${topic.name} <b>${stats.solved}/${stats.attempted}</b></span>`;
-      })).join('')}</div>` : '';
+      const rating = Math.min(MAX_LEVEL, Math.max(1, Number(training.bestRating) || 1, Number(training.rating) || 1));
+      const stages = [
+        { emoji: '🌱', name: L('Le jardin des découvertes', 'Garden of discoveries'), levels: L('Niveaux 1–2', 'Levels 1–2'), description: L('Les premiers motifs et les coups malins.', 'First patterns and clever moves.'), from: 1, to: 3 },
+        { emoji: '🧭', name: L('La forêt des tactiques', 'Forest of tactics'), levels: L('Niveaux 3–4', 'Levels 3–4'), description: L('Des défis variés choisis selon ton niveau.', 'Mixed challenges selected for your level.'), from: 3, to: 5 },
+        { emoji: '🏔️', name: L('La montagne des combinaisons', 'Mountain of combinations'), levels: L('Niveaux 5–6', 'Levels 5–6'), description: L('Des séquences plus longues à découvrir.', 'Longer combinations to discover.'), from: 5, to: 7 },
+        { emoji: '👑', name: L('Le sommet des champions', 'Champions’ summit'), levels: L('Niveaux 7–9', 'Levels 7–9'), description: L('Les défis les plus exigeants du parcours.', 'The most demanding challenges in the path.'), from: 7, to: 9 },
+      ];
+      const stageIndex = rating < 3 ? 0 : rating < 5 ? 1 : rating < 7 ? 2 : 3;
+      const currentStage = stages[stageIndex];
+      const stageProgress = Math.max(0, Math.min(100, ((rating - currentStage.from) / (currentStage.to - currentStage.from)) * 100));
+      const streak = Math.max(0, Number(training.currentStreak) || 0);
+      const streakProgress = streak % 3;
+      const winsToReward = streakProgress ? 3 - streakProgress : 3;
+      const stageHtml = stages.map((stage, index) => {
+        const done = index < stageIndex, current = index === stageIndex;
+        const state = done ? L('Palier franchi ✓', 'Milestone cleared ✓') : current ? L('Étape actuelle ⭐', 'Current stage ⭐') : L('À découvrir 🔒', 'To discover 🔒');
+        return `<li class="path-stage${done ? ' complete' : ''}${current ? ' current' : ''}"><span class="path-stage-marker">${done ? '✓' : current ? stage.emoji : '🔒'}</span><div class="path-stage-content"><span class="path-stage-name">${stage.name}</span><span class="path-stage-levels">${stage.levels}</span><p>${stage.description}</p></div><span class="path-stage-state">${state}</span>${current ? `<div class="path-stage-progress"><div class="path-stage-progress-label"><span>${L('Progression vers le prochain palier', 'Progress to the next milestone')}</span><b>${Math.round(stageProgress)}%</b></div><div class="path-stage-track" role="progressbar" aria-label="${L('Progression vers le prochain palier', 'Progress to the next milestone')}" aria-valuenow="${Math.round(stageProgress)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${stageProgress}%"></i></div><div class="path-streak-count">${L(`Série sans erreur : ${streakProgress}/3 · encore ${winsToReward} réussite${winsToReward > 1 ? 's' : ''} pour le bonus`, `Clean streak: ${streakProgress}/3 · ${winsToReward} more solve${winsToReward === 1 ? '' : 's'} for a bonus`)}</div></div>` : ''}</li>`;
+      }).join('');
       html += `<section class="theme-training-card path-dashboard">
-        <div class="theme-training-head"><div><h3>${L('Ton parcours de problèmes', 'Your puzzle path')}</h3><p class="pz-cap">${L('Tous les thèmes sont mélangés. Les problèmes sont choisis selon ton niveau et s’adaptent à tes résultats.', 'All themes are mixed. Puzzles are selected for your level and adapt to your results.')}</p></div></div>
+        <div class="path-adventure-heading"><div><h3>${L('La grande aventure des problèmes', 'The great puzzle adventure')}</h3><p class="pz-cap">${L('Tous les thèmes sont mélangés. À toi de franchir les étapes !', 'All themes are mixed. The stages are yours to conquer!')}</p></div><span class="path-level-badge">${L(`Niveau ${Math.floor(rating)} / ${MAX_LEVEL}`, `Level ${Math.floor(rating)} / ${MAX_LEVEL}`)} ⭐</span></div>
         <div class="path-progress-stats">
-          <div><strong>${attempts}</strong><span>${L('problèmes faits', 'puzzles completed')}</span></div>
-          <div><strong>${successRate}</strong><span>${L('réussite sans erreur', 'solved without mistakes')}</span></div>
-          <div><strong>${Math.round(training.rating)}/${MAX_LEVEL}</strong><span>${L('niveau actuel', 'current level')}</span></div>
-          <div><strong>${training.bestStreak || 0}</strong><span>${L('meilleure série', 'best streak')}</span></div>
+          <div><strong>${attempts} 🧩</strong><span>${L('défis terminés', 'challenges completed')}</span></div>
+          <div><strong>${successRate}</strong><span>${L('réussis sans erreur', 'solved without mistakes')}</span></div>
+          <div><strong>${training.bestStreak || 0} 🔥</strong><span>${L('record de série', 'streak record')}</span></div>
         </div>
-        <div class="path-level-progress" role="progressbar" aria-label="${L('Progression du niveau', 'Level progress')}" aria-valuemin="1" aria-valuemax="${MAX_LEVEL}" aria-valuenow="${Math.round(training.rating)}"><i style="width:${levelProgress}%"></i></div>
-        ${attempts ? `<p class="theme-training-progress">${L(`${cleanSolved} réussis sans erreur sur ${attempts} problèmes terminés.`, `${cleanSolved} solved without mistakes out of ${attempts} completed puzzles.`)}</p>` : `<p class="theme-training-progress">${storedTraining.solvedTotal ? L(`${cleanSolved} problèmes réussis. Le suivi du pourcentage commence à ta prochaine séance.`, `${cleanSolved} puzzles solved. Percentage tracking starts with your next session.`) : L('Les progrès et le pourcentage de réussite commenceront après le premier problème.', 'Progress and success rate will start after the first puzzle.')}</p>`}
-        <h4 class="path-route-title">${L('Chemin parcouru', 'Path so far')}</h4>${routeHtml}${visitedHtml}
+        <div class="path-cheer"><span aria-hidden="true">🦉</span><p><strong>${streakProgress ? L(`Bravo, ${streakProgress} défi${streakProgress > 1 ? 's' : ''} sans erreur !`, `Great job, ${streakProgress} challenge${streakProgress === 1 ? '' : 's'} without mistakes!`) : L('La prochaine récompense t’attend !', 'Your next reward is waiting!')}</strong><span>${L(`Encore ${winsToReward} réussite${winsToReward > 1 ? 's' : ''} sans erreur pour gagner 15 blés et 20 points d’expérience.`, `${winsToReward} more clean solve${winsToReward === 1 ? '' : 's'} to earn 15 wheat and 20 experience points.`)}</span></p></div>
+        <div class="path-stage-heading"><h4>${L('Ton chemin d’aventurier', 'Your adventure path')}</h4><span>${L(`Étape ${stageIndex + 1} sur ${stages.length}`, `Stage ${stageIndex + 1} of ${stages.length}`)}</span></div>
+        <p class="path-stage-intro">${L('Chaque étape mélange les thèmes et te prépare à des défis plus difficiles.', 'Every stage mixes themes and prepares you for harder challenges.')}</p>
+        <ol class="path-stages" aria-label="${L('Étapes du parcours', 'Path stages')}">${stageHtml}</ol>
+        ${attempts ? `<p class="theme-training-progress">${L(`${cleanSolved} réussis sans erreur sur ${attempts} défis terminés.`, `${cleanSolved} solved without mistakes out of ${attempts} completed challenges.`)}</p>` : `<p class="theme-training-progress">${storedTraining.solvedTotal ? L(`${cleanSolved} problèmes réussis. Le suivi du pourcentage commence à ta prochaine séance.`, `${cleanSolved} puzzles solved. Percentage tracking starts with your next session.`) : L('Tes progrès commenceront après ton premier défi.', 'Your progress will start after your first challenge.')}</p>`}
         <button class="btn primary wide" type="button" id="theme-training-start">${attempts ? L('Continuer le parcours', 'Continue the path') : L('Commencer le parcours', 'Start the path')}</button>
       </section>`;
     }
@@ -2664,7 +2672,9 @@
         if (pathMode) {
           saved.solvedTotal = (saved.solvedTotal || 0) + 1;
           saved.bestStreak = Math.max(saved.bestStreak || 0, session.streak);
+          saved.currentStreak = session.streak;
           saved.rating = session.rating;
+          saved.bestRating = Math.max(Number(saved.bestRating) || 1, session.rating);
         }
         if (session.streak % 3 === 0) reward(15, 20, L(`${session.streak} problèmes de suite`, `${session.streak} puzzles in a row`));
         const praise = [L('Excellent ! Tu reconnais de mieux en mieux ce motif.', 'Excellent! You are recognising this pattern more and more.'), L('Très bien joué ! Ta régularité fait monter la difficulté.', 'Well played! Your consistency is raising the difficulty.'), L('Belle réussite ! Continue, tu prends confiance.', 'Great solve! Keep going; you are building confidence.')][(session.cleanSolved - 1) % 3];
@@ -2673,7 +2683,7 @@
       } else {
         session.streak = 0;
         session.rating = Math.max(1, session.rating - 0.25);
-        if (pathMode) saved.rating = session.rating;
+        if (pathMode) { saved.rating = session.rating; saved.currentStreak = 0; }
         say(L(`Bien essayé. On reprend un défi adapté à la difficulté ${Math.round(session.rating)} : chaque tentative t’aide à progresser.`, `Good try. We’ll choose another challenge around difficulty ${Math.round(session.rating)}: every attempt helps you improve.`), 'happy');
         setPzStatus('good', L('La solution est trouvée. Continue à ton rythme.', 'Puzzle complete. Keep going at your own pace.'));
       }
