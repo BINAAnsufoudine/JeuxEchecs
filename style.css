@@ -637,6 +637,101 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   body.mobile-menu-open[data-screen]:not([data-screen="home"]) #home .menu { position: fixed; z-index: 61; inset: 0 auto 0 0; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 8px; width: min(340px, calc(100vw - 56px)); max-width: none; height: 100dvh; margin: 0; padding: max(64px, calc(52px + env(safe-area-inset-top))) 18px max(18px, env(safe-area-inset-bottom)); overflow-y: auto; border-right: 1px solid var(--surface-2); background: var(--surface); pointer-events: auto; }
   body.mobile-menu-open[data-screen]:not([data-screen="home"]) #home .menu .btn { width: 100%; text-align: left; padding: 11px 14px; font-size: 0.94rem; }
 }
+
+/* Accueil accueillant : navigation stable et activités mises en avant. */
+#home { justify-content: flex-start; align-items: stretch; gap: 0; }
+.home-sidebar { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.home-sidebar .hero { width: 100%; }
+.home-sidebar .hero-top { gap: 12px; }
+.home-sidebar .brand { gap: 3px; }
+.home-sidebar .logo { width: 76px; height: 76px; }
+.home-sidebar .hero h1 { font-size: 1.8rem; }
+.home-sidebar .player-profile { position: relative; flex-wrap: wrap; }
+.home-sidebar .player-profile > div { flex: 1; }
+.home-sidebar .player-profile .profile-edit { font-size: .76rem; padding: 6px 8px; }
+.home-sidebar .home-rewards { margin-top: 0; }
+.home-dashboard { width: min(100%, 960px); margin: 0 auto; padding: 8px 24px 26px; }
+.home-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; color: var(--muted); }
+.home-topline strong { color: var(--text); }
+.home-settings { width: 40px; height: 40px; border: 1px solid var(--surface-2); border-radius: 13px; background: var(--surface); font-size: 1.1rem; }
+.home-welcome { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 205px; padding: 24px 28px; overflow: hidden; border: 1px solid #456d50; border-radius: 24px; background: radial-gradient(ellipse at 80% 10%, rgba(247, 204, 89, .2), transparent 36%), linear-gradient(115deg, #294e39, #1a3529 65%, #314d39); }
+.home-welcome::after { content: '♞'; position: absolute; right: 25%; top: -36px; font-size: 180px; color: #fff; opacity: .045; transform: rotate(12deg); pointer-events: none; }
+.home-welcome-copy { position: relative; z-index: 1; max-width: 620px; }
+.home-kicker { color: #b5e9b7; font-size: .76rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.home-welcome h2 { max-width: 16ch; margin: 7px 0 6px; font-size: clamp(1.6rem, 3.2vw, 2.35rem); line-height: 1.12; }
+.home-welcome p { margin: 0 0 15px; color: #d0dfcf; }
+.home-adventure-cta { padding: 11px 15px; font-size: .95rem; }
+.home-coach-art { z-index: 1; display: flex; flex: none; flex-direction: column; align-items: center; align-self: stretch; justify-content: end; width: 160px; min-height: 158px; margin: -24px -8px -24px 0; }
+.home-coach-art img { width: 100%; height: 176px; object-fit: cover; object-position: 50% 22%; border: 2px solid rgba(245, 195, 72, .75); border-bottom: 0; border-radius: 90px 90px 10px 10px; box-shadow: 0 7px 22px #09160e88; }
+.home-coach-art span { margin-top: -23px; padding: 4px 9px; border-radius: 99px; background: var(--accent); color: var(--accent-text); font-size: .72rem; font-weight: 800; }
+.home-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 21px 0 10px; }
+.home-section-heading h2 { margin: 0; font-size: 1.18rem; }
+.home-section-heading > span { color: var(--muted); font-size: .8rem; }
+.home-activity-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.home-activity-card { position: relative; display: flex; min-height: 148px; flex-direction: column; align-items: flex-start; padding: 15px; overflow: hidden; border: 1px solid var(--surface-2); border-radius: 19px; background: var(--surface); color: var(--text); text-align: left; transition: transform .15s ease, border-color .15s ease, filter .15s ease; }
+.home-activity-card:hover { transform: translateY(-2px); border-color: var(--accent); filter: brightness(1.08); }
+.home-activity-card::after { position: absolute; right: -23px; bottom: -32px; width: 82px; height: 82px; border-radius: 50%; background: var(--activity-color); content: ''; opacity: .13; }
+.progress-card { --activity-color: #91db9d; }.learn-card { --activity-color: #7bc8ef; }.play-card { --activity-color: #ff947f; }
+.home-card-icon { font-size: 1.75rem; }
+.home-activity-card strong { margin: 7px 0 3px; font-size: 1rem; }
+.home-activity-card small { max-width: 29ch; color: var(--muted); font-size: .78rem; line-height: 1.35; }
+.home-card-arrow { position: absolute; right: 14px; top: 15px; color: var(--muted); font-size: 1.3rem; }
+.home-progress-heading { margin-top: 20px; }
+.home-progress-card { display: flex; width: 100%; align-items: center; gap: 13px; padding: 13px 15px; border: 1px solid var(--surface-2); border-radius: 17px; background: var(--surface); color: inherit; text-align: left; }
+.home-progress-card:hover { border-color: var(--accent); }
+.home-progress-medal { font-size: 2rem; }
+.home-progress-copy { display: flex; flex: 1; flex-direction: column; gap: 3px; }
+.home-progress-copy small { color: var(--muted); font-size: .78rem; }
+.home-progress-card > .home-card-arrow { position: static; font-size: 1.5rem; }
+#home #coach-program { width: 100%; max-width: none; margin-top: 14px; }
+
+@media (min-width: 1000px) {
+  :root { --desktop-menu-width: 292px; }
+  #home.active { grid-template-columns: var(--desktop-menu-width) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 0; }
+  #home .home-sidebar { grid-column: 1; grid-row: 1; min-height: 0; padding: 18px 16px 16px; overflow-y: auto; border-right: 1px solid var(--surface-2); background: var(--surface); pointer-events: auto; }
+  #home .home-sidebar .hero { padding: 0; overflow: visible; background: transparent; }
+  #home .home-sidebar .menu { width: 100%; max-width: none; gap: 8px; padding: 0; overflow: visible; border: 0; background: transparent; }
+  #home .home-sidebar .menu .btn { text-align: left; padding: 10px 13px; font-size: .9rem; }
+  #home .home-sidebar .menu-submenu .btn { padding: 9px 12px; font-size: .84rem; }
+  #home .home-dashboard { grid-column: 2; grid-row: 1; width: min(100%, 1120px); max-width: 1120px; max-height: 100vh; padding: 22px clamp(24px, 4vw, 54px) 28px; overflow-y: auto; pointer-events: auto; }
+  #home .home-sidebar .player-profile { padding: 10px; }
+  #home .home-sidebar .player-profile .profile-edit { font-size: .72rem; }
+}
+@media (max-width: 999px) {
+  #home.active { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 15px; padding-top: max(14px, env(safe-area-inset-top)); }
+  #home .home-sidebar { display: contents; }
+  #home .home-sidebar .hero { order: -2; width: min(100%, 560px); }
+  #home .home-sidebar .hero-top { display: grid; grid-template-columns: 1fr; justify-items: center; }
+  #home .home-sidebar .brand { flex-direction: row; gap: 12px; }
+  #home .home-sidebar .brand-copy { text-align: left; }
+  #home .home-sidebar .logo { width: 60px; height: 60px; }
+  #home .home-sidebar .hero h1 { margin: 0; font-size: 1.65rem; }
+  #home .home-sidebar .player-profile, #home .home-sidebar .home-rewards { width: 100%; max-width: 560px; }
+  #home .home-dashboard { order: -1; width: min(100%, 600px); padding: 0 0 12px; }
+  #home .home-welcome { min-height: 180px; padding: 18px; border-radius: 20px; }
+  #home .home-coach-art { width: 112px; min-height: 140px; margin: -18px -7px -18px 0; }
+  #home .home-coach-art img { height: 151px; }
+  #home .home-welcome p { max-width: 34ch; font-size: .88rem; }
+  #home .home-activity-grid { gap: 9px; }
+  #home .home-activity-card { min-height: 134px; padding: 12px; }
+  #home .home-section-heading { margin-top: 16px; }
+  #home .home-progress-heading { margin-top: 15px; }
+  #home .home-sidebar .menu { order: 0; width: min(100%, 560px); max-width: 560px; gap: 8px; }
+  #home .home-sidebar .menu .btn { padding: 10px 13px; font-size: .9rem; }
+  body[data-screen]:not([data-screen="home"]) #home .home-sidebar { display: contents; }
+  body[data-screen]:not([data-screen="home"]) #home .home-dashboard { display: none; }
+}
+@media (max-width: 480px) {
+  #home .home-welcome { gap: 5px; }
+  #home .home-coach-art { width: 88px; }
+  #home .home-coach-art img { height: 126px; }
+  #home .home-welcome h2 { font-size: 1.42rem; }
+  #home .home-welcome p { font-size: .8rem; }
+  #home .home-adventure-cta { padding: 9px 10px; font-size: .82rem; }
+  #home .home-activity-grid { grid-template-columns: 1fr 1fr; }
+  #home .home-activity-card:last-child { grid-column: 1 / -1; min-height: 112px; }
+  #home .home-section-heading > span { font-size: .7rem; }
+}
 .minimap b { font-size: min(88cqi, 38px); line-height: 1; font-weight: 400; pointer-events: none; }
 .minimap b.w { color: #fff; text-shadow: 0 0 1px #000, 0 0 1px #000, 0 0 2px #000; }
 .minimap b.k { color: #1b1b1f; text-shadow: 0 0 1px #fff; }

@@ -141,6 +141,8 @@
     $('btn-continue').disabled = !(saved && !saved.result);
     const player = playerProfile();
     $('home-player-name').textContent = player.name || L('Joueur', 'Player');
+    if ($('home-greeting-player')) $('home-greeting-player').textContent = player.name || L('champion', 'champion');
+    if ($('home-greeting')) $('home-greeting').textContent = L('Bonjour', 'Hello');
     $('home-player-photo').hidden = !player.photo; if (player.photo) $('home-player-photo').src = player.photo;
     renderHomeRewards();
     $('home-player-elo').textContent = L(`Elo estimé : ${estimatedElo()}`, `Estimated Elo: ${estimatedElo()}`);
@@ -3293,6 +3295,11 @@
   /* ---------- Accueil ---------- */
   const randomColor = () => (Math.random() < 0.5 ? 'w' : 'b');
   $('btn-player-name').onclick = () => (ON && ON.user ? openAccount() : promptPlayerName());
+  $('btn-home-settings').onclick = () => $('btn-settings').click();
+  $('btn-home-progress').onclick = () => { returnTo = 'home'; show('problems'); };
+  $('btn-home-learn').onclick = () => $('btn-champions').click();
+  $('btn-home-play').onclick = () => $('btn-new').click();
+  $('btn-home-rewards').onclick = () => $('home-rewards').click();
   $('btn-program').onclick = () => { returnTo = 'home'; show('program'); };
   $('btn-progress-menu').onclick = () => {
     const open = $('progress-submenu').hidden;
