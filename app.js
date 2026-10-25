@@ -76,15 +76,18 @@
   let coachHintLevel = 0;
   let coachArrows = [];        // flèches du dernier coup commenté (partie coachée)
   let judging = false, judgeSeq = 0, judgeWorker = null;
-  const TERRAIN_IDS = ['forest', 'desert', 'prairie', 'steppe', 'mud', 'rock', 'water', 'beach'];
-  const TERRAIN_NAMES = L({ forest: 'Forêt', desert: 'Désert', prairie: 'Prairie verte', steppe: 'Plaine sèche', mud: 'Terrain boueux', rock: 'Terrain rocheux', water: 'Flaques d’eau', beach: 'Plage tropicale' }, { forest: 'Forest', desert: 'Desert', prairie: 'Green meadow', steppe: 'Dry plain', mud: 'Muddy ground', rock: 'Rocky ground', water: 'Puddles', beach: 'Tropical beach' });
-  const WEATHER_IDS = ['sun', 'drizzle', 'heavy', 'heavystorm', 'windstorm', 'sunwind', 'snow', 'sunset'];
+  const TERRAIN_NAMES = L({ forest: 'Forêt', desert: 'Désert', prairie: 'Prairie verte', grass: 'Jardin tropical', steppe: 'Plaine sèche', mud: 'Forêt humide', rock: 'Récif rocheux', water: 'Lagon tropical', beach: 'Plage tropicale' }, { forest: 'Forest', desert: 'Desert', prairie: 'Green meadow', grass: 'Tropical garden', steppe: 'Dry plain', mud: 'Rainforest', rock: 'Rocky reef', water: 'Tropical lagoon', beach: 'Tropical beach' });
   const WEATHER_NAMES = L({ sun: 'Soleil', drizzle: 'Pluie fine', heavy: 'Grosse pluie', heavystorm: 'Grosse pluie orageuse', windstorm: 'Orage et grand vent', sunwind: 'Soleil et vent', snow: 'Neige fine', sunset: 'Coucher de soleil' },
     { sun: 'Sunny', drizzle: 'Light rain', heavy: 'Heavy rain', heavystorm: 'Heavy thunderstorm', windstorm: 'Windy thunderstorm', sunwind: 'Sunny and windy', snow: 'Light snow', sunset: 'Sunset' });
-  // Décor et météo tirés au sort, pour tous les modes (parties, replays, problèmes, cours)
-  function randomScenery(terrainId, weatherId) {
-    currentTerrain = TERRAIN_IDS.includes(terrainId) ? terrainId : TERRAIN_IDS[Math.floor(Math.random() * TERRAIN_IDS.length)];
-    currentWeather = WEATHER_IDS.includes(weatherId) ? weatherId : WEATHER_IDS[Math.floor(Math.random() * WEATHER_IDS.length)];
+  // Le paysage et la météo suivent la collection nature et le grade dans tous les modes de jeu.
+  function randomScenery() {
+    currentTerrain = natureTerrainForGrade();
+    currentWeather = natureWeatherForGrade();
+    const rank = adventureGrade(levelOf(walletState().xp).level);
+    $('game').dataset.natureTerrain = currentTerrain;
+    $('puzzle').dataset.natureTerrain = currentTerrain;
+    $('game').dataset.natureGrade = String(rank);
+    $('puzzle').dataset.natureGrade = String(rank);
     if (b3d) { b3d.setTerrain(currentTerrain); b3d.setWeather(currentWeather); }
     return `${TERRAIN_NAMES[currentTerrain]} · ${WEATHER_NAMES[currentWeather]}`;
   }
@@ -4381,6 +4384,22 @@
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
   ];
   let activeNatureCollection = store.get('natureCollection', 'plants');
+  const NATURE_TERRAIN_PATHS = {
+    plants: ['grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest'],
+    land: ['grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'mud', 'mud', 'mud'],
+    birds: ['grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest'],
+    ocean: ['beach', 'beach', 'rock', 'rock', 'water', 'water', 'water', 'water', 'water', 'water'],
+  };
+  const NATURE_WEATHER_PATH = ['sun', 'sunwind', 'cloudy', 'sun', 'drizzle', 'sunwind', 'cloudy', 'sunset', 'sunwind', 'sun'];
+  function natureTerrainForGrade() {
+    const rank = adventureGrade(levelOf(walletState().xp).level);
+    const path = NATURE_TERRAIN_PATHS[activeNatureCollection] || NATURE_TERRAIN_PATHS.plants;
+    return path[Math.max(0, Math.min(path.length - 1, rank - 1))];
+  }
+  function natureWeatherForGrade() {
+    const rank = adventureGrade(levelOf(walletState().xp).level);
+    return NATURE_WEATHER_PATH[Math.max(0, Math.min(NATURE_WEATHER_PATH.length - 1, rank - 1))];
+  }
   function natureCurrency(grade = adventureGrade(levelOf(walletState().xp).level)) {
     if (activeNatureCollection === 'ocean') return { key: 'pearls', icon: '🦪', name: L('Perles', 'Pearls'), unit: L('perles', 'pearls') };
     if (activeNatureCollection === 'land') {
@@ -4424,6 +4443,10 @@
     w[rewardCurrency.key] = (Number(w[rewardCurrency.key]) || 0) + wheat;
     if (after > before) w[rewardCurrency.key] += 50 * (after - before);
     store.set('wallet', w);
+    if (afterGrade > beforeGrade && game) {
+      $('terrain-name').textContent = randomScenery();
+      renderBoard();
+    }
     rewardPop(`${why ? `${why} · ` : ''}+${natureCurrencyAmount(rewardCurrency, wheat, true)} · +${xp} XP`);
     if (after > before) { rewardPop(L(`Niveau ${after} atteint ! +${natureCurrencyAmount(rewardCurrency, 50 * (after - before), true)}`, `Level ${after} reached! +${natureCurrencyAmount(rewardCurrency, 50 * (after - before), true)}`), true); sounds.win(); }
     if (afterGrade > beforeGrade) {

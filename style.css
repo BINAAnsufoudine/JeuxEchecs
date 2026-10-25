@@ -119,6 +119,12 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 
 /* Partie */
 #game { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+#game[data-nature-terrain="grass"], #puzzle[data-nature-terrain="grass"] { background-image: radial-gradient(ellipse at 50% 2%, rgba(123, 180, 91, .18), transparent 58%); }
+#game[data-nature-terrain="forest"], #puzzle[data-nature-terrain="forest"] { background-image: radial-gradient(ellipse at 50% 2%, rgba(58, 116, 71, .2), transparent 62%); }
+#game[data-nature-terrain="mud"], #puzzle[data-nature-terrain="mud"] { background-image: radial-gradient(ellipse at 50% 2%, rgba(139, 105, 67, .2), transparent 60%); }
+#game[data-nature-terrain="beach"], #puzzle[data-nature-terrain="beach"] { background-image: radial-gradient(ellipse at 50% 2%, rgba(69, 188, 211, .2), transparent 62%); }
+#game[data-nature-terrain="water"], #puzzle[data-nature-terrain="water"] { background-image: radial-gradient(ellipse at 50% 2%, rgba(43, 141, 188, .22), transparent 65%); }
+#game[data-nature-terrain="rock"], #puzzle[data-nature-terrain="rock"] { background-image: radial-gradient(ellipse at 50% 2%, rgba(130, 158, 161, .17), transparent 60%); }
 .game-layout { display: flex; flex-direction: column; gap: 12px; flex: 1; align-items: center; }
 .board-col { width: min(100%, 560px, calc(100vh - 260px)); min-width: 280px; }
 .side-col { width: min(100%, 560px); display: flex; flex-direction: column; gap: 10px; }
