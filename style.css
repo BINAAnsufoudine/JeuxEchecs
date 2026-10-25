@@ -39,6 +39,7 @@ body {
   overscroll-behavior: none;
 }
 button { font: inherit; color: inherit; cursor: pointer; }
+button[data-ui-icon]::before { content: attr(data-ui-icon); display: inline-block; margin-right: .48em; vertical-align: -.06em; }
 
 .screen { display: none; min-height: 100%; padding: env(safe-area-inset-top) 16px calc(16px + env(safe-area-inset-bottom)); }
 .screen.active { display: flex; flex-direction: column; }
