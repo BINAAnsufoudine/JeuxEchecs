@@ -1676,6 +1676,22 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         u.blackBansheeBaseScale = this.formScaleMatchingActor(actor, u.blackBanshee);
         u.floatH = new T.Box3().setFromObject(actor.parts.root).getSize(new T.Vector3()).y * 0.95; // flotte à hauteur des têtes
         u.blackBanshee.scale.setScalar(0.05); actor.parts.root.visible = false;
+        u.sky = {
+          background: this.scene.background && this.scene.background.isColor ? this.scene.background.clone() : null,
+          fog: this.scene.fog && this.scene.fog.color ? this.scene.fog.color.clone() : null,
+          sun: this.sun.intensity, hemi: this.hemi.intensity, exposure: this.renderer.toneMappingExposure,
+        };
+        u.clouds = new T.Group(); u.clouds.position.set(u.target.x, 5.2, u.target.z); u.fx.add(u.clouds);
+        for (let i = 0; i < 20; i++) {
+          const puff = new T.Mesh(
+            new T.SphereGeometry(0.85 + (i % 4) * 0.16, 12, 9),
+            new T.MeshStandardMaterial({ color: i % 3 ? 0x100d18 : 0x211a2a, roughness: 1, transparent: true, opacity: 0, depthWrite: false }),
+          );
+          const angle = i * 2.399, radius = 0.35 + (i % 5) * 0.42;
+          puff.position.set(Math.cos(angle) * radius, (i % 3) * 0.14, Math.sin(angle) * radius);
+          puff.scale.set(1.2, 0.42, 0.85); puff.userData.baseY = puff.position.y;
+          u.clouds.add(puff);
+        }
         const flameVictims = (u.flameSquares || [])
           .map((sq) => this.chars.get(sq))
           .filter((piece) => piece && piece !== king && piece.piece === piece.piece.toUpperCase());
@@ -1988,6 +2004,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
 
     tickMateUltimate(c, t, M) {
+      const T = this.THREE;
       const u = this.mateUltimate;
       if (!u || t < u.start || (c !== u.actor && c !== u.king)) return false;
       const kind = u.piece.toLowerCase(), e = t - u.start, target = u.target;
@@ -2054,6 +2071,20 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           u.blackBanshee.rotation.y = Math.sin(t * 1.8) * 0.16;
           u.blackBanshee.userData.wisps.forEach((wisp, i) => {
             wisp.rotation.z = wisp.userData.baseRotation + Math.sin(t * 5.2 + i) * 0.24;
+          });
+          const dim = clamp(e / 0.8) * (1 - clamp((e - (u.duration - 0.7)) / 0.7));
+          if (u.sky) {
+            this.skyDim = dim;
+            const night = new T.Color(0x07040c);
+            if (u.sky.background && this.scene.background && this.scene.background.isColor) this.scene.background.copy(u.sky.background).lerp(night, dim * 0.9);
+            if (u.sky.fog && this.scene.fog && this.scene.fog.color) this.scene.fog.color.copy(u.sky.fog).lerp(night, dim * 0.85);
+            if (!this.weather) { this.sun.intensity = u.sky.sun * (1 - 0.85 * dim); this.hemi.intensity = u.sky.hemi * (1 - 0.75 * dim); }
+            this.renderer.toneMappingExposure = u.sky.exposure * (1 - 0.45 * dim);
+          }
+          u.clouds.rotation.y = t * 0.12;
+          u.clouds.children.forEach((puff, i) => {
+            puff.material.opacity = 0.88 * dim;
+            puff.position.y = puff.userData.baseY + Math.sin(t * 1.3 + i) * 0.09;
           });
           if (u.fireLight) u.fireLight.intensity = 1.1 + Math.abs(Math.sin(t * 8)) * 1.8;
           if (u.columnLight) u.columnLight.intensity = 1.4 + Math.abs(Math.sin(t * 11)) * 3.2;
