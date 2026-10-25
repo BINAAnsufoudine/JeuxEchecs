@@ -2060,7 +2060,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         if (c === actor) {
           c.anim = null; c.holder.position.set(queenPos.x, 0, queenPos.z); c.parts.root.visible = false;
           const grow = smooth(e / 0.9);
-          u.blackQueenBall.scale.setScalar(0.06 + grow * u.blackQueenBallBaseScale);
+          u.blackQueenBall.scale.setScalar(Math.max(0.06, grow * u.blackQueenBallBaseScale));
           u.blackQueenBall.position.y = 0.55 + Math.sin(t * 3.2) * 0.1;
           u.blackQueenBall.rotation.set(t * 1.8, t * 2.2, t * 1.4);
           u.blackQueenBall.userData.glow.material.opacity = 0.55 + Math.abs(Math.sin(t * 8)) * 0.3;
