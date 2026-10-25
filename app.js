@@ -1613,7 +1613,7 @@
           : tags.includes('pin') || tags.includes('skewer') ? 'clouage'
             : tags.includes('hangingPiece') || tags.includes('capturingDefender') ? 'prise'
               : tags.some((tag) => /Endgame$/.test(tag) || tag === 'endgame') ? 'finale' : 'tactique';
-    BANK.push({ id: `l${raw.id}`, fen, line, theme, themes: tags, rating: raw.rating, sourceRating: raw.sourceRating });
+    BANK.push({ id: `l${raw.id}`, fen, line, theme, themes: tags, rating: raw.rating, sourceRating: raw.sourceRating, source: 'lichess' });
     puzzleIds.add(`l${raw.id}`);
   }
   // Filtres Lichess : les libellés ne sont affichés que si l'échantillon local
@@ -1916,9 +1916,16 @@
     const mine = includePersonal ? store.get('mistakes', []).filter((m) => m.theme === k && !m.solved && due(m) <= now).sort((a, b) => due(a) - due(b))[0] : null;
     if (mine) return personalItem(mine);
     const st = store.get('pzdone', {});
-    let pool = BANK.filter((p) => p.theme === k && st[p.id] !== 's');
-    if (!pool.length) pool = BANK.filter((p) => p.theme === k);
+    const eligible = BANK.filter((p) => p.theme === k && Array.isArray(p.line) && p.line.length);
+    let pool = eligible.filter((p) => st[p.id] !== 's');
+    if (!pool.length) pool = eligible;
     if (!pool.length) return null;
+    // Les puzzles Lichess enrichissent le programme personnalisé ; on en choisit
+    // environ 7 sur 10 quand ils existent, sans perdre l'apport de la banque locale.
+    const lichess = pool.filter((p) => p.source === 'lichess' || String(p.id).startsWith('l'));
+    const local = pool.filter((p) => !(p.source === 'lichess' || String(p.id).startsWith('l')));
+    if (lichess.length && local.length) pool = Math.random() < 0.7 ? lichess : local;
+    else if (lichess.length) pool = lichess;
     const dist = (p) => Math.abs((p.rating || p.level * 3 - 1) - level) + (st[p.id] ? 0.5 : 0) + Math.random() * 0.9;
     return pool.map((p) => ({ p, d: dist(p) })).sort((a, b) => a.d - b.d)[0].p;
   }
