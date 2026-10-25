@@ -1818,7 +1818,7 @@
   function recordAnalysis(g, errors, captures = []) {
     const c = loadCoach();
     const ignoredCaptureIds = new Set(captures
-      .filter((x) => x.kind === 'counterplay' || x.kind === 'material-only')
+      .filter((x) => x.kind === 'counterplay' || x.kind === 'material-only' || x.kind === 'advantageous')
       .map((x) => `${g.id}-${x.ply}`));
     const countedErrors = errors.filter((e) => !(e.theme === 'prise' && ignoredCaptureIds.has(`${g.id}-${e.ply}`)));
     const count = {};
@@ -1850,31 +1850,6 @@
       });
     }
     store.set('mistakes', mistakes.slice(-150));
-    if (captures.length) {
-      const notes = store.get('captureNotes', []);
-      const sanFor = (fen, uci) => {
-        if (!uci) return '';
-        try { return new Game(fen).playUci(uci).san || uci; } catch { return uci; }
-      };
-      for (const x of captures) {
-        let replySan = x.reply;
-        if (x.reply) {
-          try {
-            const after = new Game(x.fen);
-            after.playUci(x.played);
-            replySan = sanFor(window.Chess.toFen(after.state), x.reply);
-          } catch { replySan = x.reply; }
-        }
-        notes.push({
-          id: `${g.id}-${x.ply}`, date: g.id, move: Math.floor(x.ply / 2) + 1,
-          kind: x.kind, played: sanFor(x.fen, x.played), captured: x.captured,
-          best: sanFor(x.fen, x.best), reply: replySan,
-          score: x.score, loss: x.loss, netMaterial: x.netMaterial,
-          bestMate: x.bestMate, mateInBest: x.mateInBest,
-        });
-      }
-      store.set('captureNotes', notes.slice(-100));
-    }
     const before = new Set(store.get('tipsSeen', []));
     const fresh = tipMotifs().filter((t) => !before.has(t.key));
     if (fresh.length) {
@@ -1885,17 +1860,7 @@
     const summary = countedErrors.length
       ? L(`${countedErrors.length} faute${countedErrors.length > 1 ? 's' : ''}`, `${countedErrors.length} mistake${countedErrors.length === 1 ? '' : 's'}`) + ` (${[...new Set(countedErrors.map((e) => PZ[e.theme].name))].join(', ')})`
       : L('aucune grosse faute', 'no big mistake');
-    const captureCounts = {
-      advantageous: captures.filter((x) => x.kind === 'advantageous').length,
-      counterplay: captures.filter((x) => x.kind === 'counterplay').length,
-      materialOnly: captures.filter((x) => x.kind === 'material-only').length,
-    };
-    const captureSummary = [
-      captureCounts.advantageous && L(`${captureCounts.advantageous} prise${captureCounts.advantageous > 1 ? 's' : ''} avantageuse${captureCounts.advantageous > 1 ? 's' : ''}`, `${captureCounts.advantageous} good capture${captureCounts.advantageous === 1 ? '' : 's'}`),
-      captureCounts.counterplay && L(`${captureCounts.counterplay} prise${captureCounts.counterplay > 1 ? 's' : ''} laissant du contre-jeu`, `${captureCounts.counterplay} capture${captureCounts.counterplay === 1 ? '' : 's'} allowing counterplay`),
-      captureCounts.materialOnly && L(`${captureCounts.materialOnly} prise${captureCounts.materialOnly > 1 ? 's' : ''} ayant fait manquer un meilleur coup`, `${captureCounts.materialOnly} capture${captureCounts.materialOnly === 1 ? '' : 's'} that missed a better move`),
-    ].filter(Boolean).join(' · ');
-    toast(L(`Partie analysée : ${summary}${captureSummary ? ` · ${captureSummary}` : ''}. Voir Problèmes.`, `Game analysed: ${summary}${captureSummary ? ` · ${captureSummary}` : ''}. See Puzzles.`));
+    toast(L(`Partie analysée : ${summary}. Voir Problèmes.`, `Game analysed: ${summary}. See Puzzles.`));
     if (promoted.length || retry.length) setTimeout(() => toast((promoted.length ? L(`Niveau confirmé : ${promoted.join(', ')}. `, `Level confirmed: ${promoted.join(', ')}. `) : '') + (retry.length ? L(`À reprendre : ${retry.join(', ')}.`, `To redo: ${retry.join(', ')}.`) : '')), 3500);
   }
 
@@ -2225,7 +2190,6 @@
     const prefs = problemPreferences();
     const pending = store.get('archive', []).filter((x) => !x.analysed).length;
     const mistakes = store.get('mistakes', []);
-    const captureNotes = store.get('captureNotes', []).slice(-8).reverse();
     const order = pathOrder(c);
     const acquired = ranked(c).filter((k) => !isWeak(c.themes[k]));
     const next = peekActivity();
@@ -2297,27 +2261,8 @@
       <p id="pz-pref-error" class="pz-pref-error" role="alert"></p>
       <div class="pz-pref-actions"><button class="btn primary" id="pz-pref-save" type="button">${L('Enregistrer', 'Save')}</button><button class="btn ghost" id="pz-pref-cancel" type="button">${L('Annuler', 'Cancel')}</button></div>
     </section>`;
-    if (problemsSection === 'program' && captureNotes.length) {
-      const pieceNames = L({ p: 'un pion', n: 'un cavalier', b: 'un fou', r: 'une tour', q: 'une dame', k: 'un roi' }, { p: 'a pawn', n: 'a knight', b: 'a bishop', r: 'a rook', q: 'a queen', k: 'a king' });
-      const pawns = (cp) => `${NUM(Math.abs(cp) / 100)} ${P(Math.abs(cp) >= 200 ? 2 : 1, 'pion', 'pions', 'pawn', 'pawns')}`;
-      html += L('<h3 class="pz-section">Analyse de tes prises</h3><p class="pz-cap">Le moteur regarde si la prise garde son avantage, concède du contre-jeu ou fait manquer un meilleur coup.</p>', '<h3 class="pz-section">Your captures analysed</h3><p class="pz-cap">The engine checks whether the capture keeps its advantage, allows counterplay or misses a better move.</p>');
-      html += captureNotes.map((x) => {
-        const piece = pieceNames[x.captured] || L('une pièce', 'a piece');
-        let title, detail;
-        if (x.kind === 'advantageous') {
-          title = L('Prise avantageuse', 'Good capture');
-          detail = L(`Partie du ${fmtDate(x.date)}, coup ${x.move} (${x.played}) : prendre ${piece} conserve un avantage et gagne du matériel.`, `Game of ${fmtDate(x.date)}, move ${x.move} (${x.played}): taking ${piece} keeps an advantage and wins material.`);
-        } else if (x.kind === 'counterplay') {
-          title = L('La prise laisse du contre-jeu', 'The capture allows counterplay');
-          detail = L(`Partie du ${fmtDate(x.date)}, coup ${x.move} (${x.played}) : après cette prise, l’adversaire pouvait répondre ${x.reply || 'par une forte riposte'} et dégrader fortement ta position.`, `Game of ${fmtDate(x.date)}, move ${x.move} (${x.played}): after this capture, your opponent could reply ${x.reply || 'with a strong counter'} and badly damage your position.`);
-        } else {
-          title = L('Prise matérielle, meilleur coup manqué', 'Material grab, better move missed');
-          const better = x.bestMate ? L(`${x.best} permettait de mater en ${x.mateInBest} coup${x.mateInBest > 1 ? 's' : ''}`, `${x.best} mated in ${x.mateInBest} move${x.mateInBest === 1 ? '' : 's'}`) : L(`${x.best} conservait mieux l’avantage (écart estimé : ${pawns(x.loss)})`, `${x.best} kept the advantage better (estimated gap: ${pawns(x.loss)})`);
-          detail = L(`Partie du ${fmtDate(x.date)}, coup ${x.move} (${x.played}) : la prise gagne ${piece}, mais ${better}.`, `Game of ${fmtDate(x.date)}, move ${x.move} (${x.played}): the capture wins ${piece}, but ${better}.`);
-        }
-        return `<article class="capture-note ${x.kind}"><b>${title}</b><small>${detail}</small></article>`;
-      }).join('');
-    }
+    // Les analyses de prises restent enregistrées pour évaluer les sacrifices et
+    // les compensations, mais ce détail technique n'est pas affiché dans le programme.
     if (problemsSection === 'program') {
     const nextLabel = next.type === 'none' ? L(`Aucune erreur ne dépasse ${prefs.threshold} % sur les ${prefs.games} dernières parties.`, `No mistake exceeds ${prefs.threshold}% in the last ${prefs.games} games.`) : next.type === 'wait' ? L('Joue une partie pour confirmer tes niveaux', 'Play a game to confirm your levels') : next.type === 'lesson' ? L(`Leçon : ${lessonOf(next.theme).title}`, `Lesson: ${lessonOf(next.theme).title}`) : L(`Problèmes : ${PZ[next.theme].name} · niveau ${themeRow(c, next.theme).level} (${themeRow(c, next.theme).ok}/${LEVEL_SET})`, `Puzzles: ${PZ[next.theme].name} · level ${themeRow(c, next.theme).level} (${themeRow(c, next.theme).ok}/${LEVEL_SET})`);
     html += `<button class="btn primary wide" id="pz-go">${L('Continuer mon entraînement', 'Continue my training')}</button><p class="pz-next">${L('Prochaine étape', 'Next step')} · ${nextLabel}</p>`;

@@ -84,8 +84,11 @@
       mateInBest: isMate(best.score) && best.score > 0 ? mateIn(best.score) : null,
     };
 
-    // Une prise qui reste proche du meilleur coup et conserve un gain matériel.
-    if (couldBeGood && net >= 80) return { ...common, kind: 'advantageous' };
+    // Une prise peut perdre du matériel immédiatement tout en gardant une
+    // compensation durable selon l'évaluation moteur après la réponse adverse.
+    if ((couldBeGood && net >= 80) || (couldBeRisky && playedScore >= 150 && net >= -50)) {
+      return { ...common, kind: 'advantageous' };
+    }
 
     if (loss < 120) return null;
     const givesCounterplay = reply && (
@@ -184,6 +187,9 @@
       if (!isMate(best.score) && ps > 600) continue;
       if (loss < 180) continue;
       const theme = classifyError(s, pm, best, ps, q, insight && insight.kind);
+      // Une prise manquée n'est pas une faiblesse si la suite calculée conserve
+      // malgré tout un avantage clair : on évite de pénaliser une conversion déjà gagnante.
+      if (theme === 'prise' && !pm.captured && best.m.captured && ps >= 150) continue;
       const sol = buildLine(s, { depth: depth + 1, q, margin: 150 });
       errors.push({
         ply: i, fen: toFen(s), played: toUci(pm), best: toUci(best.m), loss: Math.round(loss), theme,
@@ -450,7 +456,7 @@
     if (isMate(playedScore) && playedScore < 0) return 'defense';
     const after = makeMove(s, pm);
     const reply = rootSearch(after, 2, q, null, 0)[0];
-    const captureHasOwnCategory = captureKind === 'counterplay' || captureKind === 'material-only';
+    const captureHasOwnCategory = captureKind === 'counterplay' || captureKind === 'material-only' || captureKind === 'advantageous';
     if (reply) {
       if (isFork(after, reply.m)) return 'fourchette';
       if (isPin(after, reply.m)) return 'clouage';
