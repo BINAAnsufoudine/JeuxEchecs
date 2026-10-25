@@ -1698,6 +1698,41 @@
   const trainingTopicName = (key) => trainingTopic(key)?.name || PZ[key]?.name || '';
   const trainingTopicIcon = (key) => trainingTopic(key)?.icon || PZ[key]?.icon || '♟';
   const trainingTopicPuzzles = (key) => trainingTopic(key)?.puzzles || (key === 'finale' ? BANK.filter((p) => p.theme === key && p.line && p.line.length) : []);
+  function topicMastery(topic) {
+    const outcomes = store.get('pzdone', {});
+    let attempted = 0, solved = 0;
+    for (const puzzle of topic.puzzles) {
+      const outcome = outcomes[puzzle.id];
+      if (outcome !== 's' && outcome !== 'f') continue;
+      attempted++;
+      if (outcome === 's') solved++;
+    }
+    const puzzleScore = attempted ? ((solved + 1) / (attempted + 2)) * 100 : null;
+    const c = loadCoach(), themeCounts = {};
+    for (const puzzle of topic.puzzles) if (PZ[puzzle.theme]) themeCounts[puzzle.theme] = (themeCounts[puzzle.theme] || 0) + 1;
+    let analysisTotal = 0, analysisWeight = 0, analysisGames = 0;
+    for (const [key, count] of Object.entries(themeCounts)) {
+      const row = c.themes[key];
+      if (!row || !row.recent || !row.recent.length) continue;
+      const recent = row.recent.slice(-10);
+      analysisGames = Math.max(analysisGames, recent.length);
+      let score = Number(row.score) || 0;
+      if (row.recent.slice(-5).some((n) => n > 0)) score = Math.max(score, 0.1);
+      const mastery = 100 * (1 - Math.min(1, score / 0.3));
+      const weight = count * recent.length;
+      analysisTotal += mastery * weight;
+      analysisWeight += weight;
+    }
+    const analysisScore = analysisWeight ? analysisTotal / analysisWeight : null;
+    if (puzzleScore === null && analysisScore === null) return { known: false, text: L('À évaluer', 'Not assessed'), className: 'unknown' };
+    let value = analysisScore === null ? puzzleScore : puzzleScore === null ? analysisScore : (() => {
+      const puzzleWeight = Math.min(0.75, attempted / (attempted + 3));
+      return puzzleScore * puzzleWeight + analysisScore * (1 - puzzleWeight);
+    })();
+    value = Math.round(value);
+    const className = value >= 67 ? 'good' : value >= 34 ? 'warm' : 'poor';
+    return { known: true, value, solved, attempted, analysisGames, text: `${value}%`, className };
+  }
   const LESSONS = window.LESSONS || [];
   const fmtDate = (id) => new Date(id).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long' });
   const loadCoach = () => Object.assign({ themes: {}, games: 0 }, store.get('coach', {}));
@@ -2171,7 +2206,13 @@
       <div class="theme-training-head"><div><h3>${L('Parcours de problèmes par thèmes', 'Themed puzzle path')}</h3><p class="pz-cap">${L('Choisis un thème ou mélange-en plusieurs. Les exercices s’adaptent progressivement à tes réussites.', 'Choose one theme or mix several. Puzzles gradually adjust to your progress.')}</p></div><span class="theme-training-level">${L('Difficulté', 'Difficulty')} ${Math.round(training.rating)}/${MAX_LEVEL}</span></div>
       <p class="theme-training-progress">${L(`${training.solvedTotal || 0} problèmes réussis · meilleure série : ${training.bestStreak || 0}`, `${training.solvedTotal || 0} puzzles solved · best streak: ${training.bestStreak || 0}`)}</p>
       <button class="btn ghost" type="button" id="theme-training-toggle" aria-expanded="${themeTrainingOpen}">${themeTrainingOpen ? L('Masquer les thèmes', 'Hide themes') : L('Choisir mes thèmes', 'Choose themes')}</button>
-      ${themeTrainingOpen ? `<div class="theme-training-groups">${trainingTopicGroups.map((group) => `<section class="theme-training-group"><h4>${group.name}</h4><div class="theme-training-choices" role="group" aria-label="${group.name}">${group.topics.map((topic) => `<label class="theme-training-choice"><input type="checkbox" value="${topic.key}" data-training-theme ${selectedThemes.includes(topic.key) ? 'checked' : ''}><span>${topic.icon} ${topic.name} <small>(${topic.puzzles.length})</small></span></label>`).join('')}</div></section>`).join('')}</div>
+      ${themeTrainingOpen ? `<div class="theme-training-groups">${trainingTopicGroups.map((group) => `<section class="theme-training-group"><h4>${group.name}</h4><div class="theme-training-choices" role="group" aria-label="${group.name}">${group.topics.map((topic) => {
+        const mastery = topicMastery(topic);
+        const title = mastery.known
+          ? L(`Maîtrise estimée : ${mastery.value} % · ${mastery.solved}/${mastery.attempted} problèmes réussis · ${mastery.analysisGames} analyses`, `Estimated mastery: ${mastery.value}% · ${mastery.solved}/${mastery.attempted} puzzles solved · ${mastery.analysisGames} analyses`)
+          : mastery.text;
+        return `<label class="theme-training-choice mastery-${mastery.className}" title="${title}"><input type="checkbox" value="${topic.key}" data-training-theme ${selectedThemes.includes(topic.key) ? 'checked' : ''}><span>${topic.icon} ${topic.name} <small>(${topic.puzzles.length})</small></span><small class="theme-mastery">${mastery.known ? `${L('Maîtrise', 'Mastery')} ${mastery.value}%` : mastery.text}</small></label>`;
+      }).join('')}</div></section>`).join('')}</div>
         <p class="pz-cap">${L('Les thèmes suivent les étiquettes de la base Lichess (CC0) ; le nombre indique les problèmes disponibles.', 'Themes follow the Lichess puzzle database tags (CC0); the number shows available puzzles.')}</p>
         <button class="btn primary wide" type="button" id="theme-training-start">${L('Commencer le parcours', 'Start the path')}</button>` : ''}
     </section>`;

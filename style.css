@@ -241,10 +241,18 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .theme-training-group h4 { margin: 0; color: var(--muted); font-size: 0.86rem; }
 .theme-training-group .theme-training-choices { margin: 6px 0 0; }
 .theme-training-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin: 14px 0 8px; }
-.theme-training-choice { display: flex; align-items: center; gap: 9px; min-height: 42px; background: var(--surface-2); border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+.theme-training-choice { display: flex; align-items: center; gap: 9px; min-height: 42px; border: 1px solid transparent; background: var(--surface-2); border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+.theme-training-choice.mastery-good { border-color: rgba(110, 190, 130, 0.38); background: linear-gradient(100deg, rgba(110, 190, 130, 0.13), var(--surface-2) 78%); }
+.theme-training-choice.mastery-warm { border-color: rgba(233, 185, 73, 0.4); background: linear-gradient(100deg, rgba(233, 185, 73, 0.12), var(--surface-2) 78%); }
+.theme-training-choice.mastery-poor { border-color: rgba(224, 108, 91, 0.42); background: linear-gradient(100deg, rgba(224, 108, 91, 0.14), var(--surface-2) 78%); }
+.theme-training-choice.mastery-unknown { border-color: rgba(150, 160, 160, 0.18); }
 .theme-training-choice input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
-.theme-training-choice span { font-size: 0.9rem; }
+.theme-training-choice > span { min-width: 0; flex: 1; font-size: 0.9rem; }
 .theme-training-choice small { color: var(--muted); white-space: nowrap; }
+.theme-training-choice .theme-mastery { flex: none; border-radius: 999px; padding: 3px 7px; background: rgba(150, 160, 160, 0.12); font-weight: 700; }
+.theme-training-choice.mastery-good .theme-mastery { background: rgba(110, 190, 130, 0.2); color: #8fd6a2; }
+.theme-training-choice.mastery-warm .theme-mastery { background: rgba(233, 185, 73, 0.2); color: var(--accent); }
+.theme-training-choice.mastery-poor .theme-mastery { background: rgba(224, 108, 91, 0.2); color: #f19a8c; }
 .pz-settings { text-align: left; background: var(--surface); border: 1px solid var(--surface-2); border-radius: var(--radius); padding: 14px 16px; margin: 4px 0 18px; }
 .pz-settings h3 { margin: 0 0 8px; font-size: 1rem; }
 .pz-settings .field-label { margin: 14px 0 6px; }
