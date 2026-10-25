@@ -3354,30 +3354,36 @@
     const castleBox = (c, label) => `<label class="ed-check${edCastleOk[c]() ? '' : ' off'}"><input type="checkbox" data-castle="${c}" ${ed.castle[c] && edCastleOk[c]() ? 'checked' : ''} ${edCastleOk[c]() ? '' : 'disabled'}> ${label}</label>`;
     const err = edError();
     $('editor-body').innerHTML = `
-      <p class="level-help">${L('Choisis une pièce puis touche les cases pour la poser. Avec la main, touche une pièce puis sa nouvelle case pour la déplacer.', 'Pick a piece, then tap squares to place it. With the hand, tap a piece and then its new square to move it.')}</p>
-      <div class="ed-palette">${tool('move', '✋', L('Déplacer', 'Move'))}${ED_PIECES.slice(0, 6).map((p) => tool(p, `<span class="pc w">${glyph(p)}</span>`, pieceName(p))).join('')}</div>
-      <div class="ed-palette">${tool('erase', '⌫', L('Effacer', 'Erase'))}${ED_PIECES.slice(6).map((p) => tool(p, `<span class="pc b">${glyph(p)}</span>`, pieceName(p))).join('')}</div>
-      <div class="ed-board-wrap"><div id="ed-board" class="ed-board" role="grid" aria-label="${L('Échiquier à construire', 'Board to set up')}"></div></div>
-      <div class="ed-actions">
-        <button type="button" class="btn" data-ed-act="start">${L('Position de départ', 'Starting position')}</button>
-        <button type="button" class="btn" data-ed-act="clear">${L('Vider', 'Clear')}</button>
-        <button type="button" class="btn" data-ed-act="flip">${L('Retourner', 'Flip')}</button>
-      </div>
-      <label class="field-label">${L('Trait aux', 'To move')}</label>
-      ${seg('turn', [['w', L('Blancs', 'White')], ['b', L('Noirs', 'Black')]], ed.turn)}
-      <label class="field-label">${L('Roques encore possibles', 'Castling still allowed')}</label>
-      <div class="ed-castles">${castleBox('K', L('Blancs O-O', 'White O-O'))}${castleBox('Q', L('Blancs O-O-O', 'White O-O-O'))}${castleBox('k', L('Noirs O-O', 'Black O-O'))}${castleBox('q', L('Noirs O-O-O', 'Black O-O-O'))}</div>
-      <label class="field-label">${L('Adversaire', 'Opponent')}</label>
-      ${seg('mode', [['ai', L('Ordinateur', 'Computer')], ['local', L('Deux joueurs', 'Two players')]], ed.mode)}
-      <div ${ed.mode === 'ai' ? '' : 'hidden'}>
-        <label class="field-label">${L('Ta couleur', 'Your colour')}</label>
-        ${seg('color', [['w', L('Blancs', 'White')], ['b', L('Noirs', 'Black')]], ed.color)}
-        <label class="field-label">${L('Niveau', 'Level')} : <strong>${LEVEL_NAMES[ed.level]} (Elo ${LEVEL_ELO[ed.level]})</strong></label>
-        <div id="ed-level-grid" class="level-grid" role="radiogroup" aria-label="${L('Niveau', 'Level')}">${levelGridHtml(ed.level)}</div>
-      </div>
-      <p class="ed-error" role="status">${escHtml(err)}</p>
-      <button type="button" id="ed-play" class="btn primary wide" ${err ? 'disabled' : ''}>${L('Jouer cette position', 'Play this position')}</button>
-      <p class="level-help">${L('Une partie jouée depuis une position libre ne compte pas pour ton Elo ni pour débloquer les niveaux.', 'A game played from a custom position does not count for your Elo or for unlocking levels.')}</p>`;
+      <div class="ed-layout">
+        <div class="ed-board-column">
+          <div class="ed-board-wrap"><div id="ed-board" class="ed-board" role="grid" aria-label="${L('Échiquier à construire', 'Board to set up')}"></div></div>
+        </div>
+        <div class="ed-controls-column">
+          <p class="level-help">${L('Choisis une pièce puis touche les cases pour la poser. Avec la main, touche une pièce puis sa nouvelle case pour la déplacer.', 'Pick a piece, then tap squares to place it. With the hand, tap a piece and then its new square to move it.')}</p>
+          <div class="ed-palette">${tool('move', '✋', L('Déplacer', 'Move'))}${ED_PIECES.slice(0, 6).map((p) => tool(p, `<span class="pc w">${glyph(p)}</span>`, pieceName(p))).join('')}</div>
+          <div class="ed-palette">${tool('erase', '⌫', L('Effacer', 'Erase'))}${ED_PIECES.slice(6).map((p) => tool(p, `<span class="pc b">${glyph(p)}</span>`, pieceName(p))).join('')}</div>
+          <div class="ed-actions">
+            <button type="button" class="btn" data-ed-act="start">${L('Position de départ', 'Starting position')}</button>
+            <button type="button" class="btn" data-ed-act="clear">${L('Vider', 'Clear')}</button>
+            <button type="button" class="btn" data-ed-act="flip">${L('Retourner', 'Flip')}</button>
+          </div>
+          <label class="field-label">${L('Trait aux', 'To move')}</label>
+          ${seg('turn', [['w', L('Blancs', 'White')], ['b', L('Noirs', 'Black')]], ed.turn)}
+          <label class="field-label">${L('Roques encore possibles', 'Castling still allowed')}</label>
+          <div class="ed-castles">${castleBox('K', L('Blancs O-O', 'White O-O'))}${castleBox('Q', L('Blancs O-O-O', 'White O-O-O'))}${castleBox('k', L('Noirs O-O', 'Black O-O'))}${castleBox('q', L('Noirs O-O-O', 'Black O-O-O'))}</div>
+          <label class="field-label">${L('Adversaire', 'Opponent')}</label>
+          ${seg('mode', [['ai', L('Ordinateur', 'Computer')], ['local', L('Deux joueurs', 'Two players')]], ed.mode)}
+          <div ${ed.mode === 'ai' ? '' : 'hidden'}>
+            <label class="field-label">${L('Ta couleur', 'Your colour')}</label>
+            ${seg('color', [['w', L('Blancs', 'White')], ['b', L('Noirs', 'Black')]], ed.color)}
+            <label class="field-label">${L('Niveau', 'Level')} : <strong>${LEVEL_NAMES[ed.level]} (Elo ${LEVEL_ELO[ed.level]})</strong></label>
+            <div id="ed-level-grid" class="level-grid" role="radiogroup" aria-label="${L('Niveau', 'Level')}">${levelGridHtml(ed.level)}</div>
+          </div>
+          <p class="ed-error" role="status">${escHtml(err)}</p>
+          <button type="button" id="ed-play" class="btn primary wide" ${err ? 'disabled' : ''}>${L('Jouer cette position', 'Play this position')}</button>
+          <p class="level-help">${L('Une partie jouée depuis une position libre ne compte pas pour ton Elo ni pour débloquer les niveaux.', 'A game played from a custom position does not count for your Elo or for unlocking levels.')}</p>
+        </div>
+      </div>`;
     renderEdBoard();
   }
   function renderEdBoard() {
