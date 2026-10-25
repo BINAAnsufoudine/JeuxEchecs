@@ -396,7 +396,7 @@
       b.className = 'theme' + (settings.theme === key ? ' on' : '');
       b.setAttribute('aria-label', th.name);
       const have = owns(`theme:${key}`);
-      b.innerHTML = `<i style="background:${th.light}"></i><i style="background:${th.dark}"></i><i style="background:${th.dark}"></i><i style="background:${th.light}"></i><span class="theme-name">${th.name}${have ? '' : ` 🔒 ${th.price} 🌾`}</span>`;
+      b.innerHTML = `<i style="background:${th.light}"></i><i style="background:${th.dark}"></i><i style="background:${th.dark}"></i><i style="background:${th.light}"></i><span class="theme-name">${th.name}${have ? '' : ` 🔒 ${riceAmount(th.price, true)}`}</span>`;
       b.onclick = () => { if (!have) { openShop(); return; } settings.theme = key; saveSettings(); renderSettings(); };
       wrap.appendChild(b);
     }
@@ -2246,7 +2246,7 @@
           <div><strong>${successRate}</strong><span>${L('réussis sans erreur', 'solved without mistakes')}</span></div>
           <div><strong>${training.bestStreak || 0} 🔥</strong><span>${L('record de série', 'streak record')}</span></div>
         </div>
-        <div class="path-cheer"><span aria-hidden="true">🦉</span><p><strong>${streakProgress ? L(`Bravo, ${streakProgress} défi${streakProgress > 1 ? 's' : ''} sans erreur !`, `Great job, ${streakProgress} challenge${streakProgress === 1 ? '' : 's'} without mistakes!`) : L('La prochaine récompense t’attend !', 'Your next reward is waiting!')}</strong><span>${L(`Encore ${winsToReward} réussite${winsToReward > 1 ? 's' : ''} sans erreur pour gagner 15 blés et 20 points d’expérience.`, `${winsToReward} more clean solve${winsToReward === 1 ? '' : 's'} to earn 15 wheat and 20 experience points.`)}</span></p></div>
+        <div class="path-cheer"><span aria-hidden="true">🌴</span><p><strong>${streakProgress ? L(`Bravo, ${streakProgress} défi${streakProgress > 1 ? 's' : ''} sans erreur !`, `Great job, ${streakProgress} challenge${streakProgress === 1 ? '' : 's'} without mistakes!`) : L('La prochaine récompense t’attend !', 'Your next reward is waiting!')}</strong><span>${L(`Encore ${winsToReward} réussite${winsToReward > 1 ? 's' : ''} sans erreur pour gagner 15 grains de riz et 20 points d’expérience.`, `${winsToReward} more clean solve${winsToReward === 1 ? '' : 's'} to earn 15 rice grains and 20 experience points.`)}</span></p></div>
         <button class="btn primary wide path-continue" type="button" id="theme-training-start">${attempts ? L('Continuer le parcours', 'Continue the path') : L('Commencer le parcours', 'Start the path')}</button>
         <div class="path-stage-heading"><h4>${L('Ton chemin d’aventurier', 'Your adventure path')}</h4><span>${L(`Étape ${stageIndex + 1} sur ${stages.length}`, `Stage ${stageIndex + 1} of ${stages.length}`)}</span></div>
         <p class="path-stage-intro">${L('Chaque étape mélange les thèmes et te prépare à des défis plus difficiles.', 'Every stage mixes themes and prepares you for harder challenges.')}</p>
@@ -4188,14 +4188,14 @@
       const payBadges = (s) => { const w = walletState(), fresh = BADGES.filter((b) => b.ok(s) && !w.badgesPaid.includes(b.id)); if (!fresh.length) return; w.badgesPaid.push(...fresh.map((b) => b.id)); store.set('wallet', w); reward(50 * fresh.length, 50 * fresh.length, L(`${fresh.length} grade${fresh.length > 1 ? 's' : ''} gagné${fresh.length > 1 ? 's' : ''}`, `${fresh.length} rank${fresh.length > 1 ? 's' : ''} earned`)); };
       payBadges(localSummary([]));
       body.innerHTML = profileHtml(localSummary([]), { name: p.name || L('Joueur', 'Player'), photo: p.photo });
-      body.insertAdjacentHTML('afterbegin', `<button class="btn primary profile-shop" type="button">🌾 ${L('Boutique et quêtes', 'Shop and quests')}</button>`);
+      body.insertAdjacentHTML('afterbegin', `<button class="btn primary profile-shop" type="button">🍚 ${L('Boutique et quêtes', 'Shop and quests')}</button>`);
       body.querySelector('.profile-shop').onclick = openShop;
       if (ON && ON.user) {
         try { tours = await ON.myTournaments(); } catch { tours = []; }
         payBadges(localSummary(tours));
         const s = localSummary(tours);
         body.innerHTML = profileHtml(s, { name: p.name || L('Joueur', 'Player'), photo: p.photo, grade: (ON.profile && ON.profile.gradePts) || 0 });
-        body.insertAdjacentHTML('afterbegin', `<button class="btn primary profile-shop" type="button">🌾 ${L('Boutique et quêtes', 'Shop and quests')}</button>`);
+        body.insertAdjacentHTML('afterbegin', `<button class="btn primary profile-shop" type="button">🍚 ${L('Boutique et quêtes', 'Shop and quests')}</button>`);
         body.querySelector('.profile-shop').onclick = openShop;
         try { h2hGames = await ON.myGames(); body.insertAdjacentHTML('beforeend', opponentsHtml(h2hGames, ON.user.uid)); } catch { /* hors ligne */ }
         // résumé public pour que les autres joueurs voient ce profil
@@ -4256,7 +4256,7 @@
   $('btn-profile').onclick = () => openProfile();
   // clic sur un joueur (tournois) : son profil
   document.addEventListener('click', (e) => { const el = e.target.closest('[data-profile]'); if (el) { e.preventDefault(); openProfile(el.dataset.profile); } });
-  /* ---------- Récompenses : grains de blé 🌾, niveau du joueur, quêtes du jour, boutique de Sissa ---------- */
+  /* ---------- Récompenses : grains de riz, grades nature, quêtes du jour, boutique de Sissa ---------- */
   const xpFor = (lvl) => 100 + 40 * (lvl - 1); // expérience pour passer du niveau lvl au suivant
   /* ---------- Grade des parties en ligne entre humains ---------- */
   // Points de grade : + en victoire (beaucoup contre un adversaire de grade plus fort, peu contre un plus faible),
@@ -4321,11 +4321,59 @@
     return `<h3 class="train-h">${L('Paliers par mode', 'Tiers by mode')}</h3><div class="tier-list">${modeList().map(([id, icon, name]) => {
       const n = counts[id] || 0, i = modeTier(n), next = TIERS_MODE[i + 1];
       const from = i >= 0 ? TIERS_MODE[i][0] : 0, pct = next ? Math.round(((n - from) / (next[0] - from)) * 100) : 100;
-      return `<div class="tier-row"><span class="tier-icon">${icon}</span><div class="tier-main"><b>${name}</b><span class="xp-bar"><i style="width:${pct}%"></i></span><small>${n}${next ? ` / ${next[0]} · ${L('prochain', 'next')} : ${next[1]} ${next[2]} (+${next[3]} 🌾)` : L(' · tous les paliers atteints', ' · all tiers reached')}</small></div><span class="tier-medals">${TIERS_MODE.map((tr, k) => `<i class="${k <= i ? 'on' : ''}" title="${tr[2]}">${tr[1]}</i>`).join('')}</span></div>`;
+      return `<div class="tier-row"><span class="tier-icon">${icon}</span><div class="tier-main"><b>${name}</b><span class="xp-bar"><i style="width:${pct}%"></i></span><small>${n}${next ? ` / ${next[0]} · ${L('prochain', 'next')} : ${next[1]} ${next[2]} (+${riceAmount(next[3], true)})` : L(' · tous les paliers atteints', ' · all tiers reached')}</small></div><span class="tier-medals">${TIERS_MODE.map((tr, k) => `<i class="${k <= i ? 'on' : ''}" title="${tr[2]}">${tr[1]}</i>`).join('')}</span></div>`;
     }).join('')}</div>`;
   }
   function walletState() { return Object.assign({ wheat: 0, xp: 0, owned: [], frame: null, title: null, firstWin: '', badgesPaid: [] }, store.get('wallet', {})); }
   function levelOf(xp) { let l = 1; while (l < 50 && xp >= xpFor(l)) { xp -= xpFor(l); l++; } return { level: l, into: xp, need: xpFor(l) }; }
+  const RICE_PER_KG = 40000;
+  const RICE_UNITS = [
+    { value: 1, fr: 'grains de riz', en: 'rice grains' },
+    { value: RICE_PER_KG, fr: 'kg de riz', en: 'kg of rice' },
+    { value: RICE_PER_KG * 1000, fr: 'tonnes de riz', en: 'tonnes of rice' },
+    { value: RICE_PER_KG * 1e6, fr: 'milliers de tonnes', en: 'thousand tonnes' },
+    { value: RICE_PER_KG * 1e9, fr: 'millions de tonnes', en: 'million tonnes' },
+    { value: RICE_PER_KG * 1e12, fr: 'milliards de tonnes', en: 'billion tonnes' },
+  ];
+  const RICE_FORMAT = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 2 });
+  function riceScale(amount) {
+    const grains = Math.max(0, Number(amount) || 0);
+    let index = 0; while (index < RICE_UNITS.length - 1 && grains >= RICE_UNITS[index + 1].value) index++;
+    const unit = RICE_UNITS[index], next = RICE_UNITS[index + 1];
+    return { grains, index, unit, next, value: grains / unit.value, progress: next ? Math.min(100, (100 * grains) / next.value) : 100 };
+  }
+  function riceAmount(amount, compact = false) {
+    const scale = riceScale(amount);
+    const value = scale.index === 0 ? Math.floor(scale.grains).toLocaleString(LOCALE) : RICE_FORMAT.format(scale.value);
+    const label = compact && scale.index === 0 ? L('grains', 'grains') : L(scale.unit.fr, scale.unit.en);
+    return `${value} ${label}${compact ? ' 🍚' : ''}`;
+  }
+  function riceCompact(amount) {
+    const scale = riceScale(amount), value = scale.index === 0 ? Math.floor(scale.grains).toLocaleString(LOCALE) : RICE_FORMAT.format(scale.value);
+    const units = [L('🍚', '🍚'), L('kg 🍚', 'kg 🍚'), L('t 🍚', 't 🍚'), L('milliers t 🍚', 'thousand t 🍚'), L('millions t 🍚', 'million t 🍚'), L('milliards t 🍚', 'billion t 🍚')];
+    return `${value} ${units[scale.index]}`;
+  }
+  const NATURE_GRADES = [
+    { name: L('Graine de riz', 'Rice seed'), icon: '🌾' }, { name: L('Germe', 'Sprout'), icon: '🌱' },
+    { name: L('Petite pousse', 'Young shoot'), icon: '🌿' }, { name: L('Bourgeon tropical', 'Tropical bud'), icon: '🌷' },
+    { name: L('Fleur tropicale', 'Tropical flower'), icon: '🌺' }, { name: L('Jardinier en herbe', 'Novice gardener'), icon: '🧑🏾‍🌾' },
+    { name: L('Gardien du potager', 'Garden keeper'), icon: '🥕' }, { name: L('Gardien du verger', 'Orchard keeper'), icon: '🥭' },
+    { name: L('Protecteur de la forêt', 'Forest guardian'), icon: '🌴' }, { name: L('Gardien du baobab', 'Baobab guardian'), icon: '🌳' },
+  ];
+  const GARDEN_PLANTS = [
+    { name: L('Riz', 'Rice'), icon: '🌱' }, { name: L('Bananier', 'Banana tree'), icon: '🍌' },
+    { name: L('Ananas', 'Pineapple'), icon: '🍍' }, { name: L('Manguier', 'Mango tree'), icon: '🥭' },
+    { name: L('Papayer', 'Papaya tree'), icon: '🍈' }, { name: L('Cocotier', 'Coconut palm'), icon: '🥥' },
+    { name: L('Potager tropical', 'Tropical vegetable garden'), icon: '🥕' }, { name: L('Goyavier', 'Guava tree'), icon: '🍐' },
+    { name: L('Palmier tropical', 'Tropical palm'), icon: '🌴' }, { name: L('Grand baobab', 'Great baobab'), icon: '🌳' },
+  ];
+  function adventureGrade(level) { return Math.min(10, Math.floor((Math.max(1, level) - 1) / 5) + 1); }
+  function xpAtLevel(level) { let total = 0; for (let n = 1; n < level; n++) total += xpFor(n); return total; }
+  function adventureProgress(totalXp, grade) {
+    const startLevel = (grade - 1) * 5 + 1, endLevel = grade === 10 ? 50 : grade * 5 + 1;
+    const start = xpAtLevel(startLevel), end = xpAtLevel(endLevel);
+    return end > start ? Math.max(0, Math.min(100, (100 * (totalXp - start)) / (end - start))) : 100;
+  }
   function rewardPop(text, big) {
     let box = document.querySelector('.reward-pops');
     if (!box) { box = document.createElement('div'); box.className = 'reward-pops'; document.body.appendChild(box); }
@@ -4336,12 +4384,18 @@
   }
   function reward(wheat, xp, why) {
     const w = walletState(), before = levelOf(w.xp).level;
+    const beforeGrade = adventureGrade(before);
     w.wheat += wheat; w.xp += xp;
     const after = levelOf(w.xp).level;
+    const afterGrade = adventureGrade(after);
     if (after > before) w.wheat += 50 * (after - before);
     store.set('wallet', w);
-    rewardPop(`${why ? `${why} · ` : ''}+${wheat} 🌾 · +${xp} XP`);
-    if (after > before) { rewardPop(L(`Niveau ${after} atteint ! +${50 * (after - before)} 🌾`, `Level ${after} reached! +${50 * (after - before)} 🌾`), true); sounds.win(); }
+    rewardPop(`${why ? `${why} · ` : ''}+${riceAmount(wheat, true)} · +${xp} XP`);
+    if (after > before) { rewardPop(L(`Niveau ${after} atteint ! +${riceAmount(50 * (after - before), true)}`, `Level ${after} reached! +${riceAmount(50 * (after - before), true)}`), true); sounds.win(); }
+    if (afterGrade > beforeGrade) {
+      const plant = GARDEN_PLANTS[afterGrade - 1];
+      setTimeout(() => rewardPop(L(`Grade ${afterGrade}/10 ! ${plant.icon} ${plant.name} rejoint ton jardin.`, `Rank ${afterGrade}/10! ${plant.icon} ${plant.name} joins your garden.`), true), 800);
+    }
     renderHomeRewards();
   }
   // Quêtes du jour : trois missions tirées chaque jour, qui font passer par les différents modes
@@ -4379,7 +4433,7 @@
       q.claimed[type] = true; store.set('quests', q);
       reward(30, 40, L('Quête accomplie', 'Quest complete'));
       if (q.ids.every((id) => q.claimed[id]) && !q.chest) { q.chest = true; store.set('quests', q); reward(60, 60, L('Coffre des trois quêtes', 'Three-quest chest')); }
-    } else store.set('quests', q);
+    } else { store.set('quests', q); renderHomeRewards(); }
   }
   // Gains par mode
   function gameReward(outcome, level, mate) {
@@ -4407,13 +4461,13 @@
     questEvent('lesson');
     countMode('lesson');
   }
-  // Boutique de Sissa : objets uniquement visuels, achetés avec le blé gagné
+  // Boutique de Sissa : objets visuels achetés avec les grains de riz gagnés
   function shopItems() {
     const out = [];
     for (const [k, th] of Object.entries(THEMES)) if (th.price) out.push({ id: `theme:${k}`, kind: 'theme', key: k, name: th.name, price: th.price, preview: `<span class="shop-board"><i style="background:${th.light}"></i><i style="background:${th.dark}"></i><i style="background:${th.dark}"></i><i style="background:${th.light}"></i></span>` });
     [['bronze', L('Cadre de bronze', 'Bronze frame'), 100], ['argent', L('Cadre d\'argent', 'Silver frame'), 250], ['or', L('Cadre d\'or', 'Gold frame'), 500], ['feu', L('Cadre de feu', 'Fire frame'), 800]]
       .forEach(([k, name, price]) => out.push({ id: `frame:${k}`, kind: 'frame', key: k, name, price, preview: `<span class="profile-photo shop-frame frame-${k}">♞</span>` }));
-    [['ecuyer', L('Écuyer', 'Squire'), 80, 1], ['chevalier', L('Chevalier', 'Knight'), 200, 5], ['seigneur', L('Seigneur', 'Lord'), 400, 10], ['vizir', L('Grand vizir', 'Grand vizier'), 700, 20], ['roi', L('Roi du blé', 'King of wheat'), 1200, 30]]
+    [['ecuyer', L('Jardinier en herbe', 'Novice gardener'), 80, 1], ['chevalier', L('Gardien du potager', 'Garden keeper'), 200, 5], ['seigneur', L('Gardien du verger', 'Orchard keeper'), 400, 10], ['vizir', L('Protecteur de la forêt', 'Forest guardian'), 700, 20], ['roi', L('Gardien du baobab', 'Baobab guardian'), 1200, 30]]
       .forEach(([k, name, price, lvl]) => out.push({ id: `title:${k}`, kind: 'title', key: k, name, price, lvl, preview: `<span class="shop-title">« ${name} »</span>` }));
     return out;
   }
@@ -4422,15 +4476,48 @@
   function renderHomeRewards() {
     const w = walletState(), lv = levelOf(w.xp), q = questState();
     const done = q.ids.filter((id) => q.claimed[id]).length;
-    $('home-rewards').innerHTML = `<span class="lvl-badge">${L('Niv.', 'Lvl')} ${lv.level}</span><span class="xp-bar"><i style="width:${Math.round((100 * lv.into) / lv.need)}%"></i></span><span>🌾 ${w.wheat}</span><span>${L('Quêtes', 'Quests')} ${done}/3</span>`;
+    const grade = adventureGrade(lv.level), gradeInfo = NATURE_GRADES[grade - 1], gradePct = adventureProgress(w.xp, grade);
+    $('home-rewards').innerHTML = `<span class="lvl-badge">${gradeInfo.icon} ${grade}/10</span><span class="xp-bar" title="${L('Progression du grade', 'Rank progress')}"><i style="width:${gradePct}%"></i></span><span>${riceCompact(w.wheat)}</span><span>🎯 ${done}/3</span>`;
+    $('home-garden-grade').textContent = L(`Grade ${grade} sur 10 · ${gradeInfo.name}`, `Rank ${grade} of 10 · ${gradeInfo.name}`);
+    $('home-garden-badge').textContent = `${gradeInfo.icon} ${grade} / 10`;
+    $('home-garden-title').textContent = grade === 10 ? L('Ton grand baobab est là !', 'Your great baobab is here!') : L(`${GARDEN_PLANTS[grade - 1].name} pousse chez toi !`, `${GARDEN_PLANTS[grade - 1].name} is growing in your garden!`);
+    $('home-garden-copy').textContent = L(`${grade}/10 plantes débloquées · gagne de l’expérience pour faire grandir ton jardin.`, `${grade}/10 plants unlocked · earn experience to grow your garden.`);
+    $('home-garden-plants').innerHTML = GARDEN_PLANTS.map((plant, index) => {
+      const unlocked = index < grade, baobab = index === GARDEN_PLANTS.length - 1;
+      return `<div class="home-garden-plant${unlocked ? ' unlocked' : ' locked'}${baobab ? ' baobab-plant' : ''}" title="${escHtml(unlocked ? plant.name : L(`Grade ${index + 1} : ${plant.name}`, `Rank ${index + 1}: ${plant.name}`))}"><span class="plant-icon">${unlocked ? plant.icon : '🔒'}</span><small>${escHtml(unlocked ? plant.name : L(`Grade ${index + 1}`, `Rank ${index + 1}`))}</small></div>`;
+    }).join('');
+    const nextPlant = GARDEN_PLANTS[grade];
+    $('home-garden-next').textContent = nextPlant
+      ? L(`Prochaine récompense au grade ${grade + 1} : ${nextPlant.icon} ${nextPlant.name}`, `Next reward at rank ${grade + 1}: ${nextPlant.icon} ${nextPlant.name}`)
+      : L('Tu as fait pousser le grand baobab : bravo, gardien de la forêt !', 'You grew the great baobab: well done, forest guardian!');
+    const rice = riceScale(w.wheat), nextRice = rice.next;
+    $('home-rice-amount').textContent = riceAmount(w.wheat);
+    $('home-rice-conversion').textContent = L('40 000 grains de riz ≈ 1 kg.', '40,000 rice grains ≈ 1 kg.');
+    $('home-rice-progress-bar').style.width = `${rice.progress}%`;
+    $('home-rice-next').textContent = nextRice
+      ? L(`Prochain changement d’unité : ${riceAmount(nextRice.value)}.`, `Next unit change: ${riceAmount(nextRice.value)}.`)
+      : L('Une réserve digne de la légende de Sissa !', 'A reserve worthy of the legend of Sissa!');
+    $('home-quest-count').textContent = L(`${done} sur 3 accomplies`, `${done} of 3 complete`);
+    const nextQuestId = q.ids.find((id) => !q.claimed[id]);
+    if (nextQuestId) {
+      const def = questList().find((item) => item.id === nextQuestId), progress = Math.min(def.goal, q.prog[nextQuestId] || 0);
+      $('home-quest-icon').textContent = ({ puzzle: '🧩', lesson: '📘', daily: '🌞', online: '♟️', win_ai: '🏆', play_ai: '♟️', mate_ai: '👑', opening: '🌱' })[nextQuestId] || '🎯';
+      $('home-quest-title').textContent = def.text;
+      $('home-quest-copy').textContent = L(`Progression ${progress}/${def.goal} · récompense : ${riceAmount(30, true)}.`, `Progress ${progress}/${def.goal} · reward: ${riceAmount(30, true)}.`);
+    } else {
+      $('home-quest-icon').textContent = q.chest ? '✅' : '🎁';
+      $('home-quest-title').textContent = q.chest ? L('Toutes les quêtes sont réussies !', 'All quests complete!') : L('Le coffre des quêtes est prêt !', 'Your quest chest is ready!');
+      $('home-quest-copy').textContent = q.chest ? L('Tes prochaines quêtes arrivent demain.', 'New quests arrive tomorrow.') : L(`Ouvre le coffre : ${riceAmount(60, true)} t’attendent.`, `Open the chest: ${riceAmount(60, true)} are waiting.`);
+    }
     $('home-player-photo').className = 'profile-photo' + (w.frame ? ` frame-${w.frame}` : '');
     $('home-player-title').hidden = !w.title; $('home-player-title').textContent = w.title ? `« ${titleName(w.title)} »` : '';
   }
   function renderShop() {
     const w = walletState(), lv = levelOf(w.xp), q = questState(), defs = questList();
-    let html = `<div class="shop-head"><span class="lvl-badge big">${L('Niveau', 'Level')} ${lv.level}</span><div class="shop-xp"><span class="xp-bar"><i style="width:${Math.round((100 * lv.into) / lv.need)}%"></i></span><small>${lv.level >= 50 ? L('Niveau maximum', 'Max level') : `${lv.into} / ${lv.need} XP`}</small></div><span class="shop-wheat">🌾 ${w.wheat}</span></div>`;
-    html += `<p class="level-help">${L('Gagne du blé et de l\'expérience dans tous les modes : parties, problèmes, leçons, défi du jour, parties en ligne et tournois. Chaque niveau gagné rapporte 50 🌾.', 'Earn wheat and experience in every mode: games, puzzles, lessons, daily challenge, online games and tournaments. Each level gained gives 50 🌾.')}</p>`;
-    html += `<h3 class="train-h">${L('Quêtes du jour', 'Daily quests')}</h3><div class="quest-list">${q.ids.map((id) => { const d = defs.find((x) => x.id === id); const p = Math.min(d.goal, q.prog[id] || 0); return `<div class="quest${q.claimed[id] ? ' done' : ''}"><span>${q.claimed[id] ? '✅' : '🎯'} ${d.text}</span><b>${p}/${d.goal} · 30 🌾</b></div>`; }).join('')}<div class="quest${q.chest ? ' done' : ''}"><span>${q.chest ? '✅' : '🎁'} ${L('Coffre : finir les trois quêtes', 'Chest: finish all three quests')}</span><b>60 🌾</b></div></div>`;
+    const natureGrade = adventureGrade(lv.level), natureInfo = NATURE_GRADES[natureGrade - 1];
+    let html = `<div class="shop-head"><span class="lvl-badge big">${natureInfo.icon} ${L('Grade', 'Rank')} ${natureGrade}/10</span><div class="shop-xp"><span class="xp-bar"><i style="width:${adventureProgress(w.xp, natureGrade)}%"></i></span><small>${lv.level >= 50 ? L('Grand baobab atteint', 'Great baobab reached') : `${natureInfo.name} · ${lv.into} / ${lv.need} XP`}</small></div><span class="shop-rice">🍚 ${riceAmount(w.wheat)}</span></div>`;
+    html += `<p class="level-help">${L('Gagne des grains de riz et de l’expérience dans tous les modes : parties, problèmes, leçons, défi du jour, parties en ligne et tournois. Chaque niveau gagné rapporte 50 grains de riz.', 'Earn rice grains and experience in every mode: games, puzzles, lessons, daily challenge, online games and tournaments. Each level gained gives 50 rice grains.')}</p>`;
+    html += `<h3 class="train-h">${L('Quêtes du jour', 'Daily quests')}</h3><div class="quest-list">${q.ids.map((id) => { const d = defs.find((x) => x.id === id); const p = Math.min(d.goal, q.prog[id] || 0); return `<div class="quest${q.claimed[id] ? ' done' : ''}"><span>${q.claimed[id] ? '✅' : '🎯'} ${d.text}</span><b>${p}/${d.goal} · ${riceAmount(30, true)}</b></div>`; }).join('')}<div class="quest${q.chest ? ' done' : ''}"><span>${q.chest ? '✅' : '🎁'} ${L('Coffre : finir les trois quêtes', 'Chest: finish all three quests')}</span><b>${riceAmount(60, true)}</b></div></div>`;
     const section = (kind, title) => {
       const items = shopItems().filter((x) => x.kind === kind);
       return `<h3 class="train-h">${title}</h3><div class="shop-grid">${items.map((it) => {
@@ -4439,7 +4526,7 @@
         const btn = used ? `<button class="btn" data-shop-off="${it.id}">${kind === 'theme' ? L('Utilisé', 'In use') : L('Retirer', 'Remove')}</button>`
           : have ? `<button class="btn primary" data-shop-use="${it.id}">${L('Utiliser', 'Use')}</button>`
           : locked ? `<button class="btn" disabled>${L(`Niveau ${it.lvl}`, `Level ${it.lvl}`)}</button>`
-          : `<button class="btn${w.wheat >= it.price ? ' primary' : ''}" data-shop-buy="${it.id}" ${w.wheat >= it.price ? '' : 'disabled'}>${it.price} 🌾</button>`;
+          : `<button class="btn${w.wheat >= it.price ? ' primary' : ''}" data-shop-buy="${it.id}" ${w.wheat >= it.price ? '' : 'disabled'}>${riceAmount(it.price, true)}</button>`;
         return `<div class="shop-item${used ? ' on' : ''}">${it.preview}<b>${it.name}</b>${btn}</div>`;
       }).join('')}</div>`;
     };
@@ -4471,6 +4558,7 @@
   });
   $('btn-shop').onclick = openShop;
   $('home-rewards').onclick = openShop;
+  $('btn-home-rice-shop').onclick = () => $('home-rewards').click();
   /* ---------- Joueurs : liste, adversaire proposé, chat coupé ---------- */
   let onlineSection = null, onlinePlayers = null, playersQuery = '', playersLoading = false;
   const isConnected = (p) => Date.now() - (p.lastSeen || 0) < 3 * 60000;
@@ -5992,8 +6080,8 @@
   const savedGame = store.get('game', null);
   const savedScreen = store.get('lastScreen', null);
   const restorableScreens = ['home', 'program', 'champions', 'setup', 'game', 'settings', 'problems', 'stats', 'rules', 'about'];
-  // à chaque ouverture : l'écran « Reprendre » avec tout ce qui est en cours
-  const initialScreen = 'welcome';
+  // L'accueil présente le jardin et laisse « Continuer mon aventure » ouvrir les reprises disponibles.
+  const initialScreen = 'home';
   if (initialScreen === 'game' && savedGame && savedGame.cfg) {
     startGame(savedGame.cfg, savedGame.moves, savedGame.result, savedGame.flipped, savedGame.terrain, savedGame.weather);
   } else {
