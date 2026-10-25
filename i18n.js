@@ -22,6 +22,8 @@
     'Elo estimé : 600': 'Estimated Elo: 600',
     'Joueur': 'Player',
     'L’estimation s’affine avec les parties et les problèmes.': 'Your estimate improves as you play games and solve puzzles.',
+    'Apparence': 'Appearance',
+    'Thème clair': 'Light theme',
     'Bonjour': 'Hello',
     'champion': 'champion',
     '☀️ Bonjour, champion !': '☀️ Hello, champion!',

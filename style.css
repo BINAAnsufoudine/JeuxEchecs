@@ -15,6 +15,20 @@
   --radius: 14px;
   color-scheme: dark;
 }
+:root[data-color-theme="light"] {
+  --bg: #f3f5ef;
+  --surface: #ffffff;
+  --surface-2: #e6ece6;
+  --text: #1c2b22;
+  --muted: #58675e;
+  --accent: #d99c16;
+  --accent-text: #2a2108;
+  --danger: #c7473d;
+  --sel: rgba(217, 156, 22, 0.45);
+  --last: rgba(217, 156, 22, 0.27);
+  --check: rgba(200, 55, 40, 0.65);
+  color-scheme: light;
+}
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
@@ -757,6 +771,17 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .sheet.light-sheet { background: #ffffff; color: #1b1b1f; }
 .sheet.light-sheet .promo-choices button { background: #f1f1ee !important; box-shadow: inset 0 0 0 1px #d8d8d2; }
 .sheet.light-sheet .btn.ghost { color: #1b1b1f; border-color: #c9c9c4; }
+
+:root[data-color-theme="light"] .prose p,
+:root[data-color-theme="light"] .prose li { color: #34453a; }
+:root[data-color-theme="light"] .theme-training-choice.mastery-good .theme-mastery,
+:root[data-color-theme="light"] .problem-theme-card.mastery-good .theme-mastery,
+:root[data-color-theme="light"] .sync-status.synced,
+:root[data-color-theme="light"] .status.good { color: #2e7742; }
+:root[data-color-theme="light"] .theme-training-choice.mastery-poor .theme-mastery,
+:root[data-color-theme="light"] .problem-theme-card.mastery-poor .theme-mastery,
+:root[data-color-theme="light"] .status.bad { color: #a33a31; }
+:root[data-color-theme="light"] .btn.ghost { color: var(--text); }
 
 /* Photos des champions */
 .coach img.photo { width: 64px; height: 80px; object-fit: cover; border-radius: 12px; filter: none; box-shadow: 0 3px 8px rgba(0,0,0,0.4); }

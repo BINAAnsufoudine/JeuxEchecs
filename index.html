@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#0b1e4a">
 </head><body>
 
+<script>try{const p=JSON.parse(localStorage.getItem('cavalier.settings')||'{}');if(p.colorTheme==='light')document.documentElement.dataset.colorTheme='light'}catch{}</script>
 <link rel="stylesheet" href="style.css">
   <!-- S01 Accueil -->
   <section id="home" class="screen active" aria-label="Accueil">
@@ -252,6 +253,8 @@
   <section id="settings" class="screen" aria-label="Réglages">
     <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2>Réglages</h2></header>
     <div class="panel">
+      <label class="field-label">Apparence</label>
+      <label class="switch"><input type="checkbox" id="opt-light-theme"><span>Thème clair</span></label>
       <label class="field-label">Plateau</label>
       <div id="themes" class="themes"></div>
       <label class="switch"><input type="checkbox" id="opt-moves"><span>Montrer les coups possibles</span></label>
