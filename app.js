@@ -4816,20 +4816,59 @@
       mastery: playerMoves ? Math.round(cleanMoves / playerMoves * 100) : null,
     };
   }
+  function openingMovePurpose(opening, uci, san, color, position) {
+    if (/^O-O(-O)?/.test(san)) return L('Mettre le roi à l’abri et rapprocher les tours.', 'Bring the king to safety and connect the rooks.');
+    const from = uci.slice(0, 2), to = uci.slice(2, 4), piece = position.state.board[window.Chess.sqIndex(from)]?.toLowerCase();
+    const captured = position.state.board[window.Chess.sqIndex(to)];
+    const center = ['c4', 'd4', 'e4', 'f4', 'c5', 'd5', 'e5', 'f5'].includes(to);
+    const named = {
+      italienne: { 'c2c3': L('Soutenir le prochain coup d4 pour prendre le centre.', 'Support the coming d4 push to take the centre.'), 'f1c4': L('Développer le fou sur une diagonale active et viser le point faible f7.', 'Develop the bishop on an active diagonal and target the weak f7 square.'), 'd2d4': L('Ouvrir le centre pendant que les pièces blanches sont prêtes à jouer.', 'Open the centre while White’s pieces are ready to play.') },
+      espagnole: { 'f1b5': L('Mettre la pression sur le cavalier c6 qui défend le pion e5.', 'Pressure the c6 knight that defends the e5 pawn.'), 'a7a6': L('Demander au fou blanc de choisir sa case et préparer l’expansion b5.', 'Ask the white bishop to choose a square and prepare the b5 advance.'), 'b7b5': L('Chasser le fou et gagner de l’espace sur l’aile dame.', 'Chase the bishop and gain queenside space.') },
+      gambitdame: { 'c2c4': L('Contester le centre avec le pion c et proposer un pion pour détourner le pion d5.', 'Challenge the centre with the c-pawn and offer a pawn to deflect the d5-pawn.') },
+      londres: { 'c1f4': L('Développer le fou avant de jouer e3, sans l’enfermer derrière les pions.', 'Develop the bishop before playing e3, so it is not trapped behind the pawns.') },
+      sicilienne: { 'c7c5': L('Contester le centre depuis le côté et créer une position déséquilibrée.', 'Challenge the centre from the side and create an unbalanced position.'), 'a7a6': L('Empêcher les pièces blanches d’arriver en b5 et préparer une poussée sur l’aile dame.', 'Stop White’s pieces from settling on b5 and prepare queenside expansion.') },
+      carokann: { 'c7c6': L('Préparer d5 tout en gardant le fou de cases blanches libre.', 'Prepare d5 while keeping the light-squared bishop free.') },
+      francaise: { 'e7e6': L('Préparer la poussée d5 pour contester le centre blanc.', 'Prepare the d5 push to challenge White’s centre.') },
+      scandinave: { 'd7d5': L('Attaquer immédiatement le pion blanc e4 et contester le centre.', 'Immediately attack White’s e4 pawn and challenge the centre.'), 'd8d5': L('Reprendre le pion central pour rétablir l’équilibre matériel.', 'Recapture the central pawn to restore material balance.'), 'd5a5': L('Mettre la dame à l’abri tout en gardant la pression sur le centre.', 'Move the queen to safety while keeping pressure on the centre.') },
+      estindienne: { 'g7g6': L('Préparer le fianchetto : le fou ira en g7 pour viser le centre à distance.', 'Prepare a fianchetto: the bishop will go to g7 and target the centre from afar.'), 'f8g7': L('Placer le fou sur la grande diagonale pour contrôler le centre à distance.', 'Place the bishop on the long diagonal to control the centre from afar.'), 'e7e5': L('Frapper le centre blanc après avoir terminé le développement.', 'Strike White’s centre after completing development.') },
+    }[opening.id]?.[uci];
+    if (named) return named;
+    if (captured) return center
+      ? L('Échanger au centre pour ouvrir les lignes et conserver une présence dans la lutte centrale.', 'Exchange in the centre to open lines and stay involved in the central fight.')
+      : L('Capturer la pièce adverse pour gagner du matériel ou simplifier la position.', 'Capture the enemy piece to win material or simplify the position.');
+    if (piece === 'p') {
+      if (center) return L('Occuper ou soutenir le centre, et ouvrir des lignes pour les pièces.', 'Occupy or support the centre and open lines for the pieces.');
+      if (to[0] === 'c') return L('Contester le centre depuis l’aile et préparer le développement des pièces.', 'Challenge the centre from the flank and prepare to develop the pieces.');
+      if (to[0] === 'a' && color === 'b') return L('Gagner de l’espace sur l’aile dame et préparer une avancée de pion.', 'Gain queenside space and prepare a pawn advance.');
+      return L('Soutenir les pions centraux et préparer une case de développement pour les pièces.', 'Support the central pawns and prepare a square for a piece to develop to.');
+    }
+    if (piece === 'n') return L('Développer le cavalier vers le centre pour contrôler davantage de cases.', 'Develop the knight toward the centre to control more squares.');
+    if (piece === 'b') return L('Développer le fou sur une diagonale active pour participer au contrôle du centre.', 'Develop the bishop on an active diagonal to help control the centre.');
+    if (piece === 'r') return L('Placer la tour sur une colonne utile pour soutenir les pions et les pièces.', 'Place the rook on a useful file to support the pawns and pieces.');
+    if (piece === 'q') return L('Replacer la dame sur une case sûre où elle soutient le développement.', 'Move the queen to a safe square where it supports development.');
+    return L('Améliorer la coordination des pièces et préparer la suite du plan.', 'Improve piece coordination and prepare the next part of the plan.');
+  }
   function startOpening(o) {
     const pre = o.color === 'b' ? o.san.slice(0, 1) : [];
     const x = trainLine(null, pre, o.san.slice(pre.length));
     const demo = trainLine(null, [], o.san);
     if (!x || !demo) return;
-    let moves = '';
-    o.san.forEach((s, i) => { moves += (i % 2 ? '' : `${i / 2 + 1}. `) + s + ' '; });
-    const steps = [
-      { text: `${o.name}. ${o.text} ${L('Les coups à retenir', 'The moves to remember')} : ${moves.trim()}.`, fen: demo.fen, demoMoves: demo.line, annotateRelations: true,
-        demoSpeech: openingSpeechLine(demo.fen, demo.line),
-        demoIntroText: L(`${o.name}. ${o.text} Je vais te montrer les coups un par un. La flèche verte suit le déplacement, les rouges montrent les attaques et les bleues les défenses.`, `${o.name}. ${o.text} I will show you the moves one by one. The green arrow follows the move, red arrows show attacks and blue arrows show defenses.`),
-        demoStartText: L('Regarde les déplacements de cette ouverture…', 'Watch the moves in this opening…'),
-        demoDoneText: L('Observe bien les déplacements : tu vas maintenant rejouer cette ouverture de mémoire.', 'Watch the moves closely: now you will replay this opening from memory.') },
-    ];
+    const steps = [];
+    const demoPosition = new Game(demo.fen);
+    demo.line.forEach((uci, index) => {
+      const fen = window.Chess.toFen(demoPosition.state), color = demoPosition.state.turn;
+      const played = demoPosition.playUci(uci);
+      if (!played) return;
+      const purpose = openingMovePurpose(o, uci, played.san, color, new Game(fen));
+      const moveLabel = `${Math.floor(index / 2) + 1}${index % 2 ? '…' : '.'} ${played.san}`;
+      const intro = index === 0 ? `${o.name}. ${o.text} ` : '';
+      steps.push({
+        text: L(`${intro}Coup ${moveLabel} (${sideName(color)}) : ${purpose}`, `${intro}Move ${moveLabel} (${sideName(color)}): ${purpose}`),
+        fen, demoMoves: [uci], demoSpeech: openingSpeechLine(fen, [uci]), annotateRelations: true,
+        demoStartText: L(`Regarde ${moveLabel} : la flèche verte montre le déplacement, les rouges les attaques et les bleues les défenses.`, `Watch ${moveLabel}: the green arrow shows the move, red arrows show attacks and blue arrows show defenses.`),
+        demoDoneText: L(`But du coup : ${purpose} ${L('Appuie sur Continuer pour observer le coup suivant.', 'Press Continue to see the next move.')}`, `Purpose: ${purpose} Press Continue to see the next move.`),
+      });
+    });
     for (const { mistake: m, badMove, goodMove } of openingMistakes(o)) {
       const goodSan = (() => { try { return new Game(m.fen).playUci(goodMove).san; } catch { return goodMove; } })();
       const arrow = (uci, color) => ({ from: window.Chess.sqIndex(uci.slice(0, 2)), to: window.Chess.sqIndex(uci.slice(2, 4)), color });
