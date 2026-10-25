@@ -1,0 +1,5 @@
+{
+  "version": "18.0.0",
+  "source": "nmrugg/stockfish.js",
+  "stabilityDays": 45
+}
