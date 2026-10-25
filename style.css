@@ -700,7 +700,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 #home #coach-program { width: 100%; max-width: none; margin-top: 14px; }
 
 @media (min-width: 1000px) {
-  :root { --desktop-menu-width: 292px; }
+  :root { --desktop-menu-width: 340px; }
   #home.active { grid-template-columns: var(--desktop-menu-width) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 0; }
   #home .home-sidebar { grid-column: 1; grid-row: 1; min-height: 0; padding: 18px 16px 16px; overflow-y: auto; border-right: 1px solid var(--surface-2); background: var(--surface); pointer-events: auto; }
   #home .home-sidebar .hero { padding: 0; overflow: visible; background: transparent; }
