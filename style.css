@@ -663,6 +663,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .home-sidebar .player-profile { position: relative; flex-wrap: wrap; }
 .home-sidebar .player-profile > div { flex: 1; }
 .home-sidebar .player-profile .profile-edit { font-size: .76rem; padding: 6px 8px; }
+.home-sidebar .player-profile .player-details { flex: 1 1 100%; min-width: 0; }
+.home-sidebar .profile-actions { display: flex; flex: 1 1 100%; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 6px; width: 100%; }
+.home-sidebar .profile-actions .profile-edit { flex: 1 1 0; min-width: 0; padding: 7px 5px; text-align: center; white-space: nowrap; font-size: .74rem; }
 .home-sidebar .home-rewards { margin-top: 0; }
 .home-dashboard { width: min(100%, 960px); margin: 0 auto; padding: 8px 24px 26px; }
 .home-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; color: var(--muted); }
