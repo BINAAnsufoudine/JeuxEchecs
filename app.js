@@ -1596,6 +1596,28 @@
   const PZ_KEYS = Object.keys(PZ);
   const PZ_LEVELS = L({ 1: 'Facile', 2: 'Moyen', 3: 'Difficile' }, { 1: 'Easy', 2: 'Medium', 3: 'Hard' });
   const BANK = window.PUZZLES || [];
+  // Sous-thèmes générés à partir du matériel réellement présent dans les FEN
+  // des problèmes de finale. Les autres statistiques gardent le thème « finale ».
+  const ENDGAME_TOPICS = [
+    { key: 'finale-pions', icon: '♙', name: L('Finales de pions', 'Pawn endgames'), matches: (m) => !m.q && !m.r && !m.b && !m.n },
+    { key: 'finale-tours', icon: '♜', name: L('Finales de tours', 'Rook endgames'), matches: (m) => !m.q && m.r > 0 },
+    { key: 'finale-dames', icon: '♛', name: L('Finales de dames', 'Queen endgames'), matches: (m) => m.q > 0 },
+    { key: 'finale-fous', icon: '♝', name: L('Finales de fous', 'Bishop endgames'), matches: (m) => !m.q && !m.r && m.b > 0 && !m.n },
+    { key: 'finale-cavaliers', icon: '♞', name: L('Finales de cavaliers', 'Knight endgames'), matches: (m) => !m.q && !m.r && !m.b && m.n > 0 },
+    { key: 'finale-pieces-mineures', icon: '♝♞', name: L('Finales de pièces mineures', 'Minor-piece endgames'), matches: (m) => !m.q && !m.r && m.b > 0 && m.n > 0 },
+  ].map((topic) => ({ ...topic, puzzles: BANK.filter((p) => p.theme === 'finale' && p.fen && topic.matches(endgameMaterial(p.fen))) }))
+    .filter((topic) => topic.puzzles.length > 0);
+  function endgameMaterial(fen) {
+    const board = String(fen).split(' ')[0].replace(/[^a-z]/gi, '').toLowerCase();
+    return { q: (board.match(/q/g) || []).length, r: (board.match(/r/g) || []).length, b: (board.match(/b/g) || []).length, n: (board.match(/n/g) || []).length };
+  }
+  const trainingTopic = (key) => ENDGAME_TOPICS.find((topic) => topic.key === key);
+  const trainingTopicName = (key) => trainingTopic(key)?.name || PZ[key]?.name || '';
+  const trainingTopicIcon = (key) => trainingTopic(key)?.icon || PZ[key]?.icon || '♟';
+  const trainingTopicPuzzles = (key) => {
+    const topic = trainingTopic(key);
+    return topic ? topic.puzzles : BANK.filter((p) => p.theme === key && p.line && p.line.length);
+  };
   const LESSONS = window.LESSONS || [];
   const fmtDate = (id) => new Date(id).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long' });
   const loadCoach = () => Object.assign({ themes: {}, games: 0 }, store.get('coach', {}));
@@ -1825,29 +1847,30 @@
     loadItem(it);
   }
   function startThemeTraining(themes) {
-    const selected = [...new Set(themes)].filter((key) => PZ[key] && BANK.some((p) => p.theme === key && p.line && p.line.length));
+    const selected = [...new Set(themes)].filter((key) => (PZ[key] || trainingTopic(key)) && trainingTopicPuzzles(key).length);
     if (!selected.length) return toast(L('Choisis au moins un thème pour commencer.', 'Choose at least one theme to start.'));
     const saved = themeTrainingPrefs();
     saved.themes = selected;
     store.set('themeTraining', saved);
-    pz = { kind: 'themed', themeSession: { themes: selected, rating: Math.max(1, Math.min(MAX_LEVEL, Number(saved.rating) || 1)), solved: 0, cleanSolved: 0, streak: 0, used: [], lastTheme: '', index: 0 } };
+    pz = { kind: 'themed', themeSession: { themes: selected, rating: Math.max(1, Math.min(MAX_LEVEL, Number(saved.rating) || 1)), solved: 0, cleanSolved: 0, streak: 0, used: [], lastTheme: '', currentTopic: '', index: 0 } };
     enterPuzzleMode();
     nextThemedPuzzle();
   }
   function nextThemedPuzzle() {
     if (!pz || pz.kind !== 'themed') return;
     const session = pz.themeSession;
-    let candidates = BANK.filter((p) => session.themes.includes(p.theme) && p.line && p.line.length && !session.used.includes(p.id));
-    if (!candidates.length) { session.used = []; candidates = BANK.filter((p) => session.themes.includes(p.theme) && p.line && p.line.length); }
-    const availableThemes = [...new Set(candidates.map((p) => p.theme))];
-    const nextThemes = availableThemes.length > 1 ? availableThemes.filter((key) => key !== session.lastTheme) : availableThemes;
-    const theme = (nextThemes.length ? nextThemes : availableThemes)[Math.floor(Math.random() * (nextThemes.length || availableThemes.length))];
-    const pool = candidates.filter((p) => p.theme === theme);
+    const candidatesFor = (key) => trainingTopicPuzzles(key).filter((p) => p.line && p.line.length);
+    let availableTopics = session.themes.filter((key) => candidatesFor(key).some((p) => !session.used.includes(p.id)));
+    if (!availableTopics.length) { session.used = []; availableTopics = session.themes.filter((key) => candidatesFor(key).length); }
+    const nextTopics = availableTopics.length > 1 ? availableTopics.filter((key) => key !== session.lastTheme) : availableTopics;
+    const topic = (nextTopics.length ? nextTopics : availableTopics)[Math.floor(Math.random() * (nextTopics.length || availableTopics.length))];
+    const pool = candidatesFor(topic).filter((p) => !session.used.includes(p.id));
     const ratingOf = (p) => Math.max(1, Math.min(MAX_LEVEL, Number(p.rating) || Number(p.level) * 3 - 1 || 1));
     const distance = Math.min(...pool.map((p) => Math.abs(ratingOf(p) - session.rating)));
     const near = pool.filter((p) => Math.abs(ratingOf(p) - session.rating) <= distance + 0.35);
     const item = near[Math.floor(Math.random() * near.length)];
-    session.lastTheme = theme;
+    session.lastTheme = topic;
+    session.currentTopic = topic;
     session.used.push(item.id);
     session.index++;
     pz.item = item;
@@ -2064,12 +2087,13 @@
     html += '</div>';
     const training = themeTrainingPrefs();
     const selectedThemes = Array.isArray(training.themes) ? training.themes : [];
-    const puzzleThemes = PZ_KEYS.filter((key) => BANK.some((p) => p.theme === key && p.line && p.line.length));
+    const puzzleThemes = PZ_KEYS.filter((key) => key !== 'finale' && BANK.some((p) => p.theme === key && p.line && p.line.length));
+    puzzleThemes.push(...ENDGAME_TOPICS.map((topic) => topic.key));
     html += `<section class="theme-training-card">
       <div class="theme-training-head"><div><h3>${L('Parcours de problèmes par thèmes', 'Themed puzzle path')}</h3><p class="pz-cap">${L('Choisis un thème ou mélange-en plusieurs. Les exercices s’adaptent progressivement à tes réussites.', 'Choose one theme or mix several. Puzzles gradually adjust to your progress.')}</p></div><span class="theme-training-level">${L('Difficulté', 'Difficulty')} ${Math.round(training.rating)}/${MAX_LEVEL}</span></div>
       <p class="theme-training-progress">${L(`${training.solvedTotal || 0} problèmes réussis · meilleure série : ${training.bestStreak || 0}`, `${training.solvedTotal || 0} puzzles solved · best streak: ${training.bestStreak || 0}`)}</p>
       <button class="btn ghost" type="button" id="theme-training-toggle" aria-expanded="${themeTrainingOpen}">${themeTrainingOpen ? L('Masquer les thèmes', 'Hide themes') : L('Choisir mes thèmes', 'Choose themes')}</button>
-      ${themeTrainingOpen ? `<div class="theme-training-choices" role="group" aria-label="${L('Thèmes de problèmes', 'Puzzle themes')}">${puzzleThemes.map((key) => `<label class="theme-training-choice"><input type="checkbox" value="${key}" data-training-theme ${selectedThemes.includes(key) ? 'checked' : ''}><span>${PZ[key].icon} ${PZ[key].name}</span></label>`).join('')}</div>
+      ${themeTrainingOpen ? `<div class="theme-training-choices" role="group" aria-label="${L('Thèmes de problèmes', 'Puzzle themes')}">${puzzleThemes.map((key) => `<label class="theme-training-choice"><input type="checkbox" value="${key}" data-training-theme ${selectedThemes.includes(key) ? 'checked' : ''}><span>${trainingTopicIcon(key)} ${trainingTopicName(key)}</span></label>`).join('')}</div>
         <p class="pz-cap">${L('Les clouages et les enfilades sont réunis dans la même catégorie de problèmes.', 'Pins and skewers are grouped in the same puzzle category.')}</p>
         <button class="btn primary wide" type="button" id="theme-training-start">${L('Commencer le parcours', 'Start the path')}</button>` : ''}
     </section>`;
@@ -2342,7 +2366,7 @@
     if (pz && pz.kind === 'themed') {
       const session = pz.themeSession;
       const goal = LANG === 'en' ? 'Solve the puzzle to keep progressing through your selected themes.' : 'Résous le problème pour avancer parmi les thèmes choisis.';
-      return `${PZ[it.theme].name} · ${L('difficulté', 'difficulty')} ${Math.round(session.rating)}/${MAX_LEVEL}. ${goal}`;
+      return `${trainingTopicName(session.currentTopic || it.theme)} · ${L('difficulté', 'difficulty')} ${Math.round(session.rating)}/${MAX_LEVEL}. ${goal}`;
     }
     if (LANG === 'en') {
       const side = game.turn === 'w' ? 'White' : 'Black';
@@ -2373,7 +2397,7 @@
     const row = themeRow(loadCoach(), it.theme);
     $('puzzle-title').textContent = pz.kind === 'themed' ? L('Parcours par thèmes', 'Themed puzzle path') : PZ[it.theme].name;
     $('pz-count').textContent = pz.kind === 'themed'
-      ? `${L('Problème', 'Puzzle')} ${pz.themeSession.index} · ${PZ[it.theme].name} · ${L('difficulté', 'difficulty')} ${Math.round(pz.themeSession.rating)}/${MAX_LEVEL}`
+      ? `${L('Problème', 'Puzzle')} ${pz.themeSession.index} · ${trainingTopicName(pz.themeSession.currentTopic || it.theme)} · ${L('difficulté', 'difficulty')} ${Math.round(pz.themeSession.rating)}/${MAX_LEVEL}`
       : (it.personal ? L('Ta partie · ', 'Your game · ') : '') + `${L('Niveau', 'Level')} ${row.level} · ${row.pending ? L('révision', 'review') : `${Math.min(LEVEL_SET, row.ok + 1)}/${LEVEL_SET}`}`;
     say(promptOf(it));
     setPzStatus('', L('À toi de jouer', 'Your move'));
