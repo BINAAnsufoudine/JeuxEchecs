@@ -4367,15 +4367,16 @@
     { name: L('Potager tropical', 'Tropical vegetable garden'), icon: '🥕' }, { name: L('Goyavier', 'Guava tree'), icon: '🍐' },
     { name: L('Palmier tropical', 'Tropical palm'), icon: '🌴' }, { name: L('Grand baobab', 'Great baobab'), icon: '🌳' },
   ];
+  const NATURE_PREVIEW_ALL_UNLOCKED = true;
   const NATURE_COLLECTIONS = [
     { id: 'plants', name: L('Plantes', 'Plants'), icon: '🌱', unlockGrade: 1, items: GARDEN_PLANTS },
-    { id: 'land', name: L('Animaux terrestres', 'Land animals'), icon: '🐒', unlockGrade: 2, items: [
+    { id: 'land', name: L('Animaux terrestres', 'Land animals'), icon: '🐒', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 2, items: [
       ['Basse-cour', 'Farmyard', '🐓', 'leaves'], ['Gecko du jardin', 'Garden gecko', '🦎', 'meat'], ['Tortue terrestre', 'Land tortoise', '🐢', 'leaves'], ['Lémurien', 'Lemur', '🐒', 'leaves'], ['Singes joueurs', 'Playful monkeys', '🐵', 'leaves'], ['Okapi', 'Okapi', '🦓', 'leaves'], ['Éléphant de forêt', 'Forest elephant', '🐘', 'leaves'], ['Panthère', 'Panther', '🐆', 'meat'], ['Cœur de la jungle', 'Heart of the jungle', '🌴', 'leaves'], ['Gardien de la jungle', 'Jungle guardian', '🦍', 'leaves'],
     ].map(([fr, en, icon, currency]) => ({ name: L(fr, en), icon, currency })) },
-    { id: 'birds', name: L('Oiseaux tropicaux', 'Tropical birds'), icon: '🦜', unlockGrade: 4, items: [
+    { id: 'birds', name: L('Oiseaux tropicaux', 'Tropical birds'), icon: '🦜', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 4, items: [
       ['Oiseaux du jardin', 'Garden birds', '🐦'], ['Colibri', 'Hummingbird', '🐦'], ['Perroquet', 'Parrot', '🦜'], ['Perruche colorée', 'Colourful parakeet', '🦜'], ['Martin-pêcheur', 'Kingfisher', '🐤'], ['Calao', 'Hornbill', '🦤'], ['Aigle pêcheur', 'Fish eagle', '🦅'], ['Vol au-dessus des palmiers', 'Flight over the palms', '🌴'], ['Forêt profonde', 'Deep forest', '🌳'], ['Grand nid tropical', 'Great tropical nest', '🪺'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
-    { id: 'ocean', name: L('Océan Indien', 'Indian Ocean'), icon: '🐋', unlockGrade: 6, items: [
+    { id: 'ocean', name: L('Océan Indien', 'Indian Ocean'), icon: '🐋', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 6, items: [
       ['Plage', 'Beach', '🏖️'], ['Crabe de sable', 'Sand crab', '🦀'], ['Récif corallien', 'Coral reef', '🪸'], ['Poissons tropicaux', 'Tropical fish', '🐠'], ['Lagon turquoise', 'Turquoise lagoon', '🐟'], ['Tortue marine', 'Sea turtle', '🐢'], ['Dauphins', 'Dolphins', '🐬'], ['Mer ouverte', 'Open sea', '🌊'], ['Grand océan Indien', 'Great Indian Ocean', '🌊'], ['Baleine majestueuse', 'Majestic whale', '🐋'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
   ];
@@ -4524,7 +4525,9 @@
     $('home-garden-badge').textContent = `${gradeInfo.icon} ${grade} / 10`;
     const currentItem = collection.items[grade - 1];
     $('home-garden-title').textContent = collection.id === 'plants' && grade === 10 ? L('Ton grand baobab est là !', 'Your great baobab is here!') : L(`${currentItem.name} rejoint ta collection !`, `${currentItem.name} joins your collection!`);
-    $('home-garden-copy').textContent = collection.id === 'plants'
+    $('home-garden-copy').textContent = NATURE_PREVIEW_ALL_UNLOCKED
+      ? L('Toutes les collections sont ouvertes : explore-les librement !', 'All collections are open: explore them freely!')
+      : collection.id === 'plants'
       ? L(`${grade}/10 plantes débloquées · gagne de l’expérience pour faire grandir ton jardin.`, `${grade}/10 plants unlocked · earn experience to grow your garden.`)
       : L(`${grade}/10 découvertes · les récompenses de tes défis ouvrent de nouveaux paysages.`, `${grade}/10 discoveries · challenge rewards reveal new places.`);
     $('home-collection-tabs').innerHTML = NATURE_COLLECTIONS.map((item) => {
@@ -4532,12 +4535,14 @@
       return `<button type="button" class="home-collection-tab${selected ? ' selected' : ''}${available ? '' : ' locked'}" data-nature-collection="${item.id}" ${available ? '' : `aria-label="${escHtml(L(`${item.name}, se débloque au grade ${item.unlockGrade}`, `${item.name}, unlocks at rank ${item.unlockGrade}`))}"`} aria-pressed="${selected}" title="${escHtml(available ? item.name : L(`Débloqué au grade ${item.unlockGrade}`, `Unlocks at rank ${item.unlockGrade}`))}">${item.icon} ${escHtml(item.name)}${available ? '' : ` · 🔒 ${item.unlockGrade}`}</button>`;
     }).join('');
     $('home-garden-plants').innerHTML = collection.items.map((plant, index) => {
-      const unlocked = index < grade, baobab = index === GARDEN_PLANTS.length - 1;
+      const unlocked = NATURE_PREVIEW_ALL_UNLOCKED || index < grade, baobab = index === GARDEN_PLANTS.length - 1;
       return `<div class="home-garden-plant${unlocked ? ' unlocked' : ' locked'}${collection.id === 'ocean' && baobab ? ' whale-plant' : ''}${collection.id === 'plants' && baobab ? ' baobab-plant' : ''}" title="${escHtml(unlocked ? plant.name : L(`Grade ${index + 1} : ${plant.name}`, `Rank ${index + 1}: ${plant.name}`))}"><span class="plant-icon">${unlocked ? plant.icon : '🔒'}</span><small>${escHtml(unlocked ? plant.name : L(`Grade ${index + 1}`, `Rank ${index + 1}`))}</small></div>`;
     }).join('');
     const nextPlant = collection.items[grade];
     const nextCollection = NATURE_COLLECTIONS.find((item) => grade < item.unlockGrade);
-    $('home-garden-next').textContent = nextPlant
+    $('home-garden-next').textContent = NATURE_PREVIEW_ALL_UNLOCKED
+      ? L('Tous les animaux, plantes et paysages sont disponibles à l’exploration.', 'All animals, plants, and landscapes are available to explore.')
+      : nextPlant
       ? L(`Prochaine découverte au grade ${grade + 1} : ${nextPlant.icon} ${nextPlant.name}`, `Next discovery at rank ${grade + 1}: ${nextPlant.icon} ${nextPlant.name}`)
       : collection.id === 'ocean'
         ? L('La baleine est arrivée : tu as exploré tout l’océan Indien !', 'The whale is here: you explored the whole Indian Ocean!')
