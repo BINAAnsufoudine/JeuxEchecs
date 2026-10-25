@@ -368,8 +368,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #puzzle.guided-learning .game-layout { width: min(1440px, 100%); margin: 0 auto; display: grid; grid-template-columns: minmax(300px, 1.4fr) minmax(240px, 0.8fr); align-content: start; align-items: start; justify-content: center; column-gap: clamp(12px, 1.5vw, 24px); row-gap: 0; }
   #puzzle.guided-learning .board-col { grid-column: 1; grid-row: 1; width: 100%; min-width: 0; }
   #puzzle.guided-learning .learning-controls { width: 100%; margin-top: 0; }
-  #puzzle.guided-learning .learning-controls .actions { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-  #puzzle.guided-learning .learning-controls .act { min-height: 72px; flex-direction: column; justify-content: center; gap: 6px; padding: 8px 4px; text-align: center; font-size: 0.76rem; }
+  #puzzle.guided-learning .learning-controls .actions { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; width: 100%; }
+  #puzzle.guided-learning .learning-controls .act { width: max-content; min-height: 72px; flex-direction: column; justify-content: center; gap: 6px; padding: 8px 16px; text-align: center; font-size: 0.76rem; }
   #puzzle.guided-learning .learning-coach-slot { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; align-items: stretch; gap: 0; width: 100%; min-width: 0; }
   #puzzle.guided-learning .coach { display: grid; grid-template-columns: 80px minmax(0, 1fr); align-items: start; gap: 8px; min-width: 0; margin: 0; padding: 14px; border: 1px solid var(--surface-2); border-radius: 16px; background: var(--surface); box-shadow: 0 10px 28px rgba(0,0,0,0.2); }
   #puzzle.guided-learning .coach img { width: 64px; height: 96px; object-fit: contain; object-position: center; border-radius: 0; }
