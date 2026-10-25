@@ -831,7 +831,9 @@
         // C'est la pièce qui donne échec (celle qui mate) qui fait l'attaque de mat, même sur un échec à la découverte
         const checkers = window.Chess.pseudoMoves({ ...s, turn: s.turn === 'w' ? 'b' : 'w', ep: -1, castling: '' }).filter((m) => m.to === kingSq).map((m) => m.from);
         const mater = last && checkers.includes(last.to) ? last.to : checkers[0];
-        if (last && mater != null && s.board[mater]) {
+        // Un Roi ne peut pas attaquer directement le Roi adverse dans une position légale.
+        // Ne pas lancer l'animation spectaculaire de mat si une position invalide le désigne comme attaquant.
+        if (last && mater != null && s.board[mater] && s.board[mater].toLowerCase() !== 'k') {
           const movedPiece = s.board[mater];
           const ultimatePiece = movedPiece;
           const attackerTo = mater;
