@@ -716,7 +716,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #home .home-sidebar .menu { width: 100%; max-width: none; gap: 8px; padding: 0; overflow: visible; border: 0; background: transparent; }
   #home .home-sidebar .menu .btn { text-align: left; padding: 10px 13px; font-size: .9rem; }
   #home .home-sidebar .menu-submenu .btn { padding: 9px 12px; font-size: .84rem; }
-  #home .home-dashboard { grid-column: 2; grid-row: 1; width: min(100%, 1120px); max-width: 1120px; max-height: 100vh; padding: 22px clamp(24px, 4vw, 54px) 28px; overflow-y: auto; pointer-events: auto; }
+  #home .home-dashboard { grid-column: 2; grid-row: 1; width: 100%; max-width: none; max-height: 100vh; margin: 0; padding: 22px clamp(24px, 4vw, 54px) 28px; overflow-y: auto; pointer-events: auto; }
   #home .home-sidebar .player-profile { padding: 10px; }
   #home .home-sidebar .player-profile .profile-edit { font-size: .72rem; }
   body[data-screen]:not([data-screen="home"]) #home .home-dashboard { display: none; }
