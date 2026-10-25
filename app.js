@@ -4912,8 +4912,7 @@
         const exercises = chapter.steps.filter((step) => step.line && step.line.length).length;
         return item(`tutorial:${chapter.id}`, `${index + 1}. ${chapter.title}`, `${chapter.description} · ${exercises} ${L('exercices', 'exercises')}${done[`tutorial:${chapter.id}`] ? L(' · Terminé', ' · Completed') : ''}`, done[`tutorial:${chapter.id}`] ? ok : '');
       });
-      const split = Math.ceil(cards.length / 2);
-      html += `<div class="tutorial-columns"><div class="tutorial-column">${cards.slice(0, split).join('')}</div><div class="tutorial-column">${cards.slice(split).join('')}</div></div>`;
+      html += `<div class="replay-items tutorial-items">${cards.join('')}</div>`;
     }
     if (section === 'lesson') {
       const lesson = dailyLessonOfDay();
