@@ -763,6 +763,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .cloud-one { top: 25px; left: 34%; }.cloud-two { top: 55px; right: 38%; font-size: 18px; }
 .home-garden-ground { position: absolute; z-index: -1; right: -7%; bottom: -67px; left: -6%; height: 135px; border-radius: 50% 50% 0 0; background: radial-gradient(ellipse at 50% 0%, #77944b, #456a3b 75%); box-shadow: inset 0 8px 0 rgba(208, 224, 125, .3); }
 .home-garden-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.home-collection-tabs { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 9px; }
+.home-collection-tab { min-height: 30px; padding: 5px 8px; border: 1px solid rgba(255,255,255,.35); border-radius: 999px; background: rgba(28,57,35,.35); color: #fff; font-size: .68rem; font-weight: 800; cursor: pointer; text-shadow: 0 1px 2px #203b24; }
+.home-collection-tab.selected { border-color: #fff1ae; background: rgba(255,229,142,.9); color: #263b25; text-shadow: none; box-shadow: 0 2px 8px rgba(30,50,25,.2); }
+.home-collection-tab.locked { opacity: .72; cursor: default; }
 .home-garden-intro h3 { margin: 0 0 2px; font-size: 1.16rem; }
 .home-garden-intro p { margin: 0; color: #344b34; font-size: .77rem; }
 .home-grade-badge { flex: none; padding: 6px 9px; border: 1px solid rgba(68, 92, 49, .16); border-radius: 99px; background: #fff8dc; color: #384923; font-size: .76rem; font-weight: 900; }
@@ -773,6 +777,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .home-garden-plant.locked { opacity: .66; filter: grayscale(.55); background: rgba(32, 49, 30, .19); }
 .home-garden-plant.baobab-plant.unlocked { min-height: 92px; background: rgba(255, 219, 114, .3); box-shadow: inset 0 0 0 1px rgba(255, 245, 195, .65); }
 .home-garden-plant.baobab-plant.unlocked .plant-icon { font-size: clamp(2.4rem, 4vw, 3.2rem); }
+.home-garden-plant.whale-plant.unlocked { min-height: 92px; background: rgba(109,218,233,.34); box-shadow: inset 0 0 0 1px rgba(214,250,255,.65); }
+.home-garden-plant.whale-plant.unlocked .plant-icon { font-size: clamp(2.4rem, 4vw, 3.2rem); }
 .home-garden-next { margin-top: 8px; color: #f8f5dd; font-size: .71rem; font-weight: 700; text-shadow: 0 1px 3px #203b24; }
 .home-rice-card { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; min-width: 0; padding: 17px; border: 1px solid var(--surface-2); border-radius: 20px; background: var(--surface); }
 .home-rice-top { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; }
