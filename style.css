@@ -710,6 +710,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #home .home-dashboard { grid-column: 2; grid-row: 1; width: min(100%, 1120px); max-width: 1120px; max-height: 100vh; padding: 22px clamp(24px, 4vw, 54px) 28px; overflow-y: auto; pointer-events: auto; }
   #home .home-sidebar .player-profile { padding: 10px; }
   #home .home-sidebar .player-profile .profile-edit { font-size: .72rem; }
+  body[data-screen]:not([data-screen="home"]) #home .home-dashboard { display: none; }
 }
 @media (max-width: 999px) {
   #home.active { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 15px; padding-top: max(14px, env(safe-area-inset-top)); }
