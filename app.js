@@ -1596,8 +1596,26 @@
   const PZ_KEYS = Object.keys(PZ);
   const PZ_LEVELS = L({ 1: 'Facile', 2: 'Moyen', 3: 'Difficile' }, { 1: 'Easy', 2: 'Medium', 3: 'Hard' });
   const BANK = window.PUZZLES || [];
-  // Les catégories détaillées sont déduites des positions et des solutions
-  // réellement disponibles. Aucun thème vide n'est proposé.
+  const puzzleIds = new Set(BANK.map((p) => p.id));
+  for (const raw of window.LICHESS_PUZZLES || []) {
+    if (puzzleIds.has(`l${raw.id}`) || !Array.isArray(raw.moves) || raw.moves.length < 2) continue;
+    const context = new Game(raw.fen);
+    if (!context.playUci(raw.moves[0])) continue;
+    const fen = window.Chess.toFen(context.state), line = raw.moves.slice(1);
+    const validation = new Game(fen);
+    if (line.some((move) => !validation.playUci(move))) continue;
+    const tags = raw.themes || [];
+    const theme = tags.some((tag) => tag === 'mate' || /^mateIn[1-5]$/.test(tag) || /Mate$/.test(tag)) ? 'mat'
+      : tags.includes('defensiveMove') ? 'defense'
+        : tags.includes('fork') ? 'fourchette'
+          : tags.includes('pin') || tags.includes('skewer') ? 'clouage'
+            : tags.includes('hangingPiece') || tags.includes('capturingDefender') ? 'prise'
+              : tags.some((tag) => /Endgame$/.test(tag) || tag === 'endgame') ? 'finale' : 'tactique';
+    BANK.push({ id: `l${raw.id}`, fen, line, theme, themes: tags, rating: raw.rating, sourceRating: raw.sourceRating });
+    puzzleIds.add(`l${raw.id}`);
+  }
+  // Filtres Lichess : les libellés ne sont affichés que si l'échantillon local
+  // contient au moins un problème réellement étiqueté pour ce thème.
   function endgameMaterial(fen) {
     const board = window.Chess.fromFen(fen).board;
     const material = { q: 0, r: 0, b: 0, n: 0 };
@@ -1606,48 +1624,75 @@
   }
   const materialTotal = (m) => m.q + m.r + m.b + m.n;
   const isEndgamePosition = (fen) => materialTotal(endgameMaterial(fen)) <= 4;
-  const ENDGAME_PIECE_NAMES = L({ q: 'dames', r: 'tours', b: 'fous', n: 'cavaliers' }, { q: 'queens', r: 'rooks', b: 'bishops', n: 'knights' });
-  const ENDGAME_PIECE_ICONS = { q: '♛', r: '♜', b: '♝', n: '♞' };
-  const endgameMaterialKey = (fen) => {
-    const m = endgameMaterial(fen);
-    return ['q', 'r', 'b', 'n'].filter((piece) => m[piece] > 0).join('') || 'p';
+  const rawTopic = (key, tag, name, icon, legacy = () => false) => ({
+    key, name, icon,
+    puzzles: BANK.filter((p) => p.themes ? p.themes.includes(tag) : legacy(p)),
+  });
+  const legacyMateIn = (n, p) => {
+    if (p.theme !== 'mat' || !p.line || Math.ceil(p.line.length / 2) !== n) return false;
+    const g = new Game(p.fen);
+    for (const move of p.line) if (!g.playUci(move)) return false;
+    const status = g.status();
+    return status.over && status.reason === 'mat';
   };
-  const materialGroupName = (key) => key === 'p'
-    ? L('Finales de pions', 'Pawn endgames')
-    : L(`Finales de ${key.split('').map((piece) => ENDGAME_PIECE_NAMES[piece]).join(' et ')}`, `${key.split('').map((piece) => ENDGAME_PIECE_NAMES[piece]).join(' and ')} endgames`);
-  const endgameGroups = new Map();
-  for (const puzzle of BANK) if (puzzle.fen && isEndgamePosition(puzzle.fen)) {
-    const key = endgameMaterialKey(puzzle.fen);
-    if (!endgameGroups.has(key)) endgameGroups.set(key, []);
-    endgameGroups.get(key).push(puzzle);
-  }
-  const ENDGAME_TOPICS = [...endgameGroups].map(([material, puzzles]) => ({
-    key: `finale-${material}`, icon: material === 'p' ? '♙' : material.split('').map((piece) => ENDGAME_PIECE_ICONS[piece]).join(''),
-    name: materialGroupName(material), puzzles,
+  const phaseTopics = [
+    rawTopic('phase-ouverture', 'opening', L('Ouverture', 'Opening'), '♙', (p) => p.fen && !isEndgamePosition(p.fen) && Number(p.fen.split(/\s+/)[5]) <= 12),
+    rawTopic('phase-milieu', 'middlegame', L('Milieu de jeu', 'Middlegame'), '♟', (p) => p.fen && !isEndgamePosition(p.fen) && Number(p.fen.split(/\s+/)[5]) > 12),
+    rawTopic('phase-finale', 'endgame', L('Finales', 'Endgames'), '♙', (p) => p.theme === 'finale' || (p.fen && isEndgamePosition(p.fen))),
+  ];
+  const endgameTopics = [
+    rawTopic('finale-tours', 'rookEndgame', L('Finales de tours', 'Rook endgames'), '♜', (p) => p.theme === 'finale' && (() => { const m = endgameMaterial(p.fen); return !m.q && m.r > 0 && !m.b && !m.n; })()),
+    rawTopic('finale-fous', 'bishopEndgame', L('Finales de fous', 'Bishop endgames'), '♝', (p) => p.theme === 'finale' && (() => { const m = endgameMaterial(p.fen); return !m.q && !m.r && m.b > 0 && !m.n; })()),
+    rawTopic('finale-pions', 'pawnEndgame', L('Finales de pions', 'Pawn endgames'), '♙', (p) => p.theme === 'finale' && (() => { const m = endgameMaterial(p.fen); return !m.q && !m.r && !m.b && !m.n; })()),
+    rawTopic('finale-cavaliers', 'knightEndgame', L('Finales de cavaliers', 'Knight endgames'), '♞', (p) => p.theme === 'finale' && (() => { const m = endgameMaterial(p.fen); return !m.q && !m.r && !m.b && m.n > 0; })()),
+    rawTopic('finale-dames', 'queenEndgame', L('Finales de dames', 'Queen endgames'), '♛', (p) => p.theme === 'finale' && (() => { const m = endgameMaterial(p.fen); return m.q > 0 && !m.r && !m.b && !m.n; })()),
+    rawTopic('finale-dames-tours', 'queenRookEndgame', L('Finales de dames et tours', 'Queen and rook endgames'), '♛♜'),
+  ];
+  const motifDefs = [
+    ['advancedPawn', L('Pion avancé', 'Advanced pawn'), '♙'], ['attackingF2F7', L('Attaque sur f2 ou f7', 'Attack on f2 or f7'), '♟'],
+    ['capturingDefender', L('Capturez le défenseur', 'Capture the defender'), '♞'], ['discoveredAttack', L('Attaque à la découverte', 'Discovered attack'), '♜'],
+    ['doubleCheck', L('Échec double', 'Double check'), '♔'], ['exposedKing', L('Roi exposé', 'Exposed king'), '♚'],
+    ['fork', L('Fourchette', 'Fork'), '♘'], ['hangingPiece', L('Pièce en prise', 'Hanging piece'), '♟'],
+    ['kingsideAttack', L('Attaque sur l’aile roi', 'Kingside attack'), '♔'], ['pin', L('Clouage', 'Pin'), '♝'],
+    ['queensideAttack', L('Attaque sur l’aile dame', 'Queenside attack'), '♕'], ['sacrifice', L('Sacrifice', 'Sacrifice'), '⚔'],
+    ['skewer', L('Enfilade', 'Skewer'), '♜'], ['trappedPiece', L('Pièce enfermée', 'Trapped piece'), '♟'],
+  ].map(([tag, name, icon]) => rawTopic(`lichess-${tag}`, tag, name, icon, (p) => ({ fork: 'fourchette', pin: 'clouage', skewer: 'clouage', hangingPiece: 'prise' }[tag] === p.theme)));
+  const advancedDefs = [
+    ['attraction', L('Attraction', 'Attraction'), '🧲'], ['clearance', L('Dégagement', 'Clearance'), '♟'],
+    ['defensiveMove', L('Coup défensif', 'Defensive move'), '🛡'], ['deflection', L('Déviation', 'Deflection'), '↗'],
+    ['interference', L('Interception', 'Interference'), '⛔'], ['intermezzo', L('Coup intermédiaire', 'Zwischenzug'), '♞'],
+    ['quietMove', L('Coup silencieux', 'Quiet move'), '♘'], ['xRayAttack', L('Attaque « rayons X »', 'X-ray attack'), '➜'],
+    ['zugzwang', 'Zugzwang', '♟'],
+  ].map(([tag, name, icon]) => rawTopic(`lichess-${tag}`, tag, name, icon, (p) => tag === 'defensiveMove' && p.theme === 'defense'));
+  const specialDefs = [
+    ['castling', L('Roque', 'Castling'), '♜'], ['enPassant', L('Prise en passant', 'En passant'), '✦'],
+    ['promotion', L('Promotion', 'Promotion'), '♕'], ['underPromotion', L('Sous-promotion', 'Underpromotion'), '♞'],
+  ].map(([tag, name, icon]) => rawTopic(`lichess-${tag}`, tag, name, icon, (p) => tag === 'promotion' && p.line && p.line.some((move) => move.length > 4)));
+  const goalDefs = [
+    ['equality', L('Égalité', 'Equality'), '⚖'], ['advantage', L('Avantage', 'Advantage'), '👍'],
+    ['crushing', L('Écrasant', 'Crushing'), '♜'], ['mate', L('Mat', 'Checkmate'), '♛'],
+  ].map(([tag, name, icon]) => rawTopic(`goal-${tag}`, tag, name, icon, (p) => tag === 'mate' && p.theme === 'mat'));
+  const mateDefs = [
+    ['mate', L('Mat', 'Checkmate'), '♛', (p) => p.theme === 'mat'],
+    ...[1, 2, 3, 4, 5].map((n) => [`mateIn${n}`, L(`Mat en ${n}`, `Mate in ${n}`), '♛', (p) => legacyMateIn(n, p)]),
+    ['anastasiaMate', L('Mat d’Anastasie', 'Anastasia’s mate'), '♞'], ['arabianMate', L('Mat arabe', 'Arabian mate'), '♜'],
+    ['backRankMate', L('Mat du couloir', 'Back-rank mate'), '♜'], ['bodenMate', L('Mat de Boden', 'Boden’s mate'), '♝'],
+    ['doubleBishopMate', L('Mat des deux fous', 'Double-bishop mate'), '♝'], ['dovetailMate', L('Mat du guéridon', 'Dovetail mate'), '♛'],
+    ['hookMate', L('Mat du hameçon', 'Hook mate'), '♞'], ['smotheredMate', L('Mat à l’étouffée', 'Smothered mate'), '♞'],
+  ].map(([tag, name, icon, legacy]) => rawTopic(`lichess-${tag}`, tag, name, icon, legacy));
+  const legacyTopics = PZ_KEYS.filter((key) => key !== 'finale').map((key) => ({
+    key: `legacy-${key}`, name: PZ[key].name, icon: PZ[key].icon,
+    puzzles: BANK.filter((p) => !p.themes && p.theme === key && p.line && p.line.length),
   }));
-  const PHASE_TOPICS = [
-    { key: 'phase-ouverture', name: L('Ouverture', 'Opening'), icon: '♙', puzzles: BANK.filter((p) => p.fen && !isEndgamePosition(p.fen) && Number(p.fen.split(/\s+/)[5]) <= 12) },
-    { key: 'phase-milieu', name: L('Milieu de jeu', 'Middlegame'), icon: '♟', puzzles: BANK.filter((p) => p.fen && !isEndgamePosition(p.fen) && Number(p.fen.split(/\s+/)[5]) > 12) },
-    { key: 'phase-finale', name: L('Finales', 'Endgames'), icon: '♙', puzzles: BANK.filter((p) => p.fen && isEndgamePosition(p.fen)) },
-  ].filter((topic) => topic.puzzles.length);
-  const SPECIAL_TOPICS = [{ key: 'special-promotion', name: L('Promotion et sous-promotion', 'Promotion and underpromotion'), icon: '♕', puzzles: BANK.filter((p) => p.line && p.line.some((move) => move.length > 4)) }].filter((topic) => topic.puzzles.length);
-  const MATE_TOPICS = [1, 2, 3, 4, 5].map((moves) => {
-    const puzzles = BANK.filter((p) => {
-      if (p.theme !== 'mat' || !p.line || Math.ceil(p.line.length / 2) !== moves) return false;
-      const game = new Game(p.fen);
-      for (const move of p.line) if (!game.playUci(move)) return false;
-      const status = game.status();
-      return status.over && status.reason === 'mat';
-    });
-    return { key: `mat-${moves}`, name: L(`Mat en ${moves}`, `Mate in ${moves}`), icon: '♛', puzzles };
-  }).filter((topic) => topic.puzzles.length);
   const trainingTopicGroups = [
-    { name: L('Motifs tactiques', 'Tactical motifs'), topics: PZ_KEYS.filter((key) => key !== 'finale').map((key) => ({ key, name: PZ[key].name, icon: PZ[key].icon, puzzles: BANK.filter((p) => p.theme === key && p.line && p.line.length) })).filter((topic) => topic.puzzles.length) },
-    { name: L('Phases de jeu', 'Game phases'), topics: PHASE_TOPICS },
-    { name: L('Finales par matériel', 'Endgames by material'), topics: ENDGAME_TOPICS },
-    { name: L('Coups spéciaux', 'Special moves'), topics: SPECIAL_TOPICS },
-    { name: L('Mats', 'Mates'), topics: MATE_TOPICS },
-  ].filter((group) => group.topics.length);
+    { name: L('Motifs', 'Motifs'), topics: [...motifDefs, ...legacyTopics] },
+    { name: L('Phases', 'Phases'), topics: phaseTopics },
+    { name: L('Finales par matériel', 'Endgames by material'), topics: endgameTopics },
+    { name: L('Avancé', 'Advanced'), topics: advancedDefs },
+    { name: L('Coups spéciaux', 'Special moves'), topics: specialDefs },
+    { name: L('Objectifs', 'Goals'), topics: goalDefs },
+    { name: L('Thèmes de mat', 'Checkmate themes'), topics: mateDefs },
+  ].map((group) => ({ ...group, topics: group.topics.filter((topic) => topic.puzzles.length) })).filter((group) => group.topics.length);
   const ALL_TRAINING_TOPICS = trainingTopicGroups.flatMap((group) => group.topics);
   const trainingTopic = (key) => ALL_TRAINING_TOPICS.find((topic) => topic.key === key);
   const trainingTopicName = (key) => trainingTopic(key)?.name || PZ[key]?.name || '';
@@ -2127,7 +2172,7 @@
       <p class="theme-training-progress">${L(`${training.solvedTotal || 0} problèmes réussis · meilleure série : ${training.bestStreak || 0}`, `${training.solvedTotal || 0} puzzles solved · best streak: ${training.bestStreak || 0}`)}</p>
       <button class="btn ghost" type="button" id="theme-training-toggle" aria-expanded="${themeTrainingOpen}">${themeTrainingOpen ? L('Masquer les thèmes', 'Hide themes') : L('Choisir mes thèmes', 'Choose themes')}</button>
       ${themeTrainingOpen ? `<div class="theme-training-groups">${trainingTopicGroups.map((group) => `<section class="theme-training-group"><h4>${group.name}</h4><div class="theme-training-choices" role="group" aria-label="${group.name}">${group.topics.map((topic) => `<label class="theme-training-choice"><input type="checkbox" value="${topic.key}" data-training-theme ${selectedThemes.includes(topic.key) ? 'checked' : ''}><span>${topic.icon} ${topic.name} <small>(${topic.puzzles.length})</small></span></label>`).join('')}</div></section>`).join('')}</div>
-        <p class="pz-cap">${L('Les clouages et les enfilades sont réunis dans la même catégorie de problèmes.', 'Pins and skewers are grouped in the same puzzle category.')}</p>
+        <p class="pz-cap">${L('Les thèmes suivent les étiquettes de la base Lichess (CC0) ; le nombre indique les problèmes disponibles.', 'Themes follow the Lichess puzzle database tags (CC0); the number shows available puzzles.')}</p>
         <button class="btn primary wide" type="button" id="theme-training-start">${L('Commencer le parcours', 'Start the path')}</button>` : ''}
     </section>`;
     if (problemSettingsOpen) html += `<section class="pz-settings" aria-label="${L('Réglages des problèmes', 'Puzzle settings')}">
