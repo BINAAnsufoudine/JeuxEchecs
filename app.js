@@ -4907,7 +4907,14 @@
     const item = (key, title, sub, extra = '') => `<button type="button" class="btn replay-item" data-train="${key}"><strong>${escHtml(title)}${extra}</strong><span>${escHtml(sub)}</span></button>`;
     const ok = ' ✓';
     let html = `<p class="level-help">${TRAIN_HELP[section]}</p>`;
-    if (section === 'tutorial') html += `<div class="replay-items">${TR.TUTORIALS.map((chapter) => { const exercises = chapter.steps.filter((step) => step.line && step.line.length).length; return item(`tutorial:${chapter.id}`, chapter.title, `${chapter.description} · ${exercises} ${L('exercices', 'exercises')}${done[`tutorial:${chapter.id}`] ? L(' · Terminé', ' · Completed') : ''}`, done[`tutorial:${chapter.id}`] ? ok : ''); }).join('')}</div>`;
+    if (section === 'tutorial') {
+      const cards = TR.TUTORIALS.map((chapter, index) => {
+        const exercises = chapter.steps.filter((step) => step.line && step.line.length).length;
+        return item(`tutorial:${chapter.id}`, `${index + 1}. ${chapter.title}`, `${chapter.description} · ${exercises} ${L('exercices', 'exercises')}${done[`tutorial:${chapter.id}`] ? L(' · Terminé', ' · Completed') : ''}`, done[`tutorial:${chapter.id}`] ? ok : '');
+      });
+      const split = Math.ceil(cards.length / 2);
+      html += `<div class="tutorial-columns"><div class="tutorial-column">${cards.slice(0, split).join('')}</div><div class="tutorial-column">${cards.slice(split).join('')}</div></div>`;
+    }
     if (section === 'lesson') {
       const lesson = dailyLessonOfDay();
       const completed = LESSONS.filter((entry) => store.get('lessonsDone', {})[entry.theme]).length;
