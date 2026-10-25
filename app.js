@@ -4659,7 +4659,7 @@
     enterPuzzleMode();
     loadLessonStep();
   }
-  function startTutorial(chapter) {
+  function startTutorial(chapter, continueCourse = true) {
     if (!chapter) return;
     const steps = chapter.steps.map((step) => ({ ...step, theme: 'mat' }));
     // Chaque notion repart de sa position de départ ; aucune pièce ni marque
@@ -4668,7 +4668,7 @@
     startTrainer({ title: chapter.title, theme: 'mat', resume: `tutorial:${chapter.id}` }, steps, () => {
       markTrain(`tutorial:${chapter.id}`);
       const chapterIndex = TR.TUTORIALS.indexOf(chapter);
-      if (chapterIndex >= 0 && chapterIndex + 1 < TR.TUTORIALS.length) return startTutorial(TR.TUTORIALS[chapterIndex + 1]);
+      if (continueCourse && chapterIndex >= 0 && chapterIndex + 1 < TR.TUTORIALS.length) return startTutorial(TR.TUTORIALS[chapterIndex + 1], true);
       toast(L(`Tutoriel terminé : ${chapter.title}`, `Tutorial complete: ${chapter.title}`));
       leavePuzzle();
     });
@@ -4874,6 +4874,32 @@
     openings: 'Discover the moves of an opening, then replay them from memory. They come back for review at the right time.',
     famous: 'Take a champion\'s place in their most famous game and guess their moves.',
   });
+  const BEGINNER_PATH = [
+    { number: 3, id: 'basics', title: L('Échecs : application tutoriel pour prendre de bonnes bases', 'Chess: a tutorial app for learning the basics'), description: L('Découvre les règles, l’échiquier et les pièces.', 'Learn the rules, the board and the pieces.') },
+    { number: 5, id: 'check', title: L('Échec', 'Check'), description: L('Comprends la menace contre le roi et les façons d’y répondre.', 'Understand threats against the king and how to answer them.') },
+    { number: 6, id: 'mate', title: L('Échec et mat', 'Checkmate'), description: L('Apprends à reconnaître et donner le mat.', 'Learn to recognize and deliver checkmate.') },
+    { number: 7, id: 'stalemate', title: L('Pat', 'Stalemate'), description: L('Distingue le pat de l’échec et mat.', 'Tell stalemate apart from checkmate.') },
+    { number: 8, id: 'draws', title: L('Comment faire match nul ?', 'How to draw a game'), description: L('Découvre les principales règles de nulle.', 'Learn the main ways a game can be drawn.') },
+    { number: 9, id: 'mate-patterns', title: L('Toutes les façons de faire échec et mat', 'Ways to checkmate'), description: L('Observe plusieurs motifs de mat, puis entraîne-toi.', 'Study checkmate patterns, then practise them.') },
+    { number: 10, id: 'castling', title: L('Défendre le roi : le roque', 'Protect the king: castling'), description: L('Mets ton roi à l’abri et active ta tour.', 'Keep your king safe and activate your rook.') },
+    { number: 11, id: 'openings', title: L('Comment commencer une partie ? Les principes de l’ouverture', 'How to start a game: opening principles'), description: L('Développe tes pièces et contrôle le centre.', 'Develop your pieces and control the centre.') },
+    { number: 13, id: 'tactics', title: L('Toutes les tactiques utiles', 'Useful tactical ideas'), description: L('Choisis des thèmes tactiques et résous des problèmes.', 'Choose tactical themes and solve puzzles.') },
+    { number: 14, id: 'blunders', title: L('Comment éviter les gaffes ?', 'How to avoid blunders'), description: L('Travaille les erreurs révélées par tes parties.', 'Work on mistakes found in your games.') },
+    { number: 15, id: 'strategy', title: L('Comment créer une stratégie ?', 'How to build a strategy'), description: L('Apprends un principe et observe-le dans une position.', 'Learn a principle and see it in a position.') },
+    { number: 16, id: 'master', title: L('Comment jouer comme un maître ?', 'How to play like a master'), description: L('Découvre les parties des champions et devine leurs coups.', 'Explore master games and guess their moves.') },
+  ];
+  function openBeginnerTopic(id) {
+    if (id === 'basics') return startTutorial(TR.TUTORIALS.find((chapter) => chapter.id === 'board'));
+    if (id === 'check') return startTutorial(TR.TUTORIALS.find((chapter) => chapter.id === 'check'), false);
+    if (id === 'mate') return startMateLesson(TR.MATES.find((mate) => mate.id === 'couloir'));
+    if (id === 'stalemate' || id === 'draws' || id === 'castling') return startTutorial(TR.TUTORIALS.find((chapter) => chapter.id === id), false);
+    if (id === 'mate-patterns') { renderTrain('mates'); show('train'); return; }
+    if (id === 'openings') { renderTrain('openings'); show('train'); return; }
+    if (id === 'tactics') { themeTrainingOpen = true; renderProblems(); show('problems'); return; }
+    if (id === 'blunders') { $('btn-program').click(); return; }
+    if (id === 'strategy') return startTutorial(TR.TUTORIALS.find((chapter) => chapter.id === 'strategy'), false);
+    if (id === 'master') { renderTrain('famous'); show('train'); }
+  }
   function dailyLessonOfDay() {
     const now = new Date(), date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const completed = store.get('lessonsDone', {});
@@ -4907,13 +4933,7 @@
     const item = (key, title, sub, extra = '') => `<button type="button" class="btn replay-item" data-train="${key}"><strong>${escHtml(title)}${extra}</strong><span>${escHtml(sub)}</span></button>`;
     const ok = ' ✓';
     let html = `<p class="level-help">${TRAIN_HELP[section]}</p>`;
-    if (section === 'tutorial') {
-      const cards = TR.TUTORIALS.map((chapter, index) => {
-        const exercises = chapter.steps.filter((step) => step.line && step.line.length).length;
-        return item(`tutorial:${chapter.id}`, `${index + 1}. ${chapter.title}`, `${chapter.description} · ${exercises} ${L('exercices', 'exercises')}${done[`tutorial:${chapter.id}`] ? L(' · Terminé', ' · Completed') : ''}`, done[`tutorial:${chapter.id}`] ? ok : '');
-      });
-      html += `<div class="replay-items tutorial-items">${cards.join('')}</div>`;
-    }
+    if (section === 'tutorial') html += `<div class="replay-items tutorial-items">${BEGINNER_PATH.map((topic) => item(`beginner:${topic.id}`, `${topic.number}. ${topic.title}`, topic.description)).join('')}</div>`;
     if (section === 'lesson') {
       const lesson = dailyLessonOfDay();
       const completed = LESSONS.filter((entry) => store.get('lessonsDone', {})[entry.theme]).length;
@@ -4945,6 +4965,7 @@
   $('train-body').addEventListener('click', (e) => {
     const b = e.target.closest('[data-train]'); if (!b) return;
     const [kind, id] = b.dataset.train.split(':');
+    if (kind === 'beginner') return openBeginnerTopic(id);
     if (kind === 'lesson-day') return startDailyLesson();
     if (kind === 'tutorial') return startTutorial(TR.TUTORIALS.find((x) => x.id === id));
     if (kind === 'daily') return startDaily(Number(id) || 0);
