@@ -4386,7 +4386,14 @@
       ['Apprenti ninja', 'Ninja apprentice', '🥷'], ['Éclaireur du dojo', 'Dojo scout', '👣'], ['Disciple du shuriken', 'Shuriken disciple', '✴️'], ['Shinobi confirmé', 'Skilled shinobi', '🥷'], ['Maître du katana', 'Katana master', '⚔️'], ['Ombre furtive', 'Silent shadow', '🌘'], ['Gardien du dojo', 'Dojo guardian', '⛩️'], ['Maître ninja', 'Ninja master', '🗡️'], ['Protecteur de la forêt', 'Forest protector', '🌲'], ['Légende des ninjas', 'Ninja legend', '🏆'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
   ];
-  let activeNatureCollection = store.get('natureCollection', 'plants');
+  const NATURE_COLLECTION_ORDER = ['ninjas', 'plants', 'land', 'birds', 'ocean'];
+  NATURE_COLLECTIONS.sort((a, b) => NATURE_COLLECTION_ORDER.indexOf(a.id) - NATURE_COLLECTION_ORDER.indexOf(b.id));
+  if (!store.get('natureNinjaDefaultMigrated', false)) {
+    const previousCollection = store.get('natureCollection', null);
+    if (!previousCollection || previousCollection === 'plants') store.set('natureCollection', 'ninjas');
+    store.set('natureNinjaDefaultMigrated', true);
+  }
+  let activeNatureCollection = store.get('natureCollection', 'ninjas');
   const NATURE_TERRAIN_PATHS = {
     plants: ['grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest'],
     land: ['grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'mud', 'mud', 'mud'],
