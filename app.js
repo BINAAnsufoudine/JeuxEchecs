@@ -76,7 +76,7 @@
   let coachHintLevel = 0;
   let coachArrows = [];        // flèches du dernier coup commenté (partie coachée)
   let judging = false, judgeSeq = 0, judgeWorker = null;
-  const TERRAIN_NAMES = L({ forest: 'Forêt', desert: 'Désert', prairie: 'Prairie verte', grass: 'Jardin tropical', steppe: 'Plaine sèche', mud: 'Forêt humide', rock: 'Récif rocheux', water: 'Lagon tropical', beach: 'Plage tropicale' }, { forest: 'Forest', desert: 'Desert', prairie: 'Green meadow', grass: 'Tropical garden', steppe: 'Dry plain', mud: 'Rainforest', rock: 'Rocky reef', water: 'Tropical lagoon', beach: 'Tropical beach' });
+  const TERRAIN_NAMES = L({ forest: 'Forêt', desert: 'Désert', prairie: 'Prairie verte', grass: 'Jardin tropical', steppe: 'Plaine sèche', mud: 'Forêt humide', rock: 'Récif rocheux', water: 'Lagon tropical', beach: 'Plage tropicale', dojo: 'Jardin du dojo' }, { forest: 'Forest', desert: 'Desert', prairie: 'Green meadow', grass: 'Tropical garden', steppe: 'Dry plain', mud: 'Rainforest', rock: 'Rocky reef', water: 'Tropical lagoon', beach: 'Tropical beach', dojo: 'Dojo garden' });
   const WEATHER_NAMES = L({ sun: 'Soleil', drizzle: 'Pluie fine', heavy: 'Grosse pluie', heavystorm: 'Grosse pluie orageuse', windstorm: 'Orage et grand vent', sunwind: 'Soleil et vent', snow: 'Neige fine', sunset: 'Coucher de soleil' },
     { sun: 'Sunny', drizzle: 'Light rain', heavy: 'Heavy rain', heavystorm: 'Heavy thunderstorm', windstorm: 'Windy thunderstorm', sunwind: 'Sunny and windy', snow: 'Light snow', sunset: 'Sunset' });
   // Le paysage et la météo suivent la collection nature et le grade dans tous les modes de jeu.
@@ -4327,7 +4327,7 @@
       return `<div class="tier-row"><span class="tier-icon">${icon}</span><div class="tier-main"><b>${name}</b><span class="xp-bar"><i style="width:${pct}%"></i></span><small>${n}${next ? ` / ${next[0]} · ${L('prochain', 'next')} : ${next[1]} ${next[2]} (+${riceAmount(next[3], true)})` : L(' · tous les paliers atteints', ' · all tiers reached')}</small></div><span class="tier-medals">${TIERS_MODE.map((tr, k) => `<i class="${k <= i ? 'on' : ''}" title="${tr[2]}">${tr[1]}</i>`).join('')}</span></div>`;
     }).join('')}</div>`;
   }
-  function walletState() { return Object.assign({ wheat: 0, pearls: 0, leaves: 0, meat: 0, xp: 0, owned: [], frame: null, title: null, firstWin: '', badgesPaid: [] }, store.get('wallet', {})); }
+  function walletState() { return Object.assign({ wheat: 0, pearls: 0, leaves: 0, meat: 0, gold: 0, xp: 0, owned: [], frame: null, title: null, firstWin: '', badgesPaid: [] }, store.get('wallet', {})); }
   function levelOf(xp) { let l = 1; while (l < 50 && xp >= xpFor(l)) { xp -= xpFor(l); l++; } return { level: l, into: xp, need: xpFor(l) }; }
   const RICE_PER_KG = 40000;
   const RICE_UNITS = [
@@ -4382,6 +4382,9 @@
     { id: 'ocean', name: L('Océan Indien', 'Indian Ocean'), icon: '🐋', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 6, items: [
       ['Plage', 'Beach', '🏖️'], ['Crabe de sable', 'Sand crab', '🦀'], ['Récif corallien', 'Coral reef', '🪸'], ['Poissons tropicaux', 'Tropical fish', '🐠'], ['Lagon turquoise', 'Turquoise lagoon', '🐟'], ['Tortue marine', 'Sea turtle', '🐢'], ['Dauphins', 'Dolphins', '🐬'], ['Mer ouverte', 'Open sea', '🌊'], ['Grand océan Indien', 'Great Indian Ocean', '🌊'], ['Baleine majestueuse', 'Majestic whale', '🐋'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
+    { id: 'ninjas', name: L('Ninjas', 'Ninjas'), icon: '🥷', unlockGrade: 1, items: [
+      ['Apprenti ninja', 'Ninja apprentice', '🥷'], ['Éclaireur du dojo', 'Dojo scout', '👣'], ['Disciple du shuriken', 'Shuriken disciple', '✴️'], ['Shinobi confirmé', 'Skilled shinobi', '🥷'], ['Maître du katana', 'Katana master', '⚔️'], ['Ombre furtive', 'Silent shadow', '🌘'], ['Gardien du dojo', 'Dojo guardian', '⛩️'], ['Maître ninja', 'Ninja master', '🗡️'], ['Protecteur de la forêt', 'Forest protector', '🌲'], ['Légende des ninjas', 'Ninja legend', '🏆'],
+    ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
   ];
   let activeNatureCollection = store.get('natureCollection', 'plants');
   const NATURE_TERRAIN_PATHS = {
@@ -4389,6 +4392,7 @@
     land: ['grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'mud', 'mud', 'mud'],
     birds: ['grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest'],
     ocean: ['beach', 'beach', 'rock', 'rock', 'water', 'water', 'water', 'water', 'water', 'water'],
+    ninjas: ['grass', 'grass', 'rock', 'rock', 'dojo', 'dojo', 'dojo', 'forest', 'forest', 'dojo'],
   };
   const NATURE_WEATHER_PATH = ['sun', 'sunwind', 'cloudy', 'sun', 'drizzle', 'sunwind', 'cloudy', 'sunset', 'sunwind', 'sun'];
   function natureTerrainForGrade() {
@@ -4402,6 +4406,7 @@
   }
   function natureCurrency(grade = adventureGrade(levelOf(walletState().xp).level)) {
     if (activeNatureCollection === 'ocean') return { key: 'pearls', icon: '🦪', name: L('Perles', 'Pearls'), unit: L('perles', 'pearls') };
+    if (activeNatureCollection === 'ninjas') return { key: 'gold', icon: '🪙', name: L('Pièces d’or', 'Gold coins'), unit: L('pièces d’or', 'gold coins') };
     if (activeNatureCollection === 'land') {
       const item = NATURE_COLLECTIONS.find((entry) => entry.id === 'land').items[Math.max(0, Math.min(9, grade - 1))];
       return item.currency === 'meat'
@@ -4450,8 +4455,9 @@
     rewardPop(`${why ? `${why} · ` : ''}+${natureCurrencyAmount(rewardCurrency, wheat, true)} · +${xp} XP`);
     if (after > before) { rewardPop(L(`Niveau ${after} atteint ! +${natureCurrencyAmount(rewardCurrency, 50 * (after - before), true)}`, `Level ${after} reached! +${natureCurrencyAmount(rewardCurrency, 50 * (after - before), true)}`), true); sounds.win(); }
     if (afterGrade > beforeGrade) {
-      const plant = GARDEN_PLANTS[afterGrade - 1];
-      setTimeout(() => rewardPop(L(`Grade ${afterGrade}/10 ! ${plant.icon} ${plant.name} rejoint ton jardin.`, `Rank ${afterGrade}/10! ${plant.icon} ${plant.name} joins your garden.`), true), 800);
+      const collection = NATURE_COLLECTIONS.find((item) => item.id === activeNatureCollection) || NATURE_COLLECTIONS[0];
+      const stage = collection.items[afterGrade - 1];
+      setTimeout(() => rewardPop(L(`Grade ${afterGrade}/10 ! ${stage.icon} ${stage.name} rejoint ta collection.`, `Rank ${afterGrade}/10! ${stage.icon} ${stage.name} joins your collection.`), true), 800);
       const newCollection = NATURE_COLLECTIONS.find((item) => item.unlockGrade === afterGrade && item.id !== 'plants');
       if (newCollection) setTimeout(() => rewardPop(L(`Nouvelle collection débloquée : ${newCollection.icon} ${newCollection.name} !`, `New collection unlocked: ${newCollection.icon} ${newCollection.name}!`), true), 1900);
     }
@@ -4564,7 +4570,7 @@
     const nextPlant = collection.items[grade];
     const nextCollection = NATURE_COLLECTIONS.find((item) => grade < item.unlockGrade);
     $('home-garden-next').textContent = NATURE_PREVIEW_ALL_UNLOCKED
-      ? L('Tous les animaux, plantes et paysages sont disponibles à l’exploration.', 'All animals, plants, and landscapes are available to explore.')
+      ? L('Tous les thèmes et toutes les étapes sont disponibles à l’exploration.', 'All themes and stages are available to explore.')
       : nextPlant
       ? L(`Prochaine découverte au grade ${grade + 1} : ${nextPlant.icon} ${nextPlant.name}`, `Next discovery at rank ${grade + 1}: ${nextPlant.icon} ${nextPlant.name}`)
       : collection.id === 'ocean'

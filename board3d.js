@@ -9,6 +9,7 @@
   const PIECE_GLYPHS = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
   const TERRAINS = {
     forest: { name: 'Forêt', sky: 0x9eb5a1, ground: 0x304b35, wood: 0x493522, frame: ['#765735', '#503a25', '#302218'], squares: ['#c6d3a6', '#58734b'], kind: 'forest' },
+    dojo: { id: 'dojo', name: 'Jardin du dojo', sky: 0x9bb8ad, ground: 0x344a3b, wood: 0x563a2b, frame: ['#8f4137', '#64322b', '#39231f'], squares: ['#d6d1a4', '#526b4a'], kind: 'forest' },
     desert: { name: 'Désert', sky: 0xd9bb91, ground: 0xb58b53, wood: 0x78502d, frame: ['#c79b61', '#9a693e', '#70492d'], squares: ['#f0d79e', '#aa7743'], kind: 'desert' },
     prairie: { name: 'Prairie verte', sky: 0xa9c895, ground: 0x6c9651, wood: 0x68482b, frame: ['#98734a', '#72502f', '#4d3825'], squares: ['#d7e6ab', '#78a654'], kind: 'grass' },
     steppe: { name: 'Plaine sèche', sky: 0xd1c194, ground: 0x9c895b, wood: 0x6d5032, frame: ['#a8875d', '#775a39', '#503d2c'], squares: ['#e3d2a3', '#9d8353'], kind: 'steppe' },
@@ -710,7 +711,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const stone = mat(terrain.kind === 'desert' || terrain.kind === 'steppe' ? 0x9a805c : 0x777974);
       const wood = mat(terrain.kind === 'forest' ? 0x553b27 : 0x766044);
       const green = mat(terrain.kind === 'forest' ? 0x315d35 : 0x477a38);
-      const paleGreen = mat(terrain.kind === 'forest' ? 0x527543 : 0x82a84c);
+      const paleGreen = mat(terrain.id === 'dojo' ? 0xd28a9e : terrain.kind === 'forest' ? 0x527543 : 0x82a84c);
       const sand = mat(terrain.kind === 'beach' ? 0xbfa468 : 0xd2b06f);
       const drySoil = mat(0xb09a6b);
       const water = mat(0x5598a2, { roughness: 0.18, metalness: 0.16, transparent: true, opacity: 0.82 });
@@ -793,6 +794,14 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             add(stemGeo, green, x, -0.03, z, 0.45, 0.48, 0.45);
             add(stemGeo, paleGreen, x + 0.16, -0.05, z + 0.12, 0.38, 0.43, 0.38);
           }
+        }
+      }
+      if (terrain.id === 'dojo') {
+        const vermilion = mat(0x9e352c), darkWood = mat(0x38251f);
+        const post = new T.BoxGeometry(0.2, 1.45, 0.2), crossbar = new T.BoxGeometry(3.1, 0.2, 0.3), lintel = new T.BoxGeometry(3.45, 0.22, 0.38);
+        for (const z of [-7.4, 7.4]) {
+          add(post, vermilion, -0.92, 0.68, z); add(post, vermilion, 0.92, 0.68, z);
+          add(crossbar, darkWood, 0, 1.52, z); add(lintel, vermilion, 0, 1.82, z);
         }
       }
     }
