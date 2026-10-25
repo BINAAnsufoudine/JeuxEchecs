@@ -2479,14 +2479,14 @@
     if (settings.voice) speak(`${$('program-text').textContent} ${$('program-focus').textContent}`); else hush();
   };
   voiceButton();
-  function say(text, mood = '', voiceText = text) {
+  function say(text, mood = '', voiceText = text, voiceCues = null) {
     text = coachGreeting(text);
     const p = $('pz-prompt');
     p.textContent = text;
     $('coach').querySelector('.coach-identity b').textContent = coachName();
     showCoachFace($('coach-img'));
     coachMessage = text; coachMood = mood; renderCoachDock();
-    const speech = speak(voiceText);
+    const speech = speak(voiceText, voiceCues);
     const box = $('coach');
     box.className = 'coach' + (mood ? ' ' + mood : '');
     void box.offsetWidth; box.classList.add('talk');
@@ -2848,11 +2848,27 @@
     const spokenText = tutorialArrival
       ? `${pz.lesson.title}. ${st.demoIntroText || stepText}`
       : st.demoIntroText;
-    const narration = say(`${tutorialArrival ? `${pz.lesson.title}. ` : ''}${stepText}`, '', spokenText);
+    const lessonStepIndex = pz.idx;
+    const syncOpeningDemo = st.syncDemoWithVoice && st.demoMoves && st.demoMoves.length;
+    const openingMoveSpeech = syncOpeningDemo && (st.demoSpeech && st.demoSpeech[0] || openingMoveSpeechForStep(st));
+    const syncedVoiceText = syncOpeningDemo
+      ? `${st.text} ${L('Regarde le coup :', 'Watch the move:')} ${openingMoveSpeech}`
+      : spokenText;
+    const openingCueIndex = syncOpeningDemo ? syncedVoiceText.indexOf(openingMoveSpeech) : -1;
+    let narration = Promise.resolve();
+    const voiceCues = openingCueIndex >= 0 ? [{ index: openingCueIndex, run: () => playLessonDemo(st, lessonStepIndex, Promise.resolve(), narration) }] : null;
+    narration = say(`${tutorialArrival ? `${pz.lesson.title}. ` : ''}${stepText}`, '', syncedVoiceText, voiceCues);
     setPzStatus('', st.line ? L('À toi de jouer', 'Your move') : '');
     renderBoard();
     pzButtons();
-    if (st.demoMoves && st.demoMoves.length) playLessonDemo(st, pz.idx, narration);
+    if (st.demoMoves && st.demoMoves.length) {
+      if (syncOpeningDemo && voiceCues && tts && settings.voice) return;
+      playLessonDemo(st, pz.idx, narration);
+    }
+  }
+  function openingMoveSpeechForStep(step) {
+    if (!step.demoMoves || !step.demoMoves.length || !step.fen) return '';
+    return openingSpeechLine(step.fen, [step.demoMoves[0]])[0] || '';
   }
   function openingMoveSpeech(san, color, uci) {
     if (/^O-O(-O)?/.test(san)) return L(`${sideName(color)} : ${san.startsWith('O-O-O') ? 'grand roque' : 'petit roque'}.`, `${sideName(color)}: ${san.startsWith('O-O-O') ? 'queenside castling' : 'kingside castling'}.`);
@@ -2902,7 +2918,7 @@
     const seen = new Set();
     return arrows.filter((arrow) => { const key = `${arrow.from}-${arrow.to}-${arrow.color}`; if (seen.has(key)) return false; seen.add(key); return true; });
   }
-  function playLessonDemo(step, index, narration = Promise.resolve()) {
+  function playLessonDemo(step, index, narration = Promise.resolve(), speechCompletion = null) {
     const session = pz;
     const baseArrows = step.arrows || [];
     const advance = async () => {
@@ -2919,7 +2935,7 @@
       if (!played) { session.demoIndex++; advance(); return; }
       const spokenMove = step.demoSpeech && step.demoSpeech[session.demoIndex]
         || openingMoveSpeech(played.san, color, uci);
-      const speech = speak(spokenMove);
+      const speech = step.syncDemoWithVoice ? Promise.resolve() : speak(spokenMove);
       session.demoIndex++;
       if (step.annotateRelations) {
         const dynamic = openingArrowsForMove(uci, game.state, color, played);
@@ -2927,7 +2943,7 @@
       }
       animateNext = true;
       renderBoard();
-      await Promise.all([speech, new Promise((resolve) => setTimeout(resolve, Math.max(850, busyDelay(250))))]);
+      await Promise.all([speech, speechCompletion || Promise.resolve(), new Promise((resolve) => setTimeout(resolve, Math.max(850, busyDelay(250))))]);
       advance();
     };
     setPzStatus('', step.demoStartText || L('Regarde les coups de ta partie…', 'Watch the moves from your game…'));
@@ -4864,7 +4880,7 @@
       const intro = index === 0 ? `${o.name}. ${o.text} ` : '';
       steps.push({
         text: L(`${intro}Coup ${moveLabel} (${sideName(color)}) : ${purpose}`, `${intro}Move ${moveLabel} (${sideName(color)}): ${purpose}`),
-        fen, demoMoves: [uci], demoSpeech: openingSpeechLine(fen, [uci]), annotateRelations: true,
+        fen, demoMoves: [uci], demoSpeech: openingSpeechLine(fen, [uci]), annotateRelations: true, syncDemoWithVoice: true,
         demoStartText: L(`Regarde ${moveLabel} : la flèche verte montre le déplacement, les rouges les attaques et les bleues les défenses.`, `Watch ${moveLabel}: the green arrow shows the move, red arrows show attacks and blue arrows show defenses.`),
         demoDoneText: L(`But du coup : ${purpose} ${L('Appuie sur Continuer pour observer le coup suivant.', 'Press Continue to see the next move.')}`, `Purpose: ${purpose} Press Continue to see the next move.`),
       });
@@ -4892,7 +4908,7 @@
         const label = `${Math.floor(examplePly / 2) + 1}${examplePly % 2 ? '…' : '.'} ${example.san}`;
         steps.push({
           text: L(`Petit exemple guidé : ${sideName(exampleColor)} joue ${label}. Ce coup sert à ${purpose.charAt(0).toLowerCase()}${purpose.slice(1)}`, `Simple guided example: ${sideName(exampleColor)} plays ${label}. The purpose is to ${purpose.charAt(0).toLowerCase()}${purpose.slice(1)}`),
-          fen: exampleFen, demoMoves: [exampleUci], demoSpeech: openingSpeechLine(exampleFen, [exampleUci]), annotateRelations: true,
+          fen: exampleFen, demoMoves: [exampleUci], demoSpeech: openingSpeechLine(exampleFen, [exampleUci]), annotateRelations: true, syncDemoWithVoice: true,
           demoStartText: L('Observe cet exemple simple et les flèches qui montrent le coup.', 'Watch this simple example and the arrows showing the move.'),
           demoDoneText: L('Tu as vu le coup et son objectif. À toi de jouer maintenant : appuie sur Continuer.', 'You have seen the move and its purpose. Now it is your turn: press Continue.'),
         });
