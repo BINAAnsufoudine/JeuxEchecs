@@ -4392,7 +4392,7 @@
     land: ['grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'mud', 'mud', 'mud'],
     birds: ['grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest'],
     ocean: ['beach', 'beach', 'rock', 'rock', 'water', 'water', 'water', 'water', 'water', 'water'],
-    ninjas: ['grass', 'grass', 'rock', 'rock', 'dojo', 'dojo', 'dojo', 'forest', 'forest', 'dojo'],
+    ninjas: ['dojo', 'dojo', 'rock', 'rock', 'dojo', 'dojo', 'dojo', 'forest', 'forest', 'dojo'],
   };
   const NATURE_WEATHER_PATH = ['sun', 'sunwind', 'cloudy', 'sun', 'drizzle', 'sunwind', 'cloudy', 'sunset', 'sunwind', 'sun'];
   function natureTerrainForGrade() {
