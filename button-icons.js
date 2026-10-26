@@ -35,6 +35,10 @@
   const alreadyIcon = /^[\s\p{Extended_Pictographic}\u200d\ufe0f\u2190-\u21ff\u2300-\u23ff\u25a0-\u27ff\u2934-\u2935\u2b00-\u2bff½]+/u;
 
   function decorate(button) {
+    if (button instanceof HTMLButtonElement && button.matches('.home-collection-tab')) {
+      delete button.dataset.uiIcon;
+      return;
+    }
     if (!(button instanceof HTMLButtonElement) || button.querySelector('.menu-icon')) return;
     const text = `${button.getAttribute('aria-label') || ''} ${button.getAttribute('title') || ''} ${button.innerText || button.textContent || ''}`.trim();
     if (!text || alreadyIcon.test(text)) return;
