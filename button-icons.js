@@ -35,17 +35,13 @@
   const alreadyIcon = /^[\s\p{Extended_Pictographic}\u200d\ufe0f\u2190-\u21ff\u2300-\u23ff\u25a0-\u27ff\u2934-\u2935\u2b00-\u2bff½]+/u;
 
   function decorate(button) {
+    if (!(button instanceof HTMLButtonElement)) return;
+    // L'icône est recalculée à chaque changement du bouton : une icône ajoutée
+    // ensuite dans son contenu ne doit pas rester doublée par le pseudo-élément.
+    delete button.dataset.uiIcon;
     // Les cases du mini-échiquier affichent les pièces de la position : ne pas
     // leur ajouter l’icône Ninja de repli, y compris sur les cases vides.
-    if (button instanceof HTMLButtonElement && button.closest('.minimap')) {
-      delete button.dataset.uiIcon;
-      return;
-    }
-    if (button instanceof HTMLButtonElement && button.matches('.home-collection-tab')) {
-      delete button.dataset.uiIcon;
-      return;
-    }
-    if (!(button instanceof HTMLButtonElement) || button.querySelector('.menu-icon')) return;
+    if (button.closest('.minimap') || button.matches('.home-collection-tab') || button.querySelector('.menu-icon')) return;
     const text = `${button.getAttribute('aria-label') || ''} ${button.getAttribute('title') || ''} ${button.innerText || button.textContent || ''}`.trim();
     if (!text || alreadyIcon.test(text)) return;
     const rule = iconRules.find(([pattern]) => pattern.test(text));
