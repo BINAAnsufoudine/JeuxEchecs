@@ -2565,6 +2565,10 @@
     st.className = 'status' + (cls ? ' ' + cls : '');
     st.textContent = text;
   }
+  function puzzleTurnText() {
+    const side = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
+    return LANG === 'en' ? `Your move as ${side}` : `À toi de jouer avec ${side}`;
+  }
   function promptOf(it) {
     if (pz && pz.kind === 'themed') {
       const session = pz.themeSession;
@@ -2605,7 +2609,7 @@
       ? `${L('Problème', 'Puzzle')} ${pz.themeSession.index} · ${trainingTopicName(pz.themeSession.currentTopic || it.theme)} · ${L('difficulté', 'difficulty')} ${Math.round(pz.themeSession.rating)}/${MAX_LEVEL}`
       : (it.personal ? L('Ta partie · ', 'Your game · ') : '') + `${L('Niveau', 'Level')} ${row.level} · ${row.pending ? L('révision', 'review') : `${Math.min(LEVEL_SET, row.ok + 1)}/${LEVEL_SET}`}`;
     say(promptOf(it));
-    setPzStatus('', L('À toi de jouer', 'Your move'));
+    setPzStatus('', puzzleTurnText());
     renderBoard();
     pzButtons();
   }
@@ -2897,7 +2901,7 @@
     let narration = Promise.resolve();
     const voiceCues = openingCueIndex >= 0 ? [{ index: openingCueIndex, run: () => playLessonDemo(st, lessonStepIndex, Promise.resolve(), narration) }] : null;
     narration = say(`${tutorialArrival ? `${pz.lesson.title}. ` : ''}${stepText}`, '', syncedVoiceText, voiceCues);
-    setPzStatus('', st.line ? L('À toi de jouer', 'Your move') : '');
+    setPzStatus('', st.line ? puzzleTurnText() : '');
     renderBoard();
     pzButtons();
     if (st.demoMoves && st.demoMoves.length) {
