@@ -1628,10 +1628,13 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           u.fx.add(ash); u.ashes.push(ash);
         }
       } else if (kind === 'q' && u.piece === 'Q') {
-        u.angel = this.makeWhiteAngel(); actor.holder.add(u.angel);
+        // La Dame reste sur l’échiquier : elle invoque un ange distinct.
+        u.angel = this.makeWhiteAngel(); u.fx.add(u.angel);
         u.angelBaseScale = this.formScaleMatchingActor(actor, u.angel);
         u.floatH = new T.Box3().setFromObject(actor.parts.root).getSize(new T.Vector3()).y * 0.95; // flotte à hauteur des têtes
-        u.angel.scale.setScalar(0.05); actor.parts.root.visible = false;
+        u.angel.scale.setScalar(0.05);
+        const summonPos = this.sqToPos(u.attackerTo);
+        u.angel.position.set(summonPos.x, 0, summonPos.z);
         u.hiddenEnemies = [...this.chars.values()].filter((piece) => piece.piece === piece.piece.toLowerCase()).map((piece) => [piece, piece.holder.visible]);
         u.energyShots = [];
         const energyMaterial = new T.MeshBasicMaterial({ color: 0xf3fbff, transparent: true, opacity: 1, blending: T.AdditiveBlending, depthWrite: false });
@@ -2027,10 +2030,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (kind === 'q' && u.piece === 'Q') {
         const queenPos = this.sqToPos(u.attackerTo);
         if (c === actor) {
-          c.anim = null; c.holder.position.set(queenPos.x, 0, queenPos.z); c.parts.root.visible = false;
+          c.anim = null; c.holder.position.set(queenPos.x, 0, queenPos.z); c.parts.root.visible = true;
           const grow = smooth(e / 0.9);
           u.angel.scale.setScalar(0.05 + grow * u.angelBaseScale);
-          u.angel.position.y = grow * u.floatH + Math.sin(t * 3.2) * 0.08;
+          u.angel.position.set(queenPos.x, grow * u.floatH + Math.sin(t * 3.2) * 0.08, queenPos.z);
           u.angel.userData.wings.forEach((wing, i) => { wing.rotation.z = (i ? -1 : 1) * (0.12 + Math.sin(t * 5.2 + i) * 0.25); });
           u.angel.userData.halo.rotation.y = t * 1.4;
           for (const shot of u.energyShots || []) {
