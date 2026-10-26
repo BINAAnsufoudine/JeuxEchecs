@@ -4388,7 +4388,7 @@
       return `<div class="tier-row"><span class="tier-icon">${icon}</span><div class="tier-main"><b>${name}</b><span class="xp-bar"><i style="width:${pct}%"></i></span><small>${n}${next ? ` / ${next[0]} · ${L('prochain', 'next')} : ${next[1]} ${next[2]} (+${riceAmount(next[3], true)})` : L(' · tous les paliers atteints', ' · all tiers reached')}</small></div><span class="tier-medals">${TIERS_MODE.map((tr, k) => `<i class="${k <= i ? 'on' : ''}" title="${tr[2]}">${tr[1]}</i>`).join('')}</span></div>`;
     }).join('')}</div>`;
   }
-  function walletState() { return Object.assign({ wheat: 0, pearls: 0, leaves: 0, meat: 0, gold: 0, xp: 0, owned: [], frame: null, title: null, firstWin: '', badgesPaid: [] }, store.get('wallet', {})); }
+  function walletState() { return Object.assign({ wheat: 0, water: 0, pearls: 0, leaves: 0, meat: 0, gold: 0, xp: 0, owned: [], frame: null, title: null, firstWin: '', badgesPaid: [] }, store.get('wallet', {})); }
   function levelOf(xp) { let l = 1; while (l < 50 && xp >= xpFor(l)) { xp -= xpFor(l); l++; } return { level: l, into: xp, need: xpFor(l) }; }
   const RICE_PER_KG = 40000;
   const RICE_UNITS = [
@@ -4490,6 +4490,7 @@
     return NATURE_WEATHER_PATH[Math.max(0, Math.min(NATURE_WEATHER_PATH.length - 1, rank - 1))];
   }
   function natureCurrency(grade = adventureGrade(levelOf(walletState().xp).level)) {
+    if (activeNatureCollection === 'plants') return { key: 'water', icon: '💧', name: L('Gouttes d’eau', 'Water drops'), unit: L('gouttes d’eau', 'water drops') };
     if (activeNatureCollection === 'ocean') return { key: 'pearls', icon: '🦪', name: L('Perles', 'Pearls'), unit: L('perles', 'pearls') };
     if (activeNatureCollection === 'ninjas') return { key: 'gold', icon: '🪙', name: L('Pièces d’or', 'Gold coins'), unit: L('pièces d’or', 'gold coins') };
     if (activeNatureCollection === 'land') {
