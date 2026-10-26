@@ -42,7 +42,11 @@
     // Les cases du mini-échiquier affichent les pièces de la position : ne pas
     // leur ajouter l’icône Ninja de repli, y compris sur les cases vides.
     if (button.closest('.minimap') || button.matches('.home-collection-tab') || button.querySelector('.menu-icon')) return;
-    const text = `${button.getAttribute('aria-label') || ''} ${button.getAttribute('title') || ''} ${button.innerText || button.textContent || ''}`.trim();
+    // Priorité à l’icône visible du bouton (ex. les commandes de replay) avant
+    // les libellés accessibles, qui ne contiennent souvent que le nom d’action.
+    const visible = button.innerText || button.textContent || '';
+    if (alreadyIcon.test(visible.trim())) return;
+    const text = `${button.getAttribute('aria-label') || ''} ${button.getAttribute('title') || ''} ${visible}`.trim();
     if (!text || alreadyIcon.test(text)) return;
     const rule = iconRules.find(([pattern]) => pattern.test(text));
     button.dataset.uiIcon = rule ? rule[1] : '🥷';
