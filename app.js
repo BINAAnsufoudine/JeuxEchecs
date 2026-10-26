@@ -4388,7 +4388,16 @@
       return `<div class="tier-row"><span class="tier-icon">${icon}</span><div class="tier-main"><b>${name}</b><span class="xp-bar"><i style="width:${pct}%"></i></span><small>${n}${next ? ` / ${next[0]} · ${L('prochain', 'next')} : ${next[1]} ${next[2]} (+${riceAmount(next[3], true)})` : L(' · tous les paliers atteints', ' · all tiers reached')}</small></div><span class="tier-medals">${TIERS_MODE.map((tr, k) => `<i class="${k <= i ? 'on' : ''}" title="${tr[2]}">${tr[1]}</i>`).join('')}</span></div>`;
     }).join('')}</div>`;
   }
-  function walletState() { return Object.assign({ wheat: 0, water: 0, pearls: 0, leaves: 0, meat: 0, gold: 0, xp: 0, owned: [], frame: null, title: null, firstWin: '', badgesPaid: [] }, store.get('wallet', {})); }
+  function walletState() {
+    const wallet = Object.assign({ wheat: 0, water: 0, pearls: 0, leaves: 0, meat: 0, gold: 0, xp: 0, owned: [], frame: null, title: null, firstWin: '', badgesPaid: [] }, store.get('wallet', {}));
+    if (!store.get('natureCurrencyUnified', false)) {
+      wallet.wheat += ['water', 'pearls', 'leaves', 'meat', 'gold'].reduce((sum, key) => sum + (Number(wallet[key]) || 0), 0);
+      for (const key of ['water', 'pearls', 'leaves', 'meat', 'gold']) wallet[key] = 0;
+      store.set('wallet', wallet);
+      store.set('natureCurrencyUnified', true);
+    }
+    return wallet;
+  }
   function levelOf(xp) { let l = 1; while (l < 50 && xp >= xpFor(l)) { xp -= xpFor(l); l++; } return { level: l, into: xp, need: xpFor(l) }; }
   const RICE_PER_KG = 40000;
   const RICE_UNITS = [
@@ -4490,19 +4499,19 @@
     return NATURE_WEATHER_PATH[Math.max(0, Math.min(NATURE_WEATHER_PATH.length - 1, rank - 1))];
   }
   function natureCurrency(grade = adventureGrade(levelOf(walletState().xp).level)) {
-    if (activeNatureCollection === 'plants') return { key: 'water', icon: '💧', name: L('Gouttes d’eau', 'Water drops'), unit: L('gouttes d’eau', 'water drops') };
-    if (activeNatureCollection === 'ocean') return { key: 'pearls', icon: '🦪', name: L('Perles', 'Pearls'), unit: L('perles', 'pearls') };
-    if (activeNatureCollection === 'ninjas') return { key: 'gold', icon: '🪙', name: L('Pièces d’or', 'Gold coins'), unit: L('pièces d’or', 'gold coins') };
+    if (activeNatureCollection === 'plants') return { key: 'wheat', icon: '💧', name: L('Gouttes d’eau', 'Water drops'), unit: L('gouttes d’eau', 'water drops') };
+    if (activeNatureCollection === 'ocean') return { key: 'wheat', icon: '🦪', name: L('Perles', 'Pearls'), unit: L('perles', 'pearls') };
+    if (activeNatureCollection === 'ninjas') return { key: 'wheat', icon: '🪙', name: L('Pièces d’or', 'Gold coins'), unit: L('pièces d’or', 'gold coins') };
     if (activeNatureCollection === 'land') {
       const item = NATURE_COLLECTIONS.find((entry) => entry.id === 'land').items[Math.max(0, Math.min(9, grade - 1))];
       return item.currency === 'meat'
-        ? { key: 'meat', icon: '🥩', name: L('Morceaux de viande', 'Meat pieces'), unit: L('morceaux de viande', 'meat pieces') }
-        : { key: 'leaves', icon: '🍃', name: L('Feuilles', 'Leaves'), unit: L('feuilles', 'leaves') };
+        ? { key: 'wheat', icon: '🥩', name: L('Morceaux de viande', 'Meat pieces'), unit: L('morceaux de viande', 'meat pieces') }
+        : { key: 'wheat', icon: '🍃', name: L('Feuilles', 'Leaves'), unit: L('feuilles', 'leaves') };
     }
-    return { key: 'wheat', icon: '🍚', name: L('Grains de riz', 'Rice grains'), unit: L('grains de riz', 'rice grains') };
+    return { key: 'wheat', icon: '🍚', name: L('Grains de riz', 'Rice grains'), unit: L('grains de riz', 'rice grains'), scale: 'rice' };
   }
   function natureCurrencyAmount(currency, amount, compact = false) {
-    if (currency.key === 'wheat') return riceAmount(amount, compact);
+    if (currency.scale === 'rice') return riceAmount(amount, compact);
     return `${Math.floor(Number(amount) || 0).toLocaleString(LOCALE)} ${currency.unit}${compact ? ` ${currency.icon}` : ''}`;
   }
   function currentNatureBalance(wallet, grade) {
@@ -4649,7 +4658,7 @@
     const collection = NATURE_COLLECTIONS.find((item) => item.id === activeNatureCollection) || NATURE_COLLECTIONS[0];
     $('home-garden-grade').textContent = L(`Grade ${grade} sur 10 · ${gradeInfo.name}`, `Rank ${grade} of 10 · ${gradeInfo.name}`);
     $('home-currency-name').textContent = balance.currency.name;
-    $('home-currency-icon').textContent = balance.currency.key === 'wheat' ? '🧺' : balance.currency.icon;
+    $('home-currency-icon').textContent = balance.currency.icon;
     $('home-garden-badge').textContent = `${gradeInfo.icon} ${grade} / 10`;
     $('home-garden-title').textContent = L(`${collection.name} rejoint ta collection !`, `${collection.name} joins your collection!`);
     $('home-garden-copy').textContent = NATURE_PREVIEW_ALL_UNLOCKED
@@ -4677,7 +4686,7 @@
           ? L(`Prochaine collection au grade ${nextCollection.unlockGrade} : ${nextCollection.icon} ${nextCollection.name}`, `Next collection at rank ${nextCollection.unlockGrade}: ${nextCollection.icon} ${nextCollection.name}`)
           : L('Tu as exploré toutes les étapes du thème Ninjas !', 'You explored every stage of the Ninjas theme!');
     $('home-rice-amount').textContent = natureCurrencyAmount(balance.currency, balance.amount);
-    if (balance.currency.key === 'wheat') {
+    if (balance.currency.scale === 'rice') {
       const rice = riceScale(balance.amount), nextRice = rice.next;
       $('home-rice-conversion').textContent = L('40 000 grains de riz ≈ 1 kg.', '40,000 rice grains ≈ 1 kg.');
       $('home-rice-progress-bar').style.width = `${rice.progress}%`;
