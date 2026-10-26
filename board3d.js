@@ -1682,10 +1682,13 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         }
         u.energyLight = new T.PointLight(0xd9f2ff, 0, 12, 2); u.energyLight.position.set(u.target.x, 4.5, u.target.z); this.scene.add(u.energyLight);
       } else if (kind === 'q') {
-        u.blackBanshee = this.makeBlackBanshee(); actor.holder.add(u.blackBanshee);
+        // La Dame reste sur l’échiquier : la Banshee est invoquée comme entité distincte.
+        u.blackBanshee = this.makeBlackBanshee(); u.fx.add(u.blackBanshee);
         u.blackBansheeBaseScale = this.formScaleMatchingActor(actor, u.blackBanshee);
         u.floatH = new T.Box3().setFromObject(actor.parts.root).getSize(new T.Vector3()).y * 0.95; // flotte à hauteur des têtes
-        u.blackBanshee.scale.setScalar(0.05); actor.parts.root.visible = false;
+        u.blackBanshee.scale.setScalar(0.05);
+        const summonPos = this.sqToPos(u.attackerTo);
+        u.blackBanshee.position.set(summonPos.x, 0, summonPos.z);
         u.sky = {
           background: this.scene.background && this.scene.background.isColor ? this.scene.background.clone() : null,
           fog: this.scene.fog && this.scene.fog.color ? this.scene.fog.color.clone() : null,
@@ -2074,11 +2077,17 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (kind === 'q') {
         const queenPos = this.sqToPos(u.attackerTo);
         if (c === actor) {
-          c.anim = null; c.holder.position.set(queenPos.x, 0, queenPos.z); c.parts.root.visible = false;
+          c.anim = null; c.holder.position.set(queenPos.x, 0, queenPos.z); c.parts.root.visible = true;
           const grow = smooth(e / 0.9);
           u.blackBanshee.scale.setScalar(Math.max(0.05, grow * u.blackBansheeBaseScale));
-          u.blackBanshee.position.y = grow * u.floatH + Math.sin(t * 3.2) * 0.08;
-          u.blackBanshee.rotation.y = Math.sin(t * 1.8) * 0.16;
+          const approach = smooth((e - 0.85) / 1.35);
+          u.blackBanshee.position.set(
+            queenPos.x + (target.x - queenPos.x) * approach,
+            grow * u.floatH + Math.sin(t * 3.2) * 0.08 + Math.sin(approach * Math.PI) * 0.7,
+            queenPos.z + (target.z - queenPos.z) * approach,
+          );
+          const dx = target.x - queenPos.x, dz = target.z - queenPos.z;
+          u.blackBanshee.rotation.y = Math.atan2(dx, dz) + Math.sin(t * 1.8) * 0.16;
           u.blackBanshee.userData.wisps.forEach((wisp, i) => {
             wisp.rotation.z = wisp.userData.baseRotation + Math.sin(t * 5.2 + i) * 0.24;
           });
