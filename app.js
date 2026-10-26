@@ -4650,8 +4650,7 @@
     $('home-currency-name').textContent = balance.currency.name;
     $('home-currency-icon').textContent = balance.currency.key === 'wheat' ? '🧺' : balance.currency.icon;
     $('home-garden-badge').textContent = `${gradeInfo.icon} ${grade} / 10`;
-    const currentItem = collection.items[grade - 1];
-    $('home-garden-title').textContent = collection.id === 'plants' && grade === 10 ? L('Ton grand baobab est là !', 'Your great baobab is here!') : L(`${currentItem.name} rejoint ta collection !`, `${currentItem.name} joins your collection!`);
+    $('home-garden-title').textContent = L(`${collection.name} rejoint ta collection !`, `${collection.name} joins your collection!`);
     $('home-garden-copy').textContent = NATURE_PREVIEW_ALL_UNLOCKED
       ? L(`Toutes les étapes du thème ${collection.name} sont ouvertes à l’exploration !`, `Every ${collection.name} theme stage is open to explore!`)
       : collection.id === 'plants'
