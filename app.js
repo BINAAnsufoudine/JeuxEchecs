@@ -3493,7 +3493,7 @@
       const sq = ed.flip ? 63 - i : i, p = ed.board[sq], row = i >> 3, col = i & 7;
       const dark = ((sq >> 3) + (sq & 7)) % 2 === 1;
       html += `<button type="button" class="sq ${dark ? 'd' : 'l'}${sq === ed.from ? ' sel' : ''}" data-sq="${sq}" aria-label="${sqName(sq)}${p ? ' ' + pieceName(p) : ''}">`
-        + (row === 7 ? `<span class="coord f">${sqName(sq)[0]}</span>` : '') + (col === 0 ? `<span class="coord r">${sqName(sq)[1]}</span>` : '')
+        + (row === 7 ? `<span class="coord f bottom">${sqName(sq)[0]}</span>` : '') + (col === 0 ? `<span class="coord r left">${sqName(sq)[1]}</span>` : '')
         + (p ? `<span class="pc ${colorOf(p)}">${glyph(p)}</span>` : '') + '</button>';
     }
     el.innerHTML = html;
