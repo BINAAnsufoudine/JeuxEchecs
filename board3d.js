@@ -1125,7 +1125,19 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           const len = Math.hypot(b.x - a.x, b.z - a.z) || 1;
           const ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
           const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); } };
-          if (m.flag === 'ep') {
+          const ocean = root.PieceTheme === 'ocean';
+          if (ocean && far && m.flag !== 'ep') {
+            // Thème Océan : jet d'eau (tour, dame) ou salve de bulles (cavalier, fou) ; les Noirs crachent de l'encre
+            const jet = kind === 'q' || kind === 'r';
+            shot = { tech: jet ? 'water' : 'bubble', ink: !white, victim: v, target: b, fire: 0.7 };
+            shot.flight = jet ? 0.45 + len * 0.09 : 0.3 + len * 0.07;
+            shot.impact = shot.fire + shot.flight;
+            shot.runStart = shot.impact + 0.9;
+            die({ t0: now + EXR + shot.impact, hit: true, swept: true, counter: { start: now, end: now + EXR, at: a } });
+          } else if (ocean && kind === 'k' && m.flag !== 'ep') {
+            const gap = Math.min(0.62, len);
+            duel = { stop: { x: b.x - ux * gap, z: b.z - uz * gap }, foe: b, len: 2.6, rate: 1.5, brawl: true };
+          } else if (m.flag === 'ep') {
             // Prise en passant : le pion file en un éclair à côté de sa cible, dont la tête tombe au sol
             knightAttack = { style: 'enpassant', start: now, from: a, target: b, to: this.sqToPos(m.to), duration: 2.6, victim: v, fx: [] };
             die({ t0: now + knightAttack.duration, knightAttack });
@@ -2969,6 +2981,13 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       finally { saved.forEach(([o, ch]) => { o.userData.char = ch; }); }
     }
 
+    // Changement de thème des personnages : on les recrée tous au prochain affichage
+    rebuildPieces() {
+      for (const c of this.chars.values()) this.pieces.remove(c.holder);
+      this.chars = new Map();
+      this.boardKey = null;
+    }
+
     makeChar(piece) {
       const T = this.THREE;
       const parts = root.Models3D.build(T, piece);
@@ -3090,7 +3109,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
               glide(a.from, a.to, u, false);
               if (u >= 1) arrive();
             }
-            if (s.tech === 'fire') this.flyFire(c, s, el, t); else this.flyDragon(c, s, el, t);
+            if (s.tech === 'fire') this.flyFire(c, s, el, t); else if (s.tech === 'bubble') this.flyBubbles(c, s, el, t); else this.flyDragon(c, s, el, t);
             continue;
           }
           if (a.toss) {
@@ -4676,8 +4695,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         const g = new T.Group();
         const water = s.fireDragon
           ? new T.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: 0.92 })
-          : new T.MeshToonMaterial({ color: 0x3fa9f5, transparent: true, opacity: 0.85 });
-        const foam = new T.MeshBasicMaterial({ color: s.fireDragon ? 0x3a1608 : 0xe6f7ff });
+          : new T.MeshToonMaterial({ color: s.ink ? 0x120d1f : 0x3fa9f5, transparent: true, opacity: 0.9 });
+        const foam = new T.MeshBasicMaterial({ color: s.fireDragon ? 0x3a1608 : s.ink ? 0x8a7fb0 : 0xe6f7ff });
         for (let i = 0; i < N; i++) {
           // Dragon de feu : corps du jaune (tête) au rouge sombre (queue), avec des flammes le long du dos
           const segMat = s.fireDragon ? new T.MeshBasicMaterial({ color: new T.Color(0xffb020).lerp(new T.Color(0xc41a06), Math.min(1, i / N * 1.6)), transparent: true, opacity: 0.95, toneMapped: false }) : water;
@@ -4721,7 +4740,50 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (el >= s.impact && !s.boom && !s.splashed) {
         s.splashed = true;
         if (s.fireDragon) this.explode(s, end, el, t, [0xfff1a8, 0xff6a1a, 0xffb347], [0xff4500, 0x2a1a12], false);
+        else if (s.ink) this.explode(s, end, el, t, [0x6a5a90, 0x1c1530, 0x4a3d6e], [0x1c1530, 0x6a5a90], true);
         else this.explode(s, end, el, t, [0xd6f2ff, 0x3fa9f5, 0x9fdcff], [0x3fa9f5, 0xe6f7ff], true);
+      }
+      this.boomStep(s, el);
+    }
+
+    // Thème Océan : une salve de bulles part des nageoires, file en ondulant et éclate sur la cible
+    flyBubbles(c, s, el, t) {
+      const T = this.THREE;
+      const N = 14;
+      if (el < s.fire) {
+        if (!s.charge) s.charge = this.fx(s, new T.Mesh(new T.SphereGeometry(0.1, 12, 8), new T.MeshBasicMaterial({ color: s.ink ? 0x6a5a90 : 0xbfeaff, transparent: true, opacity: 0.55, depthWrite: false })));
+        s.charge.position.copy(this.handsOf(c));
+        s.charge.scale.setScalar(0.4 + (el / s.fire) * 1.6);
+      } else if (s.charge) s.charge.visible = false;
+      if (el >= s.fire && !s.bubbles && !s.boom) {
+        s.start = this.handsOf(c);
+        s.bubbles = [];
+        for (let i = 0; i < N; i++) {
+          const r = 0.1 + Math.random() * 0.12;
+          const b = new T.Mesh(new T.SphereGeometry(r, 12, 8), new T.MeshBasicMaterial({ color: s.ink ? 0x241a3a : 0x5cc4ff, transparent: true, opacity: 0.75, depthWrite: false }));
+          const shine = new T.Mesh(new T.SphereGeometry(r * 0.3, 6, 4), new T.MeshBasicMaterial({ color: 0xffffff }));
+          shine.position.set(-r * 0.4, r * 0.45, r * 0.3); b.add(shine);
+          b.userData = { lag: i * 0.035, ph: Math.random() * 6, off: (Math.random() - 0.5) * 0.3 };
+          s.bubbles.push(this.fx(s, b));
+        }
+      }
+      const end = new T.Vector3(s.target.x, 0.6, s.target.z);
+      if (s.bubbles && el < s.impact + 0.3) {
+        const dir = end.clone().sub(s.start); dir.y = 0;
+        const side = new T.Vector3(-dir.z, 0, dir.x).normalize();
+        for (const b of s.bubbles) {
+          const u = Math.max(0, Math.min(1, (el - s.fire - b.userData.lag) / s.flight));
+          b.visible = el - s.fire > b.userData.lag && u < 1;
+          const p = s.start.clone().lerp(end, u);
+          p.y += Math.sin(Math.PI * u) * 0.35 + Math.sin(el * 9 + b.userData.ph) * 0.05;
+          p.addScaledVector(side, Math.sin(u * 7 + b.userData.ph) * 0.12 + b.userData.off * (1 - u));
+          b.position.copy(p);
+        }
+      }
+      if (el >= s.impact && !s.boom) {
+        if (s.bubbles) for (const b of s.bubbles) b.visible = false;
+        if (s.ink) this.explode(s, end, el, t, [0x6a5a90, 0x1c1530, 0x4a3d6e], [0x1c1530, 0x6a5a90], true);
+        else this.explode(s, end, el, t, [0xe6f7ff, 0x7fd0ff, 0xbfeaff], [0xbfeaff, 0xffffff], true);
       }
       this.boomStep(s, el);
     }

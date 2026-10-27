@@ -677,9 +677,11 @@
 
   function build(THREE, piece) {
     T = THREE;
-    const parts = BUILD[piece]();
+    // thème Océan Indien : créatures marines (ocean3d.js) au lieu des ninjas
+    const ocean = root.PieceTheme === 'ocean' && root.OceanModels;
+    const parts = ocean ? root.OceanModels.build(THREE, piece) : BUILD[piece]();
     const k = SIZE[piece.toLowerCase()] * SCALE * (parts.scaleK || 1);
-    if (parts.head) parts.head.scale.setScalar(0.5);
+    if (parts.head && !parts.noHeadScale) parts.head.scale.setScalar(0.5);
     parts.root.scale.setScalar(k);
     parts.piece = piece;
     parts.phase = Math.random() * Math.PI * 2;
