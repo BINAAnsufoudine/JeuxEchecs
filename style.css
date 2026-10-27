@@ -770,6 +770,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .home-welcome[data-theme-bg="modern"] { background-image: linear-gradient(100deg, rgba(14,16,22,.88) 0%, rgba(14,16,22,.58) 48%, rgba(14,16,22,.08) 85%), url(fond_ecran/modern.webp); }
 .home-welcome[data-theme-bg="land"] { background-image: linear-gradient(100deg, rgba(12,26,10,.86) 0%, rgba(12,26,10,.55) 48%, rgba(12,26,10,.05) 85%), url(fond_ecran/land.webp); background-position: center 45%; }
 .home-welcome[data-theme-bg="birds"] { background-image: linear-gradient(100deg, rgba(8,24,36,.86) 0%, rgba(8,24,36,.55) 48%, rgba(8,24,36,.05) 85%), url(fond_ecran/birds.webp); background-position: center 35%; }
+.home-welcome[data-theme-bg="ninjas"] { background-image: linear-gradient(100deg, rgba(10,8,22,.78) 0%, rgba(10,8,22,.45) 48%, rgba(10,8,22,0) 85%), url(fond_ecran/ninjas.webp); background-position: center 30%; }
 .home-welcome[data-theme-bg]::after { display: none; }
 .home-garden-heading { margin-top: 22px; }
 .home-tropical-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(235px, .75fr); gap: 12px; }
