@@ -4744,6 +4744,8 @@
     $('home-currency-icon').textContent = balance.currency.icon;
     $('home-garden-badge').textContent = `${gradeInfo.icon} ${grade} / 10`;
     $('home-garden-title').textContent = L(`Ta collection ${collection.name}`, `Your ${collection.name} collection`);
+    // les icônes des boutons et des menus suivent le thème (plus d'icônes ninja dans les autres thèmes)
+    if (window.setIconTheme) window.setIconTheme(collection.id);
     // l'en-tête et l'accueil suivent le thème choisi
     $('home-theme-heading').textContent = L(`Thème ${collection.name} ${collection.icon}`, `${collection.name} theme ${collection.icon}`);
     const card = $('home-theme-heading').closest('.home-section-heading') && document.querySelector('.home-garden-card');
@@ -4831,7 +4833,7 @@
       equipped = { name: theme.name, preview: `<span class="shop-board"><i style="background:${theme.light}"></i><i style="background:${theme.dark}"></i><i style="background:${theme.dark}"></i><i style="background:${theme.light}"></i></span>` };
     } else if (shopCategory === 'frame') {
       equipped = w.frame ? shopItems().find((item) => item.kind === 'frame' && item.key === w.frame) : null;
-      equipped ||= { name: L('Cadre standard', 'Default frame'), preview: '<span class="shop-frame">🥷</span>' };
+      equipped ||= { name: L('Cadre standard', 'Default frame'), preview: `<span class="shop-frame">${(NATURE_COLLECTIONS.find((c) => c.id === activeNatureCollection) || { icon: '♞' }).icon}</span>` };
     } else {
       equipped = w.title ? shopTitleItems().find((item) => item.key === w.title) : null;
     }

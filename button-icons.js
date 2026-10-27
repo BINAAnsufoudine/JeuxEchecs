@@ -1,5 +1,16 @@
-/* Icônes décoratives pour les commandes de l'application (univers Ninja). */
+/* Icônes décoratives pour les commandes de l'application. Les icônes propres à l'univers Ninja
+   sont remplacées par celles du thème choisi (plantes, animaux, oiseaux, océan). */
 (() => {
+  const THEME_ICONS = {
+    ninjas: {},
+    plants: { '🥷': '🌱', '⛩️': '🌻', '🏯': '🏡', '🌀': '🍃', '🗡️': '🌿', '🥋': '🧑‍🌾' },
+    land: { '🥷': '🐾', '⛩️': '🌳', '🏯': '🏕️', '🌀': '🦋', '🗡️': '🦁', '🥋': '🐒' },
+    birds: { '🥷': '🪶', '⛩️': '🪺', '🏯': '🌴', '🌀': '🕊️', '🗡️': '🦅', '🥋': '🦜' },
+    ocean: { '🥷': '🐚', '⛩️': '🏝️', '🏯': '⚓', '🌀': '🌊', '🗡️': '🔱', '🥋': '🐠' },
+  };
+  let theme = 'ninjas';
+  try { theme = JSON.parse(localStorage.getItem('cavalier.natureCollection')) || 'ninjas'; } catch { theme = 'ninjas'; }
+  const themed = (icon) => ((THEME_ICONS[theme] || {})[icon]) || icon;
   const iconRules = [
     [/retour|back|précédent|previous|fermer|close|annuler|cancel|undo/i, '↩️'],
     [/réglage|paramètre|setting|option/i, '⚙️'],
@@ -50,7 +61,7 @@
     const text = `${button.getAttribute('aria-label') || ''} ${button.getAttribute('title') || ''} ${visible}`.trim();
     if (!text || alreadyIcon.test(text)) return;
     const rule = iconRules.find(([pattern]) => pattern.test(text));
-    button.dataset.uiIcon = rule ? rule[1] : '🥷';
+    button.dataset.uiIcon = themed(rule ? rule[1] : '🥷');
   }
 
   function scan(root = document) {
@@ -58,6 +69,22 @@
     root.querySelectorAll?.('button').forEach(decorate);
   }
 
+  // icônes des menus écrites dans la page : l'icône d'origine est gardée pour pouvoir changer de thème
+  function applyMenuIcons() {
+    document.querySelectorAll('.menu-icon').forEach((span) => {
+      if (!span.dataset.baseIcon) span.dataset.baseIcon = span.textContent;
+      const icon = themed(span.dataset.baseIcon);
+      if (span.textContent !== icon) span.textContent = icon;
+    });
+  }
+  window.setIconTheme = (next) => {
+    if (!next || next === theme) return;
+    theme = next;
+    applyMenuIcons();
+    document.querySelectorAll('button').forEach((b) => { delete b.dataset.uiIcon; decorate(b); });
+  };
+
+  applyMenuIcons();
   scan();
   new MutationObserver(records => {
     for (const record of records) {
