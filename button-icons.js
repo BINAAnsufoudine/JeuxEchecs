@@ -33,6 +33,7 @@
     [/abandon|resign|quitter|exit/i, '🏳️'],
   ];
   const alreadyIcon = /^[\s\p{Extended_Pictographic}\u200d\ufe0f\u2190-\u21ff\u2300-\u23ff\u25a0-\u27ff\u2934-\u2935\u2b00-\u2bff½]+/u;
+  const containsIcon = /[\p{Extended_Pictographic}\u2190-\u21ff\u2300-\u23ff\u25a0-\u27ff\u2934-\u2935\u2b00-\u2bff½]/u;
 
   function decorate(button) {
     if (!(button instanceof HTMLButtonElement)) return;
@@ -45,7 +46,7 @@
     // Priorité à l’icône visible du bouton (ex. les commandes de replay) avant
     // les libellés accessibles, qui ne contiennent souvent que le nom d’action.
     const visible = button.innerText || button.textContent || '';
-    if (alreadyIcon.test(visible.trim())) return;
+    if (containsIcon.test(visible)) return;
     const text = `${button.getAttribute('aria-label') || ''} ${button.getAttribute('title') || ''} ${visible}`.trim();
     if (!text || alreadyIcon.test(text)) return;
     const rule = iconRules.find(([pattern]) => pattern.test(text));

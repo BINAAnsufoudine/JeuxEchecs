@@ -4722,6 +4722,7 @@
     $('home-player-photo').className = 'profile-photo' + (w.frame ? ` frame-${w.frame}` : '');
     $('home-player-title').hidden = !w.title; $('home-player-title').textContent = w.title ? `« ${titleName(w.title)} »` : '';
   }
+  let shopCategory = 'theme';
   function renderShop() {
     const w = walletState(), lv = levelOf(w.xp), q = questState(), defs = questList();
     const natureGrade = adventureGrade(lv.level), natureInfo = natureGradesFor()[natureGrade - 1];
@@ -4730,20 +4731,49 @@
     html += `<div class="shop-head"><span class="lvl-badge big">${natureInfo.icon} ${L('Grade', 'Rank')} ${natureGrade}/10</span><div class="shop-xp"><span class="xp-bar"><i style="width:${adventureProgress(w.xp, natureGrade)}%"></i></span><small>${lv.level >= 50 ? L(`Palier maximal atteint : ${natureInfo.name}`, `Top rank reached: ${natureInfo.name}`) : `${natureInfo.name} · ${lv.into} / ${lv.need} XP`}</small></div></div>`;
     html += `<p class="level-help">${L(`Gagne des ${currency.currency.unit} et de l’expérience dans tous les modes : parties, problèmes, leçons, défi du jour, parties en ligne et tournois. Chaque niveau gagné rapporte 50 ${currency.currency.unit}.`, `Earn ${currency.currency.unit} and experience in every mode: games, puzzles, lessons, daily challenge, online games and tournaments. Each level gives 50 ${currency.currency.unit}.`)}</p>`;
     html += `<h3 class="train-h shop-section-title">${L('Quêtes du jour', 'Daily quests')}<small>${L('Des pièces à gagner', 'Coins to earn')}</small></h3><div class="quest-list">${q.ids.map((id) => { const d = defs.find((x) => x.id === id); const p = Math.min(d.goal, q.prog[id] || 0), pct = Math.round(p / d.goal * 100); return `<div class="quest${q.claimed[id] ? ' done' : ''}"><div class="quest-copy"><span>${q.claimed[id] ? '✅' : '🎯'} ${d.text}</span><small>${p} / ${d.goal}</small><i class="quest-progress"><b style="width:${pct}%"></b></i></div><strong>${natureCurrencyAmount(currency.currency, 30, true)}</strong></div>`; }).join('')}<div class="quest chest${q.chest ? ' done' : ''}"><div class="quest-copy"><span>${q.chest ? '✅' : '🎁'} ${L('Coffre des trois quêtes', 'Three-quest chest')}</span><small>${q.ids.filter((id) => q.claimed[id]).length} / 3</small><i class="quest-progress"><b style="width:${q.ids.filter((id) => q.claimed[id]).length / 3 * 100}%"></b></i></div><strong>${natureCurrencyAmount(currency.currency, 60, true)}</strong></div></div>`;
+    const tabs = [
+      ['theme', '🧩', L('Plateaux', 'Boards')],
+      ['frame', '🖼️', L('Cadres', 'Frames')],
+      ['title', '🏅', L('Titres', 'Titles')],
+    ];
+    html += `<div class="shop-tabs" role="tablist" aria-label="${L('Catégories de la boutique', 'Shop categories')}">${tabs.map(([kind, icon, label]) => {
+      const items = shopItems().filter((item) => item.kind === kind), count = items.filter((item) => owns(item.id)).length;
+      return `<button type="button" role="tab" class="shop-tab${shopCategory === kind ? ' active' : ''}" data-shop-tab="${kind}" aria-selected="${shopCategory === kind}"><span>${icon} ${label}</span><small>${count}/${items.length}</small></button>`;
+    }).join('')}</div>`;
+    const currentItems = shopItems().filter((item) => item.kind === shopCategory);
+    let equipped;
+    if (shopCategory === 'theme') {
+      const theme = THEMES[settings.theme] || THEMES.foret;
+      equipped = { name: theme.name, preview: `<span class="shop-board"><i style="background:${theme.light}"></i><i style="background:${theme.dark}"></i><i style="background:${theme.dark}"></i><i style="background:${theme.light}"></i></span>` };
+    } else if (shopCategory === 'frame') {
+      equipped = w.frame ? shopItems().find((item) => item.kind === 'frame' && item.key === w.frame) : null;
+      equipped ||= { name: L('Cadre standard', 'Default frame'), preview: '<span class="shop-frame">🥷</span>' };
+    } else {
+      equipped = w.title ? shopTitleItems().find((item) => item.key === w.title) : null;
+    }
+    const equippedName = equipped ? equipped.name : L('Aucun titre équipé', 'No title equipped');
+    const equippedPreview = equipped ? equipped.preview : '<span class="shop-no-title">🏅</span>';
+    html += `<div class="shop-equipped"><span class="shop-equipped-caption">${L('Actuellement équipé', 'Currently equipped')}</span><span class="shop-equipped-preview">${equippedPreview}</span><b>${equippedName}</b></div>`;
+    if (shopCategory === 'title') {
+      const pathItems = shopTitleItems().filter((item) => item.collection === activeNatureCollection);
+      html += `<div class="shop-title-path"><b>${L('Parcours des titres', 'Title path')}</b><div>${pathItems.map((item, index) => `<span class="shop-title-step${owns(item.id) ? ' reached' : ''}${w.title === item.key ? ' current' : ''}" title="${item.name}"><i>${SHOP_TITLE_ILLUSTRATIONS[item.collection][index]}</i><small>${index + 1}</small></span>`).join('')}</div></div>`;
+    }
     const section = (kind, title) => {
-      const items = shopItems().filter((x) => x.kind === kind);
-      return `<h3 class="train-h">${title}</h3><div class="shop-grid">${items.map((it) => {
+      const items = currentItems;
+      return `<h3 class="train-h shop-section-title">${title}<small>${L(`${items.filter((item) => owns(item.id)).length} possédé(s)`, `${items.filter((item) => owns(item.id)).length} owned`)}</small></h3><div class="shop-grid">${items.map((it) => {
         const have = owns(it.id), used = (kind === 'frame' && w.frame === it.key) || (kind === 'title' && w.title === it.key) || (kind === 'theme' && settings.theme === it.key);
         const locked = it.lvl && lv.level < it.lvl;
+        const state = used ? L('Équipé', 'Equipped') : have ? L('Possédé · prêt à équiper', 'Owned · ready to equip') : locked ? L(`Débloqué au niveau ${it.lvl}`, `Unlocks at level ${it.lvl}`) : currency.amount >= it.price ? L('Disponible', 'Available') : L(`Encore ${natureCurrencyAmount(currency.currency, it.price - currency.amount, true)} à gagner`, `Earn ${natureCurrencyAmount(currency.currency, it.price - currency.amount, true)} more`);
         const btn = used ? `<button class="btn" data-shop-off="${it.id}">${kind === 'theme' ? L('Utilisé', 'In use') : L('Retirer', 'Remove')}</button>`
           : have ? `<button class="btn primary" data-shop-use="${it.id}">${L('Utiliser', 'Use')}</button>`
           : locked ? `<button class="btn" disabled>${L(`Niveau ${it.lvl}`, `Level ${it.lvl}`)}</button>`
           : `<button class="btn${currency.amount >= it.price ? ' primary' : ''}" data-shop-buy="${it.id}" ${currency.amount >= it.price ? '' : 'disabled'}>${natureCurrencyAmount(currency.currency, it.price, true)}</button>`;
-        return `<div class="shop-item${used ? ' on' : ''}" data-kind="${kind}"><div class="shop-item-preview">${it.preview}</div><b>${it.name}</b>${btn}</div>`;
+        return `<div class="shop-item${used ? ' on' : ''}${have && !used ? ' owned' : ''}${locked ? ' locked' : ''}" data-kind="${kind}"><div class="shop-item-preview">${it.preview}</div><b>${it.name}</b><small class="shop-item-state${used ? ' equipped' : ''}">${state}</small>${btn}</div>`;
       }).join('')}</div>`;
     };
-    html += tiersHtml();
-    html += section('theme', L('Plateaux', 'Boards')) + section('frame', L('Cadres de photo', 'Photo frames')) + section('title', L('Titres', 'Titles'));
+    const activeTab = tabs.find(([kind]) => kind === shopCategory) || tabs[0];
+    html += `<div class="shop-tab-panel" role="tabpanel" aria-label="${activeTab[2]}">${shopCategory === 'title' ? section('title', activeTab[2]) : shopCategory === 'frame' ? section('frame', L('Cadres de photo', 'Photo frames')) : section('theme', activeTab[2])}</div>`;
+    html += `<details class="shop-tier-details"><summary>${L('🏆 Progression des récompenses par mode', '🏆 Rewards progress by mode')}</summary>${tiersHtml()}</details>`;
     $('shop-body').innerHTML = html;
   }
   function openShop() {
@@ -4751,6 +4781,8 @@
     show('shop'); renderShop();
   }
   $('shop-body').addEventListener('click', (e) => {
+    const tab = e.target.closest('[data-shop-tab]');
+    if (tab) { shopCategory = tab.dataset.shopTab; renderShop(); return; }
     const b = e.target.closest('[data-shop-buy],[data-shop-use],[data-shop-off]'); if (!b) return;
     const w = walletState();
     const id = b.dataset.shopBuy || b.dataset.shopUse || b.dataset.shopOff, it = shopItems().find((x) => x.id === id);
