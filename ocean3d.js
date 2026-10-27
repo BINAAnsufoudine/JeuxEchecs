@@ -1,5 +1,6 @@
 /* Ata Wawé — personnages 3D du thème « Océan Indien ».
-   Blancs : créatures lumineuses du lagon. Noirs : créatures des abysses.
+   Blancs : créatures lumineuses du lagon. Noirs : prédateurs des abysses.
+   Chaque créature est dans sa position naturelle (cétacés et poissons allongés).
    Chaque modèle expose les mêmes articulations que les ninjas (torse, tête, bras, jambes),
    ce qui permet de réutiliser toutes les animations : les bras deviennent des nageoires,
    des pinces ou des tentacules, les jambes des nageoires caudales ou des pattes. */
@@ -119,32 +120,42 @@
       p.scaleK = 1.25;
       return p;
     },
-    Q() { // dauphin, dressé sur sa queue
-      const p = base(0.36);
-      const body = mesh(sphere(1, 24, 16), mat('#7fb2d9', { rough: 0.35 }), 0, 0.06, 0); body.scale.set(0.11, 0.26, 0.12); p.torso.add(body);
-      const belly = mesh(sphere(1, 24, 16), mat('#eaf4ff', { rough: 0.35 }), 0, 0.04, 0.03); belly.scale.set(0.09, 0.22, 0.1); p.torso.add(belly);
-      p.head.position.set(0, 0.3, 0.03);
-      p.head.add(mesh(sphere(0.09, 18, 14), mat('#7fb2d9', { rough: 0.35 })));
-      const beak = mesh(new T.CylinderGeometry(0.02, 0.04, 0.1, 10), mat('#7fb2d9', { rough: 0.35 }), 0, -0.02, 0.1); beak.rotation.x = Math.PI / 2; p.head.add(beak);
-      eyes(p.head, 0.05, 0.03, 0.06, 0.022);
-      crown(p.head, 0.1, '#e9e4ff', 0.7); // diadème de la dame
-      fin(p.torso, '#5a92bf', 0.015, 0.09, 0.06, 0, 0.15, -0.1);
-      fin(p.armL, '#5a92bf', 0.02, 0.07, 0.04, -0.11, 0.05, 0.02); fin(p.armR, '#5a92bf', 0.02, 0.07, 0.04, 0.11, 0.05, 0.02);
-      fin(p.legL, '#5a92bf', 0.12, 0.02, 0.06, -0.05, -0.22, -0.03, 0.3); fin(p.legR, '#5a92bf', 0.12, 0.02, 0.06, 0.05, -0.22, -0.03, -0.3);
+    Q() { // dauphin, allongé comme quand il nage
+      const p = base(0.3), col = '#7fb2d9', dark = '#5a92bf';
+      const body = mesh(sphere(1, 24, 16), mat(col, { rough: 0.35 })); body.scale.set(0.1, 0.1, 0.27); p.torso.add(body);
+      const belly = mesh(sphere(1, 24, 16), mat('#eaf4ff', { rough: 0.35 }), 0, -0.03, 0.02); belly.scale.set(0.085, 0.07, 0.23); p.torso.add(belly);
+      p.head.position.set(0, 0.02, 0.24);
+      p.head.add(mesh(sphere(0.085, 18, 14), mat(col, { rough: 0.35 })));
+      const beak = mesh(new T.CylinderGeometry(0.022, 0.04, 0.1, 10), mat(col, { rough: 0.35 }), 0, -0.03, 0.1); beak.rotation.x = Math.PI / 2; p.head.add(beak);
+      eyes(p.head, 0.06, 0.02, 0.04, 0.02);
+      crown(p.head, 0.09, '#e9e4ff', 0.6); // diadème de la dame
+      const dorsal = fin(p.torso, dark, 0.012, 0.08, 0.06, 0, 0.11, -0.04, 0, 1); dorsal.rotation.x = -0.5;
+      fin(p.armL, dark, 0.07, 0.012, 0.035, -0.1, -0.05, 0.08, 0.5, 1); fin(p.armR, dark, 0.07, 0.012, 0.035, 0.1, -0.05, 0.08, -0.5, 1);
+      // queue horizontale : elle bat de haut en bas avec les animations de jambes
+      p.legL.add(mesh(sphere(0.04, 12, 8), mat(col), 0, 0.01, -0.29));
+      fin(p.legL, dark, 0.12, 0.012, 0.045, 0, 0.01, -0.35, 0, 1);
+      p.scaleK = 1.15;
       return p;
     },
-    K() { // baleine à bosse couronnée
-      const p = base(0.36);
-      const body = mesh(sphere(1, 26, 18), mat('#3d6fb0', { rough: 0.5 }), 0, 0.05, 0); body.scale.set(0.17, 0.29, 0.17); p.torso.add(body);
-      const belly = mesh(sphere(1, 26, 18), mat('#f1f5ff'), 0, 0.02, 0.05); belly.scale.set(0.13, 0.24, 0.14); p.torso.add(belly);
-      for (let i = 0; i < 6; i++) p.torso.add(mesh(box(0.13, 0.008, 0.01), mat('#c9d6ee'), 0, -0.08 + i * 0.045, 0.185));
-      p.head.position.set(0, 0.3, 0.02);
-      eyes(p.head, 0.11, -0.02, 0.1, 0.03);
-      crown(p.head, 0.06);
+    K() { // baleine à bosse couronnée, allongée
+      const p = base(0.27), col = '#3d6fb0', dark = '#2f5b93';
+      const body = mesh(sphere(1, 26, 18), mat(col, { rough: 0.5 })); body.scale.set(0.16, 0.14, 0.34); p.torso.add(body);
+      const belly = mesh(sphere(1, 26, 18), mat('#f1f5ff'), 0, -0.04, 0.03); belly.scale.set(0.13, 0.1, 0.3); p.torso.add(belly);
+      for (let i = 0; i < 5; i++) p.torso.add(mesh(box(0.008, 0.008, 0.36), mat('#c9d6ee'), -0.08 + i * 0.04, -0.125, 0.05));
+      p.torso.add(mesh(sphere(0.03, 10, 8), mat(dark), 0, 0.13, -0.1)); // petite bosse
+      p.head.position.set(0, 0.02, 0.3);
+      const snout = mesh(sphere(1, 20, 14), mat(col, { rough: 0.5 })); snout.scale.set(0.12, 0.08, 0.12); p.head.add(snout);
+      for (let i = 0; i < 5; i++) p.head.add(mesh(sphere(0.012, 6, 4), mat(dark), (i % 2 ? 1 : -1) * 0.03, 0.075, -0.04 + i * 0.03));
+      eyes(p.head, 0.12, -0.02, -0.03, 0.026);
+      crown(p.head, 0.11);
       // jet de la baleine (évent)
-      p.head.add(mesh(cone(0.03, 0.12, 8), mat('#bfe8ff', { opacity: 0.6, emissive: '#bfe8ff' }), 0, 0.2, -0.02));
-      fin(p.armL, '#2f5b93', 0.03, 0.15, 0.05, -0.18, -0.02, 0.02, 0, 1); fin(p.armR, '#2f5b93', 0.03, 0.15, 0.05, 0.18, -0.02, 0.02, 0, 1);
-      fin(p.legL, '#2f5b93', 0.14, 0.02, 0.07, -0.07, -0.26, -0.03, 0.3, 1); fin(p.legR, '#2f5b93', 0.14, 0.02, 0.07, 0.07, -0.26, -0.03, -0.3, 1);
+      p.head.add(mesh(cone(0.03, 0.14, 8), mat('#bfe8ff', { opacity: 0.6, emissive: '#bfe8ff' }), 0, 0.2, -0.08));
+      // longues nageoires pectorales
+      // fixées au corps et inclinées vers le bas, sinon les animations de bras les lèvent comme des ailes
+      for (const sd of [-1, 1]) { const f = fin(p.torso, dark, 0.2, 0.014, 0.045, sd * 0.24, -0.08, 0.12, -sd * 0.6, 1); f.rotation.z = sd * -0.35; }
+      p.legL.add(mesh(sphere(0.05, 12, 8), mat(col), 0, 0.01, -0.36));
+      fin(p.legL, dark, 0.17, 0.014, 0.06, 0, 0.01, -0.43, 0, 1);
+      p.scaleK = 1.05;
       return p;
     },
     // ---------- Noirs : les abysses ----------
@@ -159,28 +170,40 @@
       p.scaleK = 1.7;
       return p;
     },
-    n() { // murène
-      const p = base(0.05);
-      const col = '#2f4a2b';
-      for (let i = 0; i < 9; i++) { const s = mesh(sphere(0.065 - i * 0.002, 14, 10), mat(col, { rough: 0.4 }), Math.sin(i * 0.9) * 0.06, 0.04 + i * 0.05, 0); p.torso.add(s); }
-      for (let i = 0; i < 9; i++) p.torso.add(mesh(sphere(0.012, 6, 4), mat('#c6d84a'), Math.sin(i * 0.9) * 0.06 + 0.05, 0.05 + i * 0.05, 0.03));
-      p.head.position.set(Math.sin(8 * 0.9) * 0.06, 0.5, 0.05);
-      const skull = mesh(sphere(0.07, 16, 12), mat(col, { rough: 0.4 })); skull.scale.set(0.9, 0.8, 1.3); p.head.add(skull);
-      const jaw = mesh(box(0.08, 0.02, 0.1), mat('#6e1e26'), 0, -0.04, 0.06); jaw.rotation.x = 0.3; p.head.add(jaw);
-      eyes(p.head, 0.035, 0.03, 0.06, 0.018, '#f2c230');
-      fin(p.armL, col, 0.01, 0.03, 0.03, -0.06, 0.3, 0); fin(p.armR, col, 0.01, 0.03, 0.03, 0.06, 0.3, 0);
+    n() { // murène : corps de serpent qui ondule au ras du sol, tête dressée, gueule ouverte
+      const p = base(0.08), col = '#2f4a2b';
+      for (let i = 0; i < 10; i++) {
+        const z = 0.16 - i * 0.05, y = i < 3 ? (3 - i) * 0.03 : 0;
+        p.torso.add(mesh(sphere(0.06 - i * 0.003, 14, 10), mat(col, { rough: 0.4 }), Math.sin(i * 0.8) * 0.05, y, z));
+        p.torso.add(mesh(sphere(0.011, 6, 4), mat('#c6d84a'), Math.sin(i * 0.8) * 0.05, y + 0.05, z));
+      }
+      p.head.position.set(0, 0.13, 0.22);
+      const skull = mesh(sphere(0.065, 16, 12), mat(col, { rough: 0.4 })); skull.scale.set(0.9, 0.8, 1.35); p.head.add(skull);
+      const jaw = mesh(box(0.075, 0.02, 0.09), mat('#6e1e26'), 0, -0.04, 0.06); jaw.rotation.x = 0.35; p.head.add(jaw);
+      for (let i = 0; i < 4; i++) p.head.add(mesh(cone(0.007, 0.02, 4), mat('#ffffff'), -0.024 + i * 0.016, -0.03, 0.09));
+      eyes(p.head, 0.034, 0.03, 0.05, 0.017, '#f2c230');
+      // nageoire dorsale continue
+      fin(p.legL, '#3d5c37', 0.008, 0.035, 0.2, 0, 0.06, -0.12, 0, 1);
+      p.scaleK = 1.2;
       return p;
     },
-    b() { // poisson-lion
-      const p = base(0.33);
-      fishBody(p, '#7a1f24', 0.16, 0.12, 0.08);
-      for (const z of [0.08, 0, -0.08]) { const s = mesh(sphere(1, 16, 10), mat('#f5e6d8'), 0, 0, z); s.scale.set(0.083, 0.11, 0.012); p.torso.add(s); }
-      // grandes épines venimeuses en éventail
-      for (let i = 0; i < 9; i++) { const a = -1.1 + i * 0.27, sp = mesh(new T.CylinderGeometry(0.004, 0.008, 0.26, 5), mat(i % 2 ? '#f5e6d8' : '#7a1f24'), 0, 0.12 + Math.cos(a) * 0.12, Math.sin(a) * 0.12); sp.rotation.x = a; p.torso.add(sp); }
-      eyes(p.head, 0.05, 0.03, 0.13, 0.025, '#2a0a0a');
-      for (const [arm, s] of [[p.armL, -1], [p.armR, 1]]) for (let i = 0; i < 4; i++) { const r = mesh(new T.CylinderGeometry(0.003, 0.005, 0.22, 4), mat('#f5e6d8', { opacity: 0.85 }), s * 0.12, -0.03 - i * 0.02, 0.02 - i * 0.03); r.rotation.z = s * (1.0 + i * 0.15); arm.add(r); }
-      fin(p.legL, '#7a1f24', 0.012, 0.08, 0.06, 0, 0.01, -0.2);
-      p.scaleK = 1.4;
+    b() { // espadon voilier : grande voile sur le dos et long rostre
+      const p = base(0.3), col = '#1f3a5a', sail = '#2b5fa0';
+      const body = mesh(sphere(1, 24, 16), mat(col, { rough: 0.3, metal: 0.25 })); body.scale.set(0.065, 0.085, 0.27); p.torso.add(body);
+      const belly = mesh(sphere(1, 24, 16), mat('#c9d3dc', { rough: 0.3, metal: 0.3 }), 0, -0.03, 0.01); belly.scale.set(0.055, 0.055, 0.24); p.torso.add(belly);
+      for (let i = 0; i < 5; i++) p.torso.add(mesh(box(0.132, 0.06, 0.006), mat('#6fa8dc'), 0, 0, 0.12 - i * 0.06));
+      // la voile : demi-disque dressé, tacheté
+      const sailM = mesh(new T.CircleGeometry(0.2, 24, 0, Math.PI), mat(sail, { opacity: 0.88, double: true }), 0, 0.07, -0.02);
+      sailM.rotation.y = Math.PI / 2; sailM.scale.set(1.2, 0.9, 1); p.torso.add(sailM);
+      for (let i = 0; i < 6; i++) { const d = mesh(sphere(0.012, 6, 4), mat('#0e1f33'), 0, 0.12 + (i % 2) * 0.05, 0.12 - i * 0.05); d.scale.x = 0.4; p.torso.add(d); }
+      p.head.position.set(0, 0.01, 0.25);
+      const hd = mesh(sphere(0.06, 16, 12), mat(col, { rough: 0.3, metal: 0.25 })); hd.scale.set(1, 1, 1.3); p.head.add(hd);
+      const bill = mesh(cone(0.014, 0.26, 8), mat('#16283d'), 0, 0.01, 0.2); bill.rotation.x = Math.PI / 2; p.head.add(bill);
+      eyes(p.head, 0.045, 0.02, 0.03, 0.02, '#000');
+      fin(p.armL, col, 0.06, 0.01, 0.025, -0.07, -0.04, 0.1, 0.5, 1); fin(p.armR, col, 0.06, 0.01, 0.025, 0.07, -0.04, 0.1, -0.5, 1);
+      // queue en croissant, verticale
+      for (const sd of [-1, 1]) { const t = fin(p.legL, col, 0.01, 0.1, 0.035, 0, sd * 0.06, -0.31, 0, 1); t.rotation.x = sd * 0.7; }
+      p.scaleK = 1.15;
       return p;
     },
     r() { // crabe géant
@@ -204,38 +227,43 @@
       p.scaleK = 0.85;
       return p;
     },
-    q() { // requin, dressé sur sa queue
-      const p = base(0.36);
-      const body = mesh(sphere(1, 24, 16), mat('#5b6a78', { rough: 0.4 }), 0, 0.06, 0); body.scale.set(0.12, 0.28, 0.13); p.torso.add(body);
-      const belly = mesh(sphere(1, 24, 16), mat('#e8ecf0'), 0, 0.03, 0.035); belly.scale.set(0.09, 0.23, 0.1); p.torso.add(belly);
-      fin(p.torso, '#4a5866', 0.015, 0.13, 0.08, 0, 0.18, -0.13, 0, 1);
-      p.head.position.set(0, 0.31, 0.03);
-      const snout = mesh(sphere(0.09, 18, 14), mat('#5b6a78', { rough: 0.4 })); snout.scale.set(1, 1, 1.3); p.head.add(snout);
-      for (let i = 0; i < 6; i++) p.head.add(mesh(cone(0.01, 0.025, 4), mat('#ffffff', { rough: 0.2 }), -0.05 + i * 0.02, -0.05, 0.08));
-      eyes(p.head, 0.06, 0.03, 0.07, 0.02, '#000');
-      crown(p.head, 0.1, '#b9a6ff', 0.7);
-      fin(p.armL, '#4a5866', 0.02, 0.09, 0.05, -0.12, 0.03, 0.02, 0, 1); fin(p.armR, '#4a5866', 0.02, 0.09, 0.05, 0.12, 0.03, 0.02, 0, 1);
-      fin(p.legL, '#4a5866', 0.12, 0.02, 0.07, -0.05, -0.23, -0.03, 0.3, 1); fin(p.legR, '#4a5866', 0.12, 0.02, 0.07, 0.05, -0.23, -0.03, -0.3, 1);
+    q() { // requin, allongé
+      const p = base(0.3), col = '#5b6a78', dark = '#4a5866';
+      const body = mesh(sphere(1, 24, 16), mat(col, { rough: 0.4 })); body.scale.set(0.1, 0.1, 0.29); p.torso.add(body);
+      const belly = mesh(sphere(1, 24, 16), mat('#e8ecf0'), 0, -0.035, 0.02); belly.scale.set(0.08, 0.065, 0.25); p.torso.add(belly);
+      const dorsal = fin(p.torso, dark, 0.012, 0.12, 0.07, 0, 0.13, 0, 0, 1); dorsal.rotation.x = -0.45;
+      for (const sd of [-1, 1]) for (let i = 0; i < 3; i++) p.torso.add(mesh(box(0.004, 0.05, 0.006), mat('#3a4652'), sd * 0.098, 0.01, 0.17 - i * 0.025));
+      p.head.position.set(0, 0.01, 0.25);
+      const snout = mesh(sphere(0.08, 18, 14), mat(col, { rough: 0.4 })); snout.scale.set(1, 0.85, 1.35); p.head.add(snout);
+      p.head.add(mesh(box(0.1, 0.012, 0.04), mat('#5a1a20'), 0, -0.045, 0.06));
+      for (let i = 0; i < 6; i++) p.head.add(mesh(cone(0.008, 0.022, 4), mat('#ffffff', { rough: 0.2 }), -0.04 + i * 0.016, -0.04, 0.075));
+      eyes(p.head, 0.06, 0.02, 0.04, 0.018, '#000');
+      crown(p.head, 0.09, '#b9a6ff', 0.6);
+      fin(p.armL, dark, 0.09, 0.012, 0.04, -0.11, -0.05, 0.08, 0.6, 1); fin(p.armR, dark, 0.09, 0.012, 0.04, 0.11, -0.05, 0.08, -0.6, 1);
+      // queue verticale en croissant, lobe du haut plus grand
+      const up = fin(p.legL, dark, 0.012, 0.12, 0.04, 0, 0.07, -0.33, 0, 1); up.rotation.x = 0.7;
+      const lo = fin(p.legL, dark, 0.012, 0.07, 0.035, 0, -0.04, -0.31, 0, 1); lo.rotation.x = -0.7;
+      p.scaleK = 1.15;
       return p;
     },
-    k() { // pieuvre géante couronnée
-      const p = base(0.36);
-      const headDome = mesh(sphere(1, 24, 18), mat('#5b2a6e', { rough: 0.35 }), 0, 0.12, -0.02); headDome.scale.set(0.17, 0.22, 0.18); p.torso.add(headDome);
-      for (let i = 0; i < 8; i++) p.torso.add(mesh(sphere(0.02, 8, 6), mat('#8e4fa8'), Math.cos(i) * 0.12, 0.15 + Math.sin(i * 2) * 0.06, 0.1));
-      p.head.position.set(0, 0.05, 0.12);
-      eyes(p.head, 0.07, 0.02, 0.04, 0.035, '#f2c230');
-      crown(p.head, 0.28);
-      // huit tentacules répartis sur les bras et les jambes
-      const tentacle = (parent, a, len) => {
-        let prev = parent;
-        for (let i = 0; i < 6; i++) {
-          const seg = new T.Group(); seg.position.set(i ? 0 : Math.cos(a) * 0.1, i ? -len : -0.08, i ? 0 : Math.sin(a) * 0.1);
-          seg.rotation.set(Math.sin(a) * 0.18, 0, -Math.cos(a) * 0.18);
-          seg.add(mesh(sphere(0.035 - i * 0.004, 10, 8), mat('#6a3380', { rough: 0.35 })));
-          prev.add(seg); prev = seg;
-        }
-      };
-      [[p.armL, 2.4], [p.armL, 3.1], [p.armR, 0.7], [p.armR, 0], [p.legL, 3.9], [p.legL, 4.6], [p.legR, 5.3], [p.legR, 6.0]].forEach(([g, a]) => tentacle(g, a, 0.045));
+    k() { // orque couronnée, allongée
+      const p = base(0.28), black = '#16181d', white = '#f4f6f8';
+      const body = mesh(sphere(1, 26, 18), mat(black, { rough: 0.3 })); body.scale.set(0.15, 0.14, 0.33); p.torso.add(body);
+      const belly = mesh(sphere(1, 26, 18), mat(white, { rough: 0.3 }), 0, -0.05, 0.06); belly.scale.set(0.11, 0.08, 0.26); p.torso.add(belly);
+      // tache grise sur le dos et grand aileron dorsal
+      const saddle = mesh(sphere(1, 16, 10), mat('#8a9099'), 0, 0.11, -0.08); saddle.scale.set(0.09, 0.04, 0.08); p.torso.add(saddle);
+      const dorsal = mesh(cone(0.05, 0.24, 4), mat(black, { rough: 0.3 }), 0, 0.24, -0.02); dorsal.scale.z = 0.25; dorsal.rotation.x = -0.25; p.torso.add(dorsal);
+      p.head.position.set(0, 0.02, 0.3);
+      const hd = mesh(sphere(1, 20, 14), mat(black, { rough: 0.3 })); hd.scale.set(0.12, 0.1, 0.12); p.head.add(hd);
+      p.head.add(mesh(box(0.14, 0.012, 0.05), mat('#3a1018'), 0, -0.05, 0.07));
+      // taches blanches au-dessus des yeux
+      for (const sd of [-1, 1]) { const pat = mesh(sphere(1, 12, 8), mat(white), sd * 0.1, 0.035, -0.03); pat.scale.set(0.03, 0.025, 0.06); p.head.add(pat); }
+      eyes(p.head, 0.11, -0.005, 0.03, 0.022, '#c0392b');
+      crown(p.head, 0.12);
+      fin(p.armL, black, 0.12, 0.014, 0.06, -0.17, -0.07, 0.12, 0.5, 1); fin(p.armR, black, 0.12, 0.014, 0.06, 0.17, -0.07, 0.12, -0.5, 1);
+      p.legL.add(mesh(sphere(0.05, 12, 8), mat(black), 0, 0.01, -0.35));
+      fin(p.legL, black, 0.16, 0.014, 0.055, 0, 0.01, -0.42, 0, 1);
+      p.scaleK = 1.05;
       return p;
     },
   };
