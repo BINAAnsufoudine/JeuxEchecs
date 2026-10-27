@@ -4746,8 +4746,8 @@
     $('home-garden-title').textContent = L(`Ta collection ${collection.name}`, `Your ${collection.name} collection`);
     // les icônes des boutons et des menus suivent le thème (plus d'icônes ninja dans les autres thèmes)
     if (window.setIconTheme) window.setIconTheme(collection.id);
-    // personnages 3D : créatures marines pour le thème Océan Indien, ninjas pour les autres
-    const pieceTheme = collection.id === 'ocean' ? 'ocean' : 'ninja';
+    // personnages 3D : créatures du thème (océan, plantes, animaux, oiseaux), ninjas sinon
+    const pieceTheme = window.ThemeModels && window.ThemeModels[collection.id] ? collection.id : 'ninja';
     if (window.PieceTheme !== pieceTheme) {
       window.PieceTheme = pieceTheme;
       if (b3d && b3d.rebuildPieces) { b3d.rebuildPieces(); if (game) render(); }

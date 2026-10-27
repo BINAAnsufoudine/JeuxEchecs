@@ -35,7 +35,19 @@
   // Avant chaque prise, les deux pièces s'affrontent : l'attaquant frappe, la cible riposte avec sa propre arme
   const X1 = 0.6, X2 = 1.4; // corps à corps : assaut jusqu'à X1, riposte de la cible jusqu'à X2
   const GROUND = -0.06; // le sol arrive au ras du plateau (au lieu d'être 0,5 plus bas)
-  const EXR = 1.1; // à distance : la cible tire d'abord sa propre technique sur l'attaquant
+  const EXR = 1.1;
+  // Couleurs des techniques à distance des thèmes de créatures : jet (serpent), salve (bulles, graines,
+  // cailloux, plumes) et éclatement à l'impact. w = Blancs, b = Noirs.
+  const THEME_FX = {
+    ocean: { w: { jet: 0x3fa9f5, foam: 0xe6f7ff, bub: 0x5cc4ff, charge: 0xbfeaff, boom: [0xd6f2ff, 0x3fa9f5, 0x9fdcff], debris: [0x3fa9f5, 0xe6f7ff], burst: [0xe6f7ff, 0x7fd0ff, 0xbfeaff], bits: [0xbfeaff, 0xffffff] },
+             b: { jet: 0x120d1f, foam: 0x8a7fb0, bub: 0x241a3a, charge: 0x6a5a90, boom: [0x6a5a90, 0x1c1530, 0x4a3d6e], debris: [0x1c1530, 0x6a5a90], burst: [0x6a5a90, 0x1c1530, 0x4a3d6e], bits: [0x1c1530, 0x6a5a90] } },
+    plants: { w: { jet: 0x5fb83a, foam: 0xf8bbd0, bub: 0x9ccc65, charge: 0xdcedc8, boom: [0xf1f8e9, 0x7cb342, 0xf8bbd0], debris: [0x7cb342, 0xf48fb1], burst: [0xf1f8e9, 0x9ccc65, 0xfff59d], bits: [0x8bc34a, 0xfff59d] },
+              b: { jet: 0x2e3b1f, foam: 0x6a1b9a, bub: 0x4e342e, charge: 0x7b5e57, boom: [0x8d6e63, 0x33402c, 0x6a1b9a], debris: [0x3e2723, 0x558b2f], burst: [0x8d6e63, 0x3e2723, 0x6a1b9a], bits: [0x3e2723, 0xbcaaa4] } },
+    land: { w: { jet: 0xd9b26a, foam: 0xfff3d6, bub: 0x9e9e9e, charge: 0xe8d5a8, boom: [0xfff3d6, 0xd9b26a, 0xc9a66b], debris: [0xb08850, 0x9e9e9e], burst: [0xf5e6c4, 0xc9a66b, 0xe0c895], bits: [0x9e9e9e, 0xc9a66b] },
+            b: { jet: 0x4a3b2c, foam: 0x8d7b5a, bub: 0x424242, charge: 0x6d5f4a, boom: [0x8d7b5a, 0x3b3125, 0x5d4f3a], debris: [0x3b3125, 0x616161], burst: [0x8d7b5a, 0x3b3125, 0x5d4f3a], bits: [0x424242, 0x5d4f3a] } },
+    birds: { w: { jet: 0xe3f2fd, foam: 0xffffff, bub: 0xfafafa, charge: 0xffffff, boom: [0xffffff, 0xb3e5fc, 0xfff59d], debris: [0xffffff, 0xffcc80], burst: [0xffffff, 0xe1f5fe, 0xfff9c4], bits: [0xffffff, 0x81d4fa] },
+             b: { jet: 0x1b1b22, foam: 0x5e5e6e, bub: 0x26262e, charge: 0x55556a, boom: [0x5e5e6e, 0x17171c, 0x3a3a48], debris: [0x17171c, 0x5e5e6e], burst: [0x5e5e6e, 0x17171c, 0x3a3a48], bits: [0x17171c, 0x5e5e6e] } },
+  }; // à distance : la cible tire d'abord sa propre technique sur l'attaquant
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
   class Board3D {
@@ -1127,11 +1139,12 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           const len = Math.hypot(b.x - a.x, b.z - a.z) || 1;
           const ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
           const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); } };
-          const ocean = root.PieceTheme === 'ocean';
+          const themeFx = THEME_FX[root.PieceTheme], ocean = !!themeFx;
           if (ocean && far && m.flag !== 'ep') {
-            // Thème Océan : jet d'eau (tour, dame) ou salve de bulles (cavalier, fou) ; les Noirs crachent de l'encre
+            // Thèmes de créatures : jet (tour, dame) ou salve (cavalier, fou), aux couleurs du thème :
+            // eau et encre (océan), liane et épines (plantes), sable et cailloux (animaux), plumes (oiseaux)
             const jet = kind === 'q' || kind === 'r';
-            shot = { tech: jet ? 'water' : 'bubble', ink: !white, victim: v, target: b, fire: 0.7 };
+            shot = { tech: jet ? 'water' : 'bubble', pal: themeFx[white ? 'w' : 'b'], victim: v, target: b, fire: 0.7 };
             shot.flight = jet ? 0.45 + len * 0.09 : 0.3 + len * 0.07;
             shot.impact = shot.fire + shot.flight;
             shot.runStart = shot.impact + 0.9;
@@ -4729,8 +4742,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         const g = new T.Group();
         const water = s.fireDragon
           ? new T.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: 0.92 })
-          : new T.MeshToonMaterial({ color: s.ink ? 0x120d1f : 0x3fa9f5, transparent: true, opacity: 0.9 });
-        const foam = new T.MeshBasicMaterial({ color: s.fireDragon ? 0x3a1608 : s.ink ? 0x8a7fb0 : 0xe6f7ff });
+          : new T.MeshToonMaterial({ color: s.pal ? s.pal.jet : 0x3fa9f5, transparent: true, opacity: 0.9 });
+        const foam = new T.MeshBasicMaterial({ color: s.fireDragon ? 0x3a1608 : s.pal ? s.pal.foam : 0xe6f7ff });
         for (let i = 0; i < N; i++) {
           // Dragon de feu : corps du jaune (tête) au rouge sombre (queue), avec des flammes le long du dos
           const segMat = s.fireDragon ? new T.MeshBasicMaterial({ color: new T.Color(0xffb020).lerp(new T.Color(0xc41a06), Math.min(1, i / N * 1.6)), transparent: true, opacity: 0.95, toneMapped: false }) : water;
@@ -4774,7 +4787,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (el >= s.impact && !s.boom && !s.splashed) {
         s.splashed = true;
         if (s.fireDragon) this.explode(s, end, el, t, [0xfff1a8, 0xff6a1a, 0xffb347], [0xff4500, 0x2a1a12], false);
-        else if (s.ink) this.explode(s, end, el, t, [0x6a5a90, 0x1c1530, 0x4a3d6e], [0x1c1530, 0x6a5a90], true);
+        else if (s.pal) this.explode(s, end, el, t, s.pal.boom, s.pal.debris, true);
         else this.explode(s, end, el, t, [0xd6f2ff, 0x3fa9f5, 0x9fdcff], [0x3fa9f5, 0xe6f7ff], true);
       }
       this.boomStep(s, el);
@@ -4785,7 +4798,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const T = this.THREE;
       const N = 14;
       if (el < s.fire) {
-        if (!s.charge) s.charge = this.fx(s, new T.Mesh(new T.SphereGeometry(0.1, 12, 8), new T.MeshBasicMaterial({ color: s.ink ? 0x6a5a90 : 0xbfeaff, transparent: true, opacity: 0.55, depthWrite: false })));
+        if (!s.charge) s.charge = this.fx(s, new T.Mesh(new T.SphereGeometry(0.1, 12, 8), new T.MeshBasicMaterial({ color: s.pal.charge, transparent: true, opacity: 0.55, depthWrite: false })));
         s.charge.position.copy(this.handsOf(c));
         s.charge.scale.setScalar(0.4 + (el / s.fire) * 1.6);
       } else if (s.charge) s.charge.visible = false;
@@ -4794,7 +4807,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         s.bubbles = [];
         for (let i = 0; i < N; i++) {
           const r = 0.1 + Math.random() * 0.12;
-          const b = new T.Mesh(new T.SphereGeometry(r, 12, 8), new T.MeshBasicMaterial({ color: s.ink ? 0x241a3a : 0x5cc4ff, transparent: true, opacity: 0.75, depthWrite: false }));
+          const b = new T.Mesh(new T.SphereGeometry(r, 12, 8), new T.MeshBasicMaterial({ color: s.pal.bub, transparent: true, opacity: 0.75, depthWrite: false }));
           const shine = new T.Mesh(new T.SphereGeometry(r * 0.3, 6, 4), new T.MeshBasicMaterial({ color: 0xffffff }));
           shine.position.set(-r * 0.4, r * 0.45, r * 0.3); b.add(shine);
           b.userData = { lag: i * 0.035, ph: Math.random() * 6, off: (Math.random() - 0.5) * 0.3 };
@@ -4816,8 +4829,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
       if (el >= s.impact && !s.boom) {
         if (s.bubbles) for (const b of s.bubbles) b.visible = false;
-        if (s.ink) this.explode(s, end, el, t, [0x6a5a90, 0x1c1530, 0x4a3d6e], [0x1c1530, 0x6a5a90], true);
-        else this.explode(s, end, el, t, [0xe6f7ff, 0x7fd0ff, 0xbfeaff], [0xbfeaff, 0xffffff], true);
+        this.explode(s, end, el, t, s.pal.burst, s.pal.bits, true);
       }
       this.boomStep(s, el);
     }

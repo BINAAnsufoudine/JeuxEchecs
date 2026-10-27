@@ -274,4 +274,6 @@
     return make();
   }
   root.OceanModels = { build };
+  root.ThemeModels = root.ThemeModels || {};
+  root.ThemeModels.ocean = root.OceanModels;
 })(window);

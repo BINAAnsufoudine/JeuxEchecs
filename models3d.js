@@ -677,9 +677,9 @@
 
   function build(THREE, piece) {
     T = THREE;
-    // thème Océan Indien : créatures marines (ocean3d.js) au lieu des ninjas
-    const ocean = root.PieceTheme === 'ocean' && root.OceanModels;
-    const parts = ocean ? root.OceanModels.build(THREE, piece) : BUILD[piece]();
+    // thèmes Océan, Plantes, Animaux, Oiseaux : créatures du thème (ocean3d.js, themes3d.js) au lieu des ninjas
+    const themed = root.ThemeModels && root.ThemeModels[root.PieceTheme];
+    const parts = themed ? themed.build(THREE, piece) : BUILD[piece]();
     const k = SIZE[piece.toLowerCase()] * SCALE * (parts.scaleK || 1);
     if (parts.head && !parts.noHeadScale) parts.head.scale.setScalar(0.5);
     parts.root.scale.setScalar(k);
@@ -897,6 +897,7 @@
     animateWind(p, t, state);
     if (p.cloak && !wind && state !== 'run') p.cloak.scale.x = 1 + Math.sin(ph * 1.8) * 0.04;
     animateAura(p, t, state);
+    if (p.pose) p.pose(p, t, state, k); // pose propre à la créature du thème (pattes, ailes, balancement)
     if (p.bolts) {
       p.bolts.rotation.y = t * 2;
       p.bolts.children.forEach((b, i) => { b.visible = Math.sin(t * 23 + i * 5) > 0.55; });
