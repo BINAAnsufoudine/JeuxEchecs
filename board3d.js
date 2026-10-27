@@ -2984,6 +2984,37 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
 
     // Changement de thème des personnages : on les recrée tous au prochain affichage
+    // Thème Océan : une fine couche d'eau translucide, avec des reflets qui ondulent, recouvre le plateau
+    tickWater(t) {
+      const on = root.PieceTheme === 'ocean';
+      if (!on && !this.waterLayer) return;
+      if (!this.waterLayer) {
+        const T = this.THREE, c = document.createElement('canvas'); c.width = c.height = 256;
+        const g = c.getContext('2d');
+        g.fillStyle = 'rgb(30,175,230)'; g.fillRect(0, 0, 256, 256);
+        // reflets clairs en vaguelettes, dessinés de façon à se raccorder quand la texture se répète
+        g.strokeStyle = 'rgba(235,250,255,0.55)'; g.lineCap = 'round';
+        for (let i = 0; i < 46; i++) {
+          const x = (i * 97) % 256, y = (i * 53) % 256, w = 18 + (i % 5) * 7;
+          g.lineWidth = 1.5 + (i % 3);
+          for (const dx of [-256, 0, 256]) for (const dy of [-256, 0, 256]) {
+            g.beginPath(); g.moveTo(x + dx - w / 2, y + dy);
+            g.quadraticCurveTo(x + dx, y + dy - 5, x + dx + w / 2, y + dy); g.stroke();
+          }
+        }
+        const tex = new T.CanvasTexture(c); tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.repeat.set(3, 3);
+        const m = new T.Mesh(new T.PlaneGeometry(SIZE - 0.04, SIZE - 0.04), new T.MeshStandardMaterial({ map: tex, transparent: true, opacity: 0.4, roughness: 0.08, metalness: 0.1, emissive: 0x0b5f86, emissiveIntensity: 0.25, depthWrite: false }));
+        // sous les repères de cases (0,01) pour qu'ils restent bien visibles
+        m.rotation.x = -Math.PI / 2; m.position.y = 0.005;
+        this.scene.add(m); this.waterLayer = m;
+      }
+      this.waterLayer.visible = on;
+      if (!on) return;
+      const tex = this.waterLayer.material.map;
+      tex.offset.set(Math.sin(t * 0.21) * 0.06 + t * 0.012, Math.cos(t * 0.17) * 0.05 + t * 0.008);
+      this.waterLayer.material.opacity = 0.38 + Math.sin(t * 0.9) * 0.04;
+    }
+
     rebuildPieces() {
       for (const c of this.chars.values()) this.pieces.remove(c.holder);
       this.chars = new Map();
@@ -3043,6 +3074,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const t = nowMs / 1000 * this.speed;
       const dt = Math.min(0.25, Math.max(0, t - (this.lastT || t)));
       this.lastT = t;
+      this.tickWater(t);
       const ease = 1 - Math.exp(-dt * 11); // rotation indépendante du nombre d'images par seconde
       const M = root.Models3D;
       const restYaw = this.viewYaw(); // tous regardent le joueur

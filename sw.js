@@ -1,5 +1,5 @@
 /* Cavalier — cache hors ligne */
-const CACHE = 'cavalier-v361';
+const CACHE = 'cavalier-v362';
 // Ne précacher que les fichiers effectivement présents : un seul fichier absent
 // fait échouer addAll et empêche toute installation du service worker.
 const FILES = ['./', 'index.html', 'style.css', 'button-icons.js', 'engine.js', 'pgn.js', 'app.js', 'ai-worker.js', 'search.js', 'coach-core.js', 'analyse-worker.js', 'puzzles.js', 'lichess_puzzles.js', 'i18n.js', 'lessons.js', 'champions.js', 'trainer.js', 'online.js', 'sissa/sissa.jpg', 'sissa/sissa-face.jpg', 'sissa/legende-1.jpg', 'sissa/legende-2.jpg', 'sissa/legende-3.jpg', 'sissa/legende-4.jpg', 'sissa/legende-5.jpg', 'sissa/montagne-de-riz.jpg', 'characters.js', 'board3d.js', 'models3d.js', 'ocean3d.js', 'stockfish.js', 'stockfish.wasm', 'vendor/three.min.js', 'icon.svg', 'manifest.json', 'logo/logo-32.png', 'logo/logo-180.png', 'logo/logo-192.png', 'logo/logo-512.png', 'logo/logo-maskable-512.png',
