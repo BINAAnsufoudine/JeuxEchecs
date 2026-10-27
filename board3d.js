@@ -34,6 +34,7 @@
   const DUEL = 1.3; // durée du coup final de chaque prise (secondes)
   // Avant chaque prise, les deux pièces s'affrontent : l'attaquant frappe, la cible riposte avec sa propre arme
   const X1 = 0.6, X2 = 1.4; // corps à corps : assaut jusqu'à X1, riposte de la cible jusqu'à X2
+  const GROUND = -0.06; // le sol arrive au ras du plateau (au lieu d'être 0,5 plus bas)
   const EXR = 1.1; // à distance : la cible tire d'abord sa propre technique sur l'attaquant
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
@@ -81,7 +82,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       fill.position.set(5, 6, -7); this.scene.add(fill);
 
       const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0x28332f, roughness: 0.94 }));
-      floor.rotation.x = -Math.PI / 2; floor.position.y = -0.535; floor.receiveShadow = true;
+      floor.rotation.x = -Math.PI / 2; floor.position.y = GROUND; floor.receiveShadow = true;
       this.scene.add(floor);
       this.floor = floor;
       this.woodTexture = this.makeWoodTexture();
@@ -95,7 +96,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       base.castShadow = true; base.receiveShadow = true;
       this.scene.add(base);
       this.base = base;
-      this.terrainGroup = new THREE.Group(); this.scene.add(this.terrainGroup);
+      this.terrainGroup = new THREE.Group(); this.terrainGroup.position.y = GROUND + 0.535; this.scene.add(this.terrainGroup);
       this.terrain = null;
       this.weatherGroup = new THREE.Group(); this.scene.add(this.weatherGroup);
       this.weather = null; this.weatherBolts = [];
@@ -441,7 +442,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     // Animaux du décor : ceux qui représentent le mieux chaque paysage se promènent, sautent, volent ou nagent autour du plateau
     buildAnimals(terrain) {
       const T = this.THREE;
-      if (!this.animalGroup) { this.animalGroup = new T.Group(); this.scene.add(this.animalGroup); }
+      if (!this.animalGroup) { this.animalGroup = new T.Group(); this.animalGroup.position.y = GROUND + 0.535; this.scene.add(this.animalGroup); }
       this.animalGroup.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
       this.animalGroup.clear();
       this.animals = [];
@@ -549,7 +550,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       };
       const groundY = -0.535;
       const place = (g, behave, extra = {}) => {
-        const a = { g, behave, ang: Math.random() * Math.PI * 2, r: extra.r || 5.2 + Math.random() * 1.3, speed: extra.speed || 0.06, dir: Math.random() < 0.5 ? 1 : -1, phase: Math.random() * 10, pauseUntil: 0, ...extra };
+        const a = { g, behave, ang: Math.random() * Math.PI * 2, r: (extra.r || 5.2 + Math.random() * 1.3) + 1.4, speed: extra.speed || 0.06, dir: Math.random() < 0.5 ? 1 : -1, phase: Math.random() * 10, pauseUntil: 0, ...extra };
         g.position.set(Math.cos(a.ang) * a.r, groundY + (a.y || 0), Math.sin(a.ang) * a.r);
         this.animalGroup.add(g); this.animals.push(a); return a;
       };
@@ -756,7 +757,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
       // Quelques reliefs proches du socle relient visuellement le plateau au terrain.
       for (let i = 0; i < points.length; i++) {
-        const [x, z] = points[i], jitter = (i % 3) * 0.16;
+        // devant et derrière le plateau, le décor est reculé pour ne pas cacher les pièces (le sol est au ras du plateau)
+        const x = points[i][0], z = points[i][1] * (Math.abs(points[i][1]) > 5 ? 1.35 : 1), jitter = (i % 3) * 0.16;
         if (terrain.kind === 'beach') {
           add(moundGeo, sand, x, -0.32, z, 1.7, 0.3, 1);
           if (i % 4 === 0) palm(x, z, (i % 8 === 0 ? 1 : -1) * 0.12);
