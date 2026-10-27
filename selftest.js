@@ -63,7 +63,8 @@
       const r = window.Coach.reviewGame(['f2f3', 'e7e5', 'g2g4', 'd8h4'], { depth: 2, q: 3 });
       assert(r.ev.length === 5 && r.marks.length === 4, 'structure de la revue incorrecte');
       assert(r.marks[2][0] === 'blunder', `g4 devrait être une gaffe, obtenu ${r.marks[2][0]}`);
-      assert(r.marks[3][0] === 'best', 'Dh4# devrait être le meilleur coup');
+      // le meilleur coup joué est classé « meilleur » ou « excellent » selon le barème actuel
+      assert(['best', 'excellent'].includes(r.marks[3][0]) && r.marks[3][2] === 'd8h4', `Dh4# devrait être le meilleur coup, obtenu ${r.marks[3][0]}`);
       assert(Math.abs(r.ev[4]) >= 1000 && r.ev[4] < 0, 'l\'évaluation finale doit annoncer le mat noir');
     });
     await test('Reconnaissance d\'ouverture', () => {

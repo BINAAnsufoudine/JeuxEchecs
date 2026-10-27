@@ -12,7 +12,11 @@ async function suite() {
   await page.goto(BASE + 'tests.html');
   await page.waitForFunction(() => window.__tests && window.__tests.done, null, { timeout: 180000 });
   const t = await page.evaluate(() => window.__tests);
-  for (const r of t.results) console.log(`${r.ok ? '✓' : '✗'} ${r.name}${r.ok ? '' : ` — ${r.error}`}`);
+  for (const r of t.results) {
+    console.log(`${r.ok ? '✓' : '✗'} ${r.name}${r.ok ? '' : ` — ${r.error}`}`);
+    // les échecs apparaissent aussi en annotations sur la page de l'action GitHub
+    if (!r.ok) console.log(`::error title=${r.name.replace(/[:,]/g, ' ')}::${r.error}`);
+  }
   if (!t.ok) { failed = true; console.log('✗ tests.html en échec'); }
   await page.close();
 }
@@ -27,11 +31,11 @@ async function boot() {
   const screen = await page.evaluate(() => document.body.dataset.screen || '');
   console.log(`${screen ? '✓' : '✗'} démarrage de l'appli (écran « ${screen} »)`);
   if (!screen) failed = true;
-  for (const e of errors) console.log(`✗ erreur au démarrage : ${e}`);
+  for (const e of errors) { console.log(`✗ erreur au démarrage : ${e}`); console.log(`::error title=Démarrage de l'appli::${e}`); }
   if (errors.length) failed = true;
   await page.close();
 }
 
-try { await suite(); await boot(); } catch (e) { console.log('✗', e.message); failed = true; }
+try { await suite(); await boot(); } catch (e) { console.log('✗', e.message); console.log(`::error title=Tests::${e.message}`); failed = true; }
 await browser.close();
 process.exit(failed ? 1 : 0);
