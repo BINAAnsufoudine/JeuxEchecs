@@ -114,7 +114,9 @@
       const plastron = mesh(new T.CylinderGeometry(0.2, 0.19, 0.03, 22), mat('#f3e3b5'), 0, -0.01, 0); plastron.scale.set(1, 1, 1.15); p.torso.add(plastron);
       p.head.position.set(0, 0.05, 0.25); p.head.add(mesh(sphere(0.07, 16, 12), mat('#7cc49a')));
       eyes(p.head, 0.04, 0.02, 0.05, 0.02);
-      for (const [g, x, z] of [[p.armL, -0.17, 0.12], [p.armR, 0.17, 0.12], [p.legL, -0.12, -0.17], [p.legR, 0.12, -0.17]]) fin(g, '#7cc49a', 0.11, 0.02, 0.05, x, -0.01, z, x < 0 ? 0.4 : -0.4, 1);
+      // nageoires avant fixées au corps, inclinées vers le bas (les animations de bras les feraient lever comme des ailes)
+      for (const x of [-0.19, 0.19]) { const f = fin(p.torso, '#7cc49a', 0.12, 0.02, 0.055, x, -0.03, 0.12, x < 0 ? 0.45 : -0.45, 1); f.rotation.z = x < 0 ? 0.35 : -0.35; }
+      for (const [g, x, z] of [[p.legL, -0.12, -0.17], [p.legR, 0.12, -0.17]]) fin(g, '#7cc49a', 0.11, 0.02, 0.05, x, -0.01, z, x < 0 ? 0.4 : -0.4, 1);
       p.scaleK = 1.25;
       return p;
     },
