@@ -251,7 +251,23 @@
     $('program-text').textContent = plan.text;
     $('program-focus').textContent = plan.focus;
     $('program-progress').innerHTML = coachProgressSummary();
+    const prefs = problemPreferences();
+    $('program-prefs').textContent = L(`⚙ Exercices choisis d’après tes ${prefs.games} dernières parties (erreurs présentes dans plus de ${prefs.threshold} % d’entre elles) · Modifier`, `⚙ Exercises based on your last ${prefs.games} games (mistakes found in more than ${prefs.threshold}% of them) · Change`);
   }
+  // Réglages du programme : nombre de parties analysées et seuil de récurrence (panneau de l'écran Problèmes)
+  function openProgramSettings() {
+    returnTo = 'program';
+    problemsSection = 'program'; problemSettingsOpen = true;
+    show('problems');
+    setTimeout(() => {
+      const panel = $('problems-body').querySelector('.pz-settings');
+      if (!panel) return;
+      window.scrollTo({ top: Math.max(0, panel.getBoundingClientRect().top + window.scrollY - 12), behavior: 'smooth' });
+      const i = panel.querySelector('input'); if (i) i.focus({ preventScroll: true });
+    }, 60);
+  }
+  $('btn-program-settings').onclick = openProgramSettings;
+  $('program-prefs').onclick = openProgramSettings;
 
   function coachProgressSummary() {
     const c = loadCoach();

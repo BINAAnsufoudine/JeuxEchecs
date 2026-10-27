@@ -1138,3 +1138,7 @@ body.admin-mode #home-rewards, body.admin-mode #coach-program, body.admin-mode #
 .tier-medals i { font-style: normal; opacity: 0.25; filter: grayscale(1); margin-left: 2px; }
 .tier-medals i.on { opacity: 1; filter: none; }
 .grade-line { color: var(--text, #fff) !important; font-weight: 650; }
+
+/* Programme personnalisé : rappel des réglages d'analyse */
+.program-prefs { display: block; width: 100%; margin-top: 10px; padding: 8px 10px; border: 1px dashed var(--surface-2); border-radius: 10px; background: transparent; color: var(--muted); font: inherit; font-size: 0.85rem; text-align: left; cursor: pointer; }
+.program-prefs:hover { color: inherit; border-color: var(--accent, #e9b949); }
