@@ -2348,7 +2348,19 @@
     const go = body.querySelector('#pz-go');
     if (go) go.onclick = nextActivity;
     $('btn-problem-settings').hidden = problemsSection !== 'program';
-    $('btn-problem-settings').onclick = () => { problemSettingsOpen = !problemSettingsOpen; renderProblems(); };
+    $('btn-problem-settings').onclick = () => {
+      problemSettingsOpen = !problemSettingsOpen;
+      renderProblems();
+      // sur mobile, la liste peut être longue : on amène le panneau à l'écran, sinon il s'ouvre hors de vue en haut de page
+      const panel = problemSettingsOpen && $('problems-body').querySelector('.pz-settings');
+      if (panel) {
+        // marge pour l'en-tête quand il reste collé en haut de l'écran
+        const header = document.querySelector('#problems .bar'), sticky = header && getComputedStyle(header).position !== 'static';
+        const offset = (sticky ? header.getBoundingClientRect().height : 0) + 12;
+        window.scrollTo({ top: Math.max(0, panel.getBoundingClientRect().top + window.scrollY - offset), behavior: 'smooth' });
+        setTimeout(() => { const i = panel.querySelector('input'); if (i) i.focus({ preventScroll: true }); }, 350);
+      }
+    };
     const savePrefs = body.querySelector('#pz-pref-save');
     if (savePrefs) savePrefs.onclick = () => {
       const games = Number(body.querySelector('#pz-pref-games').value);
