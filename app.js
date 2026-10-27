@@ -4743,7 +4743,19 @@
     $('home-currency-name').textContent = balance.currency.name;
     $('home-currency-icon').textContent = balance.currency.icon;
     $('home-garden-badge').textContent = `${gradeInfo.icon} ${grade} / 10`;
-    $('home-garden-title').textContent = L(`${collection.name} rejoint ta collection !`, `${collection.name} joins your collection!`);
+    $('home-garden-title').textContent = L(`Ta collection ${collection.name}`, `Your ${collection.name} collection`);
+    // l'en-tête et l'accueil suivent le thème choisi
+    $('home-theme-heading').textContent = L(`Thème ${collection.name} ${collection.icon}`, `${collection.name} theme ${collection.icon}`);
+    const card = $('home-theme-heading').closest('.home-section-heading') && document.querySelector('.home-garden-card');
+    if (card) card.setAttribute('aria-label', L(`Thème ${collection.name}`, `${collection.name} theme`));
+    const HERO = {
+      ninjas: [L('Ton chemin de ninja', 'Your ninja path'), L('Prêt à devenir Hokage ?', 'Ready to become Hokage?')],
+      plants: [L('Ton jardin prend vie', 'Your garden comes alive'), L('Prêt à faire grandir ton jardin ?', 'Ready to grow your garden?')],
+      land: [L('Ta réserve s’agrandit', 'Your reserve is growing'), L('Prêt à rencontrer de nouveaux animaux ?', 'Ready to meet new animals?')],
+      birds: [L('Ta volière s’agrandit', 'Your aviary is growing'), L('Prêt à faire chanter ta volière ?', 'Ready to make your aviary sing?')],
+      ocean: [L('Ton lagon s’éveille', 'Your lagoon awakens'), L('Prêt à plonger dans l’océan Indien ?', 'Ready to dive into the Indian Ocean?')],
+    }[collection.id] || [L('Ton aventure continue', 'Your adventure continues'), L('Prêt pour un nouveau défi ?', 'Ready for a new challenge?')];
+    $('home-hero-kicker').textContent = HERO[0]; $('home-hero-title').textContent = HERO[1];
     $('home-garden-copy').textContent = NATURE_PREVIEW_ALL_UNLOCKED
       ? L(`Toutes les étapes du thème ${collection.name} sont ouvertes à l’exploration !`, `Every ${collection.name} theme stage is open to explore!`)
       : collection.id === 'plants'
