@@ -1032,6 +1032,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .shop-title-art.birds { --title-ground:#34845b; background: linear-gradient(#61bde3 0%,#c2e9da 62%,#71b879 100%); }
 .shop-title-art.ocean { --title-ground:#087b9a; background: linear-gradient(#83dfdf 0%,#38b8c9 52%,#177baf 100%); }
 .shop-title-art.ocean > i { bottom: 28%; transform: rotate(-4deg); box-shadow: 0 8px rgba(255,255,255,.26),0 16px rgba(255,255,255,.16); }
+.shop-title-art.ancient { --title-ground:#a47a45; background: linear-gradient(#f6d79a 0%,#e9be7c 62%,#b98a52 100%); }
+.shop-title-art.modern { --title-ground:#5d6b4a; background: linear-gradient(#a9b8c2 0%,#c9c6a5 62%,#7d8a5f 100%); }
 .shop-title-art.ninjas { --title-ground:#473a61; background: radial-gradient(ellipse at 75% 20%,#8765a4 0%,transparent 37%),linear-gradient(#202341 0%,#484067 65%,#252a3e 100%); }
 .shop-title-art.ninjas::after { width: 54px; height: 54px; background: rgba(242,187,76,.5); }
 .shop-frame { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; background: var(--surface-2); font-size: 1.4rem; }

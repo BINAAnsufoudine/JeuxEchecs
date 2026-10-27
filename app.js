@@ -4515,6 +4515,12 @@
     ocean: [
       ['Ami de la plage', 'Beach friend', '🏖️'], ['Gardien des crabes', 'Crab guardian', '🦀'], ['Explorateur du récif', 'Reef explorer', '🪸'], ['Gardien des poissons tropicaux', 'Tropical fish guardian', '🐠'], ['Protecteur du lagon', 'Lagoon protector', '🐟'], ['Ami des tortues marines', 'Sea turtle friend', '🐢'], ['Gardien des dauphins', 'Dolphin guardian', '🐬'], ['Explorateur de la mer ouverte', 'Open sea explorer', '🌊'], ['Maître de l’océan Indien', 'Master of the Indian Ocean', '🌊'], ['Gardien de la baleine', 'Whale guardian', '🐋'],
     ],
+    ancient: [
+      ['Recrue', 'Recruit', '🪖'], ['Fantassin', 'Foot soldier', '🛡️'], ['Archer', 'Archer', '🏹'], ['Cavalier', 'Horseman', '🐎'], ['Centurion', 'Centurion', '⚔️'], ['Maître des machines', 'Siege master', '🏗️'], ['Tribun', 'Tribune', '🦅'], ['Général', 'General', '🎖️'], ['Consul', 'Consul', '🏛️'], ['Empereur', 'Emperor', '👑'],
+    ],
+    modern: [
+      ['Recrue', 'Recruit', '🪖'], ['Soldat', 'Soldier', '🎒'], ['Caporal', 'Corporal', '🎖️'], ['Sergent', 'Sergeant', '📡'], ['Pilote de drone', 'Drone pilot', '🛸'], ['Tankiste', 'Tank commander', '🛡️'], ['Pilote d’hélicoptère', 'Helicopter pilot', '🚁'], ['Pilote de chasse', 'Fighter pilot', '✈️'], ['Colonel', 'Colonel', '⭐'], ['Général', 'General', '👑'],
+    ],
     ninjas: [
       ['Étudiant de l’Académie', 'Academy student', '📜'], ['Genin', 'Genin', '🥷'], ['Genin confirmé', 'Senior Genin', '🌀'], ['Chûnin', 'Chunin', '🎯'], ['Chûnin d’élite', 'Elite Chunin', '⚔️'], ['Jônin', 'Jonin', '🛡️'], ['Jônin spécial', 'Special Jonin', '🥷'], ['ANBU', 'ANBU', '🎭'], ['Kage', 'Kage', '🏯'], ['Hokage', 'Hokage', '👑'],
     ],
@@ -4539,13 +4545,19 @@
     { id: 'ocean', name: L('Océan Indien', 'Indian Ocean'), icon: '🐋', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 6, items: [
       ['Plage', 'Beach', '🏖️'], ['Crabe de sable', 'Sand crab', '🦀'], ['Récif corallien', 'Coral reef', '🪸'], ['Poissons tropicaux', 'Tropical fish', '🐠'], ['Lagon turquoise', 'Turquoise lagoon', '🐟'], ['Tortue marine', 'Sea turtle', '🐢'], ['Dauphins', 'Dolphins', '🐬'], ['Mer ouverte', 'Open sea', '🌊'], ['Grand océan Indien', 'Great Indian Ocean', '🌊'], ['Baleine majestueuse', 'Majestic whale', '🐋'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
+    { id: 'ancient', name: L('Guerriers de l’Antiquité', 'Ancient warriors'), icon: '🏛️', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 7, items: [
+      ['Camp romain', 'Roman camp', '⛺'], ['Légionnaire', 'Legionary', '🛡️'], ['Archers', 'Archers', '🏹'], ['Cavalerie', 'Cavalry', '🐎'], ['Baliste', 'Ballista', '🎯'], ['Catapulte', 'Catapult', '🪨'], ['Bélier', 'Battering ram', '🪵'], ['Tour de siège', 'Siege tower', '🏰'], ['Éléphant de guerre', 'War elephant', '🐘'], ['Char de l’empereur', 'Emperor’s chariot', '👑'],
+    ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
+    { id: 'modern', name: L('Guerriers modernes', 'Modern warriors'), icon: '🪖', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 8, items: [
+      ['Camp d’entraînement', 'Training camp', '⛺'], ['Soldat', 'Soldier', '🪖'], ['Jeep', 'Jeep', '🚙'], ['Radar', 'Radar', '📡'], ['Drone', 'Drone', '🛸'], ['Char d’assaut', 'Tank', '🛡️'], ['Hélicoptère', 'Helicopter', '🚁'], ['Navire', 'Warship', '🚢'], ['Avion de chasse', 'Fighter jet', '✈️'], ['Quartier général', 'Headquarters', '⭐'],
+    ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
     { id: 'ninjas', name: L('Ninjas', 'Ninjas'), icon: '🥷', unlockGrade: 1, items: [
       ['Étudiant de l’Académie', 'Academy student', '📜'], ['Genin', 'Genin', '🥷'], ['Genin confirmé', 'Senior Genin', '🌀'], ['Chûnin', 'Chunin', '🎯'], ['Chûnin d’élite', 'Elite Chunin', '⚔️'], ['Jônin', 'Jonin', '🛡️'], ['Jônin spécial', 'Special Jonin', '🥷'], ['ANBU', 'ANBU', '🎭'], ['Kage', 'Kage', '🏯'], ['Hokage', 'Hokage', '👑'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
   ];
-  const NATURE_COLLECTION_ORDER = ['ninjas', 'plants', 'land', 'birds', 'ocean'];
+  const NATURE_COLLECTION_ORDER = ['ninjas', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern'];
   NATURE_COLLECTIONS.sort((a, b) => NATURE_COLLECTION_ORDER.indexOf(a.id) - NATURE_COLLECTION_ORDER.indexOf(b.id));
-  const BUILT_NATURE_COLLECTION_IDS = new Set(['plants', 'land', 'birds', 'ocean', 'ninjas']);
+  const BUILT_NATURE_COLLECTION_IDS = new Set(['plants', 'land', 'birds', 'ocean', 'ninjas', 'ancient', 'modern']);
   const AVAILABLE_NATURE_COLLECTIONS = NATURE_COLLECTIONS.filter((item) => BUILT_NATURE_COLLECTION_IDS.has(item.id));
   if (!store.get('natureNinjaDefaultMigrated', false)) {
     const previousCollection = store.get('natureCollection', null);
@@ -4563,6 +4575,8 @@
     birds: ['grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest'],
     ocean: ['beach', 'beach', 'rock', 'rock', 'water', 'water', 'water', 'water', 'water', 'water'],
     ninjas: ['dojo', 'dojo', 'rock', 'rock', 'dojo', 'dojo', 'dojo', 'forest', 'forest', 'dojo'],
+    ancient: ['steppe', 'steppe', 'desert', 'desert', 'steppe', 'rock', 'rock', 'desert', 'desert', 'steppe'],
+    modern: ['steppe', 'mud', 'mud', 'rock', 'rock', 'desert', 'desert', 'mud', 'rock', 'steppe'],
   };
   const NATURE_WEATHER_PATH = ['sun', 'sunwind', 'cloudy', 'sun', 'drizzle', 'sunwind', 'cloudy', 'sunset', 'sunwind', 'sun'];
   function natureTerrainForGrade() {
@@ -4578,6 +4592,8 @@
     if (activeNatureCollection === 'plants') return { key: 'wheat', icon: '💧', name: L('Gouttes d’eau', 'Water drops'), unit: L('gouttes d’eau', 'water drops') };
     if (activeNatureCollection === 'ocean') return { key: 'wheat', icon: '🦪', name: L('Perles', 'Pearls'), unit: L('perles', 'pearls') };
     if (activeNatureCollection === 'ninjas') return { key: 'wheat', icon: '🪙', name: L('Pièces d’or', 'Gold coins'), unit: L('pièces d’or', 'gold coins') };
+    if (activeNatureCollection === 'ancient') return { key: 'wheat', icon: '🏺', name: L('Sesterces', 'Sesterces'), unit: L('sesterces', 'sesterces') };
+    if (activeNatureCollection === 'modern') return { key: 'wheat', icon: '🎖️', name: L('Médailles', 'Medals'), unit: L('médailles', 'medals') };
     if (activeNatureCollection === 'land') {
       const item = NATURE_COLLECTIONS.find((entry) => entry.id === 'land').items[Math.max(0, Math.min(9, grade - 1))];
       return item.currency === 'meat'
@@ -4703,6 +4719,8 @@
     land: [['land-1', L('Explorateur de la basse-cour', 'Farmyard explorer')], ['land-2', L('Ami des herbivores', 'Herbivore friend')], ['land-3', L('Gardien des troupeaux', 'Herd guardian')], ['land-4', L('Protecteur des prédateurs', 'Predator protector')], ['land-5', L('Légende de la jungle', 'Jungle legend')]],
     birds: [['birds-1', L('Ami des oiseaux', 'Bird friend')], ['birds-2', L('Éclaireur des palmiers', 'Palm scout')], ['birds-3', L('Gardien des perroquets', 'Parrot guardian')], ['birds-4', L('Maître du ciel tropical', 'Master of the tropical sky')], ['birds-5', L('Légende de la forêt', 'Forest legend')]],
     ocean: [['ocean-1', L('Explorateur du rivage', 'Shore explorer')], ['ocean-2', L('Gardien du récif', 'Reef guardian')], ['ocean-3', L('Protecteur du lagon', 'Lagoon protector')], ['ocean-4', L('Maître des mers', 'Master of the seas')], ['ocean-5', L('Gardien de la baleine', 'Whale guardian')]],
+    ancient: [['ancient-1', L('Légionnaire', 'Legionary')], ['ancient-2', L('Centurion', 'Centurion')], ['ancient-3', L('Maître des machines', 'Siege master')], ['ancient-4', L('Général', 'General')], ['ancient-5', L('Empereur', 'Emperor')]],
+    modern: [['modern-1', L('Soldat', 'Soldier')], ['modern-2', L('Sergent', 'Sergeant')], ['modern-3', L('Tankiste', 'Tank commander')], ['modern-4', L('Pilote de chasse', 'Fighter pilot')], ['modern-5', L('Général', 'General')]],
     ninjas: [['ecuyer', L('Genin', 'Genin')], ['chevalier', L('Chûnin', 'Chunin')], ['seigneur', L('Jônin', 'Jonin')], ['vizir', L('Kage', 'Kage')], ['roi', L('Hokage', 'Hokage')]],
   };
   const SHOP_TITLE_ILLUSTRATIONS = {
@@ -4711,6 +4729,8 @@
     birds: ['🐦', '🌴', '🦜', '🦅', '🦉'],
     ocean: ['🐚', '🪸', '🐠', '🌊', '🐋'],
     ninjas: ['🥷', '🗡️', '🛡️', '🐉', '🏯'],
+    ancient: ['🛡️', '⚔️', '🏹', '🦅', '👑'],
+    modern: ['🪖', '📡', '🛡️', '✈️', '⭐'],
   };
   function shopTitleItems() {
     const prices = [80, 200, 400, 700, 1200], levels = [1, 5, 10, 20, 30];
@@ -4746,7 +4766,7 @@
     $('home-garden-title').textContent = L(`Ta collection ${collection.name}`, `Your ${collection.name} collection`);
     // les icônes des boutons et des menus suivent le thème (plus d'icônes ninja dans les autres thèmes)
     if (window.setIconTheme) window.setIconTheme(collection.id);
-    // personnages 3D : créatures du thème (océan, plantes, animaux, oiseaux), ninjas sinon
+    // personnages 3D : créatures et guerriers du thème (océan, plantes, animaux, oiseaux, Antiquité, moderne), ninjas sinon
     const pieceTheme = window.ThemeModels && window.ThemeModels[collection.id] ? collection.id : 'ninja';
     if (window.PieceTheme !== pieceTheme) {
       window.PieceTheme = pieceTheme;
@@ -4762,6 +4782,8 @@
       land: [L('Ta réserve s’agrandit', 'Your reserve is growing'), L('Prêt à rencontrer de nouveaux animaux ?', 'Ready to meet new animals?')],
       birds: [L('Ta volière s’agrandit', 'Your aviary is growing'), L('Prêt à faire chanter ta volière ?', 'Ready to make your aviary sing?')],
       ocean: [L('Ton lagon s’éveille', 'Your lagoon awakens'), L('Prêt à plonger dans l’océan Indien ?', 'Ready to dive into the Indian Ocean?')],
+      ancient: [L('Ta légion se rassemble', 'Your legion gathers'), L('Prêt à conquérir l’Antiquité ?', 'Ready to conquer the ancient world?')],
+      modern: [L('Ton bataillon se prépare', 'Your battalion gets ready'), L('Prêt pour la mission ?', 'Ready for the mission?')],
     }[collection.id] || [L('Ton aventure continue', 'Your adventure continues'), L('Prêt pour un nouveau défi ?', 'Ready for a new challenge?')];
     $('home-hero-kicker').textContent = HERO[0]; $('home-hero-title').textContent = HERO[1];
     $('home-garden-copy').textContent = NATURE_PREVIEW_ALL_UNLOCKED

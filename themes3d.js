@@ -606,6 +606,9 @@
     },
   };
 
+  // boîte à outils partagée avec les autres thèmes (warriors3d.js)
+  root.ThemeKit = { use(THREE) { T = THREE; }, mat, mesh, sphere, cone, cyl, box, ell, stick, base, eyes, smile, crown, tiara, quad, quadPose, apePose };
+
   const THEMES = { plants: PLANTS, land: LAND, birds: BIRDS };
   root.ThemeModels = root.ThemeModels || {};
   for (const [id, B] of Object.entries(THEMES)) {
