@@ -4633,11 +4633,18 @@
     ocean: [['ocean-1', L('Explorateur du rivage', 'Shore explorer')], ['ocean-2', L('Gardien du récif', 'Reef guardian')], ['ocean-3', L('Protecteur du lagon', 'Lagoon protector')], ['ocean-4', L('Maître des mers', 'Master of the seas')], ['ocean-5', L('Gardien de la baleine', 'Whale guardian')]],
     ninjas: [['ecuyer', L('Genin', 'Genin')], ['chevalier', L('Chûnin', 'Chunin')], ['seigneur', L('Jônin', 'Jonin')], ['vizir', L('Kage', 'Kage')], ['roi', L('Hokage', 'Hokage')]],
   };
+  const SHOP_TITLE_ILLUSTRATIONS = {
+    plants: ['🌱', '🧑🏽‍🌾', '🍎', '🌲', '🌳'],
+    land: ['🐓', '🐘', '🐃', '🦁', '🐅'],
+    birds: ['🐦', '🌴', '🦜', '🦅', '🦉'],
+    ocean: ['🐚', '🪸', '🐠', '🌊', '🐋'],
+    ninjas: ['🥷', '🗡️', '🛡️', '🐉', '🏯'],
+  };
   function shopTitleItems() {
     const prices = [80, 200, 400, 700, 1200], levels = [1, 5, 10, 20, 30];
     return Object.entries(SHOP_TITLE_PATHS).flatMap(([collection, titles]) => titles.map(([key, name], i) => ({
       id: `title:${key}`, kind: 'title', key, collection, name, price: prices[i], lvl: levels[i],
-      preview: `<span class="shop-title">« ${name} »</span>`,
+      preview: `<span class="shop-title-art ${collection}" data-stage="${i + 1}" role="img" aria-label="${escHtml(name)}"><i aria-hidden="true"></i><b aria-hidden="true">${SHOP_TITLE_ILLUSTRATIONS[collection][i]}</b><small aria-hidden="true">${i + 1}/5</small></span>`,
     })));
   }
   function shopItems() {

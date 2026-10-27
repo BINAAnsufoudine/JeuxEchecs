@@ -989,6 +989,19 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .shop-item .btn { width: 100%; padding: 7px; min-height: 0; }
 .shop-board { display: grid; grid-template-columns: 1fr 1fr; width: 46px; height: 46px; border-radius: 6px; overflow: hidden; }
 .shop-title { font-style: italic; color: var(--accent, #e9b949); min-height: 46px; display: flex; align-items: center; }
+.shop-title-art { position: relative; isolation: isolate; display: grid; place-items: center; width: 100%; height: 104px; overflow: hidden; border-radius: 12px; }
+.shop-title-art::before { content: ""; position: absolute; z-index: -1; left: -8%; right: -8%; bottom: -35%; height: 72%; border-radius: 50% 50% 0 0; background: var(--title-ground,#408052); }
+.shop-title-art::after { content: ""; position: absolute; z-index: -1; width: 42px; height: 42px; top: 9px; right: 14px; border-radius: 50%; background: rgba(255,240,177,.68); filter: blur(1px); }
+.shop-title-art > i { position: absolute; z-index: -1; left: 13%; bottom: 23%; width: 74%; height: 1px; background: rgba(255,255,255,.38); box-shadow: 0 7px rgba(255,255,255,.2),0 14px rgba(255,255,255,.13); }
+.shop-title-art > b { z-index: 1; font: 3.6rem/1 system-ui,sans-serif; filter: drop-shadow(0 5px 4px rgba(12,23,20,.38)); transform: translateY(2px); }
+.shop-title-art > small { position: absolute; right: 7px; bottom: 6px; color: rgba(255,255,255,.88); font-size: .62rem; font-weight: 800; text-shadow: 0 1px 3px rgba(0,0,0,.65); }
+.shop-title-art.plants { --title-ground:#3b8d4d; background: linear-gradient(#9ad9ad 0%,#d8f1b5 67%,#8dc978 100%); }
+.shop-title-art.land { --title-ground:#527a38; background: linear-gradient(#9dd8e7 0%,#f2d89b 66%,#a3bb67 100%); }
+.shop-title-art.birds { --title-ground:#34845b; background: linear-gradient(#61bde3 0%,#c2e9da 62%,#71b879 100%); }
+.shop-title-art.ocean { --title-ground:#087b9a; background: linear-gradient(#83dfdf 0%,#38b8c9 52%,#177baf 100%); }
+.shop-title-art.ocean > i { bottom: 28%; transform: rotate(-4deg); box-shadow: 0 8px rgba(255,255,255,.26),0 16px rgba(255,255,255,.16); }
+.shop-title-art.ninjas { --title-ground:#473a61; background: radial-gradient(ellipse at 75% 20%,#8765a4 0%,transparent 37%),linear-gradient(#202341 0%,#484067 65%,#252a3e 100%); }
+.shop-title-art.ninjas::after { width: 54px; height: 54px; background: rgba(242,187,76,.5); }
 .shop-frame { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; background: var(--surface-2); font-size: 1.4rem; }
 #shop #shop-body { width: min(960px,100%); max-width: none; margin: 0 auto; }
 #shop .bar { width: min(960px,100%); margin: 0 auto 10px; }
