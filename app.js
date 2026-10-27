@@ -3733,6 +3733,7 @@
     if (gamesStop) { gamesStop(); gamesStop = null; }
     if (user) {
       syncAfterLogin(user, profile).finally(() => { watchCloudProgress(); renderSyncStatus(); });
+      startTourWatch();
       ON.presence();
       let known = null;
       inviteStop = ON.watchInvites((all) => {
@@ -3770,7 +3771,7 @@
         }
         if (fresh && document.body.dataset.screen === 'online') openOnlineGame(fresh);
       });
-    } else { onlineInvites = { in: [], out: [] }; onlineGames = []; updateOnlineBadge(); if (progressStop) { progressStop(); progressStop = null; } }
+    } else { onlineInvites = { in: [], out: [] }; onlineGames = []; updateOnlineBadge(); stopTourWatch(); if (progressStop) { progressStop(); progressStop = null; } }
     if (document.body.dataset.screen === 'account') renderAccount();
     if (document.body.dataset.screen === 'online') renderOnline();
   }
@@ -3792,10 +3793,60 @@
     const g = onlineGames.find((x) => x.id === b.dataset.switchGame);
     if (g) openOnlineGame(g);
   });
+  /* ---------- Tournois proposés : pastilles et notification ---------- */
+  // Un tournoi ouvert auquel je ne suis pas inscrit et que je n'ai pas encore vu : pastille sur « Jouer »,
+  // sur « Tournois » et sur « Tournois ouverts », et une notification qui m'invite à m'inscrire.
+  let newTours = [];
+  function startTourWatch() {
+    if (!ON || !ON.user || tourListStop) return;
+    tourListStop = ON.watchTournaments((all) => {
+      tourList = all;
+      for (const t of all.mine) if (t.status === 'open' && t.deadline && Date.now() > t.deadline && !autoStarted.has(t.id)) { autoStarted.add(t.id); ON.startTournament(t.id, true).catch(() => {}); }
+      updateTourBadge();
+      if (document.body.dataset.screen === 'tournaments' && !tourDoc) renderTournaments();
+    });
+  }
+  function stopTourWatch() { if (tourListStop) { tourListStop(); tourListStop = null; } tourList = { open: [], mine: [] }; newTours = []; updateTourBadge(); }
+  function updateTourBadge() {
+    const me = ON && ON.user && ON.user.uid, now = Date.now(), seen = store.get('toursSeen', []);
+    newTours = me ? (tourList.open || []).filter((t) => t.owner !== me && !(t.members || []).includes(me) && (!t.deadline || t.deadline > now) && !seen.includes(t.id)) : [];
+    const n = newTours.length;
+    $('tour-badge').hidden = !n; $('tour-badge').textContent = n;
+    updatePlayBadge();
+    // une seule notification par tournoi
+    const told = store.get('toursNotified', []), fresh = newTours.filter((t) => !told.includes(t.id));
+    if (!fresh.length) return;
+    store.set('toursNotified', [...told, ...fresh.map((t) => t.id)].slice(-200));
+    notifyTours(fresh);
+  }
+  function markToursSeen() {
+    const seen = store.get('toursSeen', []), ids = (tourList.open || []).map((t) => t.id).filter((id) => !seen.includes(id));
+    if (ids.length) { store.set('toursSeen', [...seen, ...ids].slice(-300)); updateTourBadge(); }
+  }
+  function notifyTours(list) {
+    const t = list[0];
+    const title = list.length > 1 ? L(`${list.length} nouveaux tournois`, `${list.length} new tournaments`) : L('Nouveau tournoi', 'New tournament');
+    const text = list.length > 1
+      ? L(`Des tournois sont ouverts aux inscriptions, dont « ${t.name} ». Viens t’inscrire !`, `Tournaments are open for registration, including “${t.name}”. Come and sign up!`)
+      : L(`« ${t.name} » est ouvert aux inscriptions${t.deadline ? ` jusqu’au ${fmtDeadline(t.deadline)}` : ''}. Viens t’inscrire !`, `“${t.name}” is open for registration${t.deadline ? ` until ${fmtDeadline(t.deadline)}` : ''}. Come and sign up!`);
+    // notification du système si le joueur l'a déjà autorisée (appli en arrière-plan)
+    try { if (document.visibilityState !== 'visible' && 'Notification' in window && Notification.permission === 'granted') new Notification(title, { body: text, icon: 'logo/logo-192.png', tag: `tour-${t.id}` }); } catch { /* non disponible */ }
+    // pendant une partie, simple message pour ne pas interrompre le jeu
+    if (document.body.dataset.screen === 'game' || !$('modal').hidden) { toast(`🏆 ${title} : ${t.name}`); return; }
+    modal({ title: `🏆 ${title}`, text, actions: [
+      { label: L('Voir les tournois ouverts', 'See open tournaments'), primary: true, onClick: () => { $('btn-tournaments').click(); tourSection = 'open'; markToursSeen(); renderTournaments(); } },
+      { label: L('Plus tard', 'Later'), ghost: true },
+    ] });
+  }
+  function updatePlayBadge() {
+    const n = (Number($('online-badge').textContent) || 0) * !$('online-badge').hidden + newTours.length;
+    $('play-badge').hidden = !n; $('play-badge').textContent = n;
+  }
   function updateOnlineBadge() {
     const myTurn = onlineGames.filter((g) => g.status === 'active' && ((g.moves.length % 2 === 0) === (g.white === (ON.user && ON.user.uid)))).length;
     const n = onlineInvites.in.length + myTurn;
     $('online-badge').hidden = !n; $('online-badge').textContent = n;
+    updatePlayBadge();
   }
   if (ON) {
     ON.onUser(onUserChange);
@@ -3986,7 +4037,7 @@
       ['create', '➕', L('Créer un tournoi', 'Create a tournament'), null],
     ];
     if (!tourSection) {
-      body.innerHTML = `<div class="tour-menu">${SECTIONS.map(([id, icon, label, n]) => `<button class="btn tour-menu-btn" type="button" data-tour-section="${id}"><span class="tour-menu-icon">${icon}</span><b>${label}</b>${n != null ? `<span class="tour-menu-count">${n}</span>` : ''}</button>`).join('')}</div>`;
+      body.innerHTML = `<div class="tour-menu">${SECTIONS.map(([id, icon, label, n]) => `<button class="btn tour-menu-btn" type="button" data-tour-section="${id}"><span class="tour-menu-icon">${icon}</span><b>${label}</b>${n != null ? `<span class="tour-menu-count${id === 'open' && newTours.length ? ' hot' : ''}">${n}</span>` : ''}${id === 'open' && newTours.length ? `<small class="tour-menu-sub">${L(`${newTours.length} nouveau${newTours.length > 1 ? 'x' : ''}`, `${newTours.length} new`)}</small>` : ''}</button>`).join('')}</div>`;
       return;
     }
     const sec = SECTIONS.find((x) => x[0] === tourSection);
@@ -4136,7 +4187,7 @@
   }
   $('tour-body').addEventListener('click', async (e) => {
     const t = e.target.closest('button'); if (!t) return;
-    if (t.dataset.tourSection != null) { tourSection = t.dataset.tourSection || null; renderTournaments(); $('tour-body').scrollTop = 0; return; }
+    if (t.dataset.tourSection != null) { tourSection = t.dataset.tourSection || null; if (tourSection === 'open') markToursSeen(); renderTournaments(); $('tour-body').scrollTop = 0; return; }
     if (t.dataset.watch) return openSpectate(t.dataset.watch);
     const msg = (x, ok) => { const m = $('tour-msg'); if (m) { m.textContent = x; m.style.color = ok ? 'var(--accent, #e9b949)' : ''; } };
     const run = async (fn, ok) => { msg(L('Un instant…', 'One moment…'), true); try { await fn(); msg(ok || '', true); } catch (err) { msg(ON.explain(err)); } };
@@ -4173,14 +4224,7 @@
     returnTo = 'home'; tourSection = null;
     show('tournaments'); renderTournaments();
     if (!ON) return;
-    ON.load().then(() => {
-      if (ON.user && !tourListStop) tourListStop = ON.watchTournaments((all) => {
-        tourList = all;
-        for (const t of all.mine) if (t.status === 'open' && t.deadline && Date.now() > t.deadline && !autoStarted.has(t.id)) { autoStarted.add(t.id); ON.startTournament(t.id, true).catch(() => {}); }
-        if (document.body.dataset.screen === 'tournaments' && !tourDoc) renderTournaments();
-      });
-      renderTournaments();
-    }).catch(() => {});
+    ON.load().then(() => { startTourWatch(); renderTournaments(); }).catch(() => {});
   };
   /* ---------- Profil : statistiques (ordinateur, joueurs, tournois, apprentissage) et grades ---------- */
   // Rang d'un participant à la fin d'un tournoi (points, puis départage)
