@@ -4534,6 +4534,7 @@
     { name: L('Palmier tropical', 'Tropical palm'), icon: '🌴' }, { name: L('Grand baobab', 'Great baobab'), icon: '🌳' },
   ];
   const NATURE_PREVIEW_ALL_UNLOCKED = true;
+  const HOME_BACKGROUNDS = ['ocean', 'plants', 'modern']; // images dans fond_ecran/
   const NATURE_COLLECTIONS = [
     { id: 'plants', name: L('Plantes', 'Plants'), icon: '🌱', unlockGrade: 1, items: GARDEN_PLANTS },
     { id: 'land', name: L('Animaux terrestres', 'Land animals'), icon: '🐒', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 2, items: [
@@ -4786,6 +4787,9 @@
       modern: [L('Ton bataillon se prépare', 'Your battalion gets ready'), L('Prêt pour la mission ?', 'Ready for the mission?')],
     }[collection.id] || [L('Ton aventure continue', 'Your adventure continues'), L('Prêt pour un nouveau défi ?', 'Ready for a new challenge?')];
     $('home-hero-kicker').textContent = HERO[0]; $('home-hero-title').textContent = HERO[1];
+    // fond d'écran du thème dans la bannière d'accueil (pour les thèmes qui en ont un)
+    const welcome = document.querySelector('.home-welcome');
+    if (welcome) { if (HOME_BACKGROUNDS.includes(collection.id)) welcome.dataset.themeBg = collection.id; else delete welcome.dataset.themeBg; }
     $('home-garden-copy').textContent = NATURE_PREVIEW_ALL_UNLOCKED
       ? L(`Toutes les étapes du thème ${collection.name} sont ouvertes à l’exploration !`, `Every ${collection.name} theme stage is open to explore!`)
       : collection.id === 'plants'
