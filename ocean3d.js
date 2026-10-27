@@ -110,7 +110,6 @@
       const p = base(0.04);
       const shell = mesh(new T.SphereGeometry(0.2, 22, 12, 0, Math.PI * 2, 0, Math.PI / 2), mat('#2f8f5b', { rough: 0.7 }), 0, 0, 0); shell.scale.set(1, 0.75, 1.15); p.torso.add(shell);
       for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2, plate = mesh(new T.CylinderGeometry(0.05, 0.05, 0.01, 6), mat('#9fd17a', { rough: 0.6 }), Math.cos(a) * 0.11, 0.1, Math.sin(a) * 0.12); plate.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5); p.torso.add(plate); }
-      p.torso.add(mesh(new T.CylinderGeometry(0.06, 0.06, 0.012, 6), mat('#9fd17a'), 0, 0.15, 0));
       const plastron = mesh(new T.CylinderGeometry(0.2, 0.19, 0.03, 22), mat('#f3e3b5'), 0, -0.01, 0); plastron.scale.set(1, 1, 1.15); p.torso.add(plastron);
       p.head.position.set(0, 0.05, 0.25); p.head.add(mesh(sphere(0.07, 16, 12), mat('#7cc49a')));
       eyes(p.head, 0.04, 0.02, 0.05, 0.02);
