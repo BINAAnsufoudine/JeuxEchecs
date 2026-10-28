@@ -52,7 +52,7 @@
         beam.position.y = 0.55; g.add(beam);
         g.position.set(p.x, 0.03, p.z); g.userData.pulse = sq; this.overlay.add(g);
       }
-      this.setMateFire((o.mateUltimate && o.mateUltimate.piece.toLowerCase() === 'q') || THEME_MATE[root.PieceTheme] ? [] : o.mateFire || []);
+      this.setMateFire((o.mateUltimate && o.mateUltimate.piece.toLowerCase() === 'q') || THEME_MATE[root.themeOf(o.mateUltimate ? o.mateUltimate.piece : 'K')] ? [] : o.mateFire || []);
       let capture = null;
       const mark = (sq, color, opacity) => {
         if (sq < 0 || sq == null) return;
@@ -117,19 +117,19 @@
           const len = Math.hypot(b.x - a.x, b.z - a.z) || 1;
           const ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
           const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); } };
-          const themeFx = THEME_FX[root.PieceTheme], ocean = !!themeFx;
+          const theme = root.themeOf(white ? 'K' : 'k'), themeFx = THEME_FX[theme], ocean = !!themeFx;
           if (ocean && far && m.flag !== 'ep') {
             // Thèmes de créatures : jet (tour, dame) ou salve (cavalier, fou), aux couleurs du thème :
             // eau et encre (océan), liane et épines (plantes), sable et cailloux (animaux), plumes (oiseaux)
             const jet = kind === 'q' || kind === 'r';
-            const proj = WAR_PROJ[root.PieceTheme] && WAR_PROJ[root.PieceTheme][kind] && WAR_PROJ[root.PieceTheme][kind][white ? 'w' : 'b'];
+            const proj = WAR_PROJ[theme] && WAR_PROJ[theme][kind] && WAR_PROJ[theme][kind][white ? 'w' : 'b'];
             shot = { tech: proj ? 'proj' : jet ? 'water' : 'bubble', proj, white, pal: themeFx[white ? 'w' : 'b'], victim: v, target: b, fire: proj ? 0.55 : 0.7 };
             shot.flight = jet ? 0.45 + len * 0.09 : 0.3 + len * 0.07;
             if (proj) shot.flight = { shell: 0.12 + len * 0.025, laser: 0.55, missiles: 0.35 + len * 0.06, bombs: 0.9, boulder: 0.6 + len * 0.08, firepot: 0.55 + len * 0.08 }[proj] || 0.35 + len * 0.07;
             shot.impact = shot.fire + shot.flight;
             shot.runStart = shot.impact + 0.9;
             die({ t0: now + EXR + shot.impact, hit: true, swept: true, counter: { start: now, end: now + EXR, at: a } });
-          } else if (root.PieceTheme === 'modern' && kind === 'k' && m.flag !== 'ep') {
+          } else if (theme === 'modern' && kind === 'k' && m.flag !== 'ep') {
             // Guerriers modernes : le général appelle deux soldats qui entrent sur le plateau, se placent devant lui
             // de chaque côté et mitraillent la cible ; ensuite seulement il prend la case.
             escort = { white, from: a, target: b, dir: { x: ux, z: uz }, wait: 2.1, flying: !!(v && v.parts.fly) }; // engin volant : tir au bazooka
@@ -240,7 +240,7 @@
           const rook = take(rf);
           // Roque : le roi et la tour échangent leurs places d'un bond croisé, puis un dôme protecteur se lève
           // Guerriers modernes : le tank roule au sol et c'est le roi qui saute par-dessus
-          const kingJumps = root.PieceTheme === 'modern';
+          const kingJumps = root.themeOf(mover ? mover.piece : 'K') === 'modern';
           if (mover) { mover.anim.leap = true; mover.anim.dur = 0.7; if (kingJumps) mover.anim.high = 1.6; }
           if (rook) { moveChar(rook, rf, rt, { leap: !kingJumps }); rook.anim.dur = 0.7; if (!kingJumps) rook.anim.high = 1.5; next.set(rt, rook); }
           const k = this.sqToPos(m.to), r = this.sqToPos(rt);
@@ -291,9 +291,9 @@
           fromPos: { ...this.sqToPos(o.mateUltimate.attackerTo) }, target: this.sqToPos(o.mateUltimate.to),
           duration: o.mateUltimate.piece === 'k' ? 9.6 : o.mateUltimate.piece === 'K' ? 7.8 : o.mateUltimate.piece.toLowerCase() === 'q' ? 6.8 : o.mateUltimate.piece.toLowerCase() === 'p' ? 3.6 : o.mateUltimate.piece === 'N' ? 4.8 : o.mateUltimate.piece === 'n' ? 5.4 : o.mateUltimate.piece === 'b' ? 5.8 : o.mateUltimate.piece === 'R' ? 6.0 : o.mateUltimate.piece === 'r' ? 7.0 : 3.4,
         } : null;
-        if (this.mateUltimate && THEME_MATE[root.PieceTheme]) {
+        if (this.mateUltimate && THEME_MATE[root.themeOf(o.mateUltimate.piece)]) {
           const white = o.mateUltimate.piece === o.mateUltimate.piece.toUpperCase();
-          this.mateUltimate.themed = THEME_MATE[root.PieceTheme][white ? 'w' : 'b'];
+          this.mateUltimate.themed = THEME_MATE[root.themeOf(o.mateUltimate.piece)][white ? 'w' : 'b'];
           this.mateUltimate.duration = 4.8;
         }
         if (this.mateUltimate) {

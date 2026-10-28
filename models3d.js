@@ -675,10 +675,13 @@
   const SCALE = 1.45;
   const SIZE = { p: 0.82, n: 0.9, b: 0.92, r: 1.4, q: 1.0, k: 1.1 };
 
+  // Thème d'une pièce : celui de la collection, sauf pour les Noirs si un autre thème leur est choisi (mélange de thèmes)
+  root.themeOf = (piece) => (piece && piece === piece.toLowerCase() && root.PieceThemeBlack) || root.PieceTheme;
+
   function build(THREE, piece) {
     T = THREE;
     // thèmes Océan, Plantes, Animaux, Oiseaux : créatures du thème (ocean3d.js, themes3d.js) au lieu des ninjas
-    const themed = root.ThemeModels && root.ThemeModels[root.PieceTheme];
+    const themed = root.ThemeModels && root.ThemeModels[root.themeOf(piece)];
     const parts = themed ? themed.build(THREE, piece) : BUILD[piece]();
     if (themed) parts.themed = true; // les murs de protection n'existent que dans le thème Ninjas
     const k = SIZE[piece.toLowerCase()] * SCALE * (parts.scaleK || 1);

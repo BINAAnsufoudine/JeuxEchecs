@@ -1176,3 +1176,4 @@ body.admin-mode #home-rewards, body.admin-mode #coach-program, body.admin-mode #
 .daily-board li strong { text-align: right; }
 #daily-board-box .train-h { margin-top: 16px; }
 #daily-board-box .train-h small { display: block; margin-top: 2px; font-weight: 400; }
+.opt-select { width: 100%; max-width: 320px; padding: 8px 10px; border: 1px solid var(--surface-2); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; }

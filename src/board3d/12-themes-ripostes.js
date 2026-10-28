@@ -46,7 +46,7 @@
 
     // Projectile de riposte propre à la pièce ciblée, selon le thème (orienté le long de +z)
     counterProj(c, kind) {
-      const T = this.THREE, theme = root.PieceTheme, white = c.piece === c.piece.toUpperCase();
+      const T = this.THREE, theme = root.themeOf(c.piece), white = c.piece === c.piece.toUpperCase();
       const pal = THEME_FX[theme][white ? 'w' : 'b'];
       const g = new T.Group(); g.userData.themed = true;
       const std = (color, o = {}) => new T.MeshStandardMaterial(Object.assign({ color, roughness: 0.5, metalness: 0.2 }, o));
@@ -76,7 +76,7 @@
       if (el < 0.85) M.animate(c.parts, t, cast ? 'cast' : kind === 'b' ? 'throw' : 'punch', cast ? Math.min(1, el / 0.5) : Math.min(1, el / 0.45));
       else M.animate(c.parts, t, 'idle');
       if (el >= 0.3 && !k.proj && !k.done) {
-        const g = THEME_FX[root.PieceTheme] ? this.counterProj(c, kind) : new T.Group();
+        const g = THEME_FX[root.themeOf(c.piece)] ? this.counterProj(c, kind) : new T.Group();
         if (g.userData.themed) { /* arme propre à la pièce, aux couleurs du thème */ }
         else if (kind === 'b' && c.parts.shuriken) { g.add(this.cloneClean(c.parts.shuriken)); g.scale.setScalar(c.parts.root.scale.x * 1.1); }
         else {
@@ -103,7 +103,7 @@
           // parée par l'attaquant : éclat à l'impact
           this.scene.remove(k.proj); k.proj = null; k.done = true;
           this.shakeUntil = t + 0.08; this.shakeAmp = 0.02;
-          const pal = THEME_FX[root.PieceTheme] && THEME_FX[root.PieceTheme][c.piece === c.piece.toUpperCase() ? 'w' : 'b'];
+          const pal = THEME_FX[root.themeOf(c.piece)] && THEME_FX[root.themeOf(c.piece)][c.piece === c.piece.toUpperCase() ? 'w' : 'b'];
           k.burst = new T.Mesh(new T.SphereGeometry(0.2, 12, 8), this.glow(pal ? pal.burst[1] : kind === 'q' ? 0xff7a1a : kind === 'r' ? 0x2a8cff : 0xffe9a0, 0.85));
           k.burst.position.copy(end); k.burstT = el; this.scene.add(k.burst);
         }

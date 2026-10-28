@@ -95,7 +95,7 @@
             turn(c, Math.atan2(p1.x - p0.x, p1.z - p0.z));
             M.animate(c.parts, t, a.knightFlight ? 'knight-flight' : 'run');
             // Thème Oiseaux : sur plus d'une case, l'oiseau s'envole, plane puis se pose
-            const dist = Math.hypot(p1.x - p0.x, p1.z - p0.z), bird = root.PieceTheme === 'birds' && dist > 1.2;
+            const dist = Math.hypot(p1.x - p0.x, p1.z - p0.z), bird = root.themeOf(c.piece) === 'birds' && dist > 1.2;
             const arc = bird ? Math.min(1, Math.sin(Math.PI * u) * 1.6) * Math.min(2.2, 0.7 + dist * 0.28) : Math.sin(Math.PI * u) * (leap ? a.high || 0.9 : 0.12);
             c.parts.root.position.y = arc;
             c.shadow.scale.setScalar(Math.max(0.35, 1 - arc * 0.4));
@@ -119,7 +119,7 @@
             const tg = (a.shot || a.toss).target, u = t - a.pre;
             c.holder.position.set(a.from.x, 0, a.from.z);
             turn(c, Math.atan2(tg.x - a.from.x, tg.z - a.from.z));
-            if (!THEME_FX[root.PieceTheme]) { this.substitution(c, a, u, t, M); continue; }
+            if (!THEME_FX[root.themeOf(c.piece)]) { this.substitution(c, a, u, t, M); continue; }
             M.setEarthWall(c.parts, 0);
             const hitAt = 0.85, hurt = u > hitAt && u < hitAt + 0.35 ? Math.sin((u - hitAt) / 0.35 * Math.PI) : 0;
             M.animate(c.parts, t, hurt > 0 ? 'ko' : 'guard', hurt > 0 ? hurt * 0.35 : 1);
@@ -184,7 +184,7 @@
             else M.animate(c.parts, t, 'punch', finisher ? 2.35 : hits);
             c.parts.root.position.z = c.parts.weapon === 'element' ? 0 : Math.sin(hits * Math.PI * 2) * 0.06;
             c.shadow.scale.setScalar(1);
-            if (c.parts.mg && root.PieceTheme === 'modern') this.mgBurst(c, a.duel.foe, t); // guerriers modernes : rafales de mitrailleuse
+            if (c.parts.mg && root.themeOf(c.piece) === 'modern') this.mgBurst(c, a.duel.foe, t); // guerriers modernes : rafales de mitrailleuse
             else if (c.parts.weapon !== 'element') this.flash(a.duel.stop, a.duel.foe, hits, c.parts.fast ? 0xffffff : 0xffe066);
           } else {
             const u = Math.min(1, (el - a.dur - a.duel.len) / 0.35);

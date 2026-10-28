@@ -680,6 +680,7 @@
   });
   applyBoardView(false);
   applyAnimSpeed();
+  applyBlackTheme();
   // Bouton « Passer » pendant une longue animation (prise spéciale, mat) : les pièces se posent tout de suite
   setInterval(() => {
     const show = !!(b3d && game && document.body.dataset.screen === 'game' && settings.boardView !== '2d' && b3d.busyLeftMs() > 700);

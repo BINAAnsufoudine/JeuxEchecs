@@ -469,6 +469,7 @@
     $('opt-notify').checked = !!settings.notify && 'Notification' in window && Notification.permission === 'granted';
     for (const b of $('opt-anim').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.anim === (settings.anim || 'full')));
     $('opt-light-theme').checked = settings.colorTheme === 'light';
+    $('opt-black-theme').value = settings.blackTheme || '';
     renderSyncStatus();
   }
   function renderSyncStatus(state) {
@@ -511,6 +512,14 @@
     settings.anim = b.dataset.anim; applyAnimSpeed(); saveSettings();
     for (const x of $('opt-anim').querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
   });
+  // Mélange de thèmes : les Noirs peuvent avoir les pièces d'un autre thème que celui de la collection
+  $('opt-black-theme').addEventListener('change', (e) => { settings.blackTheme = e.target.value; saveSettings(); applyBlackTheme(); });
+  function applyBlackTheme() {
+    const t = settings.blackTheme || null;
+    if ((window.PieceThemeBlack || null) === t) return;
+    window.PieceThemeBlack = t;
+    if (b3d && b3d.rebuildPieces) { b3d.rebuildPieces(); if (game) render(); }
+  }
   function applyAnimSpeed() {
     if (!b3d) return;
     if (b3d.baseSpeed == null) b3d.baseSpeed = b3d.speed;
@@ -6586,6 +6595,7 @@
   });
   applyBoardView(false);
   applyAnimSpeed();
+  applyBlackTheme();
   // Bouton « Passer » pendant une longue animation (prise spéciale, mat) : les pièces se posent tout de suite
   setInterval(() => {
     const show = !!(b3d && game && document.body.dataset.screen === 'game' && settings.boardView !== '2d' && b3d.busyLeftMs() > 700);

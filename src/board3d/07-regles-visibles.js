@@ -228,7 +228,7 @@
 
     // Thème Océan : une fine couche d'eau translucide, avec des reflets qui ondulent, recouvre le plateau
     tickWater(t) {
-      const on = root.PieceTheme === 'ocean';
+      const on = root.PieceTheme === 'ocean' || root.PieceThemeBlack === 'ocean';
       if (!on && !this.waterLayer) return;
       if (!this.waterLayer) {
         const T = this.THREE, c = document.createElement('canvas'); c.width = c.height = 256;

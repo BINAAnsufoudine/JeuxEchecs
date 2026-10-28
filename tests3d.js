@@ -124,6 +124,13 @@
     test(`3D ${theme} : mat des Noirs`, () => mate(theme, false));
     test(`3D ${theme} : bouton « Passer » pendant une attaque`, () => skip(theme));
   }
+  // Mélange de thèmes : les Noirs avec les pièces d'un autre thème
+  for (const [w, k] of [['ninja', 'modern'], ['ocean', 'ancient'], ['birds', 'plants']]) {
+    window.PieceThemeBlack = k;
+    test(`3D mélange ${w} / ${k} : partie pleine de prises`, () => play(w, 21 + THEMES.indexOf(k), 40, 0.3));
+    test(`3D mélange ${w} / ${k} : mat des Noirs`, () => mate(w, false));
+    window.PieceThemeBlack = null;
+  }
   performance.now = realNow;
   const ok = results.every((r) => r.ok);
   document.getElementById('results').innerHTML = results.map((r) => `<li class="${r.ok ? 'ok' : 'ko'}">${r.ok ? '✓' : '✗'} ${r.name}${r.ok ? '' : ` — ${r.error}`}</li>`).join('');
