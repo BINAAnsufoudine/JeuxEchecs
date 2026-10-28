@@ -41,12 +41,33 @@
       K.stick(g, o.sleeve || o.body, 0.022, 0.02, [0, 0, 0], [0, -0.17, 0]);
       g.add(K.mesh(K.sphere(0.024, 8, 6), M(o.skin || '#e0b48c'), 0, -0.18, 0));
     }
+    // jambes articulées (cuisse + genou + tibia) pour pouvoir s'agenouiller
     for (const [g, s] of [[p.legL, -1], [p.legR, 1]]) {
       g.position.set(s * 0.04, -0.04, 0);
-      K.stick(g, o.legs || o.body, 0.026, 0.022, [0, 0, 0], [0, -0.24, 0]);
-      g.add(K.mesh(K.box(0.045, 0.03, 0.07), M(o.boots || '#3b2a1c'), 0, -0.25, 0.012));
+      K.stick(g, o.legs || o.body, 0.026, 0.024, [0, 0, 0], [0, -0.12, 0]);
+      const knee = new T.Group(); knee.position.y = -0.12; g.add(knee); g.userData.knee = knee;
+      knee.add(K.mesh(K.sphere(0.025, 8, 6), M(o.legs || o.body)));
+      K.stick(knee, o.legs || o.body, 0.024, 0.022, [0, 0, 0], [0, -0.12, 0]);
+      knee.add(K.mesh(K.box(0.045, 0.03, 0.07), M(o.boots || '#3b2a1c'), 0, -0.13, 0.012));
     }
+    p.pose = soldierPose;
     return p;
+  }
+  // Fantassin : genoux pliés en marchant ; à genou, un genou au sol et l'autre pied posé devant
+  function soldierPose(p, t, state, k) {
+    const kl = p.legL.userData.knee, kr = p.legR.userData.knee;
+    if (!kl) return;
+    if (state === 'kneel') {
+      const b = Math.max(0, Math.min(1, k));
+      p.root.position.y = -0.14 * p.root.scale.y * b;
+      p.legL.rotation.set(-1.45 * b, 0, 0); kl.rotation.x = 1.45 * b;  // jambe avant : pied à plat devant
+      p.legR.rotation.set(0.15 * b, 0, 0); kr.rotation.x = 1.45 * b;   // jambe arrière : genou au sol
+      p.torso.rotation.x = 0.12 * b;
+      return;
+    }
+    // en marche, le genou plie quand la jambe repart vers l'arrière
+    kl.rotation.x = Math.max(0, p.legL.rotation.x) * 0.9;
+    kr.rotation.x = Math.max(0, p.legR.rotation.x) * 0.9;
   }
   // arme tenue dans la main droite (pointe vers l'avant quand le bras se lève)
   function inHand(p, obj) { obj.position.y -= 0.18; p.armR.add(obj); return obj; }
@@ -231,7 +252,8 @@
     p.pose = rifleman;
     return p;
   }
-  function rifleman(p, t, state) {
+  function rifleman(p, t, state, k) {
+    soldierPose(p, t, state, k);
     const aim = state === 'punch' || state === 'cast' || state === 'guard' || state === 'throw';
     if (state === 'ko') { p.gun.visible = false; return; }
     p.gun.visible = true;
