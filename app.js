@@ -1412,17 +1412,27 @@
       } else toast(L('Indice : ', 'Hint: ') + move.slice(0, 2) + ' → ' + move.slice(2, 4));
       return;
     }
-    thinking = false;
-    const res = game.play(from, to, move[4]);
-    if (res) afterMove(res);
+    // l'ordinateur a réfléchi pendant l'animation : il joue dès que le plateau est libre
+    const ply = game.history.length;
+    const playNow = () => {
+      if (!thinking || !game || game.history.length !== ply) return;
+      const wait = b3d ? b3d.busyLeftMs() : 0;
+      if (wait > 0) { setTimeout(playNow, wait + 120); return; }
+      thinking = false;
+      const res = game.play(from, to, move[4]);
+      if (res) afterMove(res);
+    };
+    playNow();
   }
   function maybeAiMove() {
-    if (!game || result || cfg.mode === 'local' || cfg.mode === 'online' || game.turn === cfg.playerColor) return;
+    if (!game || result || cfg.mode === 'local' || cfg.mode === 'online') return;
+    // pendant que le joueur réfléchit, le moteur Stockfish se charge déjà (le premier chargement est long)
+    if (game.turn === cfg.playerColor) { if (usesSf(cfg.level)) try { getSf(); } catch { /* repli sur l'IA maison */ } return; }
     thinking = true;
     renderStatus(); renderActions();
-    // Petit délai pour que le coup du joueur s'affiche d'abord
-    // Laisse le duel en cours se terminer avant que l'ordinateur ne joue
-    const busy = b3d ? b3d.busyLeftMs() : 0;
+    // L'ordinateur réfléchit pendant l'animation du coup du joueur (au lieu d'attendre qu'elle finisse) ;
+    // son coup n'est joué qu'une fois le plateau libre (voir onAiMessage)
+    const busy = 0;
     const launch = () => {
       if (!thinking) return;
       // En partie coachée, le coach finit de parler avant de jouer
