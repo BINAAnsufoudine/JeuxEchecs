@@ -776,6 +776,9 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .home-garden-heading { margin-top: 22px; }
 .home-tropical-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(235px, .75fr); gap: 12px; }
 .home-garden-card { position: relative; display: flex; min-height: 242px; flex-direction: column; justify-content: space-between; overflow: hidden; padding: 14px; border: 1px solid #66895a; border-radius: 20px; color: #183222; background: linear-gradient(180deg, #8bd7ce 0%, #b7e5a0 51%, #89a64e 52%, #486b3c 100%); isolation: isolate; }
+.home-garden-card[data-theme-bg="land"] { background: linear-gradient(180deg, rgba(10,25,10,.15) 0%, rgba(10,25,10,.45) 100%), url(fond_ecran/land.webp) center top / 100% auto no-repeat, #2f4a2a; color: #fff; }
+.home-garden-card[data-theme-bg] .home-garden-sky, .home-garden-card[data-theme-bg] .home-garden-ground { display: none; }
+.home-garden-card[data-theme-bg] .home-garden-intro h3, .home-garden-card[data-theme-bg] .home-garden-intro p, .home-garden-card[data-theme-bg] > p { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
 .home-garden-sky { position: absolute; inset: 0 0 48% 0; z-index: -1; overflow: hidden; }
 .home-garden-sun { position: absolute; top: 12px; right: 15%; font-size: 29px; filter: drop-shadow(0 0 13px #fff2a6); }
 .home-garden-cloud { position: absolute; font-size: 24px; opacity: .8; }

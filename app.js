@@ -4557,6 +4557,7 @@
     { name: L('Palmier tropical', 'Tropical palm'), icon: '🌴' }, { name: L('Grand baobab', 'Great baobab'), icon: '🌳' },
   ];
   const NATURE_PREVIEW_ALL_UNLOCKED = true;
+  const CARD_BACKGROUNDS = ['land']; // thèmes dont l'image sert aussi de fond au cadre « Ta collection »
   const HOME_BACKGROUNDS = ['ninjas', 'ocean', 'plants', 'land', 'birds', 'ancient', 'modern']; // images dans fond_ecran/
   const NATURE_COLLECTIONS = [
     { id: 'plants', name: L('Plantes', 'Plants'), icon: '🌱', unlockGrade: 1, items: GARDEN_PLANTS },
@@ -4800,6 +4801,8 @@
     $('home-theme-heading').textContent = L(`Thème ${collection.name} ${collection.icon}`, `${collection.name} theme ${collection.icon}`);
     const card = $('home-theme-heading').closest('.home-section-heading') && document.querySelector('.home-garden-card');
     if (card) card.setAttribute('aria-label', L(`Thème ${collection.name}`, `${collection.name} theme`));
+    // essai : image du thème en fond du cadre « Ta collection » (Animaux terrestres pour l'instant)
+    if (card) { if (CARD_BACKGROUNDS.includes(collection.id)) card.dataset.themeBg = collection.id; else delete card.dataset.themeBg; }
     const HERO = {
       ninjas: [L('Ton chemin de ninja', 'Your ninja path'), L('Prêt à devenir Hokage ?', 'Ready to become Hokage?')],
       plants: [L('Ton jardin prend vie', 'Your garden comes alive'), L('Prêt à faire grandir ton jardin ?', 'Ready to grow your garden?')],
