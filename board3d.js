@@ -47,6 +47,12 @@
     ancient: { w: 'firearrows', b: 'boulder' },
     modern: { w: 'airstrike', b: 'orbital' },
   };
+  // Couleurs de la mise en scène des mats de thème : [lumière, trace au sol]
+  const THEME_MATE_COLORS = {
+    wave: [0x4fc3f7, 0x0d47a1], whirlpool: [0x7c4dff, 0x1a237e], roots: [0x9ccc65, 0x3e2723], jaws: [0xd81b60, 0x33691e],
+    stampede: [0xffcc80, 0x6d4c41], quake: [0xff7043, 0x3e2723], eagle: [0xfff8e1, 0x8d6e63], crows: [0x9575cd, 0x212121],
+    firearrows: [0xffa726, 0x3e2723], boulder: [0xbcaaa4, 0x4e342e], airstrike: [0xffab40, 0x263238], orbital: [0xff1744, 0x1a0000],
+  };
   // Armes propres aux thèmes guerriers, par pièce (w = Blancs, b = Noirs) ; sinon jet ou salve aux couleurs du thème
   const WAR_PROJ = {
     ancient: { n: { w: 'spear', b: 'spear' }, b: { w: 'bolt', b: 'boulder' }, r: { w: 'arrows', b: 'firepot' }, q: { w: 'spears', b: 'arrows' } },
@@ -2635,6 +2641,27 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       u.flash = at(new T.Mesh(new T.SphereGeometry(1, 18, 12), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false })), 0, 0.6, 0);
       const fireStyles = ['firearrows', 'airstrike', 'orbital', 'quake'];
       u.flash.material.color.setHex(fireStyles.includes(style) ? 0xffa726 : style === 'wave' || style === 'whirlpool' ? 0xb3e5fc : style === 'roots' || style === 'jaws' ? 0xc5e1a5 : 0xfff3e0);
+      // Mise en scène commune, aussi riche que les mats ninjas : l'attaquant se charge dans une colonne de lumière
+      // aux couleurs du thème, le ciel s'assombrit, puis l'impact projette une onde au sol, des éclats et une lumière,
+      // et laisse une trace sur la case du roi.
+      const tint = THEME_MATE_COLORS[style] || [0xffffff, 0x888888];
+      u.tint = tint;
+      const A = this.sqToPos(u.attackerTo);
+      u.pillar = new T.Mesh(new T.CylinderGeometry(0.42, 0.55, 6, 24, 1, true), new T.MeshBasicMaterial({ color: tint[0], transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
+      u.pillar.position.set(A.x, 3, A.z); g.add(u.pillar);
+      u.aura = new T.Mesh(new T.RingGeometry(0.35, 0.6, 40), new T.MeshBasicMaterial({ color: tint[0], transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
+      u.aura.rotation.x = -Math.PI / 2; u.aura.position.set(A.x, 0.03, A.z); g.add(u.aura);
+      u.shock = at(new T.Mesh(new T.RingGeometry(0.5, 0.75, 48), new T.MeshBasicMaterial({ color: tint[0], transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide })), 0, 0.04, 0);
+      u.shock.rotation.x = -Math.PI / 2;
+      u.scar = at(new T.Mesh(new T.CircleGeometry(0.62, 28), new T.MeshBasicMaterial({ color: tint[1], transparent: true, opacity: 0, depthWrite: false })), 0, 0.025, 0);
+      u.scar.rotation.x = -Math.PI / 2;
+      u.shards = [];
+      for (let i = 0; i < 26; i++) {
+        const m = at(new T.Mesh(new T.TetrahedronGeometry(0.05 + Math.random() * 0.06, 0), new T.MeshBasicMaterial({ color: i % 3 ? tint[0] : tint[1], transparent: true, opacity: 0.95 })), 0, 0.4, 0);
+        const a = Math.random() * Math.PI * 2, sp = 1.5 + Math.random() * 2.5;
+        m.userData.v = { x: Math.cos(a) * sp, y: 2.5 + Math.random() * 3.5, z: Math.sin(a) * sp }; m.visible = false; u.shards.push(m);
+      }
+      u.light = new T.PointLight(tint[0], 0, 9); u.light.position.set(P.x, 1.6, P.z); g.add(u.light);
     }
     tickThemeMate(c, t, M, u) {
       const T = this.THREE, e = t - u.start, P = u.target, style = u.themed;
@@ -2668,6 +2695,26 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const P = u.target, style = u.themed, grow = smooth((e - 0.6) / 2.2);
       if (e >= hit && !u.hitDone) { u.hitDone = true; this.shakeUntil = t + 0.8; this.shakeAmp = 0.16; }
       if (u.flash) { const f = after > 0 ? Math.max(0, 1 - after / 0.7) : 0; u.flash.material.opacity = f * 0.85; u.flash.scale.setScalar(0.4 + (1 - f) * 2.4); }
+      if (u.pillar) {
+        // charge de l'attaquant : colonne et anneau de lumière qui pulsent, puis s'éteignent à l'impact
+        const charge = smooth(e / 0.8) * (after > 0 ? Math.max(0, 1 - after / 0.5) : 1);
+        u.pillar.material.opacity = charge * (0.28 + Math.sin(t * 9) * 0.08); u.pillar.scale.set(1 + Math.sin(t * 6) * 0.05, smooth(e / 0.8), 1 + Math.sin(t * 6) * 0.05); u.pillar.rotation.y = t * 1.5;
+        u.aura.material.opacity = charge * 0.8; u.aura.scale.setScalar(1 + Math.sin(t * 7) * 0.12);
+        // le ciel s'assombrit pendant l'attaque et revient doucement après
+        this.skyDim = Math.min(0.55, grow * 0.55) * (after > 0 ? Math.max(0, 1 - after / 1.5) : 1);
+        // impact : onde au sol, éclats, lumière, et trace qui reste sur la case
+        const k = after > 0 ? after : -1;
+        u.shock.material.opacity = k >= 0 ? Math.max(0, 0.9 - k * 1.1) : 0; u.shock.scale.setScalar(k >= 0 ? 1 + k * 6 : 1);
+        u.scar.material.opacity = k >= 0 ? Math.min(0.55, k * 2) : 0;
+        u.light.intensity = k >= 0 ? Math.max(0, 6 - k * 7) : grow * 0.6;
+        for (const m of u.shards) {
+          m.visible = k >= 0 && k < 1.6;
+          if (!m.visible) continue;
+          const v = m.userData.v;
+          m.position.set(P.x + v.x * k, Math.max(0.05, 0.4 + v.y * k - 4.9 * k * k), P.z + v.z * k);
+          m.rotation.set(k * 9, k * 7, 0);
+        }
+      }
       if (style === 'wave') {
         // la vague grossit en arrivant de loin, puis s'écrase
         const k = smooth((e - 0.4) / 2.6), w = u.wave, d = w.userData.dir;
@@ -2990,6 +3037,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const u = this.mateUltimate;
       if (!u) return;
       if (u.apocalypse) this.restoreFoxWorld(u);
+      if (u.themed) this.skyDim = 0; // le ciel assombri par un mat de thème revient
       if (u.hiddenEnemies) u.hiddenEnemies.forEach(([piece, visible]) => { piece.holder.visible = visible; });
       if (u.flameVictims) u.flameVictims.forEach((victim) => {
         victim.character.holder.visible = victim.visible;

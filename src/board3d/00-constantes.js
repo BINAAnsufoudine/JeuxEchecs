@@ -47,6 +47,12 @@
     ancient: { w: 'firearrows', b: 'boulder' },
     modern: { w: 'airstrike', b: 'orbital' },
   };
+  // Couleurs de la mise en scène des mats de thème : [lumière, trace au sol]
+  const THEME_MATE_COLORS = {
+    wave: [0x4fc3f7, 0x0d47a1], whirlpool: [0x7c4dff, 0x1a237e], roots: [0x9ccc65, 0x3e2723], jaws: [0xd81b60, 0x33691e],
+    stampede: [0xffcc80, 0x6d4c41], quake: [0xff7043, 0x3e2723], eagle: [0xfff8e1, 0x8d6e63], crows: [0x9575cd, 0x212121],
+    firearrows: [0xffa726, 0x3e2723], boulder: [0xbcaaa4, 0x4e342e], airstrike: [0xffab40, 0x263238], orbital: [0xff1744, 0x1a0000],
+  };
   // Armes propres aux thèmes guerriers, par pièce (w = Blancs, b = Noirs) ; sinon jet ou salve aux couleurs du thème
   const WAR_PROJ = {
     ancient: { n: { w: 'spear', b: 'spear' }, b: { w: 'bolt', b: 'boulder' }, r: { w: 'arrows', b: 'firepot' }, q: { w: 'spears', b: 'arrows' } },
