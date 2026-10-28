@@ -3247,6 +3247,9 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
 
     rebuildPieces() {
+      // changement de thème : on termine d'abord les animations en cours pour ne laisser aucun effet orphelin
+      this.clearTransient();
+      if (this.mateUltimate) this.resetMateUltimate();
       for (const c of this.chars.values()) this.pieces.remove(c.holder);
       this.chars = new Map();
       this.boardKey = null;
@@ -3374,7 +3377,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
               glide(a.from, a.to, u, false);
               if (u >= 1) arrive();
             }
-            if (s.tech === 'fire') this.flyFire(c, s, el, t); else if (s.tech === 'bubble') this.flyBubbles(c, s, el, t); else if (s.tech === 'proj') this.flyProj(c, s, el, t); else this.flyDragon(c, s, el, t);
+            if (s.ended) { /* effet déjà nettoyé : ne rien recréer */ } else if (s.tech === 'fire') this.flyFire(c, s, el, t); else if (s.tech === 'bubble') this.flyBubbles(c, s, el, t); else if (s.tech === 'proj') this.flyProj(c, s, el, t); else this.flyDragon(c, s, el, t);
             continue;
           }
           if (a.toss) {
@@ -5085,7 +5088,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           }
         }
       }
-      if (el >= s.impact && !s.boom) {
+      if (el >= s.impact && !s.exploded) {
+        s.exploded = true; // une seule explosion, même si l'effet est encore appelé après son nettoyage
         for (const it of s.items || []) it.o.visible = false;
         if (s.beam) s.beam.visible = false;
         const fire = kind === 'shell' || kind === 'missiles' || kind === 'bombs' || kind === 'firepot' || kind === 'laser';
@@ -5136,7 +5140,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           b.position.copy(p);
         }
       }
-      if (el >= s.impact && !s.boom) {
+      if (el >= s.impact && !s.exploded) {
+        s.exploded = true;
         if (s.bubbles) for (const b of s.bubbles) b.visible = false;
         this.explode(s, end, el, t, s.pal.burst, s.pal.bits, true);
       }
@@ -5189,7 +5194,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         o.traverse((x) => { if (x.geometry) x.geometry.dispose(); if (x.material) x.material.dispose(); });
       }
       if (s.headClone) { this.scene.remove(s.headClone); s.headClone = null; }
-      s.fx = []; s.ball = null; s.boom = null; s.dragon = null;
+      s.fx = []; s.ball = null; s.boom = null; s.dragon = null; s.ended = true;
     }
 
     // Riposte à distance de la pièce prise : chacune lance sa propre technique sur l'attaquant
