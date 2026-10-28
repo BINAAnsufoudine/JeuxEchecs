@@ -1178,3 +1178,7 @@ body.admin-mode #home-rewards, body.admin-mode #coach-program, body.admin-mode #
 #daily-board-box .train-h small { display: block; margin-top: 2px; font-weight: 400; }
 .opt-select { width: 100%; max-width: 320px; padding: 8px 10px; border: 1px solid var(--surface-2); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; }
 body.recording-video #rp-video { background: #c62828; color: #fff; }
+.home-season { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 8px; padding: 7px 10px; border-radius: 10px; background: rgba(255,229,142,.92); color: #3b2f12; font-size: .72rem; font-weight: 700; }
+.home-season span { flex: 1 1 180px; }
+.home-season .btn { padding: 4px 10px; min-height: 0; font-size: .72rem; }
+.home-season:empty { display: none; }

@@ -173,6 +173,10 @@
   ];
   const NATURE_COLLECTION_ORDER = ['ninjas', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern'];
   NATURE_COLLECTIONS.sort((a, b) => NATURE_COLLECTION_ORDER.indexOf(a.id) - NATURE_COLLECTION_ORDER.indexOf(b.id));
+  // Saison mensuelle : chaque mois, un thème est à l'honneur (récompenses ×1,5 quand on joue avec lui)
+  const SEASON_BONUS = 1.5;
+  const seasonTheme = (d = new Date()) => NATURE_COLLECTION_ORDER[(d.getFullYear() * 12 + d.getMonth()) % NATURE_COLLECTION_ORDER.length];
+  const seasonMonth = (d = new Date()) => d.toLocaleDateString(LOCALE, { month: 'long' });
   const BUILT_NATURE_COLLECTION_IDS = new Set(['plants', 'land', 'birds', 'ocean', 'ninjas', 'ancient', 'modern']);
   const AVAILABLE_NATURE_COLLECTIONS = NATURE_COLLECTIONS.filter((item) => BUILT_NATURE_COLLECTION_IDS.has(item.id));
   if (!store.get('natureNinjaDefaultMigrated', false)) {
@@ -242,6 +246,10 @@
     setTimeout(() => el.remove(), big ? 4200 : 3000);
   }
   function reward(wheat, xp, why) {
+    if (activeNatureCollection === seasonTheme()) {
+      wheat = Math.round(wheat * SEASON_BONUS); xp = Math.round(xp * SEASON_BONUS);
+      why = `${why ? `${why} · ` : ''}${L('saison ×1,5', 'season ×1.5')}`;
+    }
     const w = walletState(), before = levelOf(w.xp).level;
     const beforeGrade = adventureGrade(before);
     w.xp += xp;
@@ -410,9 +418,15 @@
       : collection.id === 'plants'
       ? L(`${grade}/10 plantes débloquées · gagne de l’expérience pour faire grandir ton jardin.`, `${grade}/10 plants unlocked · earn experience to grow your garden.`)
       : L(`${grade}/10 découvertes · les récompenses de tes défis ouvrent de nouveaux paysages.`, `${grade}/10 discoveries · challenge rewards reveal new places.`);
+    // bandeau de la saison du mois
+    const season = NATURE_COLLECTIONS.find((item) => item.id === seasonTheme());
+    if (season) {
+      $('home-season').innerHTML = `<span>🏆 ${escHtml(L(`Saison ${/^[aeiouy]/i.test(seasonMonth()) ? 'd’' : 'de '}${seasonMonth()} : thème ${season.name} ${season.icon} à l’honneur, récompenses ×1,5 en jouant avec lui.`, `${seasonMonth()} season: ${season.name} ${season.icon} theme in the spotlight, rewards ×1.5 when you play with it.`))}</span>`
+        + (collection.id === season.id ? `<strong>${L('Bonus actif ✓', 'Bonus on ✓')}</strong>` : `<button type="button" class="btn" data-nature-collection="${season.id}">${L('Jouer ce thème', 'Play this theme')}</button>`);
+    }
     $('home-collection-tabs').innerHTML = AVAILABLE_NATURE_COLLECTIONS.map((item) => {
       const available = grade >= item.unlockGrade, selected = collection.id === item.id;
-      return `<button type="button" class="home-collection-tab${selected ? ' selected' : ''}${available ? '' : ' locked'}" data-nature-collection="${item.id}" ${available ? '' : `aria-label="${escHtml(L(`${item.name}, se débloque au grade ${item.unlockGrade}`, `${item.name}, unlocks at rank ${item.unlockGrade}`))}"`} aria-pressed="${selected}" title="${escHtml(available ? item.name : L(`Débloqué au grade ${item.unlockGrade}`, `Unlocks at rank ${item.unlockGrade}`))}"${HOME_BACKGROUNDS.includes(item.id) ? ` style="background-image:url('fond_ecran/mini/${item.id}.webp')"` : ''}><span>${item.icon} ${escHtml(item.name)}${available ? '' : ` · 🔒 ${item.unlockGrade}`}</span></button>`;
+      return `<button type="button" class="home-collection-tab${selected ? ' selected' : ''}${available ? '' : ' locked'}" data-nature-collection="${item.id}" ${available ? '' : `aria-label="${escHtml(L(`${item.name}, se débloque au grade ${item.unlockGrade}`, `${item.name}, unlocks at rank ${item.unlockGrade}`))}"`} aria-pressed="${selected}" title="${escHtml(available ? item.name : L(`Débloqué au grade ${item.unlockGrade}`, `Unlocks at rank ${item.unlockGrade}`))}"${HOME_BACKGROUNDS.includes(item.id) ? ` style="background-image:url('fond_ecran/mini/${item.id}.webp')"` : ''}><span>${item.id === seasonTheme() ? '🏆 ' : ''}${item.icon} ${escHtml(item.name)}${available ? '' : ` · 🔒 ${item.unlockGrade}`}</span></button>`;
     }).join('');
     // carrousel : le thème choisi reste visible au centre
     const pickedTab = $('home-collection-tabs').querySelector('.selected');
@@ -540,6 +554,7 @@
   $('btn-shop').onclick = openShop;
   $('home-rewards').onclick = openShop;
   $('btn-home-rice-shop').onclick = () => $('home-rewards').click();
+  $('home-season').addEventListener('click', (event) => { const b = event.target.closest('[data-nature-collection]'); if (b) { const tab = $('home-collection-tabs').querySelector(`[data-nature-collection="${b.dataset.natureCollection}"]`); if (tab) tab.click(); } });
   $('home-collection-tabs').addEventListener('click', (event) => {
     const button = event.target.closest('[data-nature-collection]');
     if (!button) return;
