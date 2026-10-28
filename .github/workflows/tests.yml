@@ -16,6 +16,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Vérifier que app.js et board3d.js correspondent à leurs modules (src/)
+        run: node scripts/build.mjs --check
       - name: Vérifier la syntaxe de tous les scripts
         run: for f in *.js; do node --check "$f" || exit 1; done
       - name: Installer Playwright et Chromium
