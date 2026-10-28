@@ -202,14 +202,19 @@
       p.pose = plantPose; p.scaleK = 1.15;
       return p;
     },
-    B() { // bambou : tige à nœuds, feuilles fines
-      const p = base(0.05);
-      for (let i = 0; i < 4; i++) { p.torso.add(mesh(cyl(0.045, 0.045, 0.13, 12), mat('#9ccc65'), 0, 0.06 + i * 0.14, 0)); p.torso.add(mesh(cyl(0.05, 0.05, 0.015, 12), mat('#7cb342'), 0, 0.13 + i * 0.14, 0)); }
-      p.head.position.set(0, 0.45, 0.04);
-      eyes(p.head, 0.02, 0, 0.01, 0.016); smile(p.head, -0.035, 0.012, 0.015);
-      for (const [g, s] of [[p.armL, -1], [p.armR, 1]]) { g.position.set(0, 0.35, 0); leaf(g, '#8bc34a', 0.035, 0.14, s * 0.13, 0.04, 0, 0, 0, s * -0.4); leaf(g, '#689f38', 0.03, 0.11, s * 0.1, -0.03, 0.03, 0, 0.4, s * -0.2); }
-      for (let i = 0; i < 3; i++) leaf(p.torso, '#8bc34a', 0.03, 0.12, (i - 1) * 0.05, 0.62, 0, 0.6, i, (i - 1) * 0.6);
-      p.pose = plantPose; p.scaleK = 1.05;
+    B() { // orangier : petit arbre au feuillage rond avec trois oranges
+      const p = base(0.03);
+      p.torso.add(mesh(cyl(0.035, 0.05, 0.3, 9), mat('#6d4c41', { rough: 0.9 }), 0, 0.13, 0));
+      ell(p.torso, '#2e7d32', 0.17, 0.15, 0.16, 0, 0.38, 0);
+      ell(p.torso, '#388e3c', 0.1, 0.09, 0.1, 0.08, 0.46, 0.04);
+      for (const [x, y, z] of [[0.12, 0.33, 0.11], [-0.13, 0.36, 0.08], [0.02, 0.27, 0.15]]) {
+        p.torso.add(mesh(sphere(0.042, 12, 10), mat('#fb8c00', { rough: 0.45 }), x, y, z));
+        p.torso.add(mesh(sphere(0.008, 6, 4), mat('#33691e'), x, y + 0.04, z));
+      }
+      p.head.position.set(0, 0.2, 0.05);
+      eyes(p.head, 0.025, 0.02, 0.0, 0.016); smile(p.head, -0.015, 0.005, 0.016);
+      for (const [g, s] of [[p.armL, -1], [p.armR, 1]]) { g.position.set(s * 0.03, 0.2, 0); stick(g, '#6d4c41', 0.01, 0.016, [0, 0, 0], [s * 0.11, 0.05, 0.02]); leaf(g, '#43a047', 0.03, 0.06, s * 0.13, 0.06, 0.02); }
+      p.pose = plantPose; p.scaleK = 1.15;
       return p;
     },
     R() { // baobab qui marche : tronc énorme, petites branches en couronne
@@ -223,20 +228,18 @@
       p.pose = plantPose; p.scaleK = 1.25; // la tour est la plus grande pièce du jardin
       return p;
     },
-    Q() { // fleur de lotus géante posée sur sa feuille
+    Q() { // cerisier en fleurs roses, couronné d'un diadème
       const p = base(0.03);
-      const pad = mesh(cyl(0.22, 0.22, 0.015, 20), mat('#43a047')); p.torso.add(pad);
-      stick(p.torso, '#66bb6a', 0.02, 0.025, [0, 0, 0], [0, 0.22, 0]);
-      for (let ring = 0; ring < 2; ring++) for (let i = 0; i < 7; i++) {
-        const a = (i / 7) * Math.PI * 2 + ring * 0.45, pet = mesh(sphere(1, 12, 8), mat(ring ? '#f8bbd0' : '#f06292', { double: true }), Math.cos(a) * 0.08, 0.26 + ring * 0.03, Math.sin(a) * 0.08);
-        pet.scale.set(0.045, 0.1, 0.02); pet.rotation.set(0, -a + Math.PI / 2, 0); pet.rotateX(-0.5 + ring * 0.25); p.torso.add(pet);
-      }
-      p.head.position.set(0, 0.3, 0.02);
-      ell(p.head, '#fff59d', 0.06, 0.05, 0.06);
-      eyes(p.head, 0.025, 0.015, 0.05, 0.015); smile(p.head, -0.015, 0.055, 0.015);
-      tiara(p.head, 0.06, '#e9e4ff');
-      for (const [g, s] of [[p.armL, -1], [p.armR, 1]]) { g.position.set(0, 0.15, 0); leaf(g, '#66bb6a', 0.05, 0.1, s * 0.09, 0, 0.02, 0, 0, s * -0.6); }
-      p.pose = plantPose; p.scaleK = 1.15;
+      p.torso.add(mesh(cyl(0.04, 0.065, 0.36, 9), mat('#5d4037', { rough: 0.9 }), 0, 0.15, 0));
+      for (const [x, z] of [[-1, 0.3], [1, -0.2], [0.2, 1]]) stick(p.torso, '#5d4037', 0.012, 0.022, [0, 0.3, 0], [x * 0.14, 0.42, z * 0.12]);
+      for (let i = 0; i < 6; i++) { const a = i * 1.05; ell(p.torso, i % 2 ? '#f8bbd0' : '#f48fb1', 0.12, 0.09, 0.11, Math.cos(a) * 0.1, 0.46 + (i % 3) * 0.04, Math.sin(a) * 0.09); }
+      for (let i = 0; i < 16; i++) { const a = i * 2.4, y = 0.4 + (i % 4) * 0.05; p.torso.add(mesh(sphere(0.018, 6, 4), mat('#ffffff', { emissive: '#fce4ec' }), Math.cos(a) * 0.17, y, Math.sin(a) * 0.15)); }
+      for (let i = 0; i < 5; i++) { const pet = mesh(sphere(0.012, 6, 4), mat('#f8bbd0'), Math.cos(i * 1.3) * 0.18, 0.05 + i * 0.015, Math.sin(i * 1.3) * 0.16); pet.scale.y = 0.3; p.torso.add(pet); } // pétales tombés
+      p.head.position.set(0, 0.22, 0.06);
+      eyes(p.head, 0.025, 0.02, 0.0, 0.016); smile(p.head, -0.015, 0.005, 0.016);
+      tiara(p.torso, 0.62, '#e9e4ff');
+      for (const [g, s] of [[p.armL, -1], [p.armR, 1]]) { g.position.set(s * 0.035, 0.24, 0); stick(g, '#5d4037', 0.01, 0.016, [0, 0, 0], [s * 0.12, 0.06, 0.02]); ell(g, '#f48fb1', 0.05, 0.04, 0.05, s * 0.13, 0.08, 0.02); }
+      p.pose = plantPose; p.scaleK = 1.1;
       return p;
     },
     K() { // grand manguier couronné
@@ -309,20 +312,20 @@
       p.pose = plantPose; p.scaleK = 1.25; // la tour est la plus grande pièce du jardin
       return p;
     },
-    q() { // plante carnivore : grande mâchoire dentée sur une tige
+    q() { // rosier aux trois roses noires, couronné d'un diadème
       const p = base(0.03);
-      for (let i = 0; i < 4; i++) leaf(p.torso, '#33691e', 0.06, 0.12, Math.cos(i * 1.57) * 0.1, 0.01, Math.sin(i * 1.57) * 0.1, 0, -i * 1.57, 0);
-      stick(p.torso, '#558b2f', 0.02, 0.03, [0, 0, 0], [0, 0.28, 0.03]);
-      p.head.position.set(0, 0.32, 0.04);
-      for (const s of [-1, 1]) {
-        const jaw = new T.Group(); jaw.rotation.x = s * 0.35; p.head.add(jaw);
-        const lobe = mesh(new T.SphereGeometry(0.1, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat('#7b1f2a', { double: true })); lobe.scale.set(1, 0.5, 1); lobe.rotation.x = s > 0 ? 0 : Math.PI; jaw.add(lobe);
-        for (let i = 0; i < 7; i++) { const a = (i / 6) * Math.PI; const tooth = mesh(cone(0.007, 0.04, 4), mat('#f1f8e9'), Math.cos(a) * 0.1, 0, Math.sin(a) * 0.1); tooth.rotation.x = s > 0 ? 0 : Math.PI; jaw.add(tooth); }
+      for (const [x, z, h] of [[0, 0, 0.42], [-0.07, 0.03, 0.34], [0.07, -0.02, 0.36]]) {
+        stick(p.torso, '#2e4a22', 0.012, 0.016, [0, 0, 0], [x, h, z]);
+        for (let i = 0; i < 3; i++) p.torso.add(mesh(cone(0.006, 0.025, 4), mat('#5d2e2e'), x * (i + 1) / 4, 0.08 + i * 0.09, z * (i + 1) / 4 + 0.012)); // épines
+        // rose noire : pétales serrés en spirale
+        for (let k = 0; k < 7; k++) { const a = k * 2.4, r = 0.012 + k * 0.005, pet = mesh(sphere(1, 10, 8), mat(k % 2 ? '#1a1a1d' : '#2a0f18', { rough: 0.5, double: true }), x + Math.cos(a) * r, h + 0.03 + k * 0.002, z + Math.sin(a) * r); pet.scale.set(0.028, 0.03, 0.012); pet.rotation.y = -a; p.torso.add(pet); }
       }
-      eyes(p.head, 0.04, 0.06, 0.02, 0.018, '#ff3d00');
-      tiara(p.head, 0.09, '#b9a6ff', -0.02);
-      for (const [g, s] of [[p.armL, -1], [p.armR, 1]]) { g.position.set(0, 0.14, 0); leaf(g, '#558b2f', 0.04, 0.1, s * 0.09, 0, 0.02, 0, 0, s * -0.5); }
-      p.pose = plantPose; p.scaleK = 1.2;
+      for (let i = 0; i < 6; i++) { const a = i * 1.05; leaf(p.torso, '#1b5e20', 0.03, 0.06, Math.cos(a) * 0.06, 0.12 + (i % 3) * 0.07, Math.sin(a) * 0.06, 0.3, -a, 0.4); }
+      p.head.position.set(0, 0.46, 0);
+      eyes(p.head, 0.025, -0.0, 0.035, 0.014, '#c62828');
+      tiara(p.torso, 0.52, '#b9a6ff');
+      for (const [g, s] of [[p.armL, -1], [p.armR, 1]]) { g.position.set(0, 0.2, 0); stick(g, '#2e4a22', 0.008, 0.012, [0, 0, 0], [s * 0.1, 0.03, 0.02]); leaf(g, '#1b5e20', 0.03, 0.06, s * 0.12, 0.03, 0.02); }
+      p.pose = plantPose; p.scaleK = 1.25;
       return p;
     },
     k() { // arbre mort couronné, couvert de lianes
