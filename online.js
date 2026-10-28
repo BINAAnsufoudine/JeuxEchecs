@@ -422,6 +422,36 @@ window.Online = (function () {
   }
 
 
+  /* ----- Clubs et écoles : un responsable, des membres qui rejoignent avec un code ----- */
+  async function createClub(name) {
+    const f = await load(), me = user.uid;
+    const club = { name: String(name).trim().slice(0, 40), code: code6(), owner: me, ownerName: profile.pseudo, members: [me], names: { [me]: profile.pseudo }, createdAt: Date.now() };
+    const ref = await f.addDoc(f.collection(f.db, 'clubs'), club);
+    return { id: ref.id, ...club };
+  }
+  async function myClubs() {
+    const f = await load();
+    const snap = await f.getDocs(f.query(f.collection(f.db, 'clubs'), f.where('members', 'array-contains', user.uid)));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
+  async function joinClub(code) {
+    const f = await load(), me = user.uid;
+    const snap = await f.getDocs(f.query(f.collection(f.db, 'clubs'), f.where('code', '==', String(code).toUpperCase()), f.limit(1)));
+    if (snap.empty) return null;
+    const d = snap.docs[0], c = d.data();
+    if (!c.members.includes(me)) await f.updateDoc(d.ref, { members: [...c.members, me], [`names.${me}`]: profile.pseudo });
+    return { id: d.id, ...c };
+  }
+  async function leaveClub(id) {
+    const f = await load(), me = user.uid, ref = f.doc(f.db, 'clubs', id), c = (await f.getDoc(ref)).data();
+    await f.updateDoc(ref, { members: c.members.filter((m) => m !== me), [`names.${me}`]: f.deleteField() });
+  }
+  async function removeFromClub(id, uid) {
+    const f = await load(), ref = f.doc(f.db, 'clubs', id), c = (await f.getDoc(ref)).data();
+    await f.updateDoc(ref, { members: c.members.filter((m) => m !== uid), [`names.${uid}`]: f.deleteField() });
+  }
+  async function deleteClub(id) { const f = await load(); await f.deleteDoc(f.doc(f.db, 'clubs', id)); }
+
   /* ----- Tournois : individuels ou par équipe, système suisse ou toutes rondes ----- */
   // Un participant est un joueur (tournoi individuel) ou une équipe (tournoi par équipe).
   const code6 = () => Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
@@ -644,7 +674,7 @@ window.Online = (function () {
     signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos, publishSummary, getProfile, myTournaments,
     presence, listPlayers, setMuted, sendChat, myGames, deleteAccount,
     isAdmin, isAdminEmail, sendVerification, refreshVerification, adminData, adminSetBanned, adminDeleteUser, adminDeleteTournament, markAdmin, loadAdminEmail, setAdminEmail, getAdminEmail,
-    submitDaily, dailyBoard, seasonBoard,
+    submitDaily, dailyBoard, seasonBoard, createClub, myClubs, joinClub, leaveClub, removeFromClub, deleteClub,
     saveProgress, loadProgress, watchProgress, setGrade, requestTakeback, answerTakeback, offerDraw, answerDraw, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
     createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,
   };

@@ -70,6 +70,21 @@ service cloud.firestore {
         && request.resource.data.pseudo is string && request.resource.data.pseudo.size() <= 40;
       allow delete: if isAdmin();
     }
+    // Clubs et écoles : le responsable gère son club ; un joueur peut seulement s'y ajouter ou s'en retirer lui-même
+    match /clubs/{id} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['name', 'code', 'owner', 'ownerName', 'members', 'names', 'createdAt'])
+        && request.resource.data.owner == request.auth.uid && request.resource.data.members == [request.auth.uid]
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 40;
+      allow update: if request.auth != null && changedOnly(['name', 'members', 'names']) && request.resource.data.members.size() <= 200 && (
+        resource.data.owner == request.auth.uid
+        || (changedOnly(['members', 'names'])
+          && request.resource.data.names.diff(resource.data.names).affectedKeys().hasOnly([request.auth.uid])
+          && ((!(request.auth.uid in resource.data.members) && request.resource.data.members == resource.data.members.concat([request.auth.uid]))
+            || request.resource.data.members == resource.data.members.removeAll([request.auth.uid]))));
+      allow delete: if (request.auth != null && resource.data.owner == request.auth.uid) || isAdmin();
+    }
     // Pseudos uniques : chaque pseudo pointe vers un seul compte
     match /pseudos/{name} {
       allow read: if request.auth != null;

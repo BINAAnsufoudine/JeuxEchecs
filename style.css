@@ -1182,3 +1182,8 @@ body.recording-video #rp-video { background: #c62828; color: #fff; }
 .home-season span { flex: 1 1 180px; }
 .home-season .btn { padding: 4px 10px; min-height: 0; font-size: .72rem; }
 .home-season:empty { display: none; }
+.club-form { display: flex; gap: 8px; margin: 0 0 12px; }
+.club-form input { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--surface-2); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; }
+#club-code { text-transform: uppercase; letter-spacing: .15em; }
+.club-table td:nth-child(n+2), .club-table th:nth-child(n+2) { text-align: center; }
+.club-kick { padding: 2px 8px; min-height: 0; }
