@@ -341,6 +341,35 @@
     p.pose = machinePose; p.scaleK = 1.05;
     return p;
   }
+  // Avion de chasse à aile delta et plans canard (modèle demandé pour la dame) : nez pointu, verrière,
+  // petites ailes avant, grande aile delta avec nacelles en bout d'aile, une seule dérive, deux tuyères
+  function deltaJet(c) {
+    const p = K.base(0.26); p.fly = true;
+    const skin = M(c.body, { rough: 0.35, metal: 0.35 }), dark = M(c.dark, { rough: 0.4, metal: 0.3, double: true });
+    const flat = (pts) => { const sh = new T.Shape(); sh.moveTo(pts[0][0], pts[0][1]); for (const q of pts.slice(1)) sh.lineTo(q[0], q[1]); sh.lineTo(pts[0][0], pts[0][1]); return new T.ShapeGeometry(sh); };
+    K.ell(p.torso, c.body, 0.034, 0.036, 0.24, 0, 0, -0.02, { rough: 0.35, metal: 0.35 }); // fuselage
+    const nose = K.mesh(K.cone(0.032, 0.16, 12), skin, 0, -0.004, 0.29); nose.rotation.x = Math.PI / 2; p.torso.add(nose);
+    const canopy = K.ell(p.torso, '#263238', 0.022, 0.024, 0.07, 0, 0.03, 0.15, { metal: 0.6, rough: 0.08 }); canopy.scale.set(0.022, 0.022, 0.07);
+    p.torso.add(K.mesh(K.box(0.07, 0.03, 0.07), skin, 0, -0.02, 0.05)); // entrée d'air sous le fuselage
+    for (const sd of [-1, 1]) {
+      // grande aile delta (dessinée en x / -z) et nacelle en bout d'aile
+      const wing = K.mesh(flat([[0, -0.07], [0.22, 0.13], [0.22, 0.16], [0, 0.17]]), skin); wing.rotation.x = -Math.PI / 2; wing.scale.x = sd; wing.position.y = -0.012; p.torso.add(wing);
+      const pod = K.mesh(K.cyl(0.008, 0.008, 0.11, 6), M('#cfd8dc', { metal: 0.4 }), sd * 0.22, -0.012, -0.1); pod.rotation.x = Math.PI / 2; p.torso.add(pod);
+      // plan canard près du cockpit
+      const can = K.mesh(flat([[0, -0.2], [0.075, -0.15], [0.07, -0.135], [0, -0.15]]), skin); can.rotation.x = -Math.PI / 2; can.scale.x = sd; can.position.y = 0.0; p.torso.add(can);
+      // missiles sous l'aile
+      for (const k of [0.09, 0.15]) { const m = K.mesh(K.cyl(0.007, 0.007, 0.1, 6), M('#eceff1'), sd * k, -0.03, -0.04); m.rotation.x = Math.PI / 2; p.torso.add(m); }
+      // tuyère
+      const noz = K.mesh(K.cyl(0.016, 0.019, 0.04, 10), M('#455a64', { metal: 0.6 }), sd * 0.017, -0.004, -0.27); noz.rotation.x = Math.PI / 2; p.torso.add(noz);
+      const fl = K.mesh(K.cone(0.014, 0.06, 8), M('#ff7043', { emissive: '#ff7043', opacity: 0.8 }), sd * 0.017, -0.004, -0.31); fl.rotation.x = -Math.PI / 2; p.torso.add(fl);
+    }
+    // dérive unique, en flèche
+    const fin = K.mesh(flat([[0.06, 0.03], [0.17, 0.15], [0.21, 0.15], [0.22, 0.03]]), dark); fin.rotation.y = Math.PI / 2; p.torso.add(fin);
+    p.head.position.set(0, 0, 0.32);
+    p.muzzle = new T.Object3D(); p.muzzle.position.set(0, -0.03, 0.12); p.torso.add(p.muzzle);
+    p.pose = machinePose; p.scaleK = 1.35;
+    return p;
+  }
   function general(c, isBlack) {
     const p = soldier({ body: c.body, belt: '#4e342e', legs: c.dark, sleeve: c.body, boots: '#111', skin: isBlack ? '#c08a62' : '#e0b48c' });
     for (let i = 0; i < 4; i++) p.torso.add(K.mesh(K.box(0.014, 0.01, 0.006), M(['#c62828', '#1565c0', '#f2c230', '#2e7d32'][i]), -0.045 + (i % 2) * 0.018, 0.1 - Math.floor(i / 2) * 0.014, 0.055));
@@ -358,13 +387,13 @@
     N() { return helicopter(W, false); },
     B() { return drone(W, '#4fc3f7'); },
     R() { return tank(W); },
-    Q() { const p = jet(W, false); K.crown(p.torso, 0.06, '#e9e4ff', 0.4, 0.06); p.scaleK = 1.35; return p; },
+    Q() { const p = deltaJet(W); K.crown(p.torso, 0.075, '#e9e4ff', 0.4, 0.08); return p; },
     K() { const p = general(W, false); p.scaleK = 1.0; return p; },
     p() { const p = trooper(B, true); p.scaleK = 1.05; return p; },
     n() { return helicopter(B, true); },
     b() { return drone(B, '#ff1744'); },
     r() { const p = tank(B); p.head.children[1].scale.set(1.2, 1.15, 1.2); return p; },
-    q() { const p = jet(B, true); K.crown(p.torso, 0.06, '#b9a6ff', 0.4, 0.06); p.scaleK = 1.35; return p; },
+    q() { const p = deltaJet(B); K.crown(p.torso, 0.075, '#b9a6ff', 0.4, 0.08); return p; },
     k() { const p = general(B, true); p.scaleK = 1.0; return p; },
   };
 
