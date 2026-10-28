@@ -18,9 +18,12 @@
     return mats.get(key);
   }
   const mesh = (g, m, x = 0, y = 0, z = 0) => { const o = new T.Mesh(g, m); o.position.set(x, y, z); return o; };
-  const sphere = (r, w = 20, h = 14) => new T.SphereGeometry(r, w, h);
-  const cone = (r, h, s = 10) => new T.ConeGeometry(r, h, s);
-  const box = (x, y, z) => new T.BoxGeometry(x, y, z);
+  // Formes partagées entre toutes les créatures (une même sphère n'est créée qu'une fois)
+  const geos = new Map();
+  const shared = (key, make) => { let g = geos.get(key); if (!g) { g = make(); geos.set(key, g); } return g; };
+  const sphere = (r, w = 20, h = 14) => shared(`s${r}|${w}|${h}`, () => new T.SphereGeometry(r, w, h));
+  const cone = (r, h, s = 10) => shared(`c${r}|${h}|${s}`, () => new T.ConeGeometry(r, h, s));
+  const box = (x, y, z) => shared(`b${x}|${y}|${z}`, () => new T.BoxGeometry(x, y, z));
 
   // squelette commun : torse au centre du corps, tête devant, bras/jambes en pivots vides
   function base(y = 0.3) {

@@ -17,10 +17,14 @@
     return mats.get(key);
   }
   const mesh = (g, m, x = 0, y = 0, z = 0) => { const o = new T.Mesh(g, m); o.position.set(x, y, z); return o; };
-  const sphere = (r, w = 18, h = 12) => new T.SphereGeometry(r, w, h);
-  const cone = (r, h, s = 10) => new T.ConeGeometry(r, h, s);
-  const cyl = (r1, r2, h, s = 10) => new T.CylinderGeometry(r1, r2, h, s);
-  const box = (x, y, z) => new T.BoxGeometry(x, y, z);
+  // Formes partagées : une même forme (sphère, cône…) n'est créée qu'une fois et servie à toutes les pièces
+  // qui l'utilisent (8 pions = 1 jeu de formes), ce qui allège la mémoire et la carte graphique.
+  const geos = new Map();
+  const shared = (key, make) => { let g = geos.get(key); if (!g) { g = make(); geos.set(key, g); } return g; };
+  const sphere = (r, w = 18, h = 12) => shared(`s${r}|${w}|${h}`, () => new T.SphereGeometry(r, w, h));
+  const cone = (r, h, s = 10) => shared(`c${r}|${h}|${s}`, () => new T.ConeGeometry(r, h, s));
+  const cyl = (r1, r2, h, s = 10) => shared(`y${r1}|${r2}|${h}|${s}`, () => new T.CylinderGeometry(r1, r2, h, s));
+  const box = (x, y, z) => shared(`b${x}|${y}|${z}`, () => new T.BoxGeometry(x, y, z));
   // ellipsoïde coloré ajouté à un parent
   function ell(parent, color, sx, sy, sz, x = 0, y = 0, z = 0, o) {
     const m = mesh(sphere(1, 20, 14), mat(color, o), x, y, z); m.scale.set(sx, sy, sz); parent.add(m); return m;
