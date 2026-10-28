@@ -663,6 +663,22 @@
   } catch (err) {
     b3d = null; // pas de WebGL : plateau 2D
   }
+  // Choix de la vue du plateau : 3D avec l'aperçu 2D, 2D seule (plus léger : la 3D s'arrête) ou 3D seule
+  function applyBoardView(rerender) {
+    const view = b3d ? (['both', '2d', '3d'].includes(settings.boardView) ? settings.boardView : 'both') : '2d';
+    const wrap = $('board-wrap');
+    wrap.classList.toggle('view-2d', view === '2d');
+    wrap.classList.toggle('view-3d', view === '3d');
+    $('view-switch').hidden = !b3d;
+    for (const b of $('view-switch').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
+    if (rerender && game) { if (b3d && view !== '2d') b3d.resize(); renderBoard(); }
+  }
+  $('view-switch').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-view]'); if (!b) return;
+    settings.boardView = b.dataset.view; store.set('settings', settings);
+    applyBoardView(true);
+  });
+  applyBoardView(false);
 
   const savedGame = store.get('game', null);
   const savedScreen = store.get('lastScreen', null);

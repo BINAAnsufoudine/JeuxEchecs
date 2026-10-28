@@ -50,7 +50,7 @@
 
   // Appareil modeste (peu de mémoire ou de cœurs) : 3D allégée par défaut
   const weakDevice = !!((navigator.deviceMemory && navigator.deviceMemory <= 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4));
-  const settings = Object.assign({ theme: 'foret', colorTheme: 'dark', showMoves: true, coords: true, sound: true, autoQueen: false, voice: true, coachEnabled: true, lite: weakDevice }, store.get('settings', {}));
+  const settings = Object.assign({ boardView: 'both', theme: 'foret', colorTheme: 'dark', showMoves: true, coords: true, sound: true, autoQueen: false, voice: true, coachEnabled: true, lite: weakDevice }, store.get('settings', {}));
   const setup = Object.assign({ mode: 'ai', color: 'w', level: 1 }, store.get('setup', {}));
   // Ancien réglage sur 5 niveaux : on repart du niveau débloqué
   if (!store.get('unlocked', 0)) { store.del('stats'); store.set('unlocked', 1); setup.level = 1; }

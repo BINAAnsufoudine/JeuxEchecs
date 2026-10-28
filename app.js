@@ -50,7 +50,7 @@
 
   // Appareil modeste (peu de mémoire ou de cœurs) : 3D allégée par défaut
   const weakDevice = !!((navigator.deviceMemory && navigator.deviceMemory <= 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4));
-  const settings = Object.assign({ theme: 'foret', colorTheme: 'dark', showMoves: true, coords: true, sound: true, autoQueen: false, voice: true, coachEnabled: true, lite: weakDevice }, store.get('settings', {}));
+  const settings = Object.assign({ boardView: 'both', theme: 'foret', colorTheme: 'dark', showMoves: true, coords: true, sound: true, autoQueen: false, voice: true, coachEnabled: true, lite: weakDevice }, store.get('settings', {}));
   const setup = Object.assign({ mode: 'ai', color: 'w', level: 1 }, store.get('setup', {}));
   // Ancien réglage sur 5 niveaux : on repart du niveau débloqué
   if (!store.get('unlocked', 0)) { store.del('stats'); store.set('unlocked', 1); setup.level = 1; }
@@ -959,7 +959,8 @@
     const lessonStep = pz && pz.kind === 'lesson' ? pz.steps[pz.idx] : null;
     const tutorialStars = lessonStep && !pz.done && lessonStep.stars ? lessonStep.stars.map((square) => window.Chess.sqIndex(square)) : [];
     const arrows = replay ? replayArrows() : (lessonStep && lessonStep.arrows ? lessonStep.arrows : (!pz && cfg && cfg.mode === 'coach' ? coachArrows : []));
-    if (b3d) {
+    // vue « 2D » seule : la 3D n'est pas mise à jour (et ne se dessine plus), le plateau 2D prend toute la place
+    if (b3d && settings.boardView !== '2d') {
       const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
       b3d.update({ board: s.board, selected, targets, marks, last, check: checkSq, mateFire, mateUltimate, hint, tutorialStars, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext, outcome: shown ? shown.result : null, arrows, ply: pz ? null : game.history.length });
       animateNext = false;
@@ -6472,6 +6473,22 @@
   } catch (err) {
     b3d = null; // pas de WebGL : plateau 2D
   }
+  // Choix de la vue du plateau : 3D avec l'aperçu 2D, 2D seule (plus léger : la 3D s'arrête) ou 3D seule
+  function applyBoardView(rerender) {
+    const view = b3d ? (['both', '2d', '3d'].includes(settings.boardView) ? settings.boardView : 'both') : '2d';
+    const wrap = $('board-wrap');
+    wrap.classList.toggle('view-2d', view === '2d');
+    wrap.classList.toggle('view-3d', view === '3d');
+    $('view-switch').hidden = !b3d;
+    for (const b of $('view-switch').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
+    if (rerender && game) { if (b3d && view !== '2d') b3d.resize(); renderBoard(); }
+  }
+  $('view-switch').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-view]'); if (!b) return;
+    settings.boardView = b.dataset.view; store.set('settings', settings);
+    applyBoardView(true);
+  });
+  applyBoardView(false);
 
   const savedGame = store.get('game', null);
   const savedScreen = store.get('lastScreen', null);
