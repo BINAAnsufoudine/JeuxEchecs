@@ -95,6 +95,7 @@
         return null;
       };
       const moveChar = (c, from, to, extra = {}) => {
+        if (c.anim) this.endToss(c); // la pièce rejoue avant la fin de sa propre attaque : on termine proprement l'ancienne
         const a = this.sqToPos(from), b = this.sqToPos(to);
         const dist = Math.hypot(b.x - a.x, b.z - a.z);
         c.anim = Object.assign({ from: a, to: b, t0: now, dur: 0.35 + dist * 0.09 }, extra);
@@ -110,6 +111,7 @@
         const far = Math.max(Math.abs((m.from & 7) - (vSq & 7)), Math.abs((m.from >> 3) - (vSq >> 3))) > 1;
         if (m.captured && !o.mateUltimate) {
           const v = take(vSq);
+          if (v && v.anim) { this.endToss(v); v.anim = null; } // la pièce prise arrête net sa propre attaque en cours (sinon ses effets restaient figés)
           const a = this.sqToPos(m.from), b = this.sqToPos(vSq);
           capture = { from: a, to: b, victim: v };
           const len = Math.hypot(b.x - a.x, b.z - a.z) || 1;

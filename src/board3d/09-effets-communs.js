@@ -104,6 +104,12 @@
 
     endToss(c) {
       if (c.anim && c.anim.shot) this.endShot(c);
+      // attaque spéciale interrompue (coup suivant joué avant la fin) : ses effets ne doivent pas rester à l'écran
+      if (c.anim && c.anim.knightAttack) {
+        this.endShot(c.anim.knightAttack);
+        c.parts.root.visible = true; if (c.parts.riderRoot) c.parts.riderRoot.visible = true;
+        c.parts.root.rotation.set(0, 0, 0); c.parts.root.position.set(0, 0, 0); if (c.shadow) c.shadow.scale.setScalar(1);
+      }
       const s = c.anim && c.anim.toss;
       if (!s) return;
       if (s.proj && !s.stuck) this.scene.remove(s.proj);

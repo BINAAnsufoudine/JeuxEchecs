@@ -1,6 +1,7 @@
 // Tests automatiques lancés par GitHub Actions à chaque envoi :
 // 1. tests.html (moteur d'échecs, analyse, stress de l'échiquier 3D) ;
-// 2. démarrage de l'appli (index.html) sans aucune erreur JavaScript.
+// 2. tests3d.html (plateau 3D dans les 7 thèmes : pièces fantômes, restes d'animation, caméra, mats) ;
+// 3. démarrage de l'appli (index.html) sans aucune erreur JavaScript.
 import { chromium } from 'playwright';
 
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8765/';
@@ -21,6 +22,20 @@ async function suite() {
   await page.close();
 }
 
+async function suite3d() {
+  const page = await browser.newPage();
+  page.on('pageerror', (e) => console.log(`::error title=tests3d.html::${e.message}`));
+  await page.goto(BASE + 'tests3d.html');
+  await page.waitForFunction(() => window.__tests3d && window.__tests3d.done, null, { timeout: 300000 });
+  const t = await page.evaluate(() => window.__tests3d);
+  for (const r of t.results) {
+    console.log(`${r.ok ? '✓' : '✗'} ${r.name}${r.ok ? '' : ` — ${r.error}`}`);
+    if (!r.ok) console.log(`::error title=${r.name.replace(/[:,]/g, ' ')}::${r.error}`);
+  }
+  if (!t.ok) { failed = true; console.log('✗ tests3d.html en échec'); }
+  await page.close();
+}
+
 async function boot() {
   const page = await browser.newPage({ viewport: { width: 412, height: 915 } });
   const errors = [];
@@ -36,6 +51,6 @@ async function boot() {
   await page.close();
 }
 
-try { await suite(); await boot(); } catch (e) { console.log('✗', e.message); console.log(`::error title=Tests::${e.message}`); failed = true; }
+try { await suite(); await suite3d(); await boot(); } catch (e) { console.log('✗', e.message); console.log(`::error title=Tests::${e.message}`); failed = true; }
 await browser.close();
 process.exit(failed ? 1 : 0);

@@ -1145,6 +1145,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         return null;
       };
       const moveChar = (c, from, to, extra = {}) => {
+        if (c.anim) this.endToss(c); // la pièce rejoue avant la fin de sa propre attaque : on termine proprement l'ancienne
         const a = this.sqToPos(from), b = this.sqToPos(to);
         const dist = Math.hypot(b.x - a.x, b.z - a.z);
         c.anim = Object.assign({ from: a, to: b, t0: now, dur: 0.35 + dist * 0.09 }, extra);
@@ -1160,6 +1161,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         const far = Math.max(Math.abs((m.from & 7) - (vSq & 7)), Math.abs((m.from >> 3) - (vSq >> 3))) > 1;
         if (m.captured && !o.mateUltimate) {
           const v = take(vSq);
+          if (v && v.anim) { this.endToss(v); v.anim = null; } // la pièce prise arrête net sa propre attaque en cours (sinon ses effets restaient figés)
           const a = this.sqToPos(m.from), b = this.sqToPos(vSq);
           capture = { from: a, to: b, victim: v };
           const len = Math.hypot(b.x - a.x, b.z - a.z) || 1;
@@ -3748,6 +3750,12 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
     endToss(c) {
       if (c.anim && c.anim.shot) this.endShot(c);
+      // attaque spéciale interrompue (coup suivant joué avant la fin) : ses effets ne doivent pas rester à l'écran
+      if (c.anim && c.anim.knightAttack) {
+        this.endShot(c.anim.knightAttack);
+        c.parts.root.visible = true; if (c.parts.riderRoot) c.parts.riderRoot.visible = true;
+        c.parts.root.rotation.set(0, 0, 0); c.parts.root.position.set(0, 0, 0); if (c.shadow) c.shadow.scale.setScalar(1);
+      }
       const s = c.anim && c.anim.toss;
       if (!s) return;
       if (s.proj && !s.stuck) this.scene.remove(s.proj);
