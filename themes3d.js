@@ -220,7 +220,7 @@
       eyes(p.head, 0.05, 0.02, 0.01, 0.025); smile(p.head, -0.05, 0.02, 0.03);
       for (const [g, s] of [[p.legL, -1], [p.legR, 1]]) { g.position.set(s * 0.08, -0.03, 0); stick(g, '#8d6e63', 0.04, 0.05, [0, 0, 0], [s * 0.04, -0.03, 0.08]); }
       for (const [g, s] of [[p.armL, -1], [p.armR, 1]]) { g.position.set(s * 0.15, 0.25, 0); stick(g, '#8d6e63', 0.02, 0.03, [0, 0, 0], [s * 0.12, -0.08, 0.04]); }
-      p.pose = plantPose; p.scaleK = 0.75;
+      p.pose = plantPose; p.scaleK = 1.25; // la tour est la plus grande pièce du jardin
       return p;
     },
     Q() { // fleur de lotus géante posée sur sa feuille
@@ -297,7 +297,7 @@
       p.head.add(mesh(box(0.06, 0.012, 0.01), mat('#1a1210'), 0, -0.03, 0.01));
       for (const [g, s] of [[p.armL, -1], [p.armR, 1]]) { g.position.set(s * 0.1, 0.25, 0); stick(g, '#3e2f2a', 0.015, 0.025, [0, 0, 0], [s * 0.14, -0.06, 0.03]); }
       for (const [g, s] of [[p.legL, -1], [p.legR, 1]]) { g.position.set(s * 0.08, -0.02, 0); stick(g, '#3e2f2a', 0.03, 0.04, [0, 0, 0], [s * 0.06, -0.03, 0.06]); }
-      p.pose = plantPose; p.scaleK = 0.85;
+      p.pose = plantPose; p.scaleK = 1.25; // la tour est la plus grande pièce du jardin
       return p;
     },
     q() { // plante carnivore : grande mâchoire dentée sur une tige
