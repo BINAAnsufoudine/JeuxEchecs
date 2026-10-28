@@ -3356,9 +3356,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           }
           if (a.pre && el < 0) {
             // L'attaquant lève un mur de terre pour parer la riposte, avant de lancer sa technique.
+            // Hors du thème Ninjas, pas de mur : il esquive par une technique de substitution.
             const tg = (a.shot || a.toss).target, u = t - a.pre;
             c.holder.position.set(a.from.x, 0, a.from.z);
             turn(c, Math.atan2(tg.x - a.from.x, tg.z - a.from.z));
+            if (root.PieceTheme && root.PieceTheme !== 'ninja') { this.substitution(c, a, u, t, M); continue; }
             M.animate(c.parts, t, 'guard', 1);
             M.setEarthWall(c.parts, Math.min(1, u / 0.28));
             const hitAt = 0.85;
@@ -3367,6 +3369,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           }
           if (a.shot) {
             M.setEarthWall(c.parts, 0);
+            if (a.subst && !a.subst.shown) { a.subst.shown = true; c.parts.root.visible = true; if (c.parts.riderRoot) c.parts.riderRoot.visible = true; if (c.shadow) c.shadow.visible = true; }
             const s = a.shot;
             if (el < s.runStart) {
               c.holder.position.set(a.from.x, 0, a.from.z);
@@ -5198,6 +5201,51 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
 
     // Riposte à distance de la pièce prise : chacune lance sa propre technique sur l'attaquant
+    // Technique de substitution : juste avant que la riposte ne l'atteigne, l'attaquant disparaît dans un nuage
+    // de fumée et laisse à sa place une bûche qui encaisse le coup, puis il réapparaît pour lancer son attaque.
+    substitution(c, a, u, t, M) {
+      const T = this.THREE, swap = 0.62, back = 1.0, pos = a.from;
+      M.setEarthWall(c.parts, 0);
+      M.animate(c.parts, t, u < swap ? 'guard' : 'cast', 1);
+      c.parts.root.visible = u < swap || u >= back;
+      if (c.parts.riderRoot) c.parts.riderRoot.visible = c.parts.root.visible;
+      if (c.shadow) c.shadow.visible = c.parts.root.visible;
+      a.subst = a.subst || {};
+      const puff = (at) => {
+        const g = new T.Group(); g.position.set(at.x, 0, at.z); this.scene.add(g);
+        const balls = [];
+        for (let i = 0; i < 9; i++) {
+          const m = new T.Mesh(new T.SphereGeometry(0.17, 10, 8), new T.MeshBasicMaterial({ color: i % 3 ? 0xe8e8e8 : 0xbdbdbd, transparent: true, opacity: 0.85, depthWrite: false }));
+          const ang = (i / 9) * Math.PI * 2;
+          m.userData = { dx: Math.cos(ang) * 0.35, dz: Math.sin(ang) * 0.35, y: 0.25 + (i % 3) * 0.25 };
+          g.add(m); balls.push(m);
+        }
+        this.addEffect({ start: t, dur: 0.45, tick: (e) => {
+          const k = e / 0.45;
+          for (const m of balls) { m.position.set(m.userData.dx * (0.4 + k), m.userData.y + k * 0.3, m.userData.dz * (0.4 + k)); m.scale.setScalar(0.6 + k * 1.2); m.material.opacity = 0.85 * (1 - k); }
+        }, end: () => { this.scene.remove(g); g.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); } });
+      };
+      if (u >= swap && !a.subst.out) {
+        a.subst.out = true;
+        puff(pos);
+        // la bûche prend sa place : elle encaisse la riposte, bascule et roule un peu en arrière
+        const log = new T.Group(); log.position.set(pos.x, 0, pos.z); this.scene.add(log);
+        const wood = new T.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.9 }), ring = new T.MeshStandardMaterial({ color: 0xd7b98e, roughness: 0.8 });
+        const trunk = new T.Mesh(new T.CylinderGeometry(0.16, 0.17, 0.62, 12), wood); trunk.position.y = 0.31; log.add(trunk);
+        for (const y of [0.62, 0]) { const r = new T.Mesh(new T.CircleGeometry(0.16, 12), ring); r.rotation.x = y ? -Math.PI / 2 : Math.PI / 2; r.position.y = y + (y ? 0.001 : -0.001); log.add(r); }
+        const knot = new T.Mesh(new T.CylinderGeometry(0.03, 0.04, 0.12, 6), wood); knot.rotation.z = Math.PI / 2; knot.position.set(0.17, 0.42, 0); log.add(knot); log.scale.setScalar(1.3);
+        log.rotation.y = c.holder.rotation.y;
+        const fwd = { x: Math.sin(c.holder.rotation.y), z: Math.cos(c.holder.rotation.y) };
+        this.addEffect({ start: t, dur: back - swap + 0.25, tick: (e) => {
+          const hit = Math.max(0, e - (0.85 - swap));
+          log.rotation.x = -Math.min(1.45, hit * 7); // touchée, elle tombe en arrière
+          log.position.set(pos.x - fwd.x * Math.min(0.3, hit * 1.2), 0, pos.z - fwd.z * Math.min(0.3, hit * 1.2));
+          log.visible = e < back - swap + 0.05;
+        }, end: () => { this.scene.remove(log); log.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); wood.dispose(); ring.dispose(); } });
+      }
+      if (u >= back && !a.subst.in) { a.subst.in = true; puff(pos); }
+    }
+
     counterShot(d, t) {
       const T = this.THREE, M = root.Models3D, k = d.counter, c = d.c, el = t - k.start;
       const kind = c.piece.toLowerCase(), cast = 'qrk'.includes(kind);
