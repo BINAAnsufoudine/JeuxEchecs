@@ -483,6 +483,7 @@
     $('rp-play').disabled = !sans.length;
   }
   function exitReplay() {
+    if (videoRec) stopVideo(false);
     const back = replay && replay.back;
     stopReplayPlay();
     restoreReplayDemo();
@@ -519,6 +520,59 @@
       replayTimer = setTimeout(tick, Math.max(2200, busy + 700, speech + 400));
     };
     replayTimer = setTimeout(tick, 600);
+  };
+  // « Ma partie en vidéo » : la partie est rejouée en 3D depuis le début et filmée, puis le fichier vidéo est proposé
+  let videoRec = null;
+  function videoType() {
+    if (!window.MediaRecorder) return null;
+    return ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((t) => MediaRecorder.isTypeSupported(t)) || null;
+  }
+  function stopVideo(save) {
+    const v = videoRec; if (!v) return;
+    videoRec = null;
+    clearTimeout(v.timer);
+    v.save = save;
+    if (v.rec.state !== 'inactive') v.rec.stop();
+    $('rp-video').innerHTML = `<span>🎬</span>${L('Vidéo', 'Video')}`;
+    document.body.classList.remove('recording-video');
+    if (v.view) { settings.boardView = v.view; applyBoardView(true); }
+  }
+  $('rp-video').onclick = () => {
+    if (videoRec) { stopVideo(true); return; }
+    const type = videoType(), canvas = b3d && b3d.renderer && b3d.renderer.domElement;
+    if (!replay || !replay.moves.length) return;
+    if (!type || !canvas || !canvas.captureStream) { toast(L('Ton navigateur ne sait pas enregistrer de vidéo.', 'Your browser cannot record video.')); return; }
+    restoreReplayDemo(); stopReplayPlay();
+    // la vidéo filme le plateau 3D : on quitte la vue 2D le temps de l'enregistrement
+    const view = settings.boardView === '2d' ? settings.boardView : null;
+    if (view) { settings.boardView = 'both'; applyBoardView(true); }
+    b3d.skipAnimations();
+    gotoPly(0);
+    const chunks = [], rec = new MediaRecorder(canvas.captureStream(30), { mimeType: type, videoBitsPerSecond: 5000000 });
+    const v = videoRec = { rec, view, save: true, timer: 0 };
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = () => {
+      if (!v.save || !chunks.length) return;
+      const ext = type.startsWith('video/mp4') ? 'mp4' : 'webm';
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(chunks, { type: type.split(';')[0] }));
+      a.download = `ata-wawe-${(replay && replay.title ? replay.title : 'partie').replace(/[^\w\u00C0-\u017F-]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'partie'}.${ext}`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      toast(L('Vidéo enregistrée dans tes téléchargements.', 'Video saved to your downloads.'));
+    };
+    rec.start(1000);
+    $('rp-video').innerHTML = `<span>⏹</span>${L('Arrêter', 'Stop')}`;
+    document.body.classList.add('recording-video');
+    toast(L('Enregistrement de la partie en cours… Appuie sur « Arrêter » pour finir plus tôt.', 'Recording the game… Press “Stop” to finish early.'));
+    // même rythme que la lecture : chaque coup attend la fin de son animation
+    const step = () => {
+      if (videoRec !== v) return;
+      if (!replay || replay.index >= replay.moves.length) { v.timer = setTimeout(() => stopVideo(true), Math.max(2500, (b3d ? b3d.busyLeftMs() : 0) + 1500)); return; }
+      gotoPly(replay.index + 1, true);
+      v.timer = setTimeout(step, Math.max(1800, (b3d ? b3d.busyLeftMs() : 0) + 600));
+    };
+    v.timer = setTimeout(step, 1500);
   };
   $('moves').addEventListener('click', (e) => {
     if (!replay) return;
