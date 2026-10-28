@@ -251,14 +251,20 @@
       p.pose = plantPose; p.scaleK = 1.0;
       return p;
     },
-    p() { // ronce épineuse : boule de tiges sombres hérissées d'épines
-      const p = base(0.05);
-      ell(p.torso, '#4e342e', 0.11, 0.13, 0.1, 0, 0.13, 0);
-      for (let i = 0; i < 14; i++) { const a = i * 2.4, e = (i % 5) / 5 * Math.PI - Math.PI / 2; const d = new T.Vector3(Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)); const s = mesh(cone(0.012, 0.06, 5), mat('#bcaaa4'), d.x * 0.12, 0.13 + d.y * 0.13, d.z * 0.11); s.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d); p.torso.add(s); }
-      for (let i = 0; i < 3; i++) ell(p.torso, '#4a148c', 0.02, 0.02, 0.02, (i - 1) * 0.06, 0.24, 0.06); // mûres
-      p.head.position.set(0, 0.15, 0.09);
-      eyes(p.head, 0.035, 0.01, 0.01, 0.02, '#c62828');
-      for (const [g, s] of [[p.armL, -1], [p.armR, 1]]) { g.position.set(s * 0.09, 0.14, 0); stick(g, '#3e2723', 0.01, 0.015, [0, 0, 0], [s * 0.12, 0.03, 0.03]); }
+    p() { // tulipe violette dans un pot de terre
+      const p = base(0.03);
+      p.torso.add(mesh(cyl(0.085, 0.06, 0.12, 14), mat('#5d4037', { rough: 0.8 }), 0, 0.03, 0)); // pot
+      p.torso.add(mesh(cyl(0.092, 0.092, 0.025, 14), mat('#4e342e', { rough: 0.8 }), 0, 0.095, 0)); // bord du pot
+      p.torso.add(mesh(cyl(0.08, 0.08, 0.01, 14), mat('#3e2723'), 0, 0.1, 0)); // terre
+      stick(p.torso, '#33691e', 0.012, 0.016, [0, 0.1, 0], [0, 0.32, 0]);
+      for (const [g, s] of [[p.armL, -1], [p.armR, 1]]) { g.position.set(0, 0.16, 0); const l = leaf(g, '#2e5d32', 0.03, 0.09, s * 0.05, 0.03, 0, 0, 0, s * -1.0); l.scale.set(0.09, 0.008, 0.03); }
+      // fleur en coupe : six pétales violets qui se referment vers le haut
+      p.head.position.set(0, 0.35, 0);
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2, pet = mesh(sphere(1, 12, 8), mat(i % 2 ? '#6a1b9a' : '#7b1fa2', { double: true }), Math.cos(a) * 0.035, 0.02, Math.sin(a) * 0.035);
+        pet.scale.set(0.038, 0.07, 0.02); pet.rotation.set(0, -a + Math.PI / 2, 0); pet.rotateX(-0.25); p.head.add(pet);
+      }
+      eyes(p.head, 0.025, 0.02, 0.05, 0.014, '#c62828');
       p.pose = plantPose; p.scaleK = 1.35;
       return p;
     },
