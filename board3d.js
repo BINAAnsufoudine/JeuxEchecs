@@ -1126,12 +1126,19 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       // Réutilise les personnages déjà sur le plateau ; seul celui qui joue se déplace
       const now = this.now();
       const old = this.chars, next = new Map();
-      const boardKey = o.board.join('');
+      // une case vide compte (sinon un pion qui avance sans dépasser une autre pièce donnait la même clé)
+      const boardKey = o.board.map((p) => p || '.').join('');
       const boardChanged = boardKey !== this.boardKey;
       this.boardKey = boardKey;
       // Un nouveau coup peut commencer pendant la fin de l'animation précédente :
       // on conserve alors son animation en cours et on anime uniquement le nouveau coup.
       if (boardChanged && !o.animate) this.clearTransient();
+      // Nouveau coup pendant qu'une caméra automatique filme encore l'action précédente :
+      // elle revient tout de suite à la vue normale (elle se recentrera sur la nouvelle action s'il y en a une)
+      if (boardChanged && o.animate) {
+        const now = this.now();
+        for (const cam of [this.captureCamera, this.attackCamera]) if (cam && !cam.restoreStart) cam.holdUntil = Math.min(cam.holdUntil, now);
+      }
       const take = (sq, piece) => {
         const c = old.get(sq);
         if (c && (!piece || c.piece === piece)) { old.delete(sq); return c; }
@@ -1379,8 +1386,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         scar.object.traverse((x) => { if (x.geometry) x.geometry.dispose(); if (x.material) x.material.dispose(); });
       }
       this.captureScars = [];
+      // la caméra automatique s'arrêtait là où elle était (zoomée sur une ancienne action) : on revient à la vue normale
+      const autoCam = this.captureCamera || this.attackCamera;
       this.captureCamera = null;
       this.attackCamera = null;
+      if (autoCam) this.setCamera(this.flipped, true);
       if (this.spark) this.spark.visible = false;
       this.shakeUntil = 0;
       this.busyUntil = 0;
