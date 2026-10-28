@@ -497,14 +497,8 @@
 
   /* ================= OISEAUX TROPICAUX : le ciel des tropiques ================= */
   const BIRDS = {
-    P() { // colibri en vol stationnaire devant une fleur
-      const p = bird({ h: 0.34, color: '#26a69a', w: 0.035, bh: 0.035, len: 0.06, hr: 0.03, beak: 0.09, beakR: 0.006, beakColor: '#333', belly: '#e0f2f1', wing: '#80cbc4', tailLen: 0.05, legLen: 0.02, headColor: '#00897b' });
-      for (const [g, s] of [[p.armL, -1], [p.armR, 1]]) { g.children[0].scale.set(0.09, 0.008, 0.04); g.children[0].position.set(s * 0.06, 0.02, 0); g.children[0].rotation.set(0, 0, s * 0.3); }
-      p.torso.add(mesh(cyl(0.005, 0.005, 0.32, 6), mat('#558b2f'), 0, -0.18, 0.15)); // tige de fleur
-      for (let i = 0; i < 5; i++) { const a = i * 1.26; ell(p.torso, '#ec407a', 0.02, 0.008, 0.025, Math.cos(a) * 0.02, -0.02, 0.15 + Math.sin(a) * 0.02); }
-      p.torso.add(mesh(sphere(0.012, 6, 4), mat('#ffeb3b'), 0, -0.01, 0.15));
-      p.hover = true;
-      const pose = p.pose; p.pose = (q, t, st) => { pose(q, t, st); const f = Math.sin((t + q.phase) * 40) * 0.9; q.armL.rotation.z = -0.3 - f; q.armR.rotation.z = 0.3 + f; q.torso.position.y += Math.sin(t * 3 + q.phase) * 0.01; };
+    P() { // colibri posé au sol, ailes repliées (il ne vole qu'en se déplaçant)
+      const p = bird({ color: '#26a69a', w: 0.035, bh: 0.035, len: 0.06, hr: 0.03, beak: 0.09, beakR: 0.006, beakColor: '#333', belly: '#e0f2f1', wing: '#80cbc4', tailLen: 0.05, legLen: 0.04, headColor: '#00897b' });
       p.scaleK = 1.6;
       return p;
     },
