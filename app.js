@@ -4411,11 +4411,24 @@
   /* ---------- Grade des parties en ligne entre humains ---------- */
   // Points de grade : + en victoire (beaucoup contre un adversaire de grade plus fort, peu contre un plus faible),
   // − en défaite, inchangés en cas de nulle
-  const GRADES = [
-    [0, '⚪', L('Apprenti', 'Apprentice')], [100, '🟢', 'Genin'], [250, '🔵', 'Chûnin'], [450, '🟣', 'Jônin'],
-    [700, '🟠', 'Sannin'], [1000, '🔴', 'Kage'], [1400, '👑', L('Légende', 'Legend')],
-  ];
+  // mêmes paliers de points pour tous les thèmes ; seuls les noms des grades suivent le thème choisi
+  const GRADE_STEPS = [[0, '⚪'], [100, '🟢'], [250, '🔵'], [450, '🟣'], [700, '🟠'], [1000, '🔴'], [1400, '👑']];
+  const GRADE_NAMES = {
+    ninjas: [['Apprenti', 'Apprentice'], ['Genin', 'Genin'], ['Chûnin', 'Chunin'], ['Jônin', 'Jonin'], ['Sannin', 'Sannin'], ['Kage', 'Kage'], ['Légende', 'Legend']],
+    plants: [['Graine', 'Seed'], ['Pousse', 'Sprout'], ['Bourgeon', 'Bud'], ['Fleur', 'Flower'], ['Arbuste', 'Shrub'], ['Grand arbre', 'Great tree'], ['Baobab légendaire', 'Legendary baobab']],
+    land: [['Lionceau', 'Cub'], ['Pisteur', 'Tracker'], ['Éclaireur', 'Scout'], ['Chasseur', 'Hunter'], ['Chef de meute', 'Pack leader'], ['Roi de la savane', 'King of the savanna'], ['Légende', 'Legend']],
+    birds: [['Oisillon', 'Fledgling'], ['Moineau', 'Sparrow'], ['Perroquet', 'Parrot'], ['Faucon', 'Falcon'], ['Aigle', 'Eagle'], ['Aigle royal', 'Golden eagle'], ['Légende du ciel', 'Sky legend']],
+    ocean: [['Moussaillon', 'Cabin boy'], ['Poisson-clown', 'Clownfish'], ['Tortue marine', 'Sea turtle'], ['Dauphin', 'Dolphin'], ['Requin', 'Shark'], ['Baleine', 'Whale'], ['Légende des mers', 'Legend of the seas']],
+    ancient: [['Recrue', 'Recruit'], ['Légionnaire', 'Legionary'], ['Centurion', 'Centurion'], ['Tribun', 'Tribune'], ['Général', 'General'], ['Consul', 'Consul'], ['Empereur', 'Emperor']],
+    modern: [['Recrue', 'Recruit'], ['Soldat', 'Soldier'], ['Sergent', 'Sergeant'], ['Lieutenant', 'Lieutenant'], ['Capitaine', 'Captain'], ['Colonel', 'Colonel'], ['Général', 'General']],
+  };
+  const gradeTable = () => {
+    let theme = 'ninjas'; try { theme = activeNatureCollection; } catch { /* thème pas encore chargé */ }
+    const names = GRADE_NAMES[theme] || GRADE_NAMES.ninjas;
+    return GRADE_STEPS.map(([pts, icon], i) => [pts, icon, L(names[i][0], names[i][1])]);
+  };
   function gradeOf(pts) {
+    const GRADES = gradeTable();
     pts = Math.max(0, pts || 0);
     let i = 0; while (i < GRADES.length - 1 && pts >= GRADES[i + 1][0]) i++;
     const next = GRADES[i + 1];
