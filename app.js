@@ -3864,11 +3864,11 @@
     });
   }
   /* ---------- Notifications : à toi de jouer, invitation, tournoi qui commence ---------- */
-  // Affichées quand l'appli est en arrière-plan (onglet caché ou appli installée réduite), si le joueur les a activées.
+  // Affichées en silence quand l'appli est en arrière-plan (onglet caché ou appli installée réduite), si le joueur les a activées.
   const notifySeen = new Set(), notifyWatchReady = { games: false, tours: false };
   function notifyUser(title, body, tag) {
     if (!settings.notify || !('Notification' in window) || Notification.permission !== 'granted' || document.visibilityState === 'visible') return;
-    const opts = { body, tag, icon: 'logo/logo-192.png', badge: 'logo/logo-192.png' };
+    const opts = { body, tag, icon: 'logo/logo-192.png', badge: 'logo/logo-192.png', silent: true }; // sans son ni vibration
     const fallback = () => { try { new Notification(title, opts); } catch { /* non disponible */ } };
     if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then((r) => r.showNotification(title, opts)).catch(fallback);
     else fallback();
