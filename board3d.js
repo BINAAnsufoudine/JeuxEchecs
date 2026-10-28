@@ -1154,7 +1154,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (o.animate && o.last) {
         const m = o.last;
         const white = m.piece === m.piece.toUpperCase();
-        let duel = null, toss = null, shot = null, knightAttack = null;
+        let duel = null, toss = null, shot = null, knightAttack = null, escort = null;
         const kind = m.piece.toLowerCase();
         const vSq = m.flag === 'ep' ? m.to + (white ? 8 : -8) : m.to;
         const far = Math.max(Math.abs((m.from & 7) - (vSq & 7)), Math.abs((m.from >> 3) - (vSq >> 3))) > 1;
@@ -1177,6 +1177,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             shot.impact = shot.fire + shot.flight;
             shot.runStart = shot.impact + 0.9;
             die({ t0: now + EXR + shot.impact, hit: true, swept: true, counter: { start: now, end: now + EXR, at: a } });
+          } else if (root.PieceTheme === 'modern' && kind === 'k' && m.flag !== 'ep') {
+            // Guerriers modernes : le général appelle deux soldats qui entrent sur le plateau, se placent devant lui
+            // de chaque côté et mitraillent la cible ; ensuite seulement il prend la case.
+            escort = { white, from: a, target: b, dir: { x: ux, z: uz }, wait: 2.1 };
+            die({ t0: now + 1.85, hit: true });
           } else if (ocean && kind === 'k' && m.flag !== 'ep') {
             // roi des thèmes de créatures et de guerriers : combat au corps à corps, comme les autres pièces côte à côte
             const gap = Math.min(0.62, len);
@@ -1259,8 +1264,9 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           else if (knightLeap) mover.anim.dur = (white ? 0.38 : 0.68) + Math.hypot(mover.anim.to.x - mover.anim.from.x, mover.anim.to.z - mover.anim.from.z) * (white ? 0.045 : 0.07);
           if (duel) mover.anim.dur = duel.approach;
           if (toss || shot) { mover.anim.t0 = now + EXR; mover.anim.pre = now; } // la cible tire d'abord
+          if (escort) { mover.anim.t0 = now + escort.wait; mover.anim.wait = true; this.addEscort(escort, now); }
           const followAttack = (shot || toss || knightAttack) && Math.hypot(mover.anim.to.x - mover.anim.from.x, mover.anim.to.z - mover.anim.from.z) > 2;
-          this.busyUntil = now + mover.anim.dur + (duel ? duel.len + 0.35 : 0) + (toss ? EXR + toss.runStart : 0) + (shot ? EXR + shot.runStart : 0) + (knightAttack ? 0.35 : 0);
+          this.busyUntil = now + mover.anim.dur + (escort ? escort.wait + 0.2 : 0) + (duel ? duel.len + 0.35 : 0) + (toss ? EXR + toss.runStart : 0) + (shot ? EXR + shot.runStart : 0) + (knightAttack ? 0.35 : 0);
           // laisse la victime embrochée finir d'être éjectée avant tout autre coup
           if (toss) this.busyUntil = Math.max(this.busyUntil, now + EXR + toss.impact + 0.2 + 2.4);
           const burning = this.dying.find((x) => x.c === (capture && capture.victim) && x.burn);
@@ -3424,6 +3430,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             }
             continue;
           }
+          if (a.wait && el < 0) { c.holder.position.set(a.from.x, 0, a.from.z); M.animate(c.parts, t, 'idle'); continue; } // le roi attend ses soldats
           if (a.pre && el < 0) {
             // Riposte de la cible avant l'attaque. Thème Ninjas : l'attaquant esquive par une technique de substitution
             // (fumée, bûche). Autres thèmes : pas de mur, il encaisse le coup de plein fouet puis lance son attaque.
@@ -5401,6 +5408,42 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
 
     // Étincelle au point d'impact pendant un duel
+    // Escorte du général (guerriers modernes) : deux soldats de son camp entrent depuis le bord du plateau,
+    // se postent devant lui de part et d'autre, mitraillent la cible puis repartent
+    addEscort(esc, now) {
+      const T = this.THREE, M = root.Models3D, P = esc.from, d = esc.dir, side = { x: -d.z, z: d.x };
+      const soldiers = [-1, 1].map((sd) => {
+        const parts = M.build(T, esc.white ? 'P' : 'p'), holder = new T.Group(); holder.add(parts.root); this.pieces.add(holder);
+        const post = { x: P.x + d.x * 0.55 + side.x * sd * 0.6, z: P.z + d.z * 0.55 + side.z * sd * 0.6 };
+        // entrée : depuis l'extérieur du plateau, du côté du soldat
+        const out = { x: P.x + side.x * sd * 6.5 - d.x * 1.5, z: P.z + side.z * sd * 6.5 - d.z * 1.5 };
+        holder.position.set(out.x, 0, out.z);
+        return { parts, holder, post, out };
+      });
+      const run = (s, a, b, u, t) => {
+        s.holder.position.set(a.x + (b.x - a.x) * u, 0, a.z + (b.z - a.z) * u);
+        s.holder.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
+        M.animate(s.parts, t, 'run');
+      };
+      const tIn = 0.8, tFire = 1.85, tOut = 2.7;
+      this.addEffect({ start: now, dur: tOut, tick: (e, t) => {
+        for (const s of soldiers) {
+          if (e < tIn) run(s, s.out, s.post, e / tIn, t);
+          else if (e < tFire) {
+            s.holder.position.set(s.post.x, 0, s.post.z);
+            s.holder.rotation.y = Math.atan2(esc.target.x - s.post.x, esc.target.z - s.post.z);
+            M.animate(s.parts, t, 'punch', 1);
+            if (s.parts.mg) this.mgBurst(s, esc.target, t);
+          } else run(s, s.post, s.out, (e - tFire) / (tOut - tFire), t);
+        }
+      }, end: () => {
+        for (const s of soldiers) {
+          this.pieces.remove(s.holder);
+          if (s.tracer) for (const o of [s.tracer, s.tracer.userData.muzzle, s.tracer.userData.hit]) { this.scene.remove(o); if (this.tracers) this.tracers.delete(s.tracer); }
+        }
+      } });
+    }
+
     // Rafale de mitrailleuse : balles traçantes de l'arme vers la cible, éclair au canon et étincelles à l'impact
     mgBurst(c, foe, t) {
       const T = this.THREE;
