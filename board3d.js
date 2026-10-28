@@ -1281,8 +1281,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           const rf = kingside ? m.from + 3 : m.from - 4, rt = kingside ? m.from + 1 : m.from - 1;
           const rook = take(rf);
           // Roque : le roi et la tour échangent leurs places d'un bond croisé, puis un dôme protecteur se lève
-          if (mover) { mover.anim.leap = true; mover.anim.dur = 0.7; }
-          if (rook) { moveChar(rook, rf, rt, { leap: true }); rook.anim.dur = 0.7; rook.anim.high = 1.5; next.set(rt, rook); }
+          // Guerriers modernes : le tank roule au sol et c'est le roi qui saute par-dessus
+          const kingJumps = root.PieceTheme === 'modern';
+          if (mover) { mover.anim.leap = true; mover.anim.dur = 0.7; if (kingJumps) mover.anim.high = 1.6; }
+          if (rook) { moveChar(rook, rf, rt, { leap: !kingJumps }); rook.anim.dur = 0.7; if (!kingJumps) rook.anim.high = 1.5; next.set(rt, rook); }
           const k = this.sqToPos(m.to), r = this.sqToPos(rt);
           this.addCastleDome({ x: (k.x + r.x) / 2, z: (k.z + r.z) / 2 }, white, now + 0.7);
           this.busyUntil = Math.max(this.busyUntil || now, now + 1.1);

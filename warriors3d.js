@@ -321,7 +321,7 @@
     const barrel = K.mesh(K.cyl(0.013, 0.016, 0.28, 10), M(c.dark, { metal: 0.4 }), 0, 0.005, 0.2); barrel.rotation.x = Math.PI / 2; p.head.add(barrel);
     p.muzzle = new T.Object3D(); p.muzzle.position.set(0, 0.005, 0.35); p.head.add(p.muzzle); // bout du canon
     p.head.add(K.mesh(K.cyl(0.03, 0.03, 0.02, 10), M(c.body), 0.03, 0.045, -0.03));
-    p.pose = machinePose; p.scaleK = 0.95;
+    p.pose = machinePose; p.scaleK = 1.3; // la tour (tank) est la plus grande pièce
     return p;
   }
   function jet(c, stealth) {
