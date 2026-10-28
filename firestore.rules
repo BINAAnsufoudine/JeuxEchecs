@@ -55,6 +55,21 @@ service cloud.firestore {
         allow delete: if isAdmin();
       }
     }
+    // Défi du jour : un résultat par joueur et par jour, jamais modifié ensuite (pas de deuxième essai)
+    match /dailyScores/{id} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && id == request.resource.data.day + '_' + request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'pseudo', 'day', 'month', 'first', 'ms', 'pts', 'at'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.day is string && request.resource.data.day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && request.resource.data.month is string && request.resource.data.day.matches(request.resource.data.month + '-[0-9]{2}')
+        && request.resource.data.first is int && request.resource.data.first >= 0 && request.resource.data.first <= 3
+        && request.resource.data.pts == 10 + 10 * request.resource.data.first
+        && request.resource.data.ms is number && request.resource.data.ms >= 5000
+        && request.resource.data.pseudo is string && request.resource.data.pseudo.size() <= 40;
+      allow delete: if isAdmin();
+    }
     // Pseudos uniques : chaque pseudo pointe vers un seul compte
     match /pseudos/{name} {
       allow read: if request.auth != null;

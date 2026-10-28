@@ -5293,6 +5293,8 @@
   const TR = window.TRAINER || { MATES: [], ENDGAMES: [], OPENINGS: [], FAMOUS: [], TUTORIALS: [] };
   const DAY = 86400000;
   const todayKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  // même jour, écrit avec des zéros (2026-03-05) pour le classement en ligne
+  const dayId = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   // Position de départ (fen et/ou coups déjà joués) et suite de coups en UCI ; null si une ligne ne se joue pas
   function trainLine(fen, moves, san) {
     const g = new Game(fen || undefined);
@@ -5538,12 +5540,14 @@
   // État du jour : pour chaque problème, 'ok' (trouvé du premier coup) ou 'retry' (à refaire)
   function dailyState() {
     const d = store.get('daily', { streak: 0, best: 0 });
-    if (d.day !== todayKey()) { d.day = todayKey(); d.res = {}; d.finished = false; }
+    if (d.day !== todayKey()) { d.day = todayKey(); d.res = {}; d.finished = false; d.first = {}; d.started = 0; d.sent = false; }
+    d.first = d.first || {};
     return d;
   }
   function startDaily(i) {
     const list = dailyPuzzles(), p = list[i], d = dailyState();
     if (!p) return;
+    if (!d.started) { d.started = Date.now(); store.set('daily', d); } // le chrono du classement part au premier problème ouvert
     const side = new Game(p.fen).turn, again = d.res[i] === 'retry';
     const steps = [{
       text: L(`Défi du jour, problème ${i + 1} sur 3${again ? ', deuxième chance' : ''}. Tu joues les ${sideName(side)}. ${PZ[p.theme] ? PZ[p.theme].name : ''} : trouve le meilleur coup du premier coup.`,
@@ -5554,6 +5558,7 @@
       const clean = !pz.failed && !pz.misses;
       const st = dailyState();
       if (st.res[i] !== 'ok') st.res[i] = clean ? 'ok' : 'retry';
+      if (st.first[i] == null) st.first[i] = clean; // pour le classement, seul le premier essai compte
       const okCount = [0, 1, 2].filter((k) => st.res[k] === 'ok').length;
       if (okCount === 3 && !st.finished) {
         // la série avance quand les trois problèmes du jour sont trouvés du premier coup (au besoin en les refaisant)
@@ -5562,11 +5567,43 @@
         st.best = Math.max(st.best || 0, st.streak); st.last = todayKey(); st.finished = true;
         toast(L(`Défi du jour réussi ! Série : ${st.streak} jour${st.streak > 1 ? 's' : ''}.`, `Daily challenge complete! Streak: ${st.streak} day${st.streak === 1 ? '' : 's'}.`));
         setTimeout(() => { reward(40 + 5 * Math.min(st.streak, 10), 50, L('Défi du jour', 'Daily challenge')); questEvent('daily'); countMode('daily'); }, 50);
+        setTimeout(() => sendDailyScore(dailyState()), 100);
       } else if (!clean) toast(L('Pas du premier coup : ce problème te sera reproposé aujourd\'hui.', 'Not at the first try: this puzzle will come back today.'));
       else toast(L(`Bravo ! ${okCount} sur 3 aujourd'hui.`, `Well done! ${okCount} out of 3 today.`));
       store.set('daily', st);
       leavePuzzle();
     });
+  }
+  // Classement commun : envoyé une fois, dès que le joueur connecté a fini ses trois problèmes
+  function sendDailyScore(st) {
+    if (st.sent || !st.started || !window.Online || !Online.user) return;
+    const first = [0, 1, 2].filter((k) => st.first[k] === true).length;
+    Online.submitDaily(dayId(), first, Math.max(5000, Date.now() - st.started)).then((ok) => {
+      if (!ok) return;
+      const cur = dailyState(); cur.sent = true; store.set('daily', cur);
+      if (trainSection === 'daily' && document.body.dataset.screen === 'train') renderTrain('daily');
+    });
+  }
+  const fmtTime = (ms) => { const s = Math.round(ms / 1000); return s >= 3600 ? `${Math.floor(s / 3600)} h ${String(Math.floor(s / 60) % 60).padStart(2, '0')}` : `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, '0')}`; };
+  function boardRows(rows, mine, sub) {
+    if (!rows.length) return `<p class="level-help">${L('Personne pour l’instant : sois le premier !', 'Nobody yet: be the first!')}</p>`;
+    const top = rows.slice(0, 10), me = rows.findIndex((r) => r.uid === mine);
+    const line = (r, i) => `<li class="${r.uid === mine ? 'me' : ''}"><b>${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</b><span>${escHtml(r.pseudo || '?')}</span><small>${sub(r)}</small><strong>${r.pts}</strong></li>`;
+    return `<ol class="daily-board">${top.map(line).join('')}${me >= 10 ? line(rows[me], me) : ''}</ol>`;
+  }
+  // Classement du jour (et de la saison du mois), chargé à l'ouverture de l'onglet
+  function loadDailyBoard() {
+    const box = $('daily-board-box');
+    if (!box) return;
+    if (!window.Online || !Online.user) { box.innerHTML = `<p class="level-help">${L('Connecte-toi pour apparaître dans le classement du jour : tous les joueurs ont les mêmes problèmes.', 'Sign in to appear in the daily ranking: every player gets the same puzzles.')}</p>`; return; }
+    const d = new Date(), month = dayId(d).slice(0, 7), mine = Online.user.uid;
+    Promise.all([Online.dailyBoard(dayId(d)), Online.seasonBoard(month)]).then(([day, season]) => {
+      if (!document.body.contains(box)) return;
+      box.innerHTML = `<h3 class="train-h">${L('Classement du jour', 'Today’s ranking')}<small>${L('10 pts pour finir, +10 par problème trouvé du premier coup', '10 pts to finish, +10 per puzzle solved at the first try')}</small></h3>`
+        + boardRows(day, mine, (r) => `${r.first}/3 · ${fmtTime(r.ms)}`)
+        + `<h3 class="train-h">${L('Saison du mois', 'This month’s season')}<small>${L('Total des points du défi du jour', 'Total daily challenge points')}</small></h3>`
+        + boardRows(season, mine, (r) => L(`${r.days} jour${r.days > 1 ? 's' : ''}`, `${r.days} day${r.days === 1 ? '' : 's'}`));
+    }).catch(() => { box.innerHTML = `<p class="level-help">${L('Classement indisponible pour le moment.', 'Ranking unavailable right now.')}</p>`; });
   }
   let trainSection = 'daily';
   const TRAIN_TITLES = L({ tutorial: 'Tutoriel débutant', lesson: 'Leçon du jour', daily: 'Défi du jour', mates: 'Les mats', endgames: 'Finales de base', openings: 'Ouvertures', famous: 'Devine le coup' },
@@ -5662,6 +5699,7 @@
       // les problèmes ratés sont reproposés en premier
       const order = [0, 1, 2].sort((x, y) => (d.res[y] === 'retry') - (d.res[x] === 'retry'));
       html += `<div class="replay-items">${order.map((k) => item(`daily:${k}`, L(`Problème ${k + 1}`, `Puzzle ${k + 1}`) + (d.res[k] === 'retry' ? L(' · à refaire', ' · try again') : ''), d.res[k] ? label[d.res[k]] : L('à faire', 'to do'), d.res[k] === 'ok' ? ok : '')).join('')}</div>`;
+      html += `<div id="daily-board-box"><p class="level-help">${L('Chargement du classement…', 'Loading the ranking…')}</p></div>`;
     }
     if (section === 'mates') html += `<div class="replay-items">${TR.MATES.map((m) => item(`mate:${m.id}`, m.name, m.text.split('.')[0] + '.', done[`mate:${m.id}`] ? ok : '')).join('')}</div>`;
     if (section === 'endgames') html += `<div class="replay-items">${TR.ENDGAMES.map((e) => item(`end:${e.id}`, e.name, e.goal === 'draw' ? L('Défends et obtiens la nulle contre l\'ordinateur', 'Defend and draw against the computer') : L('Donne le mat contre l\'ordinateur', 'Deliver mate against the computer'), done[`end:${e.id}`] ? ok : '')).join('')}</div>`;
@@ -5675,6 +5713,7 @@
     }).join('')}</div>`;
     if (section === 'famous') html += `<div class="replay-items">${TR.FAMOUS.map((f) => item(`famous:${f.id}`, f.name, `${f.players}${done[`famous:${f.id}`] != null ? L(` · record : ${done[`famous:${f.id}`]} coups trouvés`, ` · best: ${done[`famous:${f.id}`]} moves found`) : ''}`)).join('')}</div>`;
     $('train-body').innerHTML = html;
+    if (section === 'daily') { if (d.finished && !d.sent) sendDailyScore(d); loadDailyBoard(); }
   }
   $('train-body').addEventListener('click', (e) => {
     const b = e.target.closest('[data-train]'); if (!b) return;

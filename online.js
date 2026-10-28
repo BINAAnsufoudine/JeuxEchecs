@@ -227,6 +227,36 @@ window.Online = (function () {
     try { await f.updateDoc(f.doc(f.db, 'users', user.uid), { elo }); if (profile) profile.elo = elo; } catch { /* hors ligne */ }
   }
 
+  /* ----- Défi du jour : classement commun de la journée et saison du mois ----- */
+  // Un seul envoi par joueur et par jour (le premier défi terminé compte) : 10 points pour l'avoir fini,
+  // 10 de plus par problème trouvé du premier coup ; à égalité, le plus rapide passe devant.
+  async function submitDaily(day, first, ms) {
+    if (!user || !profile) return false;
+    const f = await load(), id = `${day}_${user.uid}`, ref = f.doc(f.db, 'dailyScores', id);
+    try {
+      if ((await f.getDoc(ref)).exists()) return false;
+      await f.setDoc(ref, { uid: user.uid, pseudo: profile.pseudo, day, month: day.slice(0, 7), first, ms: Math.round(ms), pts: 10 + 10 * first, at: Date.now() });
+      return true;
+    } catch { return false; }
+  }
+  const byScore = (a, b) => b.pts - a.pts || a.ms - b.ms;
+  async function dailyBoard(day) {
+    const f = await load();
+    const snap = await f.getDocs(f.query(f.collection(f.db, 'dailyScores'), f.where('day', '==', day), f.limit(500)));
+    return snap.docs.map((d) => d.data()).sort(byScore);
+  }
+  // Saison : total des points du défi du jour sur le mois
+  async function seasonBoard(month) {
+    const f = await load();
+    const snap = await f.getDocs(f.query(f.collection(f.db, 'dailyScores'), f.where('month', '==', month), f.limit(5000)));
+    const tot = new Map();
+    for (const d of snap.docs) {
+      const s = d.data(), t = tot.get(s.uid) || { uid: s.uid, pseudo: s.pseudo, pts: 0, days: 0, ms: 0 };
+      t.pts += s.pts; t.days++; t.ms += s.ms; t.pseudo = s.pseudo; tot.set(s.uid, t);
+    }
+    return [...tot.values()].sort(byScore);
+  }
+
   /* ----- Progression : copie de toutes les données « cavalier.* » de l'appareil ----- */
   async function saveProgress(data, at, device) {
     if (!user) return;
@@ -614,6 +644,7 @@ window.Online = (function () {
     signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos, publishSummary, getProfile, myTournaments,
     presence, listPlayers, setMuted, sendChat, myGames, deleteAccount,
     isAdmin, isAdminEmail, sendVerification, refreshVerification, adminData, adminSetBanned, adminDeleteUser, adminDeleteTournament, markAdmin, loadAdminEmail, setAdminEmail, getAdminEmail,
+    submitDaily, dailyBoard, seasonBoard,
     saveProgress, loadProgress, watchProgress, setGrade, requestTakeback, answerTakeback, offerDraw, answerDraw, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
     createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,
   };
