@@ -96,6 +96,25 @@
     }
   }
 
+  // Bouton « Passer » : au milieu d'une attaque spéciale, tout se pose aussitôt, sans reste à l'écran
+  function skip(theme) {
+    window.PieceTheme = theme; b.rebuildPieces();
+    const e = Array(64).fill(null); e[60] = 'K'; e[4] = 'k'; e[59] = 'Q'; e[3] = 'q';
+    setClock(); b.update({ ...base, board: e, last: null, animate: false, ply: 0 }); step(0.5);
+    const before = snapshot();
+    const e2 = e.slice(); e2[3] = 'Q'; e2[59] = null;
+    b.update({ ...base, board: e2, last: { from: 59, to: 3, piece: 'Q', captured: 'q' }, animate: true, ply: 1 });
+    step(1.6);
+    b.skipAnimations();
+    b.update({ ...base, board: e2, last: { from: 59, to: 3, piece: 'Q', captured: 'q' }, animate: false, ply: 1 });
+    step(0.5);
+    assert(b.pieces.children.length === 3 && b.chars.size === 3 && !b.dying.length, `après « Passer » : ${b.pieces.children.length} figurines pour 3 pièces`);
+    const q = b.chars.get(3), p = b.sqToPos(3);
+    assert(q && Math.abs(q.holder.position.x - p.x) < 0.01 && Math.abs(q.holder.position.z - p.z) < 0.01, "la dame n'est pas posée sur sa case après « Passer »");
+    const left = leftovers(before);
+    assert(!left.length, `${left.length} reste(s) après « Passer » (${[...new Set(left)].join(', ')})`);
+    assert(homeDistance() < 0.05, 'caméra pas revenue en place après « Passer »');
+  }
   window.__debug = { play, mate, b, snapshot, leftovers, step };
   if (location.search.includes('debug')) return;
   for (const theme of THEMES) {
@@ -103,6 +122,7 @@
     test(`3D ${theme} : partie au rythme normal`, () => play(theme, 11 + THEMES.indexOf(theme), 30, 1.2));
     test(`3D ${theme} : mat des Blancs`, () => mate(theme, true));
     test(`3D ${theme} : mat des Noirs`, () => mate(theme, false));
+    test(`3D ${theme} : bouton « Passer » pendant une attaque`, () => skip(theme));
   }
   performance.now = realNow;
   const ok = results.every((r) => r.ok);

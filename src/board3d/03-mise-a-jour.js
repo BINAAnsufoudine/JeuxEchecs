@@ -312,6 +312,13 @@
     }
 
     // Interrompt proprement toute animation en cours (saut dans une partie rejouée, coup pendant un duel)
+    // Saute toutes les animations en cours : chaque pièce se pose sur sa case au prochain update
+    skipAnimations() {
+      this.clearTransient();
+      if (this.mateUltimate) this.resetMateUltimate();
+      this.boardKey = null;
+    }
+
     clearTransient() {
       if (this.effects) { this.effects.forEach((fx) => fx.end()); this.effects = []; }
       for (const c of this.chars.values()) {

@@ -679,6 +679,13 @@
     applyBoardView(true);
   });
   applyBoardView(false);
+  applyAnimSpeed();
+  // Bouton « Passer » pendant une longue animation (prise spéciale, mat) : les pièces se posent tout de suite
+  setInterval(() => {
+    const show = !!(b3d && game && document.body.dataset.screen === 'game' && settings.boardView !== '2d' && b3d.busyLeftMs() > 700);
+    if ($('btn-skip-anim').hidden === show) $('btn-skip-anim').hidden = !show;
+  }, 250);
+  $('btn-skip-anim').onclick = () => { if (!b3d) return; b3d.skipAnimations(); $('btn-skip-anim').hidden = true; renderBoard(); };
 
   const savedGame = store.get('game', null);
   const savedScreen = store.get('lastScreen', null);

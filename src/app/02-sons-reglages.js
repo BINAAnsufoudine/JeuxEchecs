@@ -79,6 +79,7 @@
     $('opt-voice').checked = settings.voice;
     $('opt-coach').checked = settings.coachEnabled;
     $('opt-lite').checked = settings.lite;
+    for (const b of $('opt-anim').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.anim === (settings.anim || 'full')));
     $('opt-light-theme').checked = settings.colorTheme === 'light';
     renderSyncStatus();
   }
@@ -107,6 +108,18 @@
     $(id).addEventListener('change', (e) => { settings[key] = e.target.checked; saveSettings(); });
   });
   $('opt-light-theme').addEventListener('change', (e) => { settings.colorTheme = e.target.checked ? 'light' : 'dark'; saveSettings(); });
+  // Durée des animations : complètes, courtes (deux fois plus rapides) ou aucune (les pièces se posent directement)
+  $('opt-anim').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-anim]'); if (!b) return;
+    settings.anim = b.dataset.anim; applyAnimSpeed(); saveSettings();
+    for (const x of $('opt-anim').querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
+  });
+  function applyAnimSpeed() {
+    if (!b3d) return;
+    if (b3d.baseSpeed == null) b3d.baseSpeed = b3d.speed;
+    const speed = b3d.baseSpeed * (settings.anim === 'short' ? 2.2 : 1);
+    if (speed !== b3d.speed) { b3d.skipAnimations(); b3d.speed = speed; }
+  }
 
   $('coach-dock-close').onclick = () => { coachDockOpen = false; renderCoachDock(); };
   $('coach-dock-voice').onclick = () => {

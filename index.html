@@ -182,7 +182,7 @@
     <div class="game-layout">
       <div class="board-col">
         <div class="player top"><span class="name" id="name-top"></span><span class="captured" id="cap-top"></span></div>
-        <div class="board-wrap" id="board-wrap"><div id="board" role="grid" aria-label="Échiquier"></div><div id="minimap" class="minimap" aria-label="Aperçu 2D jouable ; le faire glisser pour le déplacer, tirer sur le bord gauche ou inférieur pour redimensionner"></div></div>
+        <div class="board-wrap" id="board-wrap"><div id="board" role="grid" aria-label="Échiquier"></div><button type="button" id="btn-skip-anim" class="skip-anim" hidden>⏩ Passer</button><div id="minimap" class="minimap" aria-label="Aperçu 2D jouable ; le faire glisser pour le déplacer, tirer sur le bord gauche ou inférieur pour redimensionner"></div></div>
         <div class="player bottom"><span class="name" id="name-bottom"></span><span class="captured" id="cap-bottom"></span></div>
         <div id="status" class="status" aria-live="polite"></div>
       </div>
@@ -285,6 +285,8 @@
       <label class="switch"><input type="checkbox" id="opt-voice"><span>Voix de l'entraîneur</span></label>
       <label class="switch"><input type="checkbox" id="opt-coach"><span>Afficher Maître Sissa sur tous les écrans</span></label>
       <label class="switch"><input type="checkbox" id="opt-lite"><span>Mode léger (3D allégé : sans ombres, 30 images/s)</span></label>
+      <label class="field-label">Animations des prises et des mats</label>
+      <div class="view-switch anim-switch" id="opt-anim" role="group" aria-label="Durée des animations"><button type="button" data-anim="full">Complètes</button><button type="button" data-anim="short">Courtes</button><button type="button" data-anim="none">Aucune</button></div>
       <label class="field-label">Ma progression</label>
       <p class="level-help">Sauvegarde ta progression (niveaux, statistiques, entraînement, parties) dans un fichier, pour la réimporter ici ou dans une autre application. Les parties sont aussi au format PGN, lisible par la plupart des applications d'échecs.</p>
       <p id="sync-status" class="sync-status" role="status" aria-live="polite"></p>

@@ -50,7 +50,7 @@
 
   // Appareil modeste (peu de mémoire ou de cœurs) : 3D allégée par défaut
   const weakDevice = !!((navigator.deviceMemory && navigator.deviceMemory <= 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4));
-  const settings = Object.assign({ boardView: 'both', theme: 'foret', colorTheme: 'dark', showMoves: true, coords: true, sound: true, autoQueen: false, voice: true, coachEnabled: true, lite: weakDevice }, store.get('settings', {}));
+  const settings = Object.assign({ anim: 'full', boardView: 'both', theme: 'foret', colorTheme: 'dark', showMoves: true, coords: true, sound: true, autoQueen: false, voice: true, coachEnabled: true, lite: weakDevice }, store.get('settings', {}));
   const setup = Object.assign({ mode: 'ai', color: 'w', level: 1 }, store.get('setup', {}));
   // Ancien réglage sur 5 niveaux : on repart du niveau débloqué
   if (!store.get('unlocked', 0)) { store.del('stats'); store.set('unlocked', 1); setup.level = 1; }
@@ -466,6 +466,7 @@
     $('opt-voice').checked = settings.voice;
     $('opt-coach').checked = settings.coachEnabled;
     $('opt-lite').checked = settings.lite;
+    for (const b of $('opt-anim').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.anim === (settings.anim || 'full')));
     $('opt-light-theme').checked = settings.colorTheme === 'light';
     renderSyncStatus();
   }
@@ -494,6 +495,18 @@
     $(id).addEventListener('change', (e) => { settings[key] = e.target.checked; saveSettings(); });
   });
   $('opt-light-theme').addEventListener('change', (e) => { settings.colorTheme = e.target.checked ? 'light' : 'dark'; saveSettings(); });
+  // Durée des animations : complètes, courtes (deux fois plus rapides) ou aucune (les pièces se posent directement)
+  $('opt-anim').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-anim]'); if (!b) return;
+    settings.anim = b.dataset.anim; applyAnimSpeed(); saveSettings();
+    for (const x of $('opt-anim').querySelectorAll('button')) x.setAttribute('aria-pressed', String(x === b));
+  });
+  function applyAnimSpeed() {
+    if (!b3d) return;
+    if (b3d.baseSpeed == null) b3d.baseSpeed = b3d.speed;
+    const speed = b3d.baseSpeed * (settings.anim === 'short' ? 2.2 : 1);
+    if (speed !== b3d.speed) { b3d.skipAnimations(); b3d.speed = speed; }
+  }
 
   $('coach-dock-close').onclick = () => { coachDockOpen = false; renderCoachDock(); };
   $('coach-dock-voice').onclick = () => {
@@ -962,7 +975,7 @@
     // vue « 2D » seule : la 3D n'est pas mise à jour (et ne se dessine plus), le plateau 2D prend toute la place
     if (b3d && settings.boardView !== '2d') {
       const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
-      b3d.update({ board: s.board, selected, targets, marks, last, check: checkSq, mateFire, mateUltimate, hint, tutorialStars, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext, outcome: shown ? shown.result : null, arrows, ply: pz ? null : game.history.length });
+      b3d.update({ board: s.board, selected, targets, marks, last, check: checkSq, mateFire, mateUltimate, hint, tutorialStars, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext && settings.anim !== 'none', outcome: shown ? shown.result : null, arrows, ply: pz ? null : game.history.length });
       animateNext = false;
       renderMinimap(s.board, last, selected, targets, mateFire, arrows, hint, tutorialStars);
       return;
@@ -6489,6 +6502,13 @@
     applyBoardView(true);
   });
   applyBoardView(false);
+  applyAnimSpeed();
+  // Bouton « Passer » pendant une longue animation (prise spéciale, mat) : les pièces se posent tout de suite
+  setInterval(() => {
+    const show = !!(b3d && game && document.body.dataset.screen === 'game' && settings.boardView !== '2d' && b3d.busyLeftMs() > 700);
+    if ($('btn-skip-anim').hidden === show) $('btn-skip-anim').hidden = !show;
+  }, 250);
+  $('btn-skip-anim').onclick = () => { if (!b3d) return; b3d.skipAnimations(); $('btn-skip-anim').hidden = true; renderBoard(); };
 
   const savedGame = store.get('game', null);
   const savedScreen = store.get('lastScreen', null);

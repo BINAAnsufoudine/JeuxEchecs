@@ -344,7 +344,7 @@
     // vue « 2D » seule : la 3D n'est pas mise à jour (et ne se dessine plus), le plateau 2D prend toute la place
     if (b3d && settings.boardView !== '2d') {
       const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
-      b3d.update({ board: s.board, selected, targets, marks, last, check: checkSq, mateFire, mateUltimate, hint, tutorialStars, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext, outcome: shown ? shown.result : null, arrows, ply: pz ? null : game.history.length });
+      b3d.update({ board: s.board, selected, targets, marks, last, check: checkSq, mateFire, mateUltimate, hint, tutorialStars, flipped, showMoves: settings.showMoves || !!marks, coords: settings.coords, light: th.light, dark: th.dark, animate: animateNext && settings.anim !== 'none', outcome: shown ? shown.result : null, arrows, ply: pz ? null : game.history.length });
       animateNext = false;
       renderMinimap(s.board, last, selected, targets, mateFire, arrows, hint, tutorialStars);
       return;
