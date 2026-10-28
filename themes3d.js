@@ -189,17 +189,17 @@
       p.pose = plantPose; p.scaleK = 1.4;
       return p;
     },
-    N() { // escargot fleuri : coquille en spirale couverte de fleurs
-      const p = base(0.04);
-      ell(p.torso, '#f1d9a0', 0.06, 0.04, 0.2, 0, 0, 0.02);
-      const shell = mesh(new T.TorusGeometry(0.09, 0.055, 12, 24), mat('#e88aa8')); shell.rotation.y = Math.PI / 2; shell.position.set(0, 0.13, -0.03); p.torso.add(shell);
-      p.torso.add(mesh(sphere(0.05, 12, 10), mat('#f7b6c8'), 0, 0.13, -0.03));
-      for (let i = 0; i < 5; i++) { const a = i * 1.26; p.torso.add(mesh(sphere(0.022, 8, 6), mat(i % 2 ? '#fff176' : '#ffffff'), Math.cos(a) * 0.06, 0.13 + Math.sin(a) * 0.1, -0.03 + Math.cos(a) * 0.05)); }
-      p.head.position.set(0, 0.08, 0.2);
-      ell(p.head, '#f1d9a0', 0.05, 0.05, 0.05);
-      for (const s of [-1, 1]) stick(p.head, '#e5c78a', 0.008, 0.008, [s * 0.02, 0.03, 0], [s * 0.04, 0.12, 0.02]);
-      eyes(p.head, 0.025, 0.02, 0.04, 0.016); smile(p.head, -0.01, 0.048, 0.015);
-      p.pose = plantPose; p.scaleK = 1.3;
+    N() { // tournesol : grande fleur jaune qui suit le soleil, feuilles en bras
+      const p = base(0.03);
+      p.torso.add(mesh(cyl(0.06, 0.08, 0.05, 12), mat('#6d4c41'), 0, 0, 0)); // motte de terre
+      stick(p.torso, '#689f38', 0.022, 0.03, [0, 0, 0], [0, 0.42, 0.03]);
+      for (const [g, s] of [[p.armL, -1], [p.armR, 1]]) { g.position.set(0, 0.2, 0); leaf(g, '#7cb342', 0.06, 0.13, s * 0.11, 0, 0.02, 0, 0, s * -0.5); }
+      p.head.position.set(0, 0.46, 0.06);
+      // pétales jaunes autour du cœur brun, face vers l'avant
+      for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2, pet = mesh(sphere(1, 10, 6), mat('#ffca28', { double: true }), Math.cos(a) * 0.1, Math.sin(a) * 0.1, -0.01); pet.scale.set(0.035, 0.065, 0.01); pet.rotation.z = a - Math.PI / 2; p.head.add(pet); }
+      const heart = mesh(sphere(0.075, 16, 12), mat('#5d4037')); heart.scale.z = 0.45; p.head.add(heart);
+      eyes(p.head, 0.03, 0.015, 0.035, 0.016); smile(p.head, -0.02, 0.036, 0.018);
+      p.pose = plantPose; p.scaleK = 1.15;
       return p;
     },
     B() { // bambou : tige à nœuds, feuilles fines
@@ -262,18 +262,20 @@
       p.pose = plantPose; p.scaleK = 1.35;
       return p;
     },
-    n() { // chenille épineuse : longue et posée au sol, l'avant relevé
-      const p = base(0.05);
-      for (let i = 0; i < 7; i++) {
-        const z = 0.12 - i * 0.05, y = i < 2 ? (2 - i) * 0.04 : 0;
-        ell(p.torso, i % 2 ? '#33691e' : '#558b2f', 0.05, 0.05, 0.035, 0, y, z);
-        for (const s of [-1, 1]) p.torso.add(mesh(cone(0.008, 0.05, 4), mat('#ffca28'), s * 0.03, y + 0.06, z));
+    n() { // chardon épineux : tige hérissée, feuilles dentelées, fleur violette en pompon
+      const p = base(0.03);
+      stick(p.torso, '#4e6b3a', 0.02, 0.028, [0, 0, 0], [0, 0.36, 0]);
+      for (let i = 0; i < 10; i++) { const y = 0.05 + i * 0.03, a = i * 2.2, sp = mesh(cone(0.006, 0.04, 4), mat('#c5e1a5'), Math.cos(a) * 0.025, y, Math.sin(a) * 0.025); sp.rotation.set(Math.sin(a) * 1.2, 0, -Math.cos(a) * 1.2); p.torso.add(sp); }
+      for (const [g, s] of [[p.armL, -1], [p.armR, 1]]) {
+        g.position.set(0, 0.17, 0); leaf(g, '#33502a', 0.04, 0.13, s * 0.1, 0, 0.01, 0, 0, s * -0.35);
+        for (let i = 0; i < 4; i++) { const sp = mesh(cone(0.006, 0.035, 4), mat('#c5e1a5'), s * (0.04 + i * 0.03), 0.012, 0.035); sp.rotation.x = -1.2; g.add(sp); }
       }
-      p.head.position.set(0, 0.11, 0.17);
-      ell(p.head, '#1b5e20', 0.05, 0.05, 0.045);
-      eyes(p.head, 0.025, 0.02, 0.035, 0.016, '#ff7043');
-      for (const s of [-1, 1]) stick(p.head, '#1b5e20', 0.005, 0.005, [s * 0.02, 0.04, 0], [s * 0.04, 0.09, 0.02]);
-      p.pose = plantPose; p.scaleK = 1.35;
+      p.head.position.set(0, 0.42, 0.01);
+      const bulb = mesh(sphere(0.06, 14, 10), mat('#4e6b3a')); bulb.scale.y = 0.8; p.head.add(bulb);
+      for (let i = 0; i < 12; i++) { const a = i * 0.9, sp = mesh(cone(0.007, 0.05, 4), mat('#2e3d24'), Math.cos(a) * 0.055, -0.01, Math.sin(a) * 0.055); sp.rotation.set(Math.sin(a) * 1.5, 0, -Math.cos(a) * 1.5); p.head.add(sp); }
+      for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2, f = mesh(cyl(0.004, 0.006, 0.07, 4), mat('#8e24aa'), Math.cos(a) * 0.03, 0.07, Math.sin(a) * 0.03); f.rotation.set(Math.sin(a) * 0.4, 0, -Math.cos(a) * 0.4); p.head.add(f); }
+      eyes(p.head, 0.025, 0.0, 0.05, 0.015, '#c62828');
+      p.pose = plantPose; p.scaleK = 1.15;
       return p;
     },
     b() { // cactus : grand cierge avec deux bras
