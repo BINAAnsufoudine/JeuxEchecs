@@ -222,8 +222,31 @@
     p.head.add(K.mesh(new T.SphereGeometry(0.06, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), M(c.body, { rough: 0.8 }), 0, 0.005, 0));
     p.head.add(K.mesh(K.cyl(0.066, 0.066, 0.008, 16), M(c.dark), 0, 0.005, 0));
     if (isBlack) p.head.add(K.mesh(K.box(0.08, 0.018, 0.02), M('#111', { metal: 0.6, rough: 0.2 }), 0, 0.012, 0.048)); // lunettes
-    inHand(p, rifle('#2b2b2b'));
+    // le fusil est tenu à deux mains : contre la poitrine au repos, épaulé et pointé vers l'adversaire à l'attaque
+    const gun = rifle('#2b2b2b'); gun.position.set(0, 0, 0); gun.rotation.order = 'ZXY';
+    const flash = K.mesh(K.cone(0.02, 0.06, 8), M('#ffd54f', { emissive: '#ffb300', opacity: 0.9 }), 0, 0.01, 0.23); flash.rotation.x = Math.PI / 2; flash.visible = false; gun.add(flash);
+    p.torso.add(gun); p.gun = gun; p.flash = flash;
+    p.pose = rifleman;
     return p;
+  }
+  function rifleman(p, t, state) {
+    const aim = state === 'punch' || state === 'cast' || state === 'guard' || state === 'throw';
+    if (state === 'ko') { p.gun.visible = false; return; }
+    p.gun.visible = true;
+    if (aim) {
+      // épaulé, canon horizontal vers l'avant ; recul et éclair à chaque tir
+      const fire = state === 'punch' || state === 'cast' ? Math.max(0, Math.sin(t * 22)) : 0;
+      p.gun.position.set(0.035, 0.125, 0.1 - fire * 0.025); p.gun.rotation.set(0, 0, 0);
+      p.flash.visible = fire > 0.6; p.flash.scale.setScalar(0.8 + fire * 0.6);
+      p.armR.rotation.set(-1.35, 0, -0.25); p.armL.rotation.set(-1.5, 0, 0.55);
+      p.head.rotation.set(0.1, 0.1, 0);
+    } else {
+      // contre la poitrine, en diagonale
+      p.gun.position.set(0, 0.075, 0.075); p.gun.rotation.set(-1.25, 0, 0.75);
+      p.flash.visible = false;
+      p.armR.rotation.set(-0.75, 0, -0.45); p.armL.rotation.set(-1.05, 0, 0.55);
+      if (state === 'run') { p.armR.rotation.x -= 0.1; p.armL.rotation.x -= 0.1; }
+    }
   }
   function helicopter(c, attack) {
     const p = K.base(0.32); p.fly = true; p.rotors = [];
