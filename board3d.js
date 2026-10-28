@@ -38,6 +38,11 @@
   const EXR = 1.1;
   // Couleurs des techniques à distance des thèmes de créatures : jet (serpent), salve (bulles, graines,
   // cailloux, plumes) et éclatement à l'impact. w = Blancs, b = Noirs.
+  // Armes propres aux thèmes guerriers, par pièce (w = Blancs, b = Noirs) ; sinon jet ou salve aux couleurs du thème
+  const WAR_PROJ = {
+    ancient: { n: { w: 'spear', b: 'spear' }, b: { w: 'bolt', b: 'boulder' }, r: { w: 'arrows', b: 'firepot' }, q: { w: 'spears', b: 'arrows' } },
+    modern: { n: { w: 'missiles', b: 'missiles' }, b: { w: 'laser', b: 'laser' }, r: { w: 'shell', b: 'shell' }, q: { w: 'bombs', b: 'bombs' } },
+  };
   const THEME_FX = {
     ocean: { w: { jet: 0x3fa9f5, foam: 0xe6f7ff, bub: 0x5cc4ff, charge: 0xbfeaff, boom: [0xd6f2ff, 0x3fa9f5, 0x9fdcff], debris: [0x3fa9f5, 0xe6f7ff], burst: [0xe6f7ff, 0x7fd0ff, 0xbfeaff], bits: [0xbfeaff, 0xffffff] },
              b: { jet: 0x120d1f, foam: 0x8a7fb0, bub: 0x241a3a, charge: 0x6a5a90, boom: [0x6a5a90, 0x1c1530, 0x4a3d6e], debris: [0x1c1530, 0x6a5a90], burst: [0x6a5a90, 0x1c1530, 0x4a3d6e], bits: [0x1c1530, 0x6a5a90] } },
@@ -1149,8 +1154,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             // Thèmes de créatures : jet (tour, dame) ou salve (cavalier, fou), aux couleurs du thème :
             // eau et encre (océan), liane et épines (plantes), sable et cailloux (animaux), plumes (oiseaux)
             const jet = kind === 'q' || kind === 'r';
-            shot = { tech: jet ? 'water' : 'bubble', pal: themeFx[white ? 'w' : 'b'], victim: v, target: b, fire: 0.7 };
+            const proj = WAR_PROJ[root.PieceTheme] && WAR_PROJ[root.PieceTheme][kind] && WAR_PROJ[root.PieceTheme][kind][white ? 'w' : 'b'];
+            shot = { tech: proj ? 'proj' : jet ? 'water' : 'bubble', proj, white, pal: themeFx[white ? 'w' : 'b'], victim: v, target: b, fire: proj ? 0.55 : 0.7 };
             shot.flight = jet ? 0.45 + len * 0.09 : 0.3 + len * 0.07;
+            if (proj) shot.flight = { shell: 0.12 + len * 0.025, laser: 0.55, missiles: 0.35 + len * 0.06, bombs: 0.9, boulder: 0.6 + len * 0.08, firepot: 0.55 + len * 0.08 }[proj] || 0.35 + len * 0.07;
             shot.impact = shot.fire + shot.flight;
             shot.runStart = shot.impact + 0.9;
             die({ t0: now + EXR + shot.impact, hit: true, swept: true, counter: { start: now, end: now + EXR, at: a } });
@@ -3161,7 +3168,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
               glide(a.from, a.to, u, false);
               if (u >= 1) arrive();
             }
-            if (s.tech === 'fire') this.flyFire(c, s, el, t); else if (s.tech === 'bubble') this.flyBubbles(c, s, el, t); else this.flyDragon(c, s, el, t);
+            if (s.tech === 'fire') this.flyFire(c, s, el, t); else if (s.tech === 'bubble') this.flyBubbles(c, s, el, t); else if (s.tech === 'proj') this.flyProj(c, s, el, t); else this.flyDragon(c, s, el, t);
             continue;
           }
           if (a.toss) {
@@ -4796,6 +4803,97 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         else this.explode(s, end, el, t, [0xd6f2ff, 0x3fa9f5, 0x9fdcff], [0x3fa9f5, 0xe6f7ff], true);
       }
       this.boomStep(s, el);
+    }
+
+    // Thèmes guerriers : armes propres à chaque pièce.
+    // Antiquité : javelot, carreau de baliste, pierre de catapulte, volée de flèches, pot de feu.
+    // Moderne : salve de missiles (hélicoptère), laser (drone), obus (tank), bombes larguées (avion).
+    flyProj(c, s, el, t) {
+      const T = this.THREE, kind = s.proj;
+      const end = new T.Vector3(s.target.x, 0.5, s.target.z);
+      if (!s.start && el >= s.fire) {
+        // départ : bout du canon, des lance-roquettes ou de l'arme, sinon les mains
+        if (c.parts.muzzle) { c.holder.updateMatrixWorld(true); s.start = c.parts.muzzle.getWorldPosition(new T.Vector3()); } else s.start = this.handsOf(c);
+        s.items = []; s.puffs = [];
+        const mat = (color, o = {}) => new T.MeshStandardMaterial(Object.assign({ color, roughness: 0.5, metalness: 0.2 }, o));
+        // projectile allongé le long de +z (orienté ensuite vers sa trajectoire)
+        const shaft = (len, r, color, tip, tipColor, fletch) => {
+          const g = new T.Group();
+          const sh = new T.Mesh(new T.CylinderGeometry(r, r, len, 6), mat(color)); sh.rotation.x = Math.PI / 2; g.add(sh);
+          if (tip) { const h = new T.Mesh(new T.ConeGeometry(r * 3, tip, 6), mat(tipColor, { metalness: 0.8, roughness: 0.25 })); h.rotation.x = Math.PI / 2; h.position.z = len / 2 + tip / 2; g.add(h); }
+          if (fletch) for (let i = 0; i < 3; i++) { const f = new T.Mesh(new T.BoxGeometry(0.004, r * 7, len * 0.18), mat(fletch)); f.rotation.z = i * Math.PI / 1.5; f.position.z = -len * 0.42; g.add(f); }
+          return g;
+        };
+        const add = (o, delay = 0, off = new T.Vector3(), arc = 0.6, spin = 0) => { o.visible = false; this.fx(s, o); s.items.push({ o, delay, off, arc, spin }); return o; };
+        const spread = (i, n, w) => new T.Vector3((Math.random() - 0.5) * w, 0, (Math.random() - 0.5) * w).add(new T.Vector3(0, 0, 0)).multiplyScalar(n > 1 ? 1 : 0);
+        if (kind === 'spear') { add(shaft(0.85, 0.02, '#8d6e63', 0.12, '#cfd8dc'), 0, new T.Vector3(), 0.9); s.trail = [0xfff3d6, 0xe0d4b8]; }
+        else if (kind === 'spears') { for (let i = 0; i < 3; i++) add(shaft(0.7, 0.017, '#8d6e63', 0.1, '#cfd8dc'), i * 0.08, spread(i, 3, 0.5), 1.0); s.trail = [0xfff3d6, 0xe0d4b8]; }
+        else if (kind === 'bolt') { add(shaft(1.05, 0.03, '#6d4c41', 0.16, '#90a4ae', '#eeeeee'), 0, new T.Vector3(), 0.25); s.trail = [0xfff3d6, 0xe0d4b8]; }
+        else if (kind === 'arrows') for (let i = 0; i < 9; i++) add(shaft(0.48, 0.011, '#8d6e63', 0.07, '#9e9e9e', s.white ? '#d32f2f' : '#212121'), i * 0.05, spread(i, 9, 0.7), 1.6);
+        else if (kind === 'boulder') { const b = new T.Mesh(new T.DodecahedronGeometry(0.24, 0), mat('#8d8478', { roughness: 0.95, flatShading: true })); add(b, 0, new T.Vector3(), 2.2, 6); s.trail = [0xd7ccc8, 0xbcaaa4]; }
+        else if (kind === 'firepot') { const g = new T.Group(); g.add(new T.Mesh(new T.SphereGeometry(0.14, 12, 10), mat('#6d4c41'))); g.add(new T.Mesh(new T.SphereGeometry(0.22, 12, 10), this.glow(0xff7a1a, 0.7))); add(g, 0, new T.Vector3(), 1.8, 3); s.trail = [0xff6a1a, 0xffb02e]; }
+        else if (kind === 'shell') {
+          const sh = shaft(0.22, 0.045, '#b08d2e', 0.07, '#8d6e2e'); sh.add(new T.Mesh(new T.SphereGeometry(0.06, 8, 6), this.glow(0xffd54f, 0.9)));
+          add(sh, 0, new T.Vector3(), 0.05); s.trail = [0xffe082, 0xbdbdbd];
+          this.shakeUntil = t + 0.2; this.shakeAmp = 0.06;
+          s.muzzleFlash = this.fx(s, new T.Mesh(new T.SphereGeometry(0.3, 12, 10), this.glow(0xffc34d, 0.95))); s.muzzleFlash.position.copy(s.start);
+        }
+        else if (kind === 'missiles') { for (let i = 0; i < 4; i++) { const m = shaft(0.34, 0.032, '#eceff1', 0.08, '#c62828'); const fl = new T.Mesh(new T.SphereGeometry(0.03, 8, 6), this.glow(0xffa726, 0.9)); fl.position.z = -0.13; m.add(fl); add(m, i * 0.09, new T.Vector3(i % 2 ? 0.12 : -0.12, 0, 0), 0.5); } s.trail = [0xeeeeee, 0xcfd8dc]; }
+        else if (kind === 'bombs') for (let i = 0; i < 3; i++) { const bmb = shaft(0.3, 0.06, '#455a64', 0.08, '#37474f'); add(bmb, i * 0.12, new T.Vector3((i - 1) * 0.25, 0, (i - 1) * 0.1), 0); bmb.userData.drop = true; }
+        else if (kind === 'laser') {
+          const beam = new T.Mesh(new T.CylinderGeometry(0.018, 0.018, 1, 8), this.glow(s.white ? 0x4fc3f7 : 0xff1744, 0.95));
+          const core = new T.Mesh(new T.CylinderGeometry(0.007, 0.007, 1, 6), this.glow(0xffffff, 1)); beam.add(core);
+          s.beam = this.fx(s, beam); s.beam.visible = false;
+        }
+      }
+      if (s.muzzleFlash) { const k = Math.max(0, 1 - (el - s.fire) / 0.3); s.muzzleFlash.visible = k > 0; s.muzzleFlash.scale.setScalar(0.5 + k); }
+      if (s.start && el < s.impact + 0.05) {
+        const u0 = (el - s.fire) / s.flight;
+        if (s.beam) {
+          // le rayon relie l'arme à la cible et grésille
+          const a = s.start, d = end.clone().sub(a), L = d.length();
+          s.beam.visible = u0 >= 0; s.beam.position.copy(a).addScaledVector(d, 0.5);
+          s.beam.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize());
+          s.beam.scale.set(0.7 + Math.random() * 0.6, L, 0.7 + Math.random() * 0.6);
+        }
+        for (const it of s.items || []) {
+          const u = (el - s.fire - it.delay) / s.flight;
+          it.o.visible = u >= 0 && u < 1;
+          if (!it.o.visible) continue;
+          const tgt = end.clone().add(it.off);
+          let pos, next;
+          if (it.o.userData.drop) {
+            // bombe : tombe du ciel à la verticale de la cible
+            const top = tgt.clone(); top.y = 4.5;
+            pos = top.clone().lerp(tgt, u * u); next = top.clone().lerp(tgt, Math.min(1, (u + 0.02) ** 2));
+          } else {
+            const at = (k) => { const p = s.start.clone().lerp(tgt, k); p.y += Math.sin(Math.PI * k) * it.arc; return p; };
+            pos = at(u); next = at(Math.min(1, u + 0.02));
+          }
+          it.o.position.copy(pos);
+          if (it.spin) it.o.rotation.set(el * it.spin, el * it.spin * 0.7, 0); else it.o.lookAt(next);
+          if (s.trail && (!it.last || el - it.last > 0.025)) {
+            it.last = el;
+            const puff = this.fx(s, new T.Mesh(new T.SphereGeometry(0.05, 8, 6), new T.MeshBasicMaterial({ color: s.trail[Math.random() < 0.5 ? 0 : 1], transparent: true, opacity: 0.7, depthWrite: false })));
+            puff.position.copy(pos); s.puffs.push({ m: puff, t0: el });
+          }
+        }
+      }
+      if (el >= s.impact && !s.boom) {
+        for (const it of s.items || []) it.o.visible = false;
+        if (s.beam) s.beam.visible = false;
+        const fire = kind === 'shell' || kind === 'missiles' || kind === 'bombs' || kind === 'firepot' || kind === 'laser';
+        if (fire) this.explode(s, end, el, t, [0xfff1a8, 0xff6a1a, 0xffc34d], [0x3b2a1a, 0xff8a2a]);
+        else this.explode(s, end, el, t, [0xf5e6c4, 0xc9a66b, 0xe0c895], [0x8d6e63, 0x9e9e9e], true);
+        if (kind === 'bombs' || kind === 'shell') { this.shakeUntil = t + 0.6; this.shakeAmp = 0.14; }
+      }
+      this.boomStep(s, el);
+      for (const p of s.puffs || []) {
+        const age = el - p.t0;
+        p.m.scale.setScalar(Math.max(0.05, 1 + age * 2));
+        p.m.material.opacity = Math.max(0, 0.7 - age * 1.4);
+        p.m.position.y += 0.004;
+      }
     }
 
     // Thème Océan : une salve de bulles part des nageoires, file en ondulant et éclate sur la cible

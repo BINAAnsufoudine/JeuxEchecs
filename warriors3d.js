@@ -106,6 +106,7 @@
       const bow = K.mesh(new T.TorusGeometry(0.16, 0.012, 6, 20, Math.PI), M('#5d4037')); bow.rotation.x = -Math.PI / 2; bow.position.z = 0.12; p.head.add(bow);
       K.stick(p.head, '#eeeeee', 0.002, 0.002, [-0.16, 0, 0.12], [0, 0, -0.06]); K.stick(p.head, '#eeeeee', 0.002, 0.002, [0.16, 0, 0.12], [0, 0, -0.06]);
       const bolt = spear('#cfd8dc', 0.3); bolt.rotation.x = Math.PI / 2; bolt.position.set(0, 0.03, 0.05); p.head.add(bolt);
+      p.muzzle = new T.Object3D(); p.muzzle.position.set(0, 0.03, 0.2); p.head.add(p.muzzle);
       p.pose = machinePose; p.scaleK = 1.15;
       return p;
     },
@@ -168,6 +169,7 @@
       K.stick(p.arm, '#5d4037', 0.012, 0.014, [0, 0, 0.06], [0, 0, -0.2]);
       const cup = K.mesh(new T.SphereGeometry(0.04, 10, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M('#3e2723', { double: true }), 0, 0.01, -0.21); p.arm.add(cup);
       p.arm.add(K.mesh(K.sphere(0.028, 8, 6), M('#757575'), 0, 0.03, -0.21));
+      p.muzzle = new T.Object3D(); p.muzzle.position.set(0, 0.03, -0.21); p.arm.add(p.muzzle); // la pierre part du godet
       p.pose = machinePose; p.scaleK = 1.15;
       return p;
     },
@@ -264,6 +266,7 @@
     tr.userData = { speed: 55, axis: 'x' }; p.rotors.push(tr);
     if (attack) for (const s of [-1, 1]) { p.torso.add(K.mesh(K.box(0.12, 0.008, 0.03), M(c.dark), s * 0.08, -0.02, 0.0)); const pod = K.mesh(K.cyl(0.016, 0.016, 0.07, 8), M('#222'), s * 0.13, -0.035, 0.0); pod.rotation.x = Math.PI / 2; p.torso.add(pod); }
     p.head.position.set(0, 0.0, 0.17);
+    p.muzzle = new T.Object3D(); p.muzzle.position.set(0, -0.04, 0.12); p.torso.add(p.muzzle);
     p.pose = machinePose; p.scaleK = 1.15;
     return p;
   }
@@ -280,6 +283,7 @@
     }
     p.torso.add(K.mesh(K.sphere(0.01, 6, 4), M(glow, { emissive: glow }), 0, 0.03, -0.07));
     p.head.position.set(0, 0, 0.08);
+    p.muzzle = new T.Object3D(); p.muzzle.position.set(0, -0.025, 0.08); p.torso.add(p.muzzle); // caméra-laser sous le drone
     p.pose = machinePose; p.scaleK = 1.25;
     return p;
   }
@@ -293,6 +297,7 @@
     p.head.position.set(0, 0.09, -0.01);
     K.ell(p.head, c.dark, 0.09, 0.04, 0.1, 0, 0, 0, { rough: 0.6 });
     const barrel = K.mesh(K.cyl(0.013, 0.016, 0.28, 10), M(c.dark, { metal: 0.4 }), 0, 0.005, 0.2); barrel.rotation.x = Math.PI / 2; p.head.add(barrel);
+    p.muzzle = new T.Object3D(); p.muzzle.position.set(0, 0.005, 0.35); p.head.add(p.muzzle); // bout du canon
     p.head.add(K.mesh(K.cyl(0.03, 0.03, 0.02, 10), M(c.body), 0.03, 0.045, -0.03));
     p.pose = machinePose; p.scaleK = 0.95;
     return p;
@@ -310,6 +315,7 @@
     }
     const flame = K.mesh(K.cyl(0.03, 0.025, 0.03, 10), M('#ff7043', { emissive: '#ff7043', opacity: 0.85 }), 0, 0, -0.235); flame.rotation.x = Math.PI / 2; p.torso.add(flame);
     p.head.position.set(0, 0, 0.3);
+    p.muzzle = new T.Object3D(); p.muzzle.position.set(0, 0, 0.32); p.torso.add(p.muzzle);
     p.pose = machinePose; p.scaleK = 1.05;
     return p;
   }
