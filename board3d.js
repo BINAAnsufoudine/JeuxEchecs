@@ -3391,9 +3391,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             c.holder.position.set(p0.x + (p1.x - p0.x) * e, 0, p0.z + (p1.z - p0.z) * e);
             turn(c, Math.atan2(p1.x - p0.x, p1.z - p0.z));
             M.animate(c.parts, t, a.knightFlight ? 'knight-flight' : 'run');
-            const arc = Math.sin(Math.PI * u) * (leap ? a.high || 0.9 : 0.12);
+            // Thème Oiseaux : sur plus d'une case, l'oiseau s'envole, plane puis se pose
+            const dist = Math.hypot(p1.x - p0.x, p1.z - p0.z), bird = root.PieceTheme === 'birds' && dist > 1.2;
+            const arc = bird ? Math.min(1, Math.sin(Math.PI * u) * 1.6) * Math.min(2.2, 0.7 + dist * 0.28) : Math.sin(Math.PI * u) * (leap ? a.high || 0.9 : 0.12);
             c.parts.root.position.y = arc;
-            c.shadow.scale.setScalar(1 - arc * 0.4);
+            c.shadow.scale.setScalar(Math.max(0.35, 1 - arc * 0.4));
             if (c.parts.fast && u < 1) this.trail(c, true, t);
           };
           const arrive = () => { this.endToss(c); c.anim = null; c.holder.position.set(a.to.x, 0, a.to.z); c.shadow.scale.setScalar(1); };
