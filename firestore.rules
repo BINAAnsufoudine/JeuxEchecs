@@ -15,6 +15,23 @@ service cloud.firestore {
     function changedOnly(keys) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
     }
+    // Anti-triche : l'Elo et le grade sont calculés sur l'appareil du joueur ; on borne leurs valeurs
+    // et ce qu'une seule écriture peut changer (une partie fait bouger l'Elo de quelques dizaines de points,
+    // le grade de 45 points au plus en victoire et de 30 au plus en défaite).
+    function changed(key) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([key]);
+    }
+    function eloOk() {
+      return !changed('elo') || (request.resource.data.elo is number
+        && request.resource.data.elo >= 100 && request.resource.data.elo <= 3200
+        && math.abs(request.resource.data.elo - resource.data.get('elo', 600)) <= 400);
+    }
+    function gradeOk() {
+      return !changed('gradePts') || (request.resource.data.gradePts is number
+        && request.resource.data.gradePts >= 0 && request.resource.data.gradePts <= 5000
+        && request.resource.data.gradePts - resource.data.get('gradePts', 0) <= 45
+        && resource.data.get('gradePts', 0) - request.resource.data.gradePts <= 30);
+    }
     match /config/admin {
       allow read: if request.auth != null;
       allow create, update: if isAdmin() && request.resource.data.email is string && request.resource.data.email == request.resource.data.email.lower();
@@ -24,11 +41,13 @@ service cloud.firestore {
       allow read: if request.auth != null;
       // un joueur ne peut pas lever lui-même sa suspension (champ « banned »)
       allow create: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['pseudo', 'pseudoLower', 'elo', 'createdAt']);
+        && request.resource.data.keys().hasOnly(['pseudo', 'pseudoLower', 'elo', 'createdAt'])
+        && request.resource.data.elo is number && request.resource.data.elo >= 100 && request.resource.data.elo <= 3200;
       // Les champs publics sont modifiables par leur propriétaire, jamais les rôles ou sanctions.
       allow update: if isAdmin() || (request.auth != null && request.auth.uid == uid
         && changedOnly(['pseudo', 'pseudoLower', 'elo', 'summary', 'summaryAt', 'gradePts', 'photo', 'muted', 'lastSeen', 'admin'])
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['admin']) || request.resource.data.get('admin', false) == false));
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['admin']) || request.resource.data.get('admin', false) == false)
+        && eloOk() && gradeOk());
       allow delete: if (request.auth != null && request.auth.uid == uid) || isAdmin();
       // Progression : visible et modifiable uniquement par son propriétaire (l'admin peut l'effacer)
       match /private/{doc} {
