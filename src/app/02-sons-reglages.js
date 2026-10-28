@@ -79,6 +79,7 @@
     $('opt-voice').checked = settings.voice;
     $('opt-coach').checked = settings.coachEnabled;
     $('opt-lite').checked = settings.lite;
+    $('opt-notify').checked = !!settings.notify && 'Notification' in window && Notification.permission === 'granted';
     for (const b of $('opt-anim').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.anim === (settings.anim || 'full')));
     $('opt-light-theme').checked = settings.colorTheme === 'light';
     renderSyncStatus();
@@ -108,6 +109,15 @@
     $(id).addEventListener('change', (e) => { settings[key] = e.target.checked; saveSettings(); });
   });
   $('opt-light-theme').addEventListener('change', (e) => { settings.colorTheme = e.target.checked ? 'light' : 'dark'; saveSettings(); });
+  // Notifications : il faut l'accord du navigateur
+  $('opt-notify').addEventListener('change', async (e) => {
+    if (!e.target.checked) { settings.notify = false; saveSettings(); return; }
+    if (!('Notification' in window)) { e.target.checked = false; toast(L('Les notifications ne sont pas disponibles sur cet appareil.', 'Notifications are not available on this device.')); return; }
+    let perm = Notification.permission;
+    if (perm === 'default') perm = await Notification.requestPermission().catch(() => 'denied');
+    settings.notify = perm === 'granted'; e.target.checked = settings.notify; saveSettings();
+    if (!settings.notify) toast(L('Notifications refusées : tu peux les autoriser dans les réglages du navigateur.', 'Notifications blocked: you can allow them in your browser settings.'));
+  });
   // Durée des animations : complètes, courtes (deux fois plus rapides) ou aucune (les pièces se posent directement)
   $('opt-anim').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-anim]'); if (!b) return;

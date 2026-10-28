@@ -466,6 +466,7 @@
     $('opt-voice').checked = settings.voice;
     $('opt-coach').checked = settings.coachEnabled;
     $('opt-lite').checked = settings.lite;
+    $('opt-notify').checked = !!settings.notify && 'Notification' in window && Notification.permission === 'granted';
     for (const b of $('opt-anim').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.anim === (settings.anim || 'full')));
     $('opt-light-theme').checked = settings.colorTheme === 'light';
     renderSyncStatus();
@@ -495,6 +496,15 @@
     $(id).addEventListener('change', (e) => { settings[key] = e.target.checked; saveSettings(); });
   });
   $('opt-light-theme').addEventListener('change', (e) => { settings.colorTheme = e.target.checked ? 'light' : 'dark'; saveSettings(); });
+  // Notifications : il faut l'accord du navigateur
+  $('opt-notify').addEventListener('change', async (e) => {
+    if (!e.target.checked) { settings.notify = false; saveSettings(); return; }
+    if (!('Notification' in window)) { e.target.checked = false; toast(L('Les notifications ne sont pas disponibles sur cet appareil.', 'Notifications are not available on this device.')); return; }
+    let perm = Notification.permission;
+    if (perm === 'default') perm = await Notification.requestPermission().catch(() => 'denied');
+    settings.notify = perm === 'granted'; e.target.checked = settings.notify; saveSettings();
+    if (!settings.notify) toast(L('Notifications refusées : tu peux les autoriser dans les réglages du navigateur.', 'Notifications blocked: you can allow them in your browser settings.'));
+  });
   // Durée des animations : complètes, courtes (deux fois plus rapides) ou aucune (les pièces se posent directement)
   $('opt-anim').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-anim]'); if (!b) return;
@@ -3842,9 +3852,26 @@
     tourListStop = ON.watchTournaments((all) => {
       tourList = all;
       for (const t of all.mine) if (t.status === 'open' && t.deadline && Date.now() > t.deadline && !autoStarted.has(t.id)) { autoStarted.add(t.id); ON.startTournament(t.id, true).catch(() => {}); }
+      // tournoi auquel je participe qui démarre : notification
+      for (const t of all.mine) {
+        const key = `tour-start:${t.id}`;
+        if (t.status === 'running' && notifyWatchReady.tours && !notifySeen.has(key)) notifyUser(L('Le tournoi commence', 'The tournament is starting'), L(`« ${t.name} » a commencé : ta première partie t’attend.`, `“${t.name}” has started: your first game is waiting.`), key);
+        if (t.status === 'running') notifySeen.add(key);
+      }
+      notifyWatchReady.tours = true;
       updateTourBadge();
       if (document.body.dataset.screen === 'tournaments' && !tourDoc) renderTournaments();
     });
+  }
+  /* ---------- Notifications : à toi de jouer, invitation, tournoi qui commence ---------- */
+  // Affichées quand l'appli est en arrière-plan (onglet caché ou appli installée réduite), si le joueur les a activées.
+  const notifySeen = new Set(), notifyWatchReady = { games: false, tours: false };
+  function notifyUser(title, body, tag) {
+    if (!settings.notify || !('Notification' in window) || Notification.permission !== 'granted' || document.visibilityState === 'visible') return;
+    const opts = { body, tag, icon: 'logo/logo-192.png', badge: 'logo/logo-192.png' };
+    const fallback = () => { try { new Notification(title, opts); } catch { /* non disponible */ } };
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then((r) => r.showNotification(title, opts)).catch(fallback);
+    else fallback();
   }
   function stopTourWatch() { if (tourListStop) { tourListStop(); tourListStop = null; } tourList = { open: [], mine: [] }; newTours = []; updateTourBadge(); }
   function updateTourBadge() {
@@ -3883,7 +3910,21 @@
     $('play-badge').hidden = !n; $('play-badge').textContent = n;
   }
   function updateOnlineBadge() {
-    const myTurn = onlineGames.filter((g) => g.status === 'active' && ((g.moves.length % 2 === 0) === (g.white === (ON.user && ON.user.uid)))).length;
+    const me = ON.user && ON.user.uid;
+    const turnGames = onlineGames.filter((g) => g.status === 'active' && ((g.moves.length % 2 === 0) === (g.white === me)));
+    const myTurn = turnGames.length;
+    // notifications : un nouveau coup de l'adversaire, une nouvelle invitation (pas au démarrage pour ce qui attendait déjà)
+    for (const g of turnGames) {
+      const key = `turn:${g.id}:${g.moves.length}`;
+      if (notifyWatchReady.games && !notifySeen.has(key) && g.moves.length) notifyUser(L('À toi de jouer', 'Your move'), L(`${g.white === me ? g.blackName : g.whiteName} a joué. C’est ton tour.`, `${g.white === me ? g.blackName : g.whiteName} has moved. It’s your turn.`), `turn-${g.id}`);
+      notifySeen.add(key);
+    }
+    for (const inv of onlineInvites.in) {
+      const key = `inv:${inv.id}`;
+      if (notifyWatchReady.games && !notifySeen.has(key)) notifyUser(L('Nouvelle invitation', 'New invitation'), L(`${inv.fromName || 'Un joueur'} t’invite à jouer une partie.`, `${inv.fromName || 'A player'} invites you to play a game.`), key);
+      notifySeen.add(key);
+    }
+    notifyWatchReady.games = true;
     const n = onlineInvites.in.length + myTurn;
     $('online-badge').hidden = !n; $('online-badge').textContent = n;
     updatePlayBadge();
