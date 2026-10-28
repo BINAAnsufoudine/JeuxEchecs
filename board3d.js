@@ -1332,6 +1332,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
       if (!this.outcome && this.mateUltimate) this.resetMateUltimate();
       this.setCheckChains(o.board, o.check);
+      this.updateVaults(o.board, o.animate);
       if (!this.outcome) for (const c of this.chars.values()) { c.endPose = null; c.endPoseAt = null; c.drawTo = null; }
       if (this.outcome === '1/2-1/2') this.planDrawFormation(now);
       this.ropes = this.findRopes(o.board);
@@ -3215,6 +3216,53 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
 
     // Changement de thème des personnages : on les recrée tous au prochain affichage
+    // Voûte d'énergie : un roi roqué, à l'abri derrière ses trois pions encore en place, est protégé
+    // par un dôme lumineux ; dès que le roque est brisé (un pion du bouclier part ou le roi sort), la voûte éclate.
+    sheltered(board, white) {
+      const k = board.indexOf(white ? 'K' : 'k');
+      if (k < 0) return -1;
+      const row = k >> 3, file = k & 7, home = white ? 7 : 0, step = white ? -1 : 1;
+      if (row !== home || (file > 2 && file < 6)) return -1; // roi resté au centre : pas de roque
+      const files = file >= 6 ? [5, 6, 7] : [0, 1, 2];
+      const pawn = white ? 'P' : 'p';
+      for (const f of files) if (board[(home + step) * 8 + f] !== pawn && board[(home + 2 * step) * 8 + f] !== pawn) return -1;
+      return k;
+    }
+    updateVaults(board, animate) {
+      const T = this.THREE, now = this.now();
+      this.vaults = this.vaults || {};
+      for (const white of [true, false]) {
+        const key = white ? 'w' : 'b', sq = board ? this.sheltered(board, white) : -1, v = this.vaults[key];
+        if (sq >= 0 && v && v.sq === sq) continue;
+        if (v) { // la voûte éclate (roque brisé) ou suit le roi
+          const old = v.g; v.breakAt = now; this.vaults[key] = null;
+          const dur = animate ? 0.6 : 0.01;
+          this.addEffect({ start: now, dur, tick: (e) => { const k = e / dur; old.scale.setScalar(1 + k * 0.6); old.children.forEach((m) => { m.material.opacity = m.userData.base * (1 - k); }); }, end: () => { this.scene.remove(old); old.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); } });
+        }
+        if (sq < 0) continue;
+        const color = white ? 0x7fd8ff : 0xc77dff, p = this.sqToPos(sq), g = new T.Group();
+        g.position.set(p.x, 0, p.z);
+        const dome = new T.Mesh(new T.SphereGeometry(0.7, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2), new T.MeshBasicMaterial({ color, transparent: true, opacity: 0.22, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
+        const grid = new T.Mesh(new T.SphereGeometry(0.71, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2), new T.MeshBasicMaterial({ color, wireframe: true, transparent: true, opacity: 0.45, blending: T.AdditiveBlending, depthWrite: false }));
+        const ring = new T.Mesh(new T.RingGeometry(0.66, 0.74, 40), new T.MeshBasicMaterial({ color, transparent: true, opacity: 0.6, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
+        ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02;
+        dome.userData.base = 0.22; grid.userData.base = 0.45; ring.userData.base = 0.6;
+        dome.scale.y = grid.scale.y = 1.9; // assez haute pour couvrir tout le roi
+        g.add(dome, grid, ring); this.scene.add(g);
+        this.vaults[key] = { sq, g, born: animate ? now : now - 10 };
+      }
+    }
+    tickVaults(t) {
+      if (!this.vaults) return;
+      for (const v of Object.values(this.vaults)) {
+        if (!v) continue;
+        const grow = Math.min(1, (t - v.born) / 0.5), pulse = 1 + Math.sin(t * 2.4) * 0.025;
+        v.g.scale.setScalar(Math.max(0.01, grow * grow * (3 - 2 * grow)) * pulse);
+        v.g.children[1].rotation.y = t * 0.25;
+        v.g.children.forEach((m) => { m.material.opacity = m.userData.base * (0.75 + 0.25 * Math.sin(t * 3 + m.userData.base * 10)); });
+      }
+    }
+
     // Thème Océan : une fine couche d'eau translucide, avec des reflets qui ondulent, recouvre le plateau
     tickWater(t) {
       const on = root.PieceTheme === 'ocean';
@@ -3309,6 +3357,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const dt = Math.min(0.25, Math.max(0, t - (this.lastT || t)));
       this.lastT = t;
       this.tickWater(t);
+      this.tickVaults(t);
       const ease = 1 - Math.exp(-dt * 11); // rotation indépendante du nombre d'images par seconde
       const M = root.Models3D;
       const restYaw = this.viewYaw(); // tous regardent le joueur
