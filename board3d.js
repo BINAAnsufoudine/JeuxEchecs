@@ -1180,7 +1180,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           } else if (root.PieceTheme === 'modern' && kind === 'k' && m.flag !== 'ep') {
             // Guerriers modernes : le général appelle deux soldats qui entrent sur le plateau, se placent devant lui
             // de chaque côté et mitraillent la cible ; ensuite seulement il prend la case.
-            escort = { white, from: a, target: b, dir: { x: ux, z: uz }, wait: 2.1 };
+            escort = { white, from: a, target: b, dir: { x: ux, z: uz }, wait: 2.1, flying: !!(v && v.parts.fly) }; // engin volant : tir au bazooka
             die({ t0: now + 1.85, hit: true });
           } else if (ocean && kind === 'k' && m.flag !== 'ep') {
             // roi des thèmes de créatures et de guerriers : combat au corps à corps, comme les autres pièces côte à côte
@@ -3955,13 +3955,16 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         g.children[1].material.opacity = 0.06 + k * 0.12;
       }
       if (!this.effects || !this.effects.length) return;
-      this.effects = this.effects.filter((fx) => {
+      // un effet peut en créer un autre pendant son tick (roquette tirée par l'escorte) : on ne le perd pas
+      const list = this.effects; this.effects = [];
+      const keep = list.filter((fx) => {
         const e = t - fx.start;
         if (e < 0) return true;
         fx.tick(e, t);
         if (e >= fx.dur) { fx.end(); return false; }
         return true;
       });
+      this.effects = keep.concat(this.effects);
     }
     disposeGroup(g) {
       this.scene.remove(g);
@@ -5418,8 +5421,32 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         // entrée : depuis l'extérieur du plateau, du côté du soldat
         const out = { x: P.x + side.x * sd * 6.5 - d.x * 1.5, z: P.z + side.z * sd * 6.5 - d.z * 1.5 };
         holder.position.set(out.x, 0, out.z);
+        if (esc.flying) {
+          // bazooka sur l'épaule à la place du fusil
+          if (parts.gun) parts.gun.visible = false;
+          const tube = new T.Group(); tube.position.set(0.06, 0.15, 0.02); parts.torso.add(tube);
+          const body = new T.Mesh(new T.CylinderGeometry(0.022, 0.022, 0.3, 10), new T.MeshStandardMaterial({ color: 0x4b5320, roughness: 0.7 })); body.rotation.x = Math.PI / 2; tube.add(body);
+          const mouth = new T.Mesh(new T.CylinderGeometry(0.03, 0.022, 0.05, 10), new T.MeshStandardMaterial({ color: 0x2e3318 })); mouth.rotation.x = Math.PI / 2; mouth.position.z = 0.16; tube.add(mouth);
+          parts.bazooka = tube; parts.bazookaTip = new T.Object3D(); parts.bazookaTip.position.z = 0.2; tube.add(parts.bazookaTip);
+          parts.pose = null; // pas de pose fusil : il tient le bazooka
+        }
         return { parts, holder, post, out };
       });
+      // roquette tirée au bazooka vers l'engin volant, avec traînée de fumée et explosion en l'air
+      const fireRocket = (s, t0) => {
+        const from = s.parts.bazookaTip.getWorldPosition(new T.Vector3()), to = new T.Vector3(esc.target.x, 0.9, esc.target.z);
+        const rocket = new T.Group(); const rb = new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.16, 8), new T.MeshStandardMaterial({ color: 0x5d6b2f })); rb.rotation.x = Math.PI / 2; rocket.add(rb);
+        const fl = new T.Mesh(new T.SphereGeometry(0.04, 8, 6), this.glow(0xffa726, 0.9)); fl.position.z = -0.1; rocket.add(fl);
+        this.scene.add(rocket); const puffs = [];
+        const boom = new T.Mesh(new T.SphereGeometry(0.3, 14, 10), this.glow(0xff8a2a, 0.9)); boom.visible = false; boom.position.copy(to); this.scene.add(boom);
+        this.addEffect({ start: t0, dur: 1.1, tick: (e) => {
+          const u = Math.min(1, e / 0.4);
+          rocket.visible = u < 1; rocket.position.copy(from).lerp(to, u); rocket.lookAt(to);
+          if (u < 1 && Math.random() < 0.8) { const pf = new T.Mesh(new T.SphereGeometry(0.05, 6, 4), new T.MeshBasicMaterial({ color: 0xdddddd, transparent: true, opacity: 0.7, depthWrite: false })); pf.position.copy(rocket.position); pf.userData.t = e; this.scene.add(pf); puffs.push(pf); }
+          for (const pf of puffs) { const a = e - pf.userData.t; pf.scale.setScalar(1 + a * 3); pf.material.opacity = Math.max(0, 0.7 - a * 1.2); }
+          if (u >= 1) { const k = (e - 0.4) / 0.7; boom.visible = k < 1; boom.scale.setScalar(0.5 + k * 2.2); boom.material.opacity = 0.9 * (1 - k); if (!s.boomShake) { s.boomShake = true; this.shakeUntil = this.now() + 0.3; this.shakeAmp = 0.08; } }
+        }, end: () => { for (const o of [rocket, boom, ...puffs]) { this.scene.remove(o); o.traverse((x) => { if (x.geometry) x.geometry.dispose(); if (x.material) x.material.dispose(); }); } } });
+      };
       const run = (s, a, b, u, t) => {
         s.holder.position.set(a.x + (b.x - a.x) * u, 0, a.z + (b.z - a.z) * u);
         s.holder.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
@@ -5432,8 +5459,13 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           else if (e < tFire) {
             s.holder.position.set(s.post.x, 0, s.post.z);
             s.holder.rotation.y = Math.atan2(esc.target.x - s.post.x, esc.target.z - s.post.z);
-            M.animate(s.parts, t, 'punch', 1);
-            if (s.parts.mg) this.mgBurst(s, esc.target, t);
+            M.animate(s.parts, t, esc.flying ? 'guard' : 'punch', 1);
+            if (esc.flying) {
+              // épaule le bazooka (canon vers la cible en hauteur), puis tire une roquette
+              s.parts.armR.rotation.set(-1.4, 0, -0.2); s.parts.armL.rotation.set(-1.2, 0, 0.5);
+              if (s.parts.bazooka) s.parts.bazooka.rotation.x = -0.35;
+              if (!s.fired && e > tIn + 0.25 + soldiers.indexOf(s) * 0.2) { s.fired = true; s.holder.updateMatrixWorld(true); fireRocket(s, t); }
+            } else if (s.parts.mg) this.mgBurst(s, esc.target, t);
           } else run(s, s.post, s.out, (e - tFire) / (tOut - tFire), t);
         }
       }, end: () => {
