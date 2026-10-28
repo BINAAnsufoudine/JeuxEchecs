@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ata Wawé · Échecs en 3D</title>
+<meta name="description" content="Ata Wawé : un jeu d'échecs en 3D gratuit, avec sept mondes à collectionner, des leçons, un défi du jour, des tournois en ligne et un mode club pour les écoles.">
+<meta property="og:title" content="Ata Wawé · Échecs en 3D">
+<meta property="og:description" content="Un échiquier, mille rencontres, une même passion. Sept mondes en 3D, leçons, défi du jour, tournois et clubs.">
+<meta property="og:image" content="fond_ecran/ninjas.webp">
+<link rel="icon" href="logo/logo-32.png">
+<link rel="apple-touch-icon" href="logo/logo-180.png">
+<style>
+  :root { --bg: #13201b; --panel: #1c2d26; --text: #eef3ee; --muted: #b7c6bb; --gold: #e8b84a; --gold-ink: #2b210a; }
+  @media (prefers-color-scheme: light) { :root { --bg: #f3f5ef; --panel: #ffffff; --text: #17241e; --muted: #4f6157; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  a { color: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+  header.top { display: flex; align-items: center; gap: 10px; padding: 14px 0; }
+  header.top img { width: 40px; height: 40px; border-radius: 10px; }
+  header.top b { font-size: 1.15rem; }
+  header.top .cta { margin-left: auto; }
+  .cta { display: inline-block; padding: 11px 20px; border-radius: 999px; background: var(--gold); color: var(--gold-ink); font-weight: 800; text-decoration: none; }
+  .cta.ghost { background: transparent; color: var(--text); border: 2px solid var(--gold); }
+  .hero { position: relative; border-radius: 22px; overflow: hidden; min-height: 420px; display: flex; align-items: flex-end; background: #000 url('fond_ecran/ninjas.webp') center / cover; }
+  .hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.82), rgba(0,0,0,.35) 60%, transparent); }
+  .hero-copy { position: relative; z-index: 1; padding: 32px; max-width: 560px; color: #fff; }
+  .hero h1 { margin: 0 0 10px; font-size: clamp(2rem, 6vw, 3.2rem); line-height: 1.05; }
+  .hero p { margin: 0 0 20px; color: #e3e9e4; font-size: 1.08rem; }
+  .hero .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .hero .cta.ghost { color: #fff; }
+  h2 { font-size: 1.6rem; margin: 48px 0 6px; }
+  .lead { color: var(--muted); margin: 0 0 20px; }
+  .themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .theme { border-radius: 14px; overflow: hidden; background: var(--panel); }
+  .theme div { aspect-ratio: 16 / 10; background: center top / cover; }
+  .theme span { display: block; padding: 8px 10px; font-weight: 700; font-size: .92rem; }
+  .features { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+  .feature { background: var(--panel); border-radius: 16px; padding: 18px; }
+  .feature b { display: block; font-size: 1.05rem; margin: 6px 0 4px; }
+  .feature p { margin: 0; color: var(--muted); font-size: .95rem; }
+  .feature .ico { font-size: 1.7rem; }
+  .sissa { display: grid; grid-template-columns: 220px 1fr; gap: 22px; align-items: center; background: var(--panel); border-radius: 18px; padding: 20px; margin-top: 48px; }
+  .sissa img { width: 100%; border-radius: 14px; }
+  .sissa h2 { margin-top: 0; }
+  .final { text-align: center; padding: 48px 0 24px; }
+  footer { color: var(--muted); font-size: .85rem; text-align: center; padding: 20px 0 32px; }
+  @media (max-width: 640px) {
+    .hero { min-height: 480px; }
+    .hero-copy { padding: 22px; }
+    .sissa { grid-template-columns: 1fr; }
+    header.top .cta { padding: 8px 14px; font-size: .9rem; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <img src="logo/logo-64.png" alt="">
+      <b>Ata Wawé</b>
+      <a class="cta" href="index.html">Jouer</a>
+    </header>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <h1>Les échecs prennent vie en 3D</h1>
+        <p>Ninjas, créatures de l'océan, plantes, animaux, oiseaux, guerriers de l'Antiquité et soldats modernes : chaque pièce attaque, riposte et donne le mat à sa façon. Gratuit, sans publicité, sur téléphone comme sur ordinateur.</p>
+        <div class="row">
+          <a class="cta" href="index.html">Commencer à jouer</a>
+          <a class="cta ghost" href="#fonctions">Découvrir</a>
+        </div>
+      </div>
+    </section>
+
+    <h2>Sept mondes à collectionner</h2>
+    <p class="lead">Fais grandir ta collection en jouant : chaque monde a ses pièces, ses armes et ses mats spectaculaires.</p>
+    <div class="themes">
+      <div class="theme"><div style="background-image:url('fond_ecran/mini/ninjas.webp')"></div><span>🥷 Ninjas</span></div>
+      <div class="theme"><div style="background-image:url('fond_ecran/mini/ocean.webp')"></div><span>🐋 Océan Indien</span></div>
+      <div class="theme"><div style="background-image:url('fond_ecran/mini/plants.webp')"></div><span>🌱 Plantes</span></div>
+      <div class="theme"><div style="background-image:url('fond_ecran/mini/land.webp')"></div><span>🐒 Animaux terrestres</span></div>
+      <div class="theme"><div style="background-image:url('fond_ecran/mini/birds.webp')"></div><span>🦜 Oiseaux tropicaux</span></div>
+      <div class="theme"><div style="background-image:url('fond_ecran/mini/ancient.webp')"></div><span>🏛️ Guerriers de l'Antiquité</span></div>
+      <div class="theme"><div style="background-image:url('fond_ecran/mini/modern.webp')"></div><span>🪖 Guerriers modernes</span></div>
+    </div>
+
+    <h2 id="fonctions">Tout pour progresser</h2>
+    <p class="lead">Du premier coup au premier tournoi, Ata Wawé t'accompagne.</p>
+    <div class="features">
+      <div class="feature"><span class="ico">🤖</span><b>Contre l'ordinateur</b><p>Des débutants aux champions, avec un entraîneur qui explique tes coups et une analyse complète de tes parties.</p></div>
+      <div class="feature"><span class="ico">📘</span><b>Leçons et tutoriel</b><p>Les règles, les mats, les finales et les ouvertures, expliqués pas à pas puis mis en pratique.</p></div>
+      <div class="feature"><span class="ico">🎯</span><b>Défi du jour</b><p>Les mêmes problèmes pour tous les joueurs chaque jour, avec un classement de la journée et une saison chaque mois.</p></div>
+      <div class="feature"><span class="ico">🌐</span><b>En ligne et tournois</b><p>Invite tes amis, joue à distance avec pendule, organise des tournois individuels ou par équipes.</p></div>
+      <div class="feature"><span class="ico">🏫</span><b>Clubs et écoles</b><p>Un professeur crée son club, ses élèves le rejoignent avec un code, et il suit la progression de chacun.</p></div>
+      <div class="feature"><span class="ico">🎬</span><b>Ta partie en vidéo</b><p>Rejoue n'importe quelle partie en 3D et enregistre-la en vidéo pour la partager.</p></div>
+    </div>
+
+    <section class="sissa">
+      <img src="sissa/sissa.jpg" alt="Maître Sissa, le guide du jeu">
+      <div>
+        <h2>Avec Maître Sissa</h2>
+        <p class="lead">Inspiré de la légende de Sissa, l'inventeur des échecs et des grains de riz sur l'échiquier, Ata Wawé récompense chaque progrès : grades, trésors, quêtes du jour et titres à débloquer.</p>
+        <a class="cta" href="index.html">Rejoindre l'aventure</a>
+      </div>
+    </section>
+
+    <section class="final">
+      <h2>Installe Ata Wawé en un geste</h2>
+      <p class="lead">Ouvre le jeu dans ton navigateur puis choisis « Ajouter à l'écran d'accueil » : il fonctionne ensuite comme une application, même hors connexion.</p>
+      <a class="cta" href="index.html">Ouvrir le jeu</a>
+    </section>
+
+    <footer>Ata Wawé · Un échiquier, mille rencontres, une même passion.</footer>
+  </div>
+</body>
+</html>
