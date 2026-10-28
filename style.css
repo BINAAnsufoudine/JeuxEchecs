@@ -764,7 +764,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .home-tropical-welcome { background: radial-gradient(ellipse at 72% 95%, rgba(156, 202, 82, .26), transparent 37%), linear-gradient(112deg, #315936, #24523b 57%, #194a3c); }
 .home-tropical-welcome .home-kicker { color: #c8f2a6; }
 /* fond d'écran du thème choisi, assombri à gauche pour garder le texte lisible */
-.home-welcome[data-theme-bg] { background-size: cover; background-position: center top; }
+.home-welcome[data-theme-bg] { background-size: 100% auto; background-position: center top; background-repeat: no-repeat; background-color: #1b2a22; } /* image à la largeur du cadre, proportions gardées, calée en haut */
 .home-welcome[data-theme-bg="ocean"] { background-image: linear-gradient(100deg, rgba(4,28,40,.86) 0%, rgba(4,28,40,.55) 48%, rgba(4,28,40,.05) 85%), url(fond_ecran/ocean.webp); }
 .home-welcome[data-theme-bg="plants"] { background-image: linear-gradient(100deg, rgba(10,30,14,.86) 0%, rgba(10,30,14,.55) 48%, rgba(10,30,14,.05) 85%), url(fond_ecran/plants.webp); }
 .home-welcome[data-theme-bg="modern"] { background-image: linear-gradient(100deg, rgba(14,16,22,.88) 0%, rgba(14,16,22,.58) 48%, rgba(14,16,22,.08) 85%), url(fond_ecran/modern.webp); }
