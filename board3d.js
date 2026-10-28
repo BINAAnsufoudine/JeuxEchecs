@@ -50,7 +50,7 @@
   // Armes propres aux thèmes guerriers, par pièce (w = Blancs, b = Noirs) ; sinon jet ou salve aux couleurs du thème
   const WAR_PROJ = {
     ancient: { n: { w: 'spear', b: 'spear' }, b: { w: 'bolt', b: 'boulder' }, r: { w: 'arrows', b: 'firepot' }, q: { w: 'spears', b: 'arrows' } },
-    modern: { n: { w: 'missiles', b: 'missiles' }, b: { w: 'laser', b: 'laser' }, r: { w: 'shell', b: 'shell' }, q: { w: 'bombs', b: 'bombs' } },
+    modern: { n: { w: 'missiles', b: 'missiles' }, b: { w: 'missiles', b: 'missiles' }, r: { w: 'shell', b: 'shell' }, q: { w: 'bombs', b: 'bombs' } },
   };
   const THEME_FX = {
     ocean: { w: { jet: 0x3fa9f5, foam: 0xe6f7ff, bub: 0x5cc4ff, charge: 0xbfeaff, boom: [0xd6f2ff, 0x3fa9f5, 0x9fdcff], debris: [0x3fa9f5, 0xe6f7ff], burst: [0xe6f7ff, 0x7fd0ff, 0xbfeaff], bits: [0xbfeaff, 0xffffff] },

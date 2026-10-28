@@ -370,6 +370,35 @@
     p.pose = machinePose; p.scaleK = 1.35;
     return p;
   }
+  // Véhicule blindé lance-missiles (fou) : caisse blindée à 4 roues, tourelle avec quatre missiles dressés et un radar
+  function missileCarrier(c) {
+    const p = K.base(0.1); p.wheels = [];
+    const hull = M(c.body, { rough: 0.7 }), darkM = M(c.dark, { rough: 0.6 });
+    p.torso.add(K.mesh(K.box(0.2, 0.09, 0.36), hull, 0, 0.03, 0)); // caisse
+    const front = K.mesh(K.box(0.2, 0.06, 0.08), hull, 0, 0.045, 0.19); front.rotation.x = 0.55; p.torso.add(front); // avant incliné
+    p.torso.add(K.mesh(K.box(0.07, 0.012, 0.05), darkM, 0.04, 0.082, 0.05)); // trappe
+    for (const sd of [-1, 1]) for (const z of [-0.12, 0.12]) {
+      const g = new T.Group(); g.position.set(sd * 0.105, -0.02, z); p.torso.add(g); p.wheels.push(g);
+      const tyre = K.mesh(K.cyl(0.05, 0.05, 0.04, 14), M('#2b2b2b', { rough: 0.9 })); tyre.rotation.z = Math.PI / 2; g.add(tyre);
+      const hub = K.mesh(K.cyl(0.025, 0.025, 0.042, 8), darkM); hub.rotation.z = Math.PI / 2; g.add(hub);
+    }
+    // tourelle (tête) : elle pivote vers la cible
+    p.head.position.set(0, 0.09, -0.04);
+    p.head.add(K.mesh(K.cyl(0.05, 0.06, 0.03, 14), darkM, 0, 0.015, 0));
+    const rack = new T.Group(); rack.position.set(0, 0.06, 0); rack.rotation.x = -0.75; p.head.add(rack);
+    rack.add(K.mesh(K.box(0.03, 0.05, 0.04), darkM, 0, 0, 0));
+    for (const sd of [-1, 1]) for (const k of [0, 1]) {
+      const x = sd * (0.04 + k * 0.035);
+      const body = K.mesh(K.cyl(0.016, 0.016, 0.2, 10), hull, x, 0, 0.05); body.rotation.x = Math.PI / 2; rack.add(body);
+      const tip = K.mesh(K.cone(0.016, 0.05, 10), hull, x, 0, 0.175); tip.rotation.x = Math.PI / 2; rack.add(tip);
+      for (const z of [-0.02, 0.06]) { const ring = K.mesh(K.cyl(0.018, 0.018, 0.006, 10), darkM, x, 0, z); ring.rotation.x = Math.PI / 2; rack.add(ring); }
+    }
+    // petit radar en parabole
+    const dish = K.mesh(new T.SphereGeometry(0.035, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2.5), M(c.dark, { double: true }), 0.07, 0.09, -0.05); dish.rotation.x = -1.2; p.head.add(dish);
+    p.muzzle = new T.Object3D(); p.muzzle.position.set(0, 0, 0.2); rack.add(p.muzzle);
+    p.pose = machinePose; p.scaleK = 1.15;
+    return p;
+  }
   function general(c, isBlack) {
     const p = soldier({ body: c.body, belt: '#4e342e', legs: c.dark, sleeve: c.body, boots: '#111', skin: isBlack ? '#c08a62' : '#e0b48c' });
     for (let i = 0; i < 4; i++) p.torso.add(K.mesh(K.box(0.014, 0.01, 0.006), M(['#c62828', '#1565c0', '#f2c230', '#2e7d32'][i]), -0.045 + (i % 2) * 0.018, 0.1 - Math.floor(i / 2) * 0.014, 0.055));
@@ -385,13 +414,13 @@
   const MODERN = {
     P() { const p = trooper(W, false); p.scaleK = 1.05; return p; },
     N() { return helicopter(W, false); },
-    B() { return drone(W, '#4fc3f7'); },
+    B() { return missileCarrier(W); },
     R() { return tank(W); },
     Q() { const p = deltaJet(W); K.crown(p.torso, 0.075, '#e9e4ff', 0.4, 0.08); return p; },
     K() { const p = general(W, false); p.scaleK = 1.0; return p; },
     p() { const p = trooper(B, true); p.scaleK = 1.05; return p; },
     n() { return helicopter(B, true); },
-    b() { return drone(B, '#ff1744'); },
+    b() { return missileCarrier(B); },
     r() { const p = tank(B); p.head.children[1].scale.set(1.2, 1.15, 1.2); return p; },
     q() { const p = deltaJet(B); K.crown(p.torso, 0.075, '#b9a6ff', 0.4, 0.08); return p; },
     k() { const p = general(B, true); p.scaleK = 1.0; return p; },
