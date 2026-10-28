@@ -3314,6 +3314,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       // changement de thème : on termine d'abord les animations en cours pour ne laisser aucun effet orphelin
       this.clearTransient();
       if (this.mateUltimate) this.resetMateUltimate();
+      for (const g of this.tracers || []) { for (const o of [g, g.userData.muzzle, g.userData.hit]) { this.scene.remove(o); o.traverse((x) => { if (x.geometry) x.geometry.dispose(); if (x.material) x.material.dispose(); }); } }
+      this.tracers = new Set();
       for (const c of this.chars.values()) this.pieces.remove(c.holder);
       this.chars = new Map();
       this.boardKey = null;
@@ -3374,6 +3376,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.lastT = t;
       this.tickWater(t);
       this.tickVaults(t);
+      this.hideTracers(t);
       const ease = 1 - Math.exp(-dt * 11); // rotation indépendante du nombre d'images par seconde
       const M = root.Models3D;
       const restYaw = this.viewYaw(); // tous regardent le joueur
@@ -3492,7 +3495,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             else M.animate(c.parts, t, 'punch', finisher ? 2.35 : hits);
             c.parts.root.position.z = c.parts.weapon === 'element' ? 0 : Math.sin(hits * Math.PI * 2) * 0.06;
             c.shadow.scale.setScalar(1);
-            if (c.parts.weapon !== 'element') this.flash(a.duel.stop, a.duel.foe, hits, c.parts.fast ? 0xffffff : 0xffe066);
+            if (c.parts.mg && root.PieceTheme === 'modern') this.mgBurst(c, a.duel.foe, t); // guerriers modernes : rafales de mitrailleuse
+            else if (c.parts.weapon !== 'element') this.flash(a.duel.stop, a.duel.foe, hits, c.parts.fast ? 0xffffff : 0xffe066);
           } else {
             const u = Math.min(1, (el - a.dur - a.duel.len) / 0.35);
             this.brawlMode(c, false);
@@ -5397,6 +5401,30 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
 
     // Étincelle au point d'impact pendant un duel
+    // Rafale de mitrailleuse : balles traçantes de l'arme vers la cible, éclair au canon et étincelles à l'impact
+    mgBurst(c, foe, t) {
+      const T = this.THREE;
+      if (!c.tracer) {
+        const g = new T.Group();
+        for (let i = 0; i < 4; i++) { const tr = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.35, 5), new T.MeshBasicMaterial({ color: 0xffe082, transparent: true, opacity: 0.95, blending: T.AdditiveBlending, depthWrite: false })); g.add(tr); }
+        g.userData.muzzle = new T.Mesh(new T.SphereGeometry(0.07, 8, 6), new T.MeshBasicMaterial({ color: 0xffd54f, transparent: true, opacity: 0.9, blending: T.AdditiveBlending, depthWrite: false }));
+        g.userData.hit = new T.Mesh(new T.IcosahedronGeometry(0.09, 0), new T.MeshBasicMaterial({ color: 0xffb300, transparent: true, opacity: 0.9, blending: T.AdditiveBlending, depthWrite: false }));
+        this.scene.add(g, g.userData.muzzle, g.userData.hit);
+        c.tracer = g; (this.tracers = this.tracers || new Set()).add(g);
+      }
+      const g = c.tracer; c.holder.updateMatrixWorld(true);
+      const from = c.parts.mg.getWorldPosition(new T.Vector3()), to = new T.Vector3(foe.x, 0.55, foe.z), d = to.clone().sub(from), L = d.length();
+      const dir = d.clone().normalize(), q = new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), dir);
+      g.children.forEach((tr, i) => { const u = ((t * 9 + i / 4) % 1); tr.position.copy(from).addScaledVector(d, u); tr.quaternion.copy(q); tr.visible = u * L > 0.1; });
+      const on = Math.sin(t * 60) > 0;
+      g.userData.muzzle.position.copy(from); g.userData.muzzle.visible = on; g.userData.muzzle.scale.setScalar(0.7 + Math.random() * 0.6);
+      g.userData.hit.position.copy(to).addScaledVector(dir, -0.15); g.userData.hit.visible = !on; g.userData.hit.rotation.set(Math.random() * 3, Math.random() * 3, 0);
+      g.visible = true; g.userData.until = t + 0.06;
+    }
+    hideTracers(t) {
+      for (const g of this.tracers || []) if (g.visible && !(t < g.userData.until)) { g.visible = false; g.userData.muzzle.visible = false; g.userData.hit.visible = false; }
+    }
+
     flash(a, b, hits, color) {
       const T = this.THREE;
       if (!this.spark) {

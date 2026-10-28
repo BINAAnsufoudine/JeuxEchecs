@@ -250,6 +250,7 @@
     const flash = K.mesh(K.cone(0.02, 0.06, 8), M('#ffd54f', { emissive: '#ffb300', opacity: 0.9 }), 0, 0.01, 0.23); flash.rotation.x = Math.PI / 2; flash.visible = false; gun.add(flash);
     p.torso.add(gun); p.gun = gun; p.flash = flash;
     p.pose = rifleman;
+    p.mg = flash; // le fusil d'assaut sert de mitrailleuse
     return p;
   }
   function rifleman(p, t, state, k) {
@@ -289,6 +290,7 @@
     if (attack) for (const s of [-1, 1]) { p.torso.add(K.mesh(K.box(0.12, 0.008, 0.03), M(c.dark), s * 0.08, -0.02, 0.0)); const pod = K.mesh(K.cyl(0.016, 0.016, 0.07, 8), M('#222'), s * 0.13, -0.035, 0.0); pod.rotation.x = Math.PI / 2; p.torso.add(pod); }
     p.head.position.set(0, 0.0, 0.17);
     p.muzzle = new T.Object3D(); p.muzzle.position.set(0, -0.04, 0.12); p.torso.add(p.muzzle);
+    machineGun(p, p.torso, 0, -0.07, 0.12, c.dark); // canon sous le nez
     p.pose = machinePose; p.scaleK = 1.15;
     return p;
   }
@@ -320,6 +322,7 @@
     K.ell(p.head, c.dark, 0.09, 0.04, 0.1, 0, 0, 0, { rough: 0.6 });
     const barrel = K.mesh(K.cyl(0.013, 0.016, 0.28, 10), M(c.dark, { metal: 0.4 }), 0, 0.005, 0.2); barrel.rotation.x = Math.PI / 2; p.head.add(barrel);
     p.muzzle = new T.Object3D(); p.muzzle.position.set(0, 0.005, 0.35); p.head.add(p.muzzle); // bout du canon
+    machineGun(p, p.head, 0.055, 0.03, 0.08, c.dark); // mitrailleuse sur la tourelle
     p.head.add(K.mesh(K.cyl(0.03, 0.03, 0.02, 10), M(c.body), 0.03, 0.045, -0.03));
     p.pose = machinePose; p.scaleK = 1.3; // la tour (tank) est la plus grande pièce
     return p;
@@ -367,6 +370,7 @@
     const fin = K.mesh(flat([[0.06, 0.03], [0.17, 0.15], [0.21, 0.15], [0.22, 0.03]]), dark); fin.rotation.y = Math.PI / 2; p.torso.add(fin);
     p.head.position.set(0, 0, 0.32);
     p.muzzle = new T.Object3D(); p.muzzle.position.set(0, -0.03, 0.12); p.torso.add(p.muzzle);
+    machineGun(p, p.torso, 0.028, -0.012, 0.18, c.dark); // canon de bord
     p.pose = machinePose; p.scaleK = 1.35;
     return p;
   }
@@ -396,8 +400,18 @@
     // petit radar en parabole
     const dish = K.mesh(new T.SphereGeometry(0.035, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2.5), M(c.dark, { double: true }), 0.07, 0.09, -0.05); dish.rotation.x = -1.2; p.head.add(dish);
     p.muzzle = new T.Object3D(); p.muzzle.position.set(0, 0, 0.2); rack.add(p.muzzle);
+    machineGun(p, p.head, -0.07, 0.05, 0.03, c.dark); // mitrailleuse de tourelle
     p.pose = machinePose; p.scaleK = 1.15;
     return p;
+  }
+  // Mitrailleuse montée (toutes les pièces modernes sauf le roi) : canon court, chargeur, et point de tir p.mg
+  function machineGun(p, parent, x, y, z, color) {
+    const g = new T.Group(); g.position.set(x, y, z); parent.add(g);
+    const barrel = K.mesh(K.cyl(0.006, 0.006, 0.09, 6), M('#212121', { metal: 0.7 }), 0, 0, 0.045); barrel.rotation.x = Math.PI / 2; g.add(barrel);
+    g.add(K.mesh(K.box(0.022, 0.022, 0.04), M(color || '#37474f', { metal: 0.5 }), 0, 0, 0));
+    g.add(K.mesh(K.box(0.012, 0.025, 0.014), M('#263238'), 0, -0.02, 0.005)); // chargeur
+    p.mg = new T.Object3D(); p.mg.position.set(0, 0, 0.095); g.add(p.mg);
+    return g;
   }
   function general(c, isBlack) {
     const p = soldier({ body: c.body, belt: '#4e342e', legs: c.dark, sleeve: c.body, boots: '#111', skin: isBlack ? '#c08a62' : '#e0b48c' });
