@@ -268,15 +268,15 @@
       p.pose = plantPose; p.scaleK = 1.35;
       return p;
     },
-    n() { // plant de maïs : longues feuilles retombantes, épi de maïs violet sombre, panache au sommet
+    n() { // plant de maïs : longues feuilles retombantes, épi de maïs jaune, panache au sommet
       const p = base(0.03);
       stick(p.torso, '#3d5a2a', 0.022, 0.03, [0, 0, 0], [0, 0.46, 0]);
       for (let i = 0; i < 4; i++) { const a = i * 1.7, y = 0.08 + i * 0.07; leaf(p.torso, '#2f4a22', 0.035, 0.17, Math.cos(a) * 0.1, y, Math.sin(a) * 0.1, 0.35, -a, Math.cos(a) * 0.5); }
       for (const [g, s] of [[p.armL, -1], [p.armR, 1]]) { g.position.set(0, 0.24, 0); leaf(g, '#33502a', 0.035, 0.16, s * 0.11, -0.02, 0.01, 0, 0, s * -0.6); }
-      // épi : grains violet sombre dans des feuilles d'enveloppe, avec la soie
+      // épi : grains jaunes dans des feuilles d'enveloppe, avec la soie
       p.head.position.set(0.05, 0.3, 0.05);
-      const cob = mesh(sphere(1, 14, 10), mat('#4a148c', { rough: 0.5 })); cob.scale.set(0.045, 0.1, 0.045); p.head.add(cob);
-      for (let i = 0; i < 18; i++) { const a = (i % 6) / 6 * Math.PI * 2, y = -0.06 + Math.floor(i / 6) * 0.06; p.head.add(mesh(sphere(0.012, 6, 4), mat('#6a1b9a'), Math.cos(a) * 0.042, y, Math.sin(a) * 0.042)); }
+      const cob = mesh(sphere(1, 14, 10), mat('#f9c80e', { rough: 0.5 })); cob.scale.set(0.045, 0.1, 0.045); p.head.add(cob);
+      for (let i = 0; i < 18; i++) { const a = (i % 6) / 6 * Math.PI * 2, y = -0.06 + Math.floor(i / 6) * 0.06; p.head.add(mesh(sphere(0.012, 6, 4), mat('#fbd437'), Math.cos(a) * 0.042, y, Math.sin(a) * 0.042)); }
       for (const sd of [-1, 1]) { const h = leaf(p.head, '#558b2f', 0.04, 0.11, sd * 0.03, -0.04, 0, 0, 0, sd * 0.3); h.rotation.x = Math.PI / 2; h.scale.set(0.035, 0.008, 0.11); }
       for (let i = 0; i < 5; i++) { const f = mesh(cyl(0.003, 0.003, 0.06, 3), mat('#8d6e63'), (i - 2) * 0.008, 0.12, 0); f.rotation.z = (i - 2) * 0.3; p.head.add(f); }
       eyes(p.head, 0.025, 0.02, 0.04, 0.014, '#c62828');
