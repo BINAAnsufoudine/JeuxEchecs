@@ -680,6 +680,7 @@
     // thèmes Océan, Plantes, Animaux, Oiseaux : créatures du thème (ocean3d.js, themes3d.js) au lieu des ninjas
     const themed = root.ThemeModels && root.ThemeModels[root.PieceTheme];
     const parts = themed ? themed.build(THREE, piece) : BUILD[piece]();
+    if (themed) parts.themed = true; // les murs de protection n'existent que dans le thème Ninjas
     const k = SIZE[piece.toLowerCase()] * SCALE * (parts.scaleK || 1);
     if (parts.head && !parts.noHeadScale) parts.head.scale.setScalar(0.5);
     parts.root.scale.setScalar(k);
@@ -794,7 +795,7 @@
       // garde : avant-bras croisés devant le visage
       p.armL.rotation.set(-1.9, 0, 0.6); p.armR.rotation.set(-1.9, 0, -0.6);
       p.torso.rotation.x = 0.1; p.legL.rotation.x = -0.3; p.legR.rotation.x = 0.3;
-      setWall(p, p.noWall ? 0 : Math.min(1, k)); // pas de mur dans un combat au corps à corps
+      setWall(p, p.noWall || p.themed ? 0 : Math.min(1, k)); // pas de mur au corps à corps, ni hors du thème Ninjas
     } else if (state === 'cast') {
       // signes des mains, puis poussée vers l'avant (k : 0 → 1)
       if (k < 0.6) {

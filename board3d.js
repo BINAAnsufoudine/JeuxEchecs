@@ -3355,16 +3355,18 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             continue;
           }
           if (a.pre && el < 0) {
-            // L'attaquant lève un mur de terre pour parer la riposte, avant de lancer sa technique.
-            // Hors du thème Ninjas, pas de mur : il esquive par une technique de substitution.
+            // Riposte de la cible avant l'attaque. Thème Ninjas : l'attaquant esquive par une technique de substitution
+            // (fumée, bûche). Autres thèmes : pas de mur, il encaisse le coup de plein fouet puis lance son attaque.
             const tg = (a.shot || a.toss).target, u = t - a.pre;
             c.holder.position.set(a.from.x, 0, a.from.z);
             turn(c, Math.atan2(tg.x - a.from.x, tg.z - a.from.z));
-            if (root.PieceTheme && root.PieceTheme !== 'ninja') { this.substitution(c, a, u, t, M); continue; }
-            M.animate(c.parts, t, 'guard', 1);
-            M.setEarthWall(c.parts, Math.min(1, u / 0.28));
-            const hitAt = 0.85;
-            c.parts.root.position.z = u > hitAt && u < hitAt + 0.2 ? -Math.sin((u - hitAt) / 0.2 * Math.PI) * 0.12 : 0;
+            if (!THEME_FX[root.PieceTheme]) { this.substitution(c, a, u, t, M); continue; }
+            M.setEarthWall(c.parts, 0);
+            const hitAt = 0.85, hurt = u > hitAt && u < hitAt + 0.35 ? Math.sin((u - hitAt) / 0.35 * Math.PI) : 0;
+            M.animate(c.parts, t, hurt > 0 ? 'ko' : 'guard', hurt > 0 ? hurt * 0.35 : 1);
+            c.parts.root.position.z = -hurt * 0.2; // projeté en arrière par l'impact
+            c.parts.root.rotation.x = -hurt * 0.35;
+            if (u > hitAt && !a.hurtShake) { a.hurtShake = true; this.shakeUntil = t + 0.15; this.shakeAmp = 0.05; }
             continue;
           }
           if (a.shot) {
@@ -5246,14 +5248,41 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (u >= back && !a.subst.in) { a.subst.in = true; puff(pos); }
     }
 
+    // Projectile de riposte propre à la pièce ciblée, selon le thème (orienté le long de +z)
+    counterProj(c, kind) {
+      const T = this.THREE, theme = root.PieceTheme, white = c.piece === c.piece.toUpperCase();
+      const pal = THEME_FX[theme][white ? 'w' : 'b'];
+      const g = new T.Group(); g.userData.themed = true;
+      const std = (color, o = {}) => new T.MeshStandardMaterial(Object.assign({ color, roughness: 0.5, metalness: 0.2 }, o));
+      const shaft = (len, r, color, tipColor) => {
+        const sh = new T.Mesh(new T.CylinderGeometry(r, r, len, 6), std(color)); sh.rotation.x = Math.PI / 2; g.add(sh);
+        const tip = new T.Mesh(new T.ConeGeometry(r * 3, len * 0.18, 6), std(tipColor, { metalness: 0.8 })); tip.rotation.x = Math.PI / 2; tip.position.z = len * 0.59; g.add(tip);
+      };
+      const glowBall = (r, c1, c2) => { g.add(new T.Mesh(new T.SphereGeometry(r, 12, 8), this.glow(c1, 1)), new T.Mesh(new T.SphereGeometry(r * 1.8, 12, 8), this.glow(c2, 0.5))); };
+      const weapon = (WAR_PROJ[theme] && WAR_PROJ[theme][kind] && WAR_PROJ[theme][kind][white ? 'w' : 'b']) || (theme === 'modern' ? 'bullet' : theme === 'ancient' ? 'spear' : 'orb');
+      if (weapon === 'spear' || weapon === 'spears') shaft(0.75, 0.018, '#8d6e63', '#cfd8dc');
+      else if (weapon === 'bolt') shaft(0.95, 0.028, '#6d4c41', '#90a4ae');
+      else if (weapon === 'arrows') shaft(0.5, 0.011, '#8d6e63', '#9e9e9e');
+      else if (weapon === 'boulder') { g.add(new T.Mesh(new T.DodecahedronGeometry(0.2, 0), std(0x8d8478, { flatShading: true, roughness: 0.95 }))); g.userData.spin = true; }
+      else if (weapon === 'firepot') { g.add(new T.Mesh(new T.SphereGeometry(0.12, 10, 8), std(0x6d4c41))); g.add(new T.Mesh(new T.SphereGeometry(0.2, 10, 8), this.glow(0xff7a1a, 0.7))); }
+      else if (weapon === 'missiles' || weapon === 'bombs') { shaft(0.36, 0.032, '#eceff1', '#c62828'); const f = new T.Mesh(new T.SphereGeometry(0.05, 8, 6), this.glow(0xffa726, 0.9)); f.position.z = -0.2; g.add(f); }
+      else if (weapon === 'shell') { shaft(0.24, 0.045, '#b08d2e', '#8d6e2e'); g.add(new T.Mesh(new T.SphereGeometry(0.07, 8, 6), this.glow(0xffd54f, 0.9))); }
+      else if (weapon === 'laser') { const beam = new T.Mesh(new T.CylinderGeometry(0.025, 0.025, 0.9, 8), this.glow(white ? 0x4fc3f7 : 0xff1744, 0.95)); beam.rotation.x = Math.PI / 2; g.add(beam); }
+      else if (weapon === 'bullet') { for (let i = 0; i < 3; i++) { const tr = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.3, 5), this.glow(0xffe082, 0.95)); tr.rotation.x = Math.PI / 2; tr.position.set((i - 1) * 0.06, (i % 2) * 0.05, -i * 0.25); g.add(tr); } }
+      else if (kind === 'q' || kind === 'r') { const jet = new T.Mesh(new T.CylinderGeometry(0.06, 0.1, 0.7, 10), new T.MeshToonMaterial({ color: pal.jet, transparent: true, opacity: 0.9 })); jet.rotation.x = Math.PI / 2; g.add(jet); glowBall(0.08, pal.foam, pal.charge); } // créatures : jet du thème
+      else glowBall(0.1, pal.bub, pal.charge); // créatures : bulle, graine, caillou, plume aux couleurs du thème
+      return g;
+    }
+
     counterShot(d, t) {
       const T = this.THREE, M = root.Models3D, k = d.counter, c = d.c, el = t - k.start;
       const kind = c.piece.toLowerCase(), cast = 'qrk'.includes(kind);
       if (el < 0.85) M.animate(c.parts, t, cast ? 'cast' : kind === 'b' ? 'throw' : 'punch', cast ? Math.min(1, el / 0.5) : Math.min(1, el / 0.45));
       else M.animate(c.parts, t, 'idle');
       if (el >= 0.3 && !k.proj && !k.done) {
-        const g = new T.Group();
-        if (kind === 'b' && c.parts.shuriken) { g.add(this.cloneClean(c.parts.shuriken)); g.scale.setScalar(c.parts.root.scale.x * 1.1); }
+        const g = THEME_FX[root.PieceTheme] ? this.counterProj(c, kind) : new T.Group();
+        if (g.userData.themed) { /* arme propre à la pièce, aux couleurs du thème */ }
+        else if (kind === 'b' && c.parts.shuriken) { g.add(this.cloneClean(c.parts.shuriken)); g.scale.setScalar(c.parts.root.scale.x * 1.1); }
         else {
           const col = { q: [0xfff1a8, 0xff7a1a], r: [0xd8f6ff, 0x2a8cff], k: [0xeaffff, 0x5fd8ff], n: [0xffffff, 0x9fb8ff], p: [0xffffff, 0xffc04a] }[kind] || [0xffffff, 0xffe066];
           const long = kind === 'p' || kind === 'k' || kind === 'n';
@@ -5263,7 +5292,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           g.add(core, halo);
           g.scale.setScalar(1.5);
         }
-        k.start3 = this.handsOf(c);
+        if (c.parts.muzzle) { c.holder.updateMatrixWorld(true); k.start3 = c.parts.muzzle.getWorldPosition(new T.Vector3()); } else k.start3 = this.handsOf(c);
         k.proj = g; this.scene.add(g);
       }
       if (k.proj) {
@@ -5272,12 +5301,14 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         const pos = k.start3.clone().lerp(end, u); pos.y += Math.sin(Math.PI * u) * 0.25;
         k.proj.position.copy(pos);
         k.proj.lookAt(end);
-        if (kind === 'b') k.proj.rotation.z = -el * 28;
+        if (kind === 'b' && !k.proj.userData.themed) k.proj.rotation.z = -el * 28;
+        if (k.proj.userData.spin) k.proj.rotation.set(el * 7, el * 5, 0);
         if (u >= 1) {
           // parée par l'attaquant : éclat à l'impact
           this.scene.remove(k.proj); k.proj = null; k.done = true;
           this.shakeUntil = t + 0.08; this.shakeAmp = 0.02;
-          k.burst = new T.Mesh(new T.SphereGeometry(0.2, 12, 8), this.glow(kind === 'q' ? 0xff7a1a : kind === 'r' ? 0x2a8cff : 0xffe9a0, 0.85));
+          const pal = THEME_FX[root.PieceTheme] && THEME_FX[root.PieceTheme][c.piece === c.piece.toUpperCase() ? 'w' : 'b'];
+          k.burst = new T.Mesh(new T.SphereGeometry(0.2, 12, 8), this.glow(pal ? pal.burst[1] : kind === 'q' ? 0xff7a1a : kind === 'r' ? 0x2a8cff : 0xffe9a0, 0.85));
           k.burst.position.copy(end); k.burstT = el; this.scene.add(k.burst);
         }
       }
