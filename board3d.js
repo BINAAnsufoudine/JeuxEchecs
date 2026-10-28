@@ -1171,8 +1171,12 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             shot.runStart = shot.impact + 0.9;
             die({ t0: now + EXR + shot.impact, hit: true, swept: true, counter: { start: now, end: now + EXR, at: a } });
           } else if (ocean && kind === 'k' && m.flag !== 'ep') {
+            // roi des thèmes de créatures et de guerriers : combat au corps à corps, comme les autres pièces côte à côte
             const gap = Math.min(0.62, len);
             duel = { stop: { x: b.x - ux * gap, z: b.z - uz * gap }, foe: b, len: 2.6, rate: 1.5, brawl: true };
+            duel.approach = 0.35 + Math.max(0, len - gap) * 0.09;
+            duel.len += X2;
+            die({ t0: now + duel.approach + duel.len, from: duel.stop, start: now + duel.approach, ex: true, far: true }); // sans cela, la pièce prise restait affichée
           } else if (m.flag === 'ep') {
             // Prise en passant : le pion file en un éclair à côté de sa cible, dont la tête tombe au sol
             knightAttack = { style: 'enpassant', start: now, from: a, target: b, to: this.sqToPos(m.to), duration: 2.6, victim: v, fx: [] };
