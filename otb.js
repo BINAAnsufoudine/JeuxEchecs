@@ -18,6 +18,7 @@
     };
     t.totalRounds = totalRounds(t, opts.rounds);
     // élimination directe : les places du tableau (et donc les qualifiés directs) tirées au sort si demandé
+    if (t.format === 'ko') t.koMode = opts.koMode === 'exempt' ? 'exempt' : 'barrage';
     if (t.format === 'ko' && opts.byes === 'random') t.seeds = entrants.map((e) => e.no).map((no) => [Math.random(), no]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
     t.rounds.push(pairNext(t));
     return t;
@@ -199,7 +200,26 @@
     while (o.length < size) { const m = o.length * 2 + 1; o = o.flatMap((s) => [s, m - s]); }
     return o;
   }
+  // Mode « exemptions » : tout le monde joue dès le premier tour ; à chaque tour où le nombre de qualifiés
+  // est impair, un joueur est exempté (le mieux placé qui ne l'a pas encore été) et passe au tour suivant
+  function pairKnockoutExempt(t, r) {
+    const rank = (no) => (t.seeds ? t.seeds.indexOf(no) : no);
+    const alive = r === 1 ? t.entrants.map((e) => e.no).sort((a, b) => rank(a) - rank(b)) : t.rounds[r - 2].tables.map((p) => winnerOf(t, p));
+    const hadBye = new Set(t.rounds.flatMap((rd) => rd.tables.filter((p) => p.b == null).map((p) => p.a)));
+    const out = [];
+    let list = alive.slice();
+    if (list.length % 2) {
+      const bye = [...list].sort((a, b) => rank(a) - rank(b)).find((no) => !hadBye.has(no)) || list[0];
+      list = list.filter((no) => no !== bye);
+      out.push({ a: bye, b: null, r: 'bye' });
+    }
+    const pairs = [];
+    if (r === 1) for (let i = 0; i < list.length / 2; i++) pairs.push([list[i], list[list.length - 1 - i]]);
+    else for (let i = 0; i + 1 < list.length; i += 2) pairs.push([list[i], list[i + 1]]);
+    return [...pairs.map(([x, y]) => { const [w, bl] = orient(t, x, y); return { a: w, b: bl, r: null }; }), ...out];
+  }
   function pairKnockout(t, r) {
+    if (t.koMode === 'exempt') return pairKnockoutExempt(t, r);
     if (r === 1) {
       // Tableau de 2, 4, 8, 16… places : quand il manque des joueurs, le premier tour devient un tour de barrage
       // et les mieux placés (têtes de série, ou places tirées au sort) sont qualifiés directement pour le tour suivant
@@ -270,7 +290,11 @@
   function koStage(t, no) {
     if (t.format !== 'ko') return null;
     const round = t.rounds[no - 1], left = t.totalRounds - no;
-    if (no === 1 && round && round.tables.some((p) => p.b == null) && left > 0) return 'barrage';
+    if (t.koMode !== 'exempt' && no === 1 && round && round.tables.some((p) => p.b == null) && left > 0) return 'barrage';
+    if (t.koMode === 'exempt' && round) { // nommé d'après le nombre de joueurs encore en course
+      const n = round.tables.reduce((k, p) => k + (p.b == null ? 1 : 2), 0);
+      return n <= 2 ? 'final' : n <= 4 ? 'semi' : n <= 8 ? 'quarter' : n <= 16 ? 'eighth' : 'round';
+    }
     return left === 0 ? 'final' : left === 1 ? 'semi' : left === 2 ? 'quarter' : left === 3 ? 'eighth' : 'round';
   }
   // Avec n joueurs : combien jouent le barrage, combien sont qualifiés directement
