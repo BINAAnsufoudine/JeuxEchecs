@@ -61,6 +61,9 @@
   // Suppression par son créateur, quel que soit son statut ; retenue pour qu'aucune copie (compte, autre appareil) ne la fasse revenir
   function deleteOtbTournament(t, withPlayers = false) {
     clearTimeout(otbUpload);
+    // la liste des joueurs est d'abord complétée avec ceux du tournoi : sinon, pour un tournoi créé avant
+    // l'existence de cette liste, ses joueurs disparaissaient avec lui même en supprimant « le tournoi seulement »
+    directory(); registerPlayers(tournamentNames(t));
     store.set('otbDeleted', [...new Set([...store.get('otbDeleted', []), t.id])].slice(-200));
     otbWrite(otbList().filter((x) => x.id !== t.id)); updateOtbCount();
     if (ON && ON.user) ON.deleteOtb(t).catch(() => {});
