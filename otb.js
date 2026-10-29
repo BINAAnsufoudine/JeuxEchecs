@@ -12,7 +12,7 @@
     const type = opts.type === 'team' ? 'team' : 'solo';
     const entrants = opts.entrants.map((e, i) => ({ no: i + 1, name: String(e.name).trim(), players: type === 'team' ? (e.players || []).map((p) => String(p).trim()).filter(Boolean) : undefined, out: false }));
     const t = {
-      id: Date.now(), name: String(opts.name || '').trim() || 'Tournoi', type, format: opts.format || 'swiss',
+      id: Date.now() * 100 + Math.floor(Math.random() * 100), name: String(opts.name || '').trim() || 'Tournoi', type, format: opts.format || 'swiss',
       info: { date: opts.date || '', time: opts.time || '', place: String(opts.place || '').trim(), referee: String(opts.referee || '').trim() },
       boards: type === 'team' ? Math.max(1, opts.boards || 4) : 1, entrants, rounds: [], status: 'running', createdAt: Date.now(),
     };
@@ -265,5 +265,60 @@
     return no;
   }
 
-  root.OTB = { create, standings, tableScore, roundDone, winnerOf, syncTiebreaks, tiebreakState, addTiebreak, isFinal, next, undoRound, addEntrant, current, suggestedRounds, totalRounds, seedOrder, byNo, SCORE };
+  /* ----- Classement cumulé sur plusieurs tournois ----- */
+  // Chaque joueur est reconnu par son nom (sans tenir compte des majuscules ni des espaces en trop).
+  // En individuel : les parties du tournoi (départages compris) ; en équipe : les parties de chaque joueur
+  // à son échiquier. Classement : points, puis pourcentage, puis victoires, puis meilleure place.
+  function aggregate(list) {
+    const key = (n) => String(n || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    const map = new Map();
+    const P = (name) => {
+      const k = key(name); if (!k) return null;
+      if (!map.has(k)) map.set(k, { name: String(name).trim(), tournaments: new Set(), games: 0, wins: 0, draws: 0, losses: 0, pts: 0, white: 0, gold: 0, silver: 0, bronze: 0, best: null });
+      return map.get(k);
+    };
+    const game = (wName, bName, r) => {
+      const s = SCORE[r]; if (!s) return;
+      const forfeit = r === '+-' || r === '-+';
+      [[wName, s[0], s[1], true], [bName, s[1], s[0], false]].forEach(([n, me, op, isWhite]) => {
+        const x = P(n); if (!x) return;
+        x.pts += me;
+        if (forfeit) return; // forfait : le point compte, mais ce n'est pas une partie jouée
+        x.games++; if (isWhite) x.white++;
+        if (me > op) x.wins++; else if (me < op) x.losses++; else x.draws++;
+      });
+    };
+    for (const t of list) {
+      const name = (no) => (byNo(t, no) || {}).name;
+      for (const round of t.rounds) for (const p of round.tables) {
+        if (p.b == null) continue;
+        if (t.type === 'team') {
+          const A = byNo(t, p.a) || {}, B = byNo(t, p.b) || {};
+          (p.games || []).forEach((g, k) => {
+            const pa = (A.players || [])[k], pb = (B.players || [])[k]; if (!pa || !pb) return;
+            if (k % 2 === 0) game(pa, pb, g.r); else game(pb, pa, g.r === '1-0' ? '0-1' : g.r === '0-1' ? '1-0' : g.r);
+          });
+          (p.tb || []).forEach((g) => { const pl = (no) => ((byNo(t, no) || {}).players || [])[0]; game(pl(g.w), pl(g.b), g.r); });
+        } else {
+          game(name(p.a), name(p.b), p.r);
+          (p.tb || []).forEach((g) => game(name(g.w), name(g.b), g.r));
+        }
+      }
+      // participation et places
+      const names = t.type === 'team' ? t.entrants.flatMap((e) => e.players || []) : t.entrants.map((e) => e.name);
+      names.forEach((n) => { const x = P(n); if (x) x.tournaments.add(t.id); });
+      if (t.status === 'over') standings(t).forEach((s, i) => {
+        const members = t.type === 'team' ? (byNo(t, s.no) || {}).players || [] : [s.name];
+        members.forEach((n) => {
+          const x = P(n); if (!x) return;
+          if (i === 0) x.gold++; else if (i === 1) x.silver++; else if (i === 2) x.bronze++;
+          if (!t.type || t.type !== 'team') x.best = x.best == null ? i + 1 : Math.min(x.best, i + 1);
+        });
+      });
+    }
+    return [...map.values()].map((x) => ({ ...x, tournaments: x.tournaments.size, pct: x.games ? Math.round((x.wins + x.draws / 2) / x.games * 100) : 0 }))
+      .sort((a, b) => b.pts - a.pts || b.pct - a.pct || b.wins - a.wins || (a.best || 99) - (b.best || 99) || a.name.localeCompare(b.name));
+  }
+
+  root.OTB = { aggregate, create, standings, tableScore, roundDone, winnerOf, syncTiebreaks, tiebreakState, addTiebreak, isFinal, next, undoRound, addEntrant, current, suggestedRounds, totalRounds, seedOrder, byNo, SCORE };
 })(typeof window !== 'undefined' ? window : globalThis);

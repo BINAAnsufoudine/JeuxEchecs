@@ -162,6 +162,16 @@
         const t4 = O.create({ format: 'ko', entrants: names(4) }), p4 = O.current(t4).tables[0];
         p4.r = '1/2'; assert(!O.addTiebreak(t4, p4) && O.tiebreakState(t4, p4) === 'choose', 'avant la finale, une nulle ne se rejoue pas');
       });
+      await test('Tournoi en réel : classement cumulé des joueurs sur plusieurs tournois', () => {
+        const a = O.create({ format: 'rr', entrants: [{ name: 'Awa' }, { name: 'Moussa' }] });
+        O.current(a).tables[0].r = O.current(a).tables[0].a === 1 ? '1-0' : '0-1'; O.next(a); // Awa gagne
+        const b = O.create({ format: 'rr', entrants: [{ name: ' awa ' }, { name: 'Fatou' }] });
+        b.id = a.id + 1;
+        O.current(b).tables[0].r = '1/2'; O.next(b);
+        const rows = O.aggregate([a, b]), awa = rows[0];
+        assert(awa.name.trim().toLowerCase() === 'awa' && awa.pts === 1.5 && awa.games === 2 && awa.tournaments === 2 && awa.gold === 2, `Awa : ${JSON.stringify(awa)}`);
+        assert(rows.length === 3, 'les joueurs de même nom doivent être regroupés');
+      });
       await test('Tournoi en réel : par équipes, points de match et de parties', () => {
         const t = run({ type: 'team', format: 'swiss', boards: 4, entrants: names(6) }), st = O.standings(t);
         assert(st.every((x) => x.game <= t.rounds.length * 4), 'points de parties impossibles');
