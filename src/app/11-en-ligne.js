@@ -43,7 +43,8 @@
     for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.startsWith('cavalier.') && !SKIP_SYNC.has(k.slice(9))) localStorage.removeItem(k); }
     for (const [k, v] of Object.entries(data || {})) rawSet(k, v);
     if (!localOtb.length) return false;
-    const m = mergeOtb((data || {}).otb, localOtb);
+    const gone = new Set([...(store.get('otbDeleted', []) || []), ...((data || {}).otbDeleted || [])]);
+    const m = mergeOtb(((data || {}).otb || []).filter((t) => !gone.has(t.id)), localOtb.filter((t) => !gone.has(t.id)));
     rawSet('otb', m.list);
     return m.newer;
   }

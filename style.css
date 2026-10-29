@@ -1248,3 +1248,5 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
 .otb-pick button { padding: 6px 12px; border: 1px solid var(--surface-2); border-radius: 999px; background: transparent; color: var(--text); font: inherit; font-weight: 600; cursor: pointer; text-align: left; }
 .otb-pick button small { display: block; font-weight: 400; opacity: .7; font-size: .78em; }
 .otb-pick button.on { background: #e8b84a; border-color: transparent; color: #241b05; }
+.otb-dir td:nth-child(n+2), .otb-dir th:nth-child(n+2) { text-align: center; }
+.otb-dir-del { padding: 2px 8px; min-height: 0; }
