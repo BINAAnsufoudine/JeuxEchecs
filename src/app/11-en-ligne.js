@@ -30,9 +30,22 @@
     return data;
   }
   const hasProgress = (d) => !!(d && ((d.archive && d.archive.length) || (d.stats && Object.keys(d.stats).length) || (d.pzdone && Object.keys(d.pzdone).length) || (d.coach && d.coach.themes && Object.keys(d.coach.themes).length)));
-  function replaceLocal(data) {
+  // Tournois en réel : jamais écrasés par une copie plus ancienne venue du compte ou d'un autre appareil ;
+  // on garde, tournoi par tournoi, la version la plus récente. Renvoie vrai si l'appareil avait du plus récent.
+  function mergeOtb(remote, local) {
+    const byId = new Map((remote || []).map((t) => [t.id, t]));
+    let newer = false;
+    for (const t of local || []) { const r = byId.get(t.id); if (!r || (t.updatedAt || 0) > (r.updatedAt || 0)) { byId.set(t.id, t); newer = true; } }
+    return { list: [...byId.values()].sort((a, b) => (b.updatedAt || b.id) - (a.updatedAt || a.id)).slice(0, 50), newer };
+  }
+  function replaceLocal(data, keepOtb = true) {
+    const localOtb = keepOtb ? store.get('otb', []) : [];
     for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.startsWith('cavalier.') && !SKIP_SYNC.has(k.slice(9))) localStorage.removeItem(k); }
     for (const [k, v] of Object.entries(data || {})) rawSet(k, v);
+    if (!localOtb.length) return false;
+    const m = mergeOtb((data || {}).otb, localOtb);
+    rawSet('otb', m.list);
+    return m.newer;
   }
   async function pushProgress() {
     if (!ON || !ON.user || !progressDirty || progressPushing) { renderSyncStatus(); return; }
@@ -76,11 +89,14 @@
       if (store.get('onlineSynced', null) !== (ON.user && ON.user.uid)) return; // première connexion : gérée par syncAfterLogin
       // modifications locales plus récentes pas encore envoyées : elles l'emportent (elles partent juste après)
       if (progressDirty && store.get('progressEditAt', 0) > updatedAt) { pushProgress(); return; }
-      replaceLocal({ ...data, settings: store.get('settings', data.settings || {}) });
+      const keptNewer = replaceLocal({ ...data, settings: store.get('settings', data.settings || {}) });
       rawSet('progressAt', updatedAt);
       progressDirty = false; rawSet('progressDirty', false);
+      // des tournois en réel plus récents sur cet appareil : ils repartent vers le compte
+      if (keptNewer) { progressDirty = true; rawSet('progressDirty', true); clearTimeout(pushSoon); pushSoon = setTimeout(() => pushProgress(), 1500); }
       refreshHome();
       const scr = document.body.dataset.screen;
+      if (scr === 'otb') renderOtb();
       if (scr === 'welcome') renderWelcome();
       if (scr === 'profile') openProfile();
       if (scr === 'train') renderTrain();
@@ -89,7 +105,7 @@
   // Chaque compte garde ses propres données : la progression locale appartient au compte « onlineSynced »
   // (ou à un joueur sans compte si ce champ est vide) et n'est jamais donnée à un autre compte.
   function wipeLocalProgress() {
-    replaceLocal({ settings: store.get('settings', {}) });
+    replaceLocal({ settings: store.get('settings', {}) }, false);
     progressDirty = false; rawSet('progressDirty', false); rawSet('progressAt', 0); rawSet('progressEditAt', 0);
   }
   // progression pas encore envoyée d'un compte (hors connexion) : mise de côté pour ce seul compte
@@ -133,7 +149,7 @@
         text: L('Cet appareil contient déjà une progression (parties, problèmes, niveaux). Veux-tu l\'importer dans ton compte ?', 'This device already holds progress (games, puzzles, levels). Do you want to import it into your account?'),
         actions: [
           { label: L('Importer ma progression', 'Import my progress'), primary: true, onClick: async () => { rawSet('onlineSynced', user.uid); progressDirty = true; await pushProgress(); toast(L('Progression importée dans ton compte.', 'Progress imported into your account.')); } },
-          { label: L('Repartir de zéro', 'Start from scratch'), ghost: true, onClick: async () => { const keep = { settings: store.get('settings', {}), player: store.get('player', {}) }; replaceLocal(keep); rawSet('onlineSynced', user.uid); progressDirty = true; await pushProgress(); location.reload(); } },
+          { label: L('Repartir de zéro', 'Start from scratch'), ghost: true, onClick: async () => { const keep = { settings: store.get('settings', {}), player: store.get('player', {}) }; replaceLocal(keep, false); rawSet('onlineSynced', user.uid); progressDirty = true; await pushProgress(); location.reload(); } },
         ] });
       return;
     }

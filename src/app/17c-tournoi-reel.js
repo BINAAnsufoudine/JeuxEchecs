@@ -8,7 +8,19 @@
   let otbId = null, otbTab = 'round', otbNew = null;
   // Tournois partagés par d'autres joueurs (lecture seule), et celui qu'on regarde en direct
   let otbShared = [], otbView = null, otbStopWatch = null;
-  const otbList = () => store.get('otb', []);
+  let otbFallback = null, otbWarned = false;
+  const otbList = () => otbFallback || store.get('otb', []);
+  // Enregistre la liste et vérifie qu'elle a bien été écrite : si la mémoire de l'appareil est pleine,
+  // le tournoi continue en mémoire (et sur le compte en ligne) et on prévient l'organisateur
+  function otbWrite(list) {
+    store.set('otb', list);
+    const back = store.get('otb', null), ok = !!back && back.length === list.length && (!list[0] || (back[0].id === list[0].id && back[0].updatedAt === list[0].updatedAt));
+    otbFallback = ok ? null : list;
+    if (!ok && !otbWarned) {
+      otbWarned = true;
+      modal({ title: L('Mémoire de l’appareil pleine', 'Device storage full'), text: L('Le tournoi continue, mais il ne peut plus être enregistré sur cet appareil : ne ferme pas et ne rafraîchis pas la page. Connecte-toi pour qu’il soit gardé sur ton compte, ou libère de la place (Réglages > Ma progression).', 'The tournament goes on, but it can no longer be saved on this device: do not close or refresh the page. Sign in so it is kept on your account, or free some space.'), actions: [{ label: 'OK', primary: true }] });
+    }
+  }
   const otbGet = () => (otbView && otbId === otbView.key ? otbView.t : otbList().find((t) => t.id === otbId) || null);
   // Enregistré sur l'appareil, puis (compte connecté) sur le compte en ligne, quelques instants après la dernière saisie
   let otbUpload = null;
@@ -20,7 +32,7 @@
   }
   function otbSave(t) {
     t.updatedAt = Date.now();
-    const list = otbList().filter((x) => x.id !== t.id); list.unshift(t); store.set('otb', list.slice(0, 50)); updateOtbCount();
+    const list = otbList().filter((x) => x.id !== t.id); list.unshift(t); otbWrite(list.slice(0, 50)); updateOtbCount();
     if (!ON || !ON.user) return;
     clearTimeout(otbUpload);
     otbUpload = setTimeout(() => ON.saveOtb(t).catch(() => {}), 1500);
@@ -35,7 +47,7 @@
       for (const t of mine) { const l = byId.get(t.id); if (!l || (t.updatedAt || 0) > (l.updatedAt || 0)) byId.set(t.id, t); }
       // les tournois de l'appareil pas encore envoyés partent sur le compte
       for (const t of local) if (!mine.some((m) => m.id === t.id)) ON.saveOtb(t).catch(() => {});
-      store.set('otb', [...byId.values()].sort((a, b) => (b.updatedAt || b.id) - (a.updatedAt || a.id)).slice(0, 50)); updateOtbCount();
+      otbWrite([...byId.values()].sort((a, b) => (b.updatedAt || b.id) - (a.updatedAt || a.id)).slice(0, 50)); updateOtbCount();
       otbShared = shared;
     } catch { /* hors ligne : on garde l'appareil */ }
   }
@@ -324,7 +336,7 @@
     if (act === 'delete') {
       return modal({ title: L('Supprimer ce tournoi ?', 'Delete this tournament?'), text: t.name, actions: [
         { label: L('Annuler', 'Cancel'), ghost: true },
-        { label: L('Supprimer', 'Delete'), primary: true, onClick: () => { store.set('otb', otbList().filter((x) => x.id !== t.id)); updateOtbCount(); if (ON && ON.user) ON.deleteOtb(t); otbId = null; renderOtb(); } },
+        { label: L('Supprimer', 'Delete'), primary: true, onClick: () => { otbWrite(otbList().filter((x) => x.id !== t.id)); updateOtbCount(); if (ON && ON.user) ON.deleteOtb(t); otbId = null; renderOtb(); } },
       ] });
     }
     if (b.dataset.otbOut) { const en = OTB.byNo(t, Number(b.dataset.otbOut)); en.out = !en.out; otbSave(t); return renderOtb(); }

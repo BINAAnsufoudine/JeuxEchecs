@@ -3645,9 +3645,22 @@
     return data;
   }
   const hasProgress = (d) => !!(d && ((d.archive && d.archive.length) || (d.stats && Object.keys(d.stats).length) || (d.pzdone && Object.keys(d.pzdone).length) || (d.coach && d.coach.themes && Object.keys(d.coach.themes).length)));
-  function replaceLocal(data) {
+  // Tournois en réel : jamais écrasés par une copie plus ancienne venue du compte ou d'un autre appareil ;
+  // on garde, tournoi par tournoi, la version la plus récente. Renvoie vrai si l'appareil avait du plus récent.
+  function mergeOtb(remote, local) {
+    const byId = new Map((remote || []).map((t) => [t.id, t]));
+    let newer = false;
+    for (const t of local || []) { const r = byId.get(t.id); if (!r || (t.updatedAt || 0) > (r.updatedAt || 0)) { byId.set(t.id, t); newer = true; } }
+    return { list: [...byId.values()].sort((a, b) => (b.updatedAt || b.id) - (a.updatedAt || a.id)).slice(0, 50), newer };
+  }
+  function replaceLocal(data, keepOtb = true) {
+    const localOtb = keepOtb ? store.get('otb', []) : [];
     for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.startsWith('cavalier.') && !SKIP_SYNC.has(k.slice(9))) localStorage.removeItem(k); }
     for (const [k, v] of Object.entries(data || {})) rawSet(k, v);
+    if (!localOtb.length) return false;
+    const m = mergeOtb((data || {}).otb, localOtb);
+    rawSet('otb', m.list);
+    return m.newer;
   }
   async function pushProgress() {
     if (!ON || !ON.user || !progressDirty || progressPushing) { renderSyncStatus(); return; }
@@ -3691,11 +3704,14 @@
       if (store.get('onlineSynced', null) !== (ON.user && ON.user.uid)) return; // première connexion : gérée par syncAfterLogin
       // modifications locales plus récentes pas encore envoyées : elles l'emportent (elles partent juste après)
       if (progressDirty && store.get('progressEditAt', 0) > updatedAt) { pushProgress(); return; }
-      replaceLocal({ ...data, settings: store.get('settings', data.settings || {}) });
+      const keptNewer = replaceLocal({ ...data, settings: store.get('settings', data.settings || {}) });
       rawSet('progressAt', updatedAt);
       progressDirty = false; rawSet('progressDirty', false);
+      // des tournois en réel plus récents sur cet appareil : ils repartent vers le compte
+      if (keptNewer) { progressDirty = true; rawSet('progressDirty', true); clearTimeout(pushSoon); pushSoon = setTimeout(() => pushProgress(), 1500); }
       refreshHome();
       const scr = document.body.dataset.screen;
+      if (scr === 'otb') renderOtb();
       if (scr === 'welcome') renderWelcome();
       if (scr === 'profile') openProfile();
       if (scr === 'train') renderTrain();
@@ -3704,7 +3720,7 @@
   // Chaque compte garde ses propres données : la progression locale appartient au compte « onlineSynced »
   // (ou à un joueur sans compte si ce champ est vide) et n'est jamais donnée à un autre compte.
   function wipeLocalProgress() {
-    replaceLocal({ settings: store.get('settings', {}) });
+    replaceLocal({ settings: store.get('settings', {}) }, false);
     progressDirty = false; rawSet('progressDirty', false); rawSet('progressAt', 0); rawSet('progressEditAt', 0);
   }
   // progression pas encore envoyée d'un compte (hors connexion) : mise de côté pour ce seul compte
@@ -3748,7 +3764,7 @@
         text: L('Cet appareil contient déjà une progression (parties, problèmes, niveaux). Veux-tu l\'importer dans ton compte ?', 'This device already holds progress (games, puzzles, levels). Do you want to import it into your account?'),
         actions: [
           { label: L('Importer ma progression', 'Import my progress'), primary: true, onClick: async () => { rawSet('onlineSynced', user.uid); progressDirty = true; await pushProgress(); toast(L('Progression importée dans ton compte.', 'Progress imported into your account.')); } },
-          { label: L('Repartir de zéro', 'Start from scratch'), ghost: true, onClick: async () => { const keep = { settings: store.get('settings', {}), player: store.get('player', {}) }; replaceLocal(keep); rawSet('onlineSynced', user.uid); progressDirty = true; await pushProgress(); location.reload(); } },
+          { label: L('Repartir de zéro', 'Start from scratch'), ghost: true, onClick: async () => { const keep = { settings: store.get('settings', {}), player: store.get('player', {}) }; replaceLocal(keep, false); rawSet('onlineSynced', user.uid); progressDirty = true; await pushProgress(); location.reload(); } },
         ] });
       return;
     }
@@ -6019,7 +6035,19 @@
   let otbId = null, otbTab = 'round', otbNew = null;
   // Tournois partagés par d'autres joueurs (lecture seule), et celui qu'on regarde en direct
   let otbShared = [], otbView = null, otbStopWatch = null;
-  const otbList = () => store.get('otb', []);
+  let otbFallback = null, otbWarned = false;
+  const otbList = () => otbFallback || store.get('otb', []);
+  // Enregistre la liste et vérifie qu'elle a bien été écrite : si la mémoire de l'appareil est pleine,
+  // le tournoi continue en mémoire (et sur le compte en ligne) et on prévient l'organisateur
+  function otbWrite(list) {
+    store.set('otb', list);
+    const back = store.get('otb', null), ok = !!back && back.length === list.length && (!list[0] || (back[0].id === list[0].id && back[0].updatedAt === list[0].updatedAt));
+    otbFallback = ok ? null : list;
+    if (!ok && !otbWarned) {
+      otbWarned = true;
+      modal({ title: L('Mémoire de l’appareil pleine', 'Device storage full'), text: L('Le tournoi continue, mais il ne peut plus être enregistré sur cet appareil : ne ferme pas et ne rafraîchis pas la page. Connecte-toi pour qu’il soit gardé sur ton compte, ou libère de la place (Réglages > Ma progression).', 'The tournament goes on, but it can no longer be saved on this device: do not close or refresh the page. Sign in so it is kept on your account, or free some space.'), actions: [{ label: 'OK', primary: true }] });
+    }
+  }
   const otbGet = () => (otbView && otbId === otbView.key ? otbView.t : otbList().find((t) => t.id === otbId) || null);
   // Enregistré sur l'appareil, puis (compte connecté) sur le compte en ligne, quelques instants après la dernière saisie
   let otbUpload = null;
@@ -6031,7 +6059,7 @@
   }
   function otbSave(t) {
     t.updatedAt = Date.now();
-    const list = otbList().filter((x) => x.id !== t.id); list.unshift(t); store.set('otb', list.slice(0, 50)); updateOtbCount();
+    const list = otbList().filter((x) => x.id !== t.id); list.unshift(t); otbWrite(list.slice(0, 50)); updateOtbCount();
     if (!ON || !ON.user) return;
     clearTimeout(otbUpload);
     otbUpload = setTimeout(() => ON.saveOtb(t).catch(() => {}), 1500);
@@ -6046,7 +6074,7 @@
       for (const t of mine) { const l = byId.get(t.id); if (!l || (t.updatedAt || 0) > (l.updatedAt || 0)) byId.set(t.id, t); }
       // les tournois de l'appareil pas encore envoyés partent sur le compte
       for (const t of local) if (!mine.some((m) => m.id === t.id)) ON.saveOtb(t).catch(() => {});
-      store.set('otb', [...byId.values()].sort((a, b) => (b.updatedAt || b.id) - (a.updatedAt || a.id)).slice(0, 50)); updateOtbCount();
+      otbWrite([...byId.values()].sort((a, b) => (b.updatedAt || b.id) - (a.updatedAt || a.id)).slice(0, 50)); updateOtbCount();
       otbShared = shared;
     } catch { /* hors ligne : on garde l'appareil */ }
   }
@@ -6335,7 +6363,7 @@
     if (act === 'delete') {
       return modal({ title: L('Supprimer ce tournoi ?', 'Delete this tournament?'), text: t.name, actions: [
         { label: L('Annuler', 'Cancel'), ghost: true },
-        { label: L('Supprimer', 'Delete'), primary: true, onClick: () => { store.set('otb', otbList().filter((x) => x.id !== t.id)); updateOtbCount(); if (ON && ON.user) ON.deleteOtb(t); otbId = null; renderOtb(); } },
+        { label: L('Supprimer', 'Delete'), primary: true, onClick: () => { otbWrite(otbList().filter((x) => x.id !== t.id)); updateOtbCount(); if (ON && ON.user) ON.deleteOtb(t); otbId = null; renderOtb(); } },
       ] });
     }
     if (b.dataset.otbOut) { const en = OTB.byNo(t, Number(b.dataset.otbOut)); en.out = !en.out; otbSave(t); return renderOtb(); }
