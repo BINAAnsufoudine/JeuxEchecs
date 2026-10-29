@@ -51,7 +51,7 @@
     if (p.b == null) return p.a;
     const s = tableScore(t, p); if (!s.done) return null;
     if (s.a > s.b) return p.a; if (s.b > s.a) return p.b;
-    if (p.adv != null) return p.adv; // anciens tournois : qualifié désigné à la main
+    if (p.adv != null) return p.adv; // qualifié désigné à la main (abandon d'un joueur au départage)
     for (const g of p.tb || []) {
       if (g.r === '1-0') return g.w;
       if (g.r === '0-1') return g.b;
@@ -67,7 +67,8 @@
   function syncTiebreaks(t, p) {
     if (t.format !== 'ko' || p.b == null) return;
     const s = tableScore(t, p);
-    if (!s.done || s.a !== s.b || p.adv != null) { delete p.tb; return; }
+    if (!s.done || s.a !== s.b) { delete p.tb; delete p.adv; return; }
+    if (p.adv != null) { delete p.tb; return; }
     if (!p.tb || !p.tb.length) p.tb = [{ w: p.b, b: p.a, r: null }];
     // on retire les parties devenues inutiles (un résultat corrigé), puis on ajoute la suivante si besoin
     const cut = p.tb.findIndex((g) => g.r !== '1/2' || g.arm);

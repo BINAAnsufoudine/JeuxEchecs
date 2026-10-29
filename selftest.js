@@ -155,6 +155,8 @@
         assert(p.tb.length === 3 && p.tb[2].arm, 'pas de partie décisive après deux nulles');
         p.tb[2].r = '1/2'; assert(O.winnerOf(t, p) === p.tb[2].b, 'la nulle de la partie décisive doit qualifier les Noirs');
         p.tb[0].r = '0-1'; O.syncTiebreaks(t, p); assert(p.tb.length === 1 && O.winnerOf(t, p) === p.a, 'correction du premier départage mal prise en compte');
+        p.adv = p.b; O.syncTiebreaks(t, p); assert(!p.tb && O.winnerOf(t, p) === p.b, 'qualifié désigné après un abandon non retenu');
+        delete p.adv; O.syncTiebreaks(t, p); assert(p.tb && p.tb.length === 1 && O.winnerOf(t, p) == null, 'annulation du qualifié désigné');
       });
       await test('Tournoi en réel : par équipes, points de match et de parties', () => {
         const t = run({ type: 'team', format: 'swiss', boards: 4, entrants: names(6) }), st = O.standings(t);
