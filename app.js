@@ -6156,12 +6156,13 @@
       if ((p.tb || []).length) html += `<b>${L('Parties de départage', 'Play-off games')}</b>${t.type === 'team' ? `<small>${L('entre les joueurs de l’échiquier 1', 'between the board 1 players')}</small>` : ''}`
         + p.tb.map((g, k) => `<div class="otb-match board"><span class="otb-side">⚪ ${escHtml(name(g.w))}</span>${resultButtons(`data-t="${i}" data-tb="${k}"`, g.r, locked || p.adv != null)}<span class="otb-side">⚫ ${escHtml(name(g.b))}</span><small class="otb-board">${k + 1}</small></div>`).join('');
       if (win != null) {
-        html += `<div class="otb-tb-win">✅ ${escHtml(OTB.byNo(t, win).name)} ${L('passe au tour suivant', 'goes through')}${p.adv != null ? ` <small>(${L('choix de l’organisateur', 'organiser’s decision')})</small>` : ''}</div>`;
+        html += `<div class="otb-tb-win">${OTB.isFinal(t) ? `🏆 ${escHtml(OTB.byNo(t, win).name)} ${L('remporte la finale', 'wins the final')}` : `✅ ${escHtml(OTB.byNo(t, win).name)} ${L('passe au tour suivant', 'goes through')}`}${p.adv != null ? ` <small>(${L('choix de l’organisateur', 'organiser’s decision')})</small>` : ''}</div>`;
         if (p.adv != null && !locked) html += `<span><button type="button" class="btn ghost" data-t="${i}" data-adv="">${L('Annuler ce choix', 'Cancel this decision')}</button></span>`;
       } else if (!locked) {
-        html += `<div class="otb-adv"><span>${state === 'playing' ? L('Partie de départage en cours. Ou qualifier directement :', 'Play-off game in progress. Or qualify directly:') : L('Nulle : que fait-on ?', 'Draw: what next?')}</span>`
-          + (state === 'choose' ? `<button type="button" class="btn primary" data-t="${i}" data-tb-add="1">▶ ${L('Rejouer une partie', 'Play another game')}</button>` : '')
-          + [p.a, p.b].map((no) => `<button type="button" class="btn" data-t="${i}" data-adv="${no}">${L('Qualifier', 'Qualify')} ${escHtml(OTB.byNo(t, no).name)}</button>`).join('') + '</div>';
+        const final = OTB.isFinal(t);
+        html += `<div class="otb-adv"><span>${state === 'playing' ? L('Partie de départage en cours. Ou qualifier directement :', 'Play-off game in progress. Or qualify directly:') : final ? L('Nulle en finale : rejouer jusqu’à un gagnant, ou désigner le vainqueur :', 'Draw in the final: replay until there is a winner, or choose the winner:') : L('Nulle : qui passe au tour suivant ?', 'Draw: who goes through?')}</span>`
+          + (state === 'choose' && final ? `<button type="button" class="btn primary" data-t="${i}" data-tb-add="1">▶ ${L('Rejouer une partie', 'Play another game')}</button>` : '')
+          + [p.a, p.b].map((no) => `<button type="button" class="btn" data-t="${i}" data-adv="${no}">${OTB.isFinal(t) ? L('Vainqueur :', 'Winner:') : L('Qualifier', 'Qualify')} ${escHtml(OTB.byNo(t, no).name)}</button>`).join('') + '</div>';
       } else html += `<small>${L('En attente de la décision de l’organisateur.', 'Waiting for the organiser’s decision.')}</small>`;
       html += '</div>';
     }

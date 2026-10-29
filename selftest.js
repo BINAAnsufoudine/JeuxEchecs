@@ -126,7 +126,7 @@
             const pick = () => ['1-0', '0-1', '1/2'][Math.floor(rnd() * 3)];
             if (p.games) p.games.forEach((g) => { g.r = pick(); }); else p.r = pick();
             for (let k = 0; t.format === 'ko' && O.winnerOf(t, p) == null; k++) {
-              if (k > 3) { p.adv = p.a; break; }
+              if (k > 3 || !O.isFinal(t)) { p.adv = p.a; break; }
               O.addTiebreak(t, p); p.tb[p.tb.length - 1].r = rnd() < 0.5 ? '1/2' : '1-0';
             }
           }
@@ -159,6 +159,8 @@
         p.adv = p.b; O.syncTiebreaks(t, p); assert(O.winnerOf(t, p) === p.b && p.tb.every((g) => g.r), 'qualifié choisi par l’organisateur non retenu');
         delete p.adv; O.syncTiebreaks(t, p); assert(O.winnerOf(t, p) == null && O.tiebreakState(t, p) === 'choose', 'annulation du choix');
         p.tb[0].r = '0-1'; O.syncTiebreaks(t, p); assert(p.tb.length === 1 && O.winnerOf(t, p) === p.a, 'correction d’un départage mal prise en compte');
+        const t4 = O.create({ format: 'ko', entrants: names(4) }), p4 = O.current(t4).tables[0];
+        p4.r = '1/2'; assert(!O.addTiebreak(t4, p4) && O.tiebreakState(t4, p4) === 'choose', 'avant la finale, une nulle ne se rejoue pas');
       });
       await test('Tournoi en réel : par équipes, points de match et de parties', () => {
         const t = run({ type: 'team', format: 'swiss', boards: 4, entrants: names(6) }), st = O.standings(t);

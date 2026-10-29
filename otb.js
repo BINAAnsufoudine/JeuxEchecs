@@ -46,9 +46,9 @@
     return { a: ga > gb ? 2 : ga === gb ? 1 : 0, b: gb > ga ? 2 : ga === gb ? 1 : 0, ga, gb, done: true };
   }
   const roundDone = (t, round) => round.tables.every((p) => tableScore(t, p).done && (t.format !== 'ko' || p.b == null || winnerOf(t, p) != null));
-  // Élimination directe : vainqueur d'une table. Après une nulle, l'organisateur décide : les deux joueurs
-  // rejouent une partie de départage (autant de fois qu'il veut), ou il désigne lui-même le qualifié
-  // (abandon, départage trouvé hors de l'appli…). Rien n'est décidé automatiquement.
+  // Élimination directe : vainqueur d'une table. Après une nulle, rien n'est décidé automatiquement :
+  // l'organisateur désigne le qualifié (départage trouvé hors de l'appli, abandon…) ; seule la finale peut
+  // aussi être rejouée, autant de fois que nécessaire, jusqu'à ce qu'il y ait un gagnant.
   function winnerOf(t, p) {
     if (p.b == null) return p.a;
     const s = tableScore(t, p); if (!s.done) return null;
@@ -68,9 +68,11 @@
     const last = (p.tb || [])[(p.tb || []).length - 1];
     return last && last.r == null ? 'playing' : 'choose';
   }
-  // Nouvelle partie de départage, couleurs inversées par rapport à la précédente (en équipe : échiquier 1)
+  // La finale : la seule table du dernier tour
+  const isFinal = (t, round = current(t)) => t.format === 'ko' && round === current(t) && round.tables.length === 1;
+  // Nouvelle partie de départage (finale seulement), couleurs inversées par rapport à la précédente (en équipe : échiquier 1)
   function addTiebreak(t, p) {
-    if (tiebreakState(t, p) !== 'choose') return false;
+    if (tiebreakState(t, p) !== 'choose' || !isFinal(t) || !current(t).tables.includes(p)) return false;
     const tb = p.tb || (p.tb = []), last = tb[tb.length - 1];
     tb.push(last ? { w: last.b, b: last.w, r: null } : { w: p.b, b: p.a, r: null });
     return true;
@@ -263,5 +265,5 @@
     return no;
   }
 
-  root.OTB = { create, standings, tableScore, roundDone, winnerOf, syncTiebreaks, tiebreakState, addTiebreak, next, undoRound, addEntrant, current, suggestedRounds, totalRounds, seedOrder, byNo, SCORE };
+  root.OTB = { create, standings, tableScore, roundDone, winnerOf, syncTiebreaks, tiebreakState, addTiebreak, isFinal, next, undoRound, addEntrant, current, suggestedRounds, totalRounds, seedOrder, byNo, SCORE };
 })(typeof window !== 'undefined' ? window : globalThis);
