@@ -108,6 +108,7 @@
   function wipeLocalProgress() {
     replaceLocal({ settings: store.get('settings', {}) }, false);
     progressDirty = false; rawSet('progressDirty', false); rawSet('progressAt', 0); rawSet('progressEditAt', 0);
+    rawSet('lastOtb', null); rawSet('lastTrainSection', null); rawSet('lastScreen', 'home'); // aucun écran de l'ancien compte ne se rouvre
   }
   // progression pas encore envoyée d'un compte (hors connexion) : mise de côté pour ce seul compte
   const backupKey = (uid) => `cavalierbackup.${uid}`;
@@ -173,7 +174,9 @@
     if (!user && owner) {
       if (progressDirty) backupFor(owner);
       wipeLocalProgress(); rawSet('onlineSynced', null);
-      refreshHome();
+      // on recharge pour vider aussi tout ce qui est en mémoire (partie en ligne affichée, tournois partagés, club…)
+      location.reload();
+      return;
     }
     rawSet('onlineSession', !!user);
     renderSyncStatus();
