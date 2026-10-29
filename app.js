@@ -6121,13 +6121,22 @@
   }
   const otbReadOnly = (t) => !!(otbView && otbView.t === t);
   // Suppression par son créateur, quel que soit son statut ; retenue pour qu'aucune copie (compte, autre appareil) ne la fasse revenir
-  function deleteOtbTournament(t) {
+  function deleteOtbTournament(t, withPlayers = false) {
     clearTimeout(otbUpload);
     store.set('otbDeleted', [...new Set([...store.get('otbDeleted', []), t.id])].slice(-200));
     otbWrite(otbList().filter((x) => x.id !== t.id)); updateOtbCount();
     if (ON && ON.user) ON.deleteOtb(t).catch(() => {});
+    // avec ses joueurs : ceux qui ne jouent dans aucun autre tournoi quittent aussi la liste des joueurs
+    let removed = 0;
+    if (withPlayers) {
+      const linked = new Set(allTournaments().flatMap(tournamentNames).map((n) => nameKey(n)));
+      const mine = new Set(tournamentNames(t).map((n) => nameKey(n)));
+      const before = (otbPlayers() || []).length;
+      store.set('otbPlayers', (otbPlayers() || []).filter((n) => !mine.has(nameKey(n)) || linked.has(nameKey(n))));
+      removed = before - (otbPlayers() || []).length;
+    }
     otbId = null; renderOtb();
-    toast(L('Tournoi supprimé.', 'Tournament deleted.'));
+    toast(withPlayers ? L(`Tournoi supprimé, avec ${removed} joueur${removed > 1 ? 's' : ''} (ceux inscrits à d’autres tournois sont gardés).`, `Tournament deleted, with ${removed} player${removed === 1 ? '' : 's'} (those in other tournaments are kept).`) : L('Tournoi supprimé ; ses joueurs restent dans la liste.', 'Tournament deleted; its players stay listed.'));
   }
   const who = (t, no) => { const e = OTB.byNo(t, no); return e ? `<span class="otb-no">${no}</span> ${escHtml(e.name)}` : '—'; };
   const plain = (t, no) => { const e = OTB.byNo(t, no); return e ? `${no}. ${e.name}` : '—'; };
@@ -6642,9 +6651,10 @@
       ] });
     }
     if (act === 'delete') {
-      return modal({ title: L('Supprimer ce tournoi ?', 'Delete this tournament?'), text: t.name, actions: [
+      return modal({ title: L('Supprimer ce tournoi ?', 'Delete this tournament?'), text: L(`${t.name} : garder ses joueurs dans la liste des joueurs, ou les supprimer aussi ? (Un joueur inscrit à un autre tournoi est toujours gardé.)`, `${t.name}: keep its players in the player list, or delete them too? (A player in another tournament is always kept.)`), actions: [
         { label: L('Annuler', 'Cancel'), ghost: true },
-        { label: L('Supprimer', 'Delete'), primary: true, onClick: () => deleteOtbTournament(t) },
+        { label: L('Le tournoi et ses joueurs', 'Tournament and its players'), onClick: () => deleteOtbTournament(t, true) },
+        { label: L('Le tournoi seulement', 'Tournament only'), primary: true, onClick: () => deleteOtbTournament(t, false) },
       ] });
     }
     if (b.dataset.otbOut) { const en = OTB.byNo(t, Number(b.dataset.otbOut)); en.out = !en.out; otbSave(t); return renderOtb(); }
