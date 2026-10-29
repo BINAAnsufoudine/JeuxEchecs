@@ -164,7 +164,7 @@
       ${(() => {
         const past = pastEntrants(f.type), picked = new Set(f.picked || []);
         if (!past.length) return '';
-        return `<label class="field-label">${team ? L('Équipes des tournois précédents', 'Teams from previous tournaments') : L('Joueurs des tournois précédents', 'Players from previous tournaments')} <span class="otb-count">${picked.size}</span></label>
+        return `<label class="field-label">${team ? L('Équipes des tournois précédents', 'Teams from previous tournaments') : L('Joueurs des tournois précédents', 'Players from previous tournaments')}${otbShared.length ? L(' (y compris partagés)', ' (shared ones included)') : ''} <span class="otb-count">${picked.size}</span></label>
           <p class="level-help">${L('Touche un nom pour l’ajouter ; les nouveaux se tapent dans la liste ci-dessus.', 'Tap a name to add it; type new ones in the list above.')}</p>
           ${past.length > 12 ? `<input id="otb-pick-search" class="otb-input" placeholder="${L('Rechercher un nom…', 'Search a name…')}" autocomplete="off">` : ''}
           <div class="otb-pick">${[...past].sort((x, y) => picked.has(nameKey(y.name)) - picked.has(nameKey(x.name))).map((e) => `<button type="button" class="${picked.has(nameKey(e.name)) ? 'on' : ''}" data-otb-pick-name="${escHtml(nameKey(e.name))}" title="${escHtml(e.sub || '')}">${picked.has(nameKey(e.name)) ? '✓ ' : ''}${escHtml(e.name)}${team && e.sub ? `<small>${escHtml(e.sub)}</small>` : ''}</button>`).join('')}</div>
@@ -175,11 +175,13 @@
   }
   // Joueurs (ou équipes) des tournois précédents, à cocher au lieu de les retaper
   const nameKey = (n) => String(n || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  // mes tournois et ceux partagés avec moi : leurs participants sont mis en commun
+  const allTournaments = () => [...otbList(), ...otbShared.map((x) => x.t)];
   function pastEntrants(type) {
-    if (type !== 'team') return OTB.aggregate(otbList().filter((t) => t.type !== 'team')).map((x) => ({ name: x.name, sub: L(`${x.tournaments} tournoi${x.tournaments > 1 ? 's' : ''}`, `${x.tournaments} event${x.tournaments === 1 ? '' : 's'}`) }))
+    if (type !== 'team') return OTB.aggregate(allTournaments().filter((t) => t.type !== 'team')).map((x) => ({ name: x.name, sub: L(`${x.tournaments} tournoi${x.tournaments > 1 ? 's' : ''}`, `${x.tournaments} event${x.tournaments === 1 ? '' : 's'}`) }))
       .sort((a, b) => a.name.localeCompare(b.name));
     const teams = new Map();
-    for (const t of otbList().filter((x) => x.type === 'team').sort((a, b) => (a.updatedAt || a.id) - (b.updatedAt || b.id)))
+    for (const t of allTournaments().filter((x) => x.type === 'team').sort((a, b) => (a.updatedAt || a.id) - (b.updatedAt || b.id)))
       for (const e of t.entrants) teams.set(nameKey(e.name), { name: e.name, players: e.players || [], sub: (e.players || []).join(', ') }); // la composition la plus récente
     return [...teams.values()].sort((a, b) => a.name.localeCompare(b.name));
   }
