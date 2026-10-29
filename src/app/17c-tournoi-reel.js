@@ -6,9 +6,34 @@
   const FORMAT_NAMES = L({ swiss: 'Système suisse', rr: 'Toutes rondes', rr2: 'Toutes rondes aller-retour', ko: 'Élimination directe' },
     { swiss: 'Swiss system', rr: 'Round robin', rr2: 'Double round robin', ko: 'Knockout' });
   let otbId = null, otbTab = 'round', otbNew = null;
+  // Tournois partagés par d'autres joueurs (lecture seule), et celui qu'on regarde en direct
+  let otbShared = [], otbView = null, otbStopWatch = null;
   const otbList = () => store.get('otb', []);
-  const otbGet = () => otbList().find((t) => t.id === otbId) || null;
-  function otbSave(t) { const list = otbList().filter((x) => x.id !== t.id); list.unshift(t); store.set('otb', list.slice(0, 30)); }
+  const otbGet = () => (otbView && otbId === otbView.key ? otbView.t : otbList().find((t) => t.id === otbId) || null);
+  // Enregistré sur l'appareil, puis (compte connecté) sur le compte en ligne, quelques instants après la dernière saisie
+  let otbUpload = null;
+  function otbSave(t) {
+    t.updatedAt = Date.now();
+    const list = otbList().filter((x) => x.id !== t.id); list.unshift(t); store.set('otb', list.slice(0, 50));
+    if (!ON || !ON.user) return;
+    clearTimeout(otbUpload);
+    otbUpload = setTimeout(() => ON.saveOtb(t).catch(() => {}), 1500);
+  }
+  // Historique du compte : les tournois créés sur un autre appareil reviennent ici (le plus récent l'emporte)
+  async function otbSync() {
+    if (!ON || !ON.user) { otbShared = []; return; }
+    try {
+      await ON.load();
+      const [mine, shared] = await Promise.all([ON.myOtbs(), ON.sharedOtbs()]);
+      const local = otbList(), byId = new Map(local.map((t) => [t.id, t]));
+      for (const t of mine) { const l = byId.get(t.id); if (!l || (t.updatedAt || 0) > (l.updatedAt || 0)) byId.set(t.id, t); }
+      // les tournois de l'appareil pas encore envoyés partent sur le compte
+      for (const t of local) if (!mine.some((m) => m.id === t.id)) ON.saveOtb(t).catch(() => {});
+      store.set('otb', [...byId.values()].sort((a, b) => (b.updatedAt || b.id) - (a.updatedAt || a.id)).slice(0, 50));
+      otbShared = shared;
+    } catch { /* hors ligne : on garde l'appareil */ }
+  }
+  const otbReadOnly = (t) => !!(otbView && otbView.t === t);
   const who = (t, no) => { const e = OTB.byNo(t, no); return e ? `<span class="otb-no">${no}</span> ${escHtml(e.name)}` : '—'; };
   const plain = (t, no) => { const e = OTB.byNo(t, no); return e ? `${no}. ${e.name}` : '—'; };
   // Infos pratiques : date, heure de début, lieu, référent
@@ -28,7 +53,8 @@
       <label class="wide"><span class="field-label">${L('Référent (arbitre ou organisateur)', 'Organiser (arbiter or contact)')}</span><input id="otb-referee" class="otb-input" maxlength="60" value="${escHtml(i.referee || '')}" placeholder="${L('Nom et téléphone', 'Name and phone')}"></label>
     </div>`;
   const readInfo = () => ({ date: $('otb-date').value, time: $('otb-time').value, place: $('otb-place').value.trim(), referee: $('otb-referee').value.trim() });
-  function openOtb() { returnTo = 'home'; otbId = null; otbNew = null; show('otb'); renderOtb(); }
+  function closeOtbView() { if (otbStopWatch) otbStopWatch(); otbStopWatch = null; otbView = null; }
+  function openOtb() { returnTo = 'home'; closeOtbView(); otbId = null; otbNew = null; show('otb'); renderOtb(); otbSync().then(() => { if (document.body.dataset.screen === 'otb' && !otbId && !otbNew) renderOtb(); }); }
   $('btn-otb').onclick = openOtb;
 
   function renderOtb() {
@@ -42,6 +68,8 @@
     const list = otbList();
     $('otb-body').innerHTML = `<p class="level-help">${L('Pour un tournoi joué sur de vrais échiquiers : saisis les noms, l’appli annonce à chaque ronde qui joue contre qui, tu entres les résultats, et elle s’occupe du reste jusqu’au classement final.', 'For a tournament played on real boards: enter the names, the app announces each round who plays whom, you enter the results, and it handles the rest up to the final standings.')}</p>
       <button type="button" class="btn primary wide" data-otb="new">➕ ${L('Nouveau tournoi', 'New tournament')}</button>
+      ${ON && ON.user ? '' : `<p class="level-help">${L('Connecte-toi pour garder l’historique de tes tournois sur ton compte et les partager avec d’autres joueurs.', 'Sign in to keep your tournament history on your account and share it with other players.')}</p>`}
+      ${otbShared.length ? `<h3 class="train-h">${L('Partagés avec moi', 'Shared with me')}</h3><div class="replay-items">${otbShared.map((s) => `<button type="button" class="btn replay-item" data-otb-shared="${s.docId}"><strong>👁️ ${escHtml(s.t.name)}</strong><span>${L(`Organisé par ${escHtml(s.ownerName)}`, `Organised by ${escHtml(s.ownerName)}`)}${s.t.info && s.t.info.date ? ` · ${fmtOtbDate(s.t.info.date)}` : ''} · ${s.t.status === 'over' ? L('terminé', 'finished') : L(`ronde ${s.t.rounds.length} sur ${s.t.totalRounds}`, `round ${s.t.rounds.length} of ${s.t.totalRounds}`)}</span></button>`).join('')}</div>` : ''}
       ${list.length ? `<h3 class="train-h">${L('Mes tournois', 'My tournaments')}</h3><div class="replay-items">${list.map((t) => `<button type="button" class="btn replay-item" data-otb-open="${t.id}"><strong>${t.type === 'team' ? '👥' : '♟️'} ${escHtml(t.name)}</strong><span>${t.info && t.info.date ? `${fmtOtbDate(t.info.date)} · ` : ''}${FORMAT_NAMES[t.format]} · ${t.entrants.length} ${t.type === 'team' ? L('équipes', 'teams') : L('joueurs', 'players')} · ${t.status === 'over' ? L('terminé', 'finished') : L(`ronde ${t.rounds.length} sur ${t.totalRounds}`, `round ${t.rounds.length} of ${t.totalRounds}`)}</span></button>`).join('')}</div>` : ''}`;
   }
 
@@ -124,10 +152,11 @@
       <p class="level-help">${t.format === 'ko' ? L('Classement par tour atteint.', 'Ranked by round reached.') : L('À égalité de points : Buchholz (total des points des adversaires), puis Sonneborn-Berger (points des adversaires battus, la moitié pour les nulles).', 'Tied on points: Buchholz (opponents’ total points), then Sonneborn-Berger (points of beaten opponents, half for draws).')}</p>`;
   }
   function renderOtbTournament(t) {
-    const round = OTB.current(t), done = OTB.roundDone(t, round), over = t.status === 'over';
+    const round = OTB.current(t), done = OTB.roundDone(t, round), over = t.status === 'over', ro = otbReadOnly(t);
     const tabs = [['round', over ? L('Podium', 'Podium') : L(`Ronde ${round.no}`, `Round ${round.no}`)], ['table', L('Classement', 'Standings')], ['people', t.type === 'team' ? L('Équipes', 'Teams') : L('Joueurs', 'Players')], ['history', L('Rondes', 'Rounds')]];
     const infoLine = otbInfoLine(t, '<br>');
-    let html = `${infoLine ? `<p class="otb-info">${infoLine}</p>` : ''}<p class="level-help">${FORMAT_NAMES[t.format]} · ${t.entrants.length} ${t.type === 'team' ? L(`équipes · ${t.boards} échiquiers`, `teams · ${t.boards} boards`) : L('joueurs', 'players')} · ${over ? L('tournoi terminé', 'finished') : L(`ronde ${round.no} sur ${t.totalRounds}`, `round ${round.no} of ${t.totalRounds}`)}</p>
+    const shares = Object.entries(t.shares || {});
+    let html = `${ro ? `<p class="otb-shared-note">👁️ ${L(`Tournoi de ${escHtml(otbView.ownerName)}, suivi en direct (lecture seule)`, `${escHtml(otbView.ownerName)}’s tournament, followed live (read only)`)}</p>` : ''}${infoLine ? `<p class="otb-info">${infoLine}</p>` : ''}<p class="level-help">${FORMAT_NAMES[t.format]} · ${t.entrants.length} ${t.type === 'team' ? L(`équipes · ${t.boards} échiquiers`, `teams · ${t.boards} boards`) : L('joueurs', 'players')} · ${over ? L('tournoi terminé', 'finished') : L(`ronde ${round.no} sur ${t.totalRounds}`, `round ${round.no} of ${t.totalRounds}`)}</p>
       <div class="ed-seg otb-tabs">${tabs.map(([id, label]) => `<button type="button" data-otb-tab="${id}" class="${otbTab === id ? 'on' : ''}">${label}</button>`).join('')}</div>`;
     if (otbTab === 'round') {
       if (over) {
@@ -135,15 +164,15 @@
         html += `<div class="otb-podium">${st.slice(0, 3).map((x, i) => `<div class="p${i + 1}"><span>${['🥇', '🥈', '🥉'][i]}</span><b>${escHtml(x.name)}</b><small>${x.pts} ${t.type === 'team' ? L('pts de match', 'match pts') : L('pts', 'pts')}</small></div>`).join('')}</div>${standingsHtml(t)}`;
       } else {
         const missing = round.tables.filter((p) => !OTB.tableScore(t, p).done || (t.format === 'ko' && p.b != null && OTB.winnerOf(t, p) == null)).length;
-        html += `<div class="otb-tables">${round.tables.map((p, i) => [p, i]).sort((x, y) => (x[0].b == null) - (y[0].b == null)).map(([p, i]) => tableHtml(t, p, i, false)).join('')}</div>
+        html += `<div class="otb-tables">${round.tables.map((p, i) => [p, i]).sort((x, y) => (x[0].b == null) - (y[0].b == null)).map(([p, i]) => tableHtml(t, p, i, ro)).join('')}</div>
           <p class="level-help">${done ? L('Tous les résultats sont saisis.', 'All results are in.') : L(`Résultats à saisir : ${missing}.`, `Results to enter: ${missing}.`)}</p>
-          <div class="actions"><button type="button" class="btn primary" data-otb="next"${done ? '' : ' disabled'}>${round.no >= t.totalRounds || (t.format === 'ko' && round.tables.length === 1) ? L('Terminer le tournoi', 'Finish the tournament') : L('Ronde suivante', 'Next round')}</button></div>`;
+          ${ro ? '' : `<div class="actions"><button type="button" class="btn primary" data-otb="next"${done ? '' : ' disabled'}>${round.no >= t.totalRounds || (t.format === 'ko' && round.tables.length === 1) ? L('Terminer le tournoi', 'Finish the tournament') : L('Ronde suivante', 'Next round')}</button></div>`}`;
       }
-      html += `<div class="actions otb-tools"><button type="button" class="btn" data-otb="big">📺 ${L('Grand écran', 'Big screen')}</button><button type="button" class="btn" data-otb="print">🖨️ ${L('Imprimer', 'Print')}</button>${t.rounds.length > 1 || over ? `<button type="button" class="btn ghost" data-otb="undo">↩️ ${over ? L('Rouvrir la dernière ronde', 'Reopen the last round') : L('Annuler cette ronde', 'Cancel this round')}</button>` : ''}</div>`;
+      html += `<div class="actions otb-tools"><button type="button" class="btn" data-otb="big">📺 ${L('Grand écran', 'Big screen')}</button><button type="button" class="btn" data-otb="print">🖨️ ${L('Imprimer', 'Print')}</button>${!ro && (t.rounds.length > 1 || over) ? `<button type="button" class="btn ghost" data-otb="undo">↩️ ${over ? L('Rouvrir la dernière ronde', 'Reopen the last round') : L('Annuler cette ronde', 'Cancel this round')}</button>` : ''}</div>`;
     }
     if (otbTab === 'table') html += standingsHtml(t);
     if (otbTab === 'people') {
-      const canEdit = t.format === 'swiss' && !over;
+      const canEdit = t.format === 'swiss' && !over && !ro;
       html += `<div class="replay-items">${t.entrants.map((e) => `<div class="btn replay-item otb-person${e.out ? ' otb-out' : ''}"><strong>${who(t, e.no)}</strong>${e.players && e.players.length ? `<span>${e.players.map((p, k) => `${k + 1}. ${escHtml(p)}`).join(' · ')}</span>` : ''}${canEdit ? `<button type="button" class="btn ghost" data-otb-out="${e.no}">${e.out ? L('Réintégrer', 'Bring back') : L('Abandon', 'Withdraw')}</button>` : ''}</div>`).join('')}</div>
         ${canEdit ? `<p class="level-help">${L('Un joueur qui abandonne n’est plus apparié à partir de la ronde suivante. Un retardataire entre à la prochaine ronde avec 0 point.', 'A withdrawn player is not paired from the next round. A latecomer joins the next round with 0 points.')}</p>
           <div class="club-form"><input id="otb-late" maxlength="40" placeholder="${t.type === 'team' ? L('Équipe : joueur 1, joueur 2…', 'Team: player 1, player 2…') : L('Nom du retardataire', 'Latecomer’s name')}"><button type="button" class="btn" data-otb="late">${L('Ajouter', 'Add')}</button></div>`
@@ -156,7 +185,9 @@
         return `<tr><td>${p.table}</td><td>${who(t, p.a)}</td><td><b>${res}</b>${t.format === 'ko' && p.adv != null && s.a === s.b ? ` <small>(${L('passe', 'through')} : ${escHtml(OTB.byNo(t, p.adv).name)})</small>` : ''}</td><td>${p.b == null ? '' : who(t, p.b)}</td></tr>`;
       }).join('')}</table>`).join('');
     }
-    html += `<div class="actions"><button type="button" class="btn ghost" data-otb="list">${L('Mes tournois', 'My tournaments')}</button><button type="button" class="btn ghost" data-otb="info">✏️ ${L('Infos du tournoi', 'Tournament details')}</button><button type="button" class="btn ghost" data-otb="delete">🗑️ ${L('Supprimer', 'Delete')}</button></div>`;
+    if (!ro) html += `<h3 class="train-h">${L('Partage', 'Sharing')}</h3>${shares.length ? `<div class="otb-shares">${shares.map(([uid, name]) => `<span>${escHtml(name)}<button type="button" class="btn ghost" data-otb-unshare="${uid}" aria-label="${L('Ne plus partager', 'Stop sharing')}">✕</button></span>`).join('')}</div>` : `<p class="level-help">${L('Partage ce tournoi avec d’autres joueurs de l’appli : ils suivront les tables, les résultats et le classement en direct, sans pouvoir rien modifier.', 'Share this tournament with other players: they follow the tables, results and standings live, without being able to change anything.')}</p>`}
+      <div class="club-form"><input id="otb-share" maxlength="30" autocomplete="off" placeholder="${L('Pseudo du joueur', 'Player’s nickname')}"><button type="button" class="btn" data-otb="share">🔗 ${L('Partager', 'Share')}</button></div>`;
+    html += `<div class="actions"><button type="button" class="btn ghost" data-otb="list">${ro ? L('Retour', 'Back') : L('Mes tournois', 'My tournaments')}</button>${ro ? '' : `<button type="button" class="btn ghost" data-otb="info">✏️ ${L('Infos du tournoi', 'Tournament details')}</button><button type="button" class="btn ghost" data-otb="delete">🗑️ ${L('Supprimer', 'Delete')}</button>`}</div>`;
     $('otb-body').innerHTML = html;
   }
 
@@ -206,10 +237,36 @@
     if (act === 'cancel') { otbNew = null; return renderOtb(); }
     if (b.closest('[data-otb-seg]')) { readOtbForm(); const k = b.closest('[data-otb-seg]').dataset.otbSeg; otbNew[k] = b.dataset.value; if (k === 'format') otbNew.rounds = null; return renderOtb(); }
     if (act === 'start') return startOtb();
-    if (b.dataset.otbOpen) { otbId = Number(b.dataset.otbOpen); otbTab = 'round'; return renderOtb(); }
-    if (act === 'list') { otbId = null; return renderOtb(); }
+    if (b.dataset.otbOpen) { closeOtbView(); otbId = Number(b.dataset.otbOpen); otbTab = 'round'; return renderOtb(); }
+    if (b.dataset.otbShared) {
+      const s = otbShared.find((x) => x.docId === b.dataset.otbShared); if (!s) return;
+      closeOtbView(); otbView = { key: `s:${s.docId}`, t: s.t, ownerName: s.ownerName }; otbId = otbView.key; otbTab = 'round';
+      otbStopWatch = ON.watchOtb(s.docId, (t, ownerName) => {
+        if (!otbView || otbView.key !== `s:${s.docId}`) return;
+        if (!t) { closeOtbView(); otbId = null; toast(L('Ce tournoi n’est plus partagé avec toi.', 'This tournament is no longer shared with you.')); return renderOtb(); }
+        otbView.t = t; otbView.ownerName = ownerName || otbView.ownerName;
+        if (document.body.dataset.screen === 'otb') renderOtb();
+      });
+      return renderOtb();
+    }
+    if (act === 'list') { closeOtbView(); otbId = null; renderOtb(); otbSync().then(() => { if (!otbId && !otbNew) renderOtb(); }); return; }
     const t = otbGet(); if (!t) return;
     if (b.dataset.otbTab) { otbTab = b.dataset.otbTab; return renderOtb(); }
+    if (act === 'big') return bigScreen(t);
+    if (act === 'print') return printOtb(t);
+    if (otbReadOnly(t)) return; // tournoi partagé : rien d'autre n'est modifiable
+    if (act === 'share') {
+      if (!ON || !ON.user) { toast(L('Connecte-toi pour partager un tournoi.', 'Sign in to share a tournament.')); return openAccount(); }
+      const pseudo = $('otb-share').value.trim(); if (!pseudo) return;
+      ON.load().then(() => ON.findPlayer(pseudo)).then((p) => {
+        if (p.uid === ON.user.uid) return toast(L('C’est ton propre compte.', 'That is your own account.'));
+        t.shares = { ...(t.shares || {}), [p.uid]: p.pseudo || pseudo };
+        otbSave(t); clearTimeout(otbUpload); ON.saveOtb(t).catch(() => {});
+        toast(L(`Tournoi partagé avec ${p.pseudo || pseudo}.`, `Tournament shared with ${p.pseudo || pseudo}.`)); renderOtb();
+      }).catch((err) => toast(ON.explain ? ON.explain(err) : L('Joueur introuvable.', 'Player not found.')));
+      return;
+    }
+    if (b.dataset.otbUnshare) { const s = { ...(t.shares || {}) }; delete s[b.dataset.otbUnshare]; t.shares = s; otbSave(t); clearTimeout(otbUpload); if (ON && ON.user) ON.saveOtb(t).catch(() => {}); return renderOtb(); }
     const round = OTB.current(t);
     if (b.dataset.res && t.status !== 'over') {
       const p = round.tables[Number(b.dataset.t)];
@@ -228,7 +285,7 @@
     if (act === 'delete') {
       return modal({ title: L('Supprimer ce tournoi ?', 'Delete this tournament?'), text: t.name, actions: [
         { label: L('Annuler', 'Cancel'), ghost: true },
-        { label: L('Supprimer', 'Delete'), primary: true, onClick: () => { store.set('otb', otbList().filter((x) => x.id !== t.id)); otbId = null; renderOtb(); } },
+        { label: L('Supprimer', 'Delete'), primary: true, onClick: () => { store.set('otb', otbList().filter((x) => x.id !== t.id)); if (ON && ON.user) ON.deleteOtb(t); otbId = null; renderOtb(); } },
       ] });
     }
     if (b.dataset.otbOut) { const en = OTB.byNo(t, Number(b.dataset.otbOut)); en.out = !en.out; otbSave(t); return renderOtb(); }
@@ -246,6 +303,4 @@
         { label: L('Enregistrer', 'Save'), primary: true, onClick: () => { t.name = box.querySelector('#otb-name').value.trim() || t.name; t.info = readInfo(); otbSave(t); renderOtb(); } },
       ] });
     }
-    if (act === 'big') return bigScreen(t);
-    if (act === 'print') return printOtb(t);
   });

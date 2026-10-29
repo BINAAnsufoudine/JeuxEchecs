@@ -1226,3 +1226,7 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
 .otb-info-grid .wide { grid-column: 1 / -1; }
 .otb-info { margin: 0 0 6px; padding: 8px 12px; border-radius: 10px; background: var(--surface); font-weight: 600; line-height: 1.7; }
 .otb-big-info { font-size: .6em; opacity: .75; margin: -.4em 0 1em; }
+.otb-shared-note { margin: 0 0 6px; padding: 8px 12px; border-radius: 10px; background: rgba(232,184,74,.18); font-weight: 600; }
+.otb-shares { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.otb-shares span { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: 999px; background: var(--surface); font-weight: 600; }
+.otb-shares .btn { padding: 2px 8px; min-height: 0; }

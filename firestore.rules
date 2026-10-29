@@ -70,6 +70,17 @@ service cloud.firestore {
         && request.resource.data.pseudo is string && request.resource.data.pseudo.size() <= 40;
       allow delete: if isAdmin();
     }
+    // Tournois en réel : historique du créateur ; lisible aussi par les joueurs avec qui il l'a partagé
+    match /otbTournaments/{id} {
+      allow read: if request.auth != null && (resource.data.owner == request.auth.uid || request.auth.uid in resource.data.sharedWith);
+      allow create, update: if request.auth != null && request.resource.data.owner == request.auth.uid
+        && id.matches(request.auth.uid + '_[0-9]+')
+        && (resource == null || resource.data.owner == request.auth.uid)
+        && request.resource.data.keys().hasOnly(['owner', 'ownerName', 'name', 'date', 'sharedWith', 'json', 'updatedAt'])
+        && request.resource.data.sharedWith is list && request.resource.data.sharedWith.size() <= 50
+        && request.resource.data.json is string && request.resource.data.json.size() < 900000;
+      allow delete: if (request.auth != null && resource.data.owner == request.auth.uid) || isAdmin();
+    }
     // Clubs et écoles : le responsable gère son club ; un joueur peut seulement s'y ajouter ou s'en retirer lui-même
     match /clubs/{id} {
       allow read: if request.auth != null;

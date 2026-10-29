@@ -422,6 +422,35 @@ window.Online = (function () {
   }
 
 
+  /* ----- Tournois en réel : historique sur le compte du créateur, partage en lecture avec d'autres joueurs ----- */
+  // Un document par tournoi (identifiant « créateur_numéro ») : le tournoi complet en JSON, et la liste des invités.
+  const otbDocId = (t) => `${user.uid}_${t.id}`;
+  async function saveOtb(t) {
+    if (!user || !profile) return;
+    const f = await load(), shares = t.shares || {};
+    await f.setDoc(f.doc(f.db, 'otbTournaments', otbDocId(t)), {
+      owner: user.uid, ownerName: profile.pseudo, name: t.name, date: (t.info && t.info.date) || '',
+      sharedWith: Object.keys(shares), json: JSON.stringify(t), updatedAt: t.updatedAt || Date.now(),
+    });
+  }
+  async function myOtbs() {
+    const f = await load();
+    const snap = await f.getDocs(f.query(f.collection(f.db, 'otbTournaments'), f.where('owner', '==', user.uid)));
+    return snap.docs.map((d) => { try { return JSON.parse(d.data().json); } catch { return null; } }).filter(Boolean);
+  }
+  async function sharedOtbs() {
+    const f = await load();
+    const snap = await f.getDocs(f.query(f.collection(f.db, 'otbTournaments'), f.where('sharedWith', 'array-contains', user.uid)));
+    return snap.docs.map((d) => { const x = d.data(); try { return { docId: d.id, ownerName: x.ownerName, t: JSON.parse(x.json) }; } catch { return null; } }).filter(Boolean);
+  }
+  // Suivi en direct d'un tournoi partagé (les résultats apparaissent dès que l'organisateur les saisit)
+  function watchOtb(docId, cb) {
+    let stop = () => {};
+    load().then((f) => { stop = f.onSnapshot(f.doc(f.db, 'otbTournaments', docId), (s) => { if (s.exists()) { try { cb(JSON.parse(s.data().json), s.data().ownerName); } catch { /* document illisible */ } } else cb(null); }, () => cb(null)); });
+    return () => stop();
+  }
+  async function deleteOtb(t) { if (!user) return; const f = await load(); try { await f.deleteDoc(f.doc(f.db, 'otbTournaments', otbDocId(t))); } catch { /* jamais envoyé */ } }
+
   /* ----- Clubs et écoles : un responsable, des membres qui rejoignent avec un code ----- */
   async function createClub(name) {
     const f = await load(), me = user.uid;
@@ -674,7 +703,7 @@ window.Online = (function () {
     signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos, publishSummary, getProfile, myTournaments,
     presence, listPlayers, setMuted, sendChat, myGames, deleteAccount,
     isAdmin, isAdminEmail, sendVerification, refreshVerification, adminData, adminSetBanned, adminDeleteUser, adminDeleteTournament, markAdmin, loadAdminEmail, setAdminEmail, getAdminEmail,
-    submitDaily, dailyBoard, seasonBoard, createClub, myClubs, joinClub, leaveClub, removeFromClub, deleteClub,
+    submitDaily, dailyBoard, seasonBoard, saveOtb, myOtbs, sharedOtbs, watchOtb, deleteOtb, createClub, myClubs, joinClub, leaveClub, removeFromClub, deleteClub,
     saveProgress, loadProgress, watchProgress, setGrade, requestTakeback, answerTakeback, offerDraw, answerDraw, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
     createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,
   };
