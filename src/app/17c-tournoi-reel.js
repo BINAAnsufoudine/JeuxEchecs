@@ -93,13 +93,15 @@
     if (!t) return renderOtbHome();
     renderOtbTournament(t);
   }
+  // Tournois disponibles pour le classement cumulé : les miens, puis ceux partagés avec moi (clé « s:… »)
+  const bestSources = () => [...otbList().map((t) => ({ key: String(t.id), t, owner: null })), ...otbShared.map((s) => ({ key: `s:${s.docId}`, t: s.t, owner: s.ownerName }))];
   function renderOtbBest() {
-    const list = otbList(), sel = otbBest.sel, chosen = list.filter((t) => sel.has(t.id));
+    const sources = bestSources(), sel = otbBest.sel, chosen = sources.filter((s) => sel.has(s.key)).map((s) => s.t);
     const rows = OTB.aggregate(chosen, otbBest.by), top = rows.slice(0, otbBest.top);
     const medals = (x) => `${'🥇'.repeat(x.gold)}${'🥈'.repeat(x.silver)}${'🥉'.repeat(x.bronze)}` || '—';
     $('otb-body').innerHTML = `<p class="level-help">${L('Coche les tournois à prendre en compte : l’appli additionne les résultats de chaque joueur (reconnu par son nom) et les classe. En équipe, ce sont les parties de chaque joueur à son échiquier qui comptent.', 'Tick the tournaments to include: the app adds up each player’s results (matched by name) and ranks them. In team events, each player’s own board games count.')}</p>
       <div class="otb-best-tools"><button type="button" class="btn ghost" data-otb="best-all">${L('Tout cocher', 'Select all')}</button><button type="button" class="btn ghost" data-otb="best-none">${L('Tout décocher', 'Clear')}</button></div>
-      <div class="otb-best-list">${list.map((t) => `<label class="switch"><input type="checkbox" data-otb-pick="${t.id}"${sel.has(t.id) ? ' checked' : ''}><span>${t.type === 'team' ? '👥' : '♟️'} ${escHtml(t.name)}${t.info && t.info.date ? ` · ${fmtOtbDate(t.info.date)}` : ''}${t.status === 'over' ? '' : ` · ${L('en cours', 'in progress')}`}</span></label>`).join('')}</div>
+      <div class="otb-best-list">${sources.map(({ key, t, owner }) => `<label class="switch"><input type="checkbox" data-otb-pick="${escHtml(key)}"${sel.has(key) ? ' checked' : ''}><span>${owner ? '👁️' : t.type === 'team' ? '👥' : '♟️'} ${escHtml(t.name)}${owner ? ` · ${L(`partagé par ${escHtml(owner)}`, `shared by ${escHtml(owner)}`)}` : ''}${t.info && t.info.date ? ` · ${fmtOtbDate(t.info.date)}` : ''}${t.status === 'over' ? '' : ` · ${L('en cours', 'in progress')}`}</span></label>`).join('')}</div>
       <label class="field-label">${L('Classer par', 'Rank by')}</label>
       <div class="ed-seg otb-tabs">${[['points', L('Points marqués', 'Points scored')], ['places', L('Places obtenues', 'Places achieved')]].map(([v, label]) => `<button type="button" data-otb-by="${v}" class="${otbBest.by === v ? 'on' : ''}">${label}</button>`).join('')}</div>
       <label class="field-label" for="otb-top">${L('Nombre de joueurs à afficher', 'Number of players to show')}</label>
@@ -113,7 +115,7 @@
       <div class="actions"><button type="button" class="btn ghost" data-otb="best-close">${L('Mes tournois', 'My tournaments')}</button></div>`;
   }
   function printOtbBest() {
-    const chosen = otbList().filter((t) => otbBest.sel.has(t.id)), top = OTB.aggregate(chosen, otbBest.by).slice(0, otbBest.top);
+    const chosen = bestSources().filter((s) => otbBest.sel.has(s.key)).map((s) => s.t), top = OTB.aggregate(chosen, otbBest.by).slice(0, otbBest.top);
     const doc = `<!doctype html><html lang="${window.LANG === 'en' ? 'en' : 'fr'}"><head><meta charset="utf-8"><title>${L('Meilleurs joueurs', 'Best players')}</title><style>body{font:14px system-ui,sans-serif;margin:24px;color:#000}h1{font-size:20px;margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border:1px solid #999;padding:6px 8px;text-align:left}</style></head><body>
       <h1>${L(`Les ${top.length} meilleurs joueurs`, `Top ${top.length} players`)}</h1><div>${chosen.map((t) => escHtml(t.name)).join(' · ')}</div>
       <table><tr><th>#</th><th>${L('Joueur', 'Player')}</th><th>${L('Points', 'Points')}</th><th>${L('Parties', 'Games')}</th><th>${L('V', 'W')}</th><th>${L('N', 'D')}</th><th>${L('D', 'L')}</th><th>%</th><th>${L('Tournois', 'Events')}</th><th>🥇</th><th>🥈</th><th>🥉</th></tr>
@@ -131,7 +133,7 @@
     const list = otbList();
     $('otb-body').innerHTML = `<p class="level-help">${L('Pour un tournoi joué sur de vrais échiquiers : saisis les noms, l’appli annonce à chaque ronde qui joue contre qui, tu entres les résultats, et elle s’occupe du reste jusqu’au classement final.', 'For a tournament played on real boards: enter the names, the app announces each round who plays whom, you enter the results, and it handles the rest up to the final standings.')}</p>
       <button type="button" class="btn primary wide" data-otb="new">➕ ${L('Nouveau tournoi', 'New tournament')}</button>
-      ${list.length ? `<button type="button" class="btn wide otb-best-btn" data-otb="best">📊 ${L('Meilleurs joueurs sur plusieurs tournois', 'Best players across tournaments')}</button>` : ''}
+      ${list.length || otbShared.length ? `<button type="button" class="btn wide otb-best-btn" data-otb="best">📊 ${L('Meilleurs joueurs sur plusieurs tournois', 'Best players across tournaments')}</button>` : ''}
       ${ON && ON.user ? '' : `<p class="level-help">${L('Connecte-toi pour garder l’historique de tes tournois sur ton compte et les partager avec d’autres joueurs.', 'Sign in to keep your tournament history on your account and share it with other players.')}</p>`}
       ${otbShared.length ? `<h3 class="train-h">${L('Partagés avec moi', 'Shared with me')}</h3><div class="replay-items">${otbShared.map((s) => `<button type="button" class="btn replay-item" data-otb-shared="${s.docId}"><strong>👁️ ${escHtml(s.t.name)}</strong><span>${L(`Organisé par ${escHtml(s.ownerName)}`, `Organised by ${escHtml(s.ownerName)}`)}${s.t.info && s.t.info.date ? ` · ${fmtOtbDate(s.t.info.date)}` : ''} · ${s.t.status === 'over' ? L('terminé', 'finished') : L(`ronde ${s.t.rounds.length} sur ${s.t.totalRounds}`, `round ${s.t.rounds.length} of ${s.t.totalRounds}`)}</span></button>`).join('')}</div>` : ''}
       ${otbSection(L('Tournois en cours', 'Tournaments in progress'), list.filter((t) => t.status !== 'over'), (t) => `<button type="button" class="btn replay-item" data-otb-open="${t.id}"><strong>${t.type === 'team' ? '👥' : '♟️'} ${escHtml(t.name)}</strong><span>${t.info && t.info.date ? `${fmtOtbDate(t.info.date)} · ` : ''}${FORMAT_NAMES[t.format]} · ${t.entrants.length} ${t.type === 'team' ? L('équipes', 'teams') : L('joueurs', 'players')} · ${t.status === 'over' ? L('terminé', 'finished') : L(`ronde ${t.rounds.length} sur ${t.totalRounds}`, `round ${t.rounds.length} of ${t.totalRounds}`)}</span></button>`)}
@@ -310,8 +312,8 @@
         return `<tr><td>${p.table}</td><td>${who(t, p.a)}</td><td><b>${res}</b>${t.format === 'ko' && s.done && s.a === s.b && p.adv != null ? ` <small>(${L('qualifié par l’organisateur', 'qualified by the organiser')} : ${escHtml(OTB.byNo(t, p.adv).name)})</small>` : ''}${t.format === 'ko' && s.done && s.a === s.b && p.adv == null && OTB.winnerOf(t, p) != null ? ` <small>(${L('départage', 'play-off')} : ${(p.tb || []).map((g) => ({ '1-0': '1-0', '0-1': '0-1', '1/2': '½' }[g.r] || '…')).join(', ')} · ${L('qualifié', 'through')} : ${escHtml(OTB.byNo(t, OTB.winnerOf(t, p)).name)})</small>` : ''}</td><td>${p.b == null ? '' : who(t, p.b)}</td></tr>`;
       }).join('')}</table>`).join('');
     }
-    if (!ro) html += `<h3 class="train-h">${L('Partage', 'Sharing')}</h3>${shares.length ? `<div class="otb-shares">${shares.map(([uid, name]) => `<span>${escHtml(name)}<button type="button" class="btn ghost" data-otb-unshare="${uid}" aria-label="${L('Ne plus partager', 'Stop sharing')}">✕</button></span>`).join('')}</div>` : `<p class="level-help">${L('Partage ce tournoi avec d’autres joueurs de l’appli : ils suivront les tables, les résultats et le classement en direct, sans pouvoir rien modifier.', 'Share this tournament with other players: they follow the tables, results and standings live, without being able to change anything.')}</p>`}
-      <div class="club-form"><input id="otb-share" maxlength="30" autocomplete="off" placeholder="${L('Pseudo du joueur', 'Player’s nickname')}"><button type="button" class="btn" data-otb="share">🔗 ${L('Partager', 'Share')}</button></div>`;
+    html += `<h3 class="train-h">${L('Partage', 'Sharing')}</h3>${ro ? `<p class="level-help">${L(`Organisé par ${escHtml(otbView.ownerName)}, partagé avec :`, `Organised by ${escHtml(otbView.ownerName)}, shared with:`)}</p>` : ''}${shares.length ? `<div class="otb-shares">${shares.map(([uid, name]) => `<span>${escHtml(name)}${ro ? '' : `<button type="button" class="btn ghost" data-otb-unshare="${uid}" aria-label="${L('Ne plus partager', 'Stop sharing')}">✕</button>`}</span>`).join('')}</div>` : `<p class="level-help">${L('Partage ce tournoi avec d’autres joueurs de l’appli : ils suivront les tables, les résultats et le classement en direct, sans pouvoir rien modifier.', 'Share this tournament with other players: they follow the tables, results and standings live, without being able to change anything.')}</p>`}
+      ${ro ? '' : `<div class="club-form"><input id="otb-share" maxlength="30" autocomplete="off" placeholder="${L('Pseudo du joueur', 'Player’s nickname')}"><button type="button" class="btn" data-otb="share">🔗 ${L('Partager', 'Share')}</button></div>`}`;
     html += `<div class="actions"><button type="button" class="btn ghost" data-otb="list">${ro ? L('Retour', 'Back') : L('Mes tournois', 'My tournaments')}</button><button type="button" class="btn ghost" data-otb="info">✏️ ${L('Infos du tournoi', 'Tournament details')}</button><button type="button" class="btn ghost" data-otb="delete">🗑️ ${L('Supprimer', 'Delete')}</button></div>`;
     $('otb-body').innerHTML = html;
     // invité : exactement le même écran que l'organisateur, mais rien n'est modifiable (seuls les onglets,
@@ -357,7 +359,7 @@
       t.lateUntil = Math.max(1, Math.min(t.totalRounds, Number(e.target.value) || 1)); otbSave(t); return renderOtb();
     }
     if (!otbBest) return;
-    if (e.target.dataset.otbPick) { const id = Number(e.target.dataset.otbPick); if (e.target.checked) otbBest.sel.add(id); else otbBest.sel.delete(id); renderOtb(); }
+    if (e.target.dataset.otbPick) { const key = e.target.dataset.otbPick; if (e.target.checked) otbBest.sel.add(key); else otbBest.sel.delete(key); renderOtb(); }
     if (e.target.id === 'otb-top') { otbBest.top = Math.max(1, Math.min(200, Number(e.target.value) || 10)); renderOtb(); }
   });
   $('otb-body').addEventListener('input', (e) => {
@@ -388,10 +390,10 @@
       otbNew.picked = [...set];
       const y = window.scrollY; renderOtb(); window.scrollTo(0, y); return;
     }
-    if (act === 'best') { otbBest = { sel: new Set(otbList().map((t) => t.id)), top: 10, by: 'points' }; return renderOtb(); }
+    if (act === 'best') { otbBest = { sel: new Set(bestSources().map((s) => s.key)), top: 10, by: 'points' }; return renderOtb(); }
     if (b.dataset.otbBy && otbBest) { otbBest.by = b.dataset.otbBy; return renderOtb(); }
     if (act === 'best-close') { otbBest = null; return renderOtb(); }
-    if (act === 'best-all') { otbList().forEach((t) => otbBest.sel.add(t.id)); return renderOtb(); }
+    if (act === 'best-all') { bestSources().forEach((s) => otbBest.sel.add(s.key)); return renderOtb(); }
     if (act === 'best-none') { otbBest.sel.clear(); return renderOtb(); }
     if (act === 'best-print') return printOtbBest();
     if (b.closest('[data-otb-seg]')) { readOtbForm(); const k = b.closest('[data-otb-seg]').dataset.otbSeg; otbNew[k] = b.dataset.value; if (k === 'format') otbNew.rounds = null; if (k === 'type') otbNew.picked = []; return renderOtb(); }
