@@ -125,8 +125,10 @@
             if (p.b == null) continue;
             const pick = () => ['1-0', '0-1', '1/2'][Math.floor(rnd() * 3)];
             if (p.games) p.games.forEach((g) => { g.r = pick(); }); else p.r = pick();
-            O.syncTiebreaks(t, p);
-            for (let k = 0; t.format === 'ko' && O.winnerOf(t, p) == null && k < 5; k++) { p.tb[p.tb.length - 1].r = rnd() < 0.5 ? '1/2' : '1-0'; O.syncTiebreaks(t, p); }
+            for (let k = 0; t.format === 'ko' && O.winnerOf(t, p) == null; k++) {
+              if (k > 3) { p.adv = p.a; break; }
+              O.addTiebreak(t, p); p.tb[p.tb.length - 1].r = rnd() < 0.5 ? '1/2' : '1-0';
+            }
           }
           assert(O.next(t), 'ronde complète refusée');
         }
@@ -149,14 +151,14 @@
       });
       await test('Tournoi en réel : départage après une nulle en élimination directe', () => {
         const t = O.create({ format: 'ko', entrants: names(2) }), p = O.current(t).tables[0];
-        p.r = '1/2'; O.syncTiebreaks(t, p);
-        assert(p.tb.length === 1 && p.tb[0].w === p.b, 'premier départage absent ou mauvaises couleurs');
-        p.tb[0].r = '1/2'; O.syncTiebreaks(t, p); p.tb[1].r = '1/2'; O.syncTiebreaks(t, p);
-        assert(p.tb.length === 3 && p.tb[2].arm, 'pas de partie décisive après deux nulles');
-        p.tb[2].r = '1/2'; assert(O.winnerOf(t, p) === p.tb[2].b, 'la nulle de la partie décisive doit qualifier les Noirs');
-        p.tb[0].r = '0-1'; O.syncTiebreaks(t, p); assert(p.tb.length === 1 && O.winnerOf(t, p) === p.a, 'correction du premier départage mal prise en compte');
-        p.adv = p.b; O.syncTiebreaks(t, p); assert(!p.tb && O.winnerOf(t, p) === p.b, 'qualifié désigné après un abandon non retenu');
-        delete p.adv; O.syncTiebreaks(t, p); assert(p.tb && p.tb.length === 1 && O.winnerOf(t, p) == null, 'annulation du qualifié désigné');
+        p.r = '1/2';
+        assert(O.tiebreakState(t, p) === 'choose' && !p.tb, 'après une nulle, rien ne doit être décidé ni lancé automatiquement');
+        O.addTiebreak(t, p); assert(p.tb.length === 1 && p.tb[0].w === p.b && O.tiebreakState(t, p) === 'playing', 'partie de départage mal créée');
+        for (let k = 0; k < 4; k++) { p.tb[p.tb.length - 1].r = '1/2'; assert(O.winnerOf(t, p) == null && O.tiebreakState(t, p) === 'choose', 'une suite de nulles ne doit qualifier personne'); O.addTiebreak(t, p); }
+        assert(p.tb[1].w === p.a, 'couleurs non inversées d’une partie à l’autre');
+        p.adv = p.b; O.syncTiebreaks(t, p); assert(O.winnerOf(t, p) === p.b && p.tb.every((g) => g.r), 'qualifié choisi par l’organisateur non retenu');
+        delete p.adv; O.syncTiebreaks(t, p); assert(O.winnerOf(t, p) == null && O.tiebreakState(t, p) === 'choose', 'annulation du choix');
+        p.tb[0].r = '0-1'; O.syncTiebreaks(t, p); assert(p.tb.length === 1 && O.winnerOf(t, p) === p.a, 'correction d’un départage mal prise en compte');
       });
       await test('Tournoi en réel : par équipes, points de match et de parties', () => {
         const t = run({ type: 'team', format: 'swiss', boards: 4, entrants: names(6) }), st = O.standings(t);

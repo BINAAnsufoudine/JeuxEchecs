@@ -1231,5 +1231,4 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
 .otb-shares span { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: 999px; background: var(--surface); font-weight: 600; }
 .otb-shares .btn { padding: 2px 8px; min-height: 0; }
 .otb-tb { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(232,184,74,.12); display: grid; gap: 4px; }
-.otb-arm { opacity: .75; font-size: .82rem; }
 .otb-tb-win { font-weight: 700; }

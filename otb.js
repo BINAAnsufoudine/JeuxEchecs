@@ -46,35 +46,45 @@
     return { a: ga > gb ? 2 : ga === gb ? 1 : 0, b: gb > ga ? 2 : ga === gb ? 1 : 0, ga, gb, done: true };
   }
   const roundDone = (t, round) => round.tables.every((p) => tableScore(t, p).done && (t.format !== 'ko' || p.b == null || winnerOf(t, p) != null));
-  // Élimination directe : vainqueur d'une table ; en cas d'égalité, c'est le match de départage qui décide
+  // Élimination directe : vainqueur d'une table. Après une nulle, l'organisateur décide : les deux joueurs
+  // rejouent une partie de départage (autant de fois qu'il veut), ou il désigne lui-même le qualifié
+  // (abandon, départage trouvé hors de l'appli…). Rien n'est décidé automatiquement.
   function winnerOf(t, p) {
     if (p.b == null) return p.a;
     const s = tableScore(t, p); if (!s.done) return null;
     if (s.a > s.b) return p.a; if (s.b > s.a) return p.b;
-    if (p.adv != null) return p.adv; // qualifié désigné à la main (abandon d'un joueur au départage)
+    if (p.adv != null) return p.adv;
     for (const g of p.tb || []) {
       if (g.r === '1-0') return g.w;
       if (g.r === '0-1') return g.b;
-      if (g.r === '1/2' && g.arm) return g.b; // partie décisive (Armageddon) : la nulle qualifie les Noirs
       if (g.r !== '1/2') return null;
     }
     return null;
   }
-  // Matchs de départage d'une table nulle en élimination directe : une partie couleurs inversées, une deuxième
-  // si elle est encore nulle, puis une partie décisive où les Blancs doivent gagner (la nulle qualifie les Noirs).
-  // En équipe, le départage se joue entre les joueurs de l'échiquier 1.
-  const MAX_TB = 3;
+  // État du départage : 'none' (pas d'égalité ou déjà tranché), 'playing' (une partie en cours), 'choose' (à décider)
+  function tiebreakState(t, p) {
+    if (t.format !== 'ko' || p.b == null || winnerOf(t, p) != null) return 'none';
+    const s = tableScore(t, p); if (!s.done) return 'none';
+    const last = (p.tb || [])[(p.tb || []).length - 1];
+    return last && last.r == null ? 'playing' : 'choose';
+  }
+  // Nouvelle partie de départage, couleurs inversées par rapport à la précédente (en équipe : échiquier 1)
+  function addTiebreak(t, p) {
+    if (tiebreakState(t, p) !== 'choose') return false;
+    const tb = p.tb || (p.tb = []), last = tb[tb.length - 1];
+    tb.push(last ? { w: last.b, b: last.w, r: null } : { w: p.b, b: p.a, r: null });
+    return true;
+  }
+  // Après une correction : plus d'égalité, plus de départage ; parties devenues inutiles retirées
   function syncTiebreaks(t, p) {
     if (t.format !== 'ko' || p.b == null) return;
     const s = tableScore(t, p);
     if (!s.done || s.a !== s.b) { delete p.tb; delete p.adv; return; }
-    if (p.adv != null) { delete p.tb; return; }
-    if (!p.tb || !p.tb.length) p.tb = [{ w: p.b, b: p.a, r: null }];
-    // on retire les parties devenues inutiles (un résultat corrigé), puis on ajoute la suivante si besoin
-    const cut = p.tb.findIndex((g) => g.r !== '1/2' || g.arm);
+    if (!p.tb) return;
+    const cut = p.tb.findIndex((g) => g.r !== '1/2');
     if (cut >= 0) p.tb = p.tb.slice(0, cut + 1);
-    const last = p.tb[p.tb.length - 1];
-    if (last.r === '1/2' && !last.arm && p.tb.length < MAX_TB) p.tb.push({ w: last.b, b: last.w, r: null, arm: p.tb.length === MAX_TB - 1 });
+    if (p.adv != null) p.tb = p.tb.filter((g) => g.r != null); // qualifié choisi : la partie en attente n'a plus lieu d'être
+    if (!p.tb.length) delete p.tb;
   }
 
   // Classement : points, puis départages (Buchholz et Sonneborn-Berger, dans l'ordre adapté au format)
@@ -253,5 +263,5 @@
     return no;
   }
 
-  root.OTB = { create, standings, tableScore, roundDone, winnerOf, syncTiebreaks, next, undoRound, addEntrant, current, suggestedRounds, totalRounds, seedOrder, byNo, SCORE };
+  root.OTB = { create, standings, tableScore, roundDone, winnerOf, syncTiebreaks, tiebreakState, addTiebreak, next, undoRound, addEntrant, current, suggestedRounds, totalRounds, seedOrder, byNo, SCORE };
 })(typeof window !== 'undefined' ? window : globalThis);
