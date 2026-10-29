@@ -29,7 +29,7 @@
     }
     return data;
   }
-  const hasProgress = (d) => !!(d && ((d.archive && d.archive.length) || (d.stats && Object.keys(d.stats).length) || (d.pzdone && Object.keys(d.pzdone).length) || (d.coach && d.coach.themes && Object.keys(d.coach.themes).length)));
+  const hasProgress = (d) => !!(d && ((d.archive && d.archive.length) || (d.localArchive && d.localArchive.length) || (d.reviews && d.reviews.length) || (d.stats && Object.keys(d.stats).length) || (d.pzdone && Object.keys(d.pzdone).length) || (d.coach && d.coach.themes && Object.keys(d.coach.themes).length)));
   // Tournois en réel : jamais écrasés par une copie plus ancienne venue du compte ou d'un autre appareil ;
   // on garde, tournoi par tournoi, la version la plus récente. Renvoie vrai si l'appareil avait du plus récent.
   function mergeOtb(remote, local) {
@@ -167,6 +167,14 @@
     refreshHome();
   }
   async function onUserChange(user, profile) {
+    // session terminée sans passer par « Se déconnecter » (session expirée, compte suspendu…) : les données
+    // du compte quittent aussi l'appareil (ce qui n'a pas pu être envoyé est gardé pour ce seul compte)
+    const owner = store.get('onlineSynced', null);
+    if (!user && owner) {
+      if (progressDirty) backupFor(owner);
+      wipeLocalProgress(); rawSet('onlineSynced', null);
+      refreshHome();
+    }
     rawSet('onlineSession', !!user);
     renderSyncStatus();
     clearTimeout(pushSoon); // un envoi prévu pour l'ancien compte ne part pas vers le nouveau

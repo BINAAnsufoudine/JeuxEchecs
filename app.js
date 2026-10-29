@@ -3651,7 +3651,7 @@
     }
     return data;
   }
-  const hasProgress = (d) => !!(d && ((d.archive && d.archive.length) || (d.stats && Object.keys(d.stats).length) || (d.pzdone && Object.keys(d.pzdone).length) || (d.coach && d.coach.themes && Object.keys(d.coach.themes).length)));
+  const hasProgress = (d) => !!(d && ((d.archive && d.archive.length) || (d.localArchive && d.localArchive.length) || (d.reviews && d.reviews.length) || (d.stats && Object.keys(d.stats).length) || (d.pzdone && Object.keys(d.pzdone).length) || (d.coach && d.coach.themes && Object.keys(d.coach.themes).length)));
   // Tournois en réel : jamais écrasés par une copie plus ancienne venue du compte ou d'un autre appareil ;
   // on garde, tournoi par tournoi, la version la plus récente. Renvoie vrai si l'appareil avait du plus récent.
   function mergeOtb(remote, local) {
@@ -3789,6 +3789,14 @@
     refreshHome();
   }
   async function onUserChange(user, profile) {
+    // session terminée sans passer par « Se déconnecter » (session expirée, compte suspendu…) : les données
+    // du compte quittent aussi l'appareil (ce qui n'a pas pu être envoyé est gardé pour ce seul compte)
+    const owner = store.get('onlineSynced', null);
+    if (!user && owner) {
+      if (progressDirty) backupFor(owner);
+      wipeLocalProgress(); rawSet('onlineSynced', null);
+      refreshHome();
+    }
     rawSet('onlineSession', !!user);
     renderSyncStatus();
     clearTimeout(pushSoon); // un envoi prévu pour l'ancien compte ne part pas vers le nouveau
@@ -4027,17 +4035,33 @@
       ] });
       return;
     }
-    if (t.id === 'acc-logout') accountAction(async () => {
+    if (t.id === 'acc-logout') {
       const uid = ON.user && ON.user.uid;
-      await pushProgress();
-      // ce qui n'a pas pu partir (hors connexion) est gardé pour ce compte seulement
-      if (progressDirty && uid && store.get('onlineSynced', null) === uid) backupFor(uid);
-      await ON.signOut();
-      // l'appareil redevient vierge : rien de ce compte ne passe au suivant
-      if (store.get('onlineSynced', null)) wipeLocalProgress();
-      rawSet('onlineSynced', null);
-      location.reload();
-    }, L('Déconnecté.', 'Signed out.'));
+      // Déconnexion : l'appareil redevient toujours vierge, rien de la session ne reste pour le joueur sans compte
+      // ni pour le compte suivant (parties, analyses, progression contre l'ordinateur…).
+      const logout = (importFirst) => accountAction(async () => {
+        if (importFirst && uid) { rawSet('onlineSynced', uid); progressDirty = true; }
+        await pushProgress();
+        // ce qui n'a pas pu partir (hors connexion) est gardé pour ce compte seulement
+        if (progressDirty && uid && store.get('onlineSynced', null) === uid) backupFor(uid);
+        await ON.signOut();
+        wipeLocalProgress();
+        rawSet('onlineSynced', null);
+        location.reload();
+      }, L('Déconnecté.', 'Signed out.'));
+      // progression jouée sur l'appareil mais jamais rattachée au compte : on demande avant de l'effacer
+      if (uid && store.get('onlineSynced', null) !== uid && hasProgress(localProgress())) {
+        modal({ title: L('Garder ta progression ?', 'Keep your progress?'),
+          text: L('Cet appareil contient des parties et une progression qui ne sont pas enregistrées sur ton compte. À la déconnexion, elles seront effacées de l’appareil.', 'This device holds games and progress that are not saved to your account. Signing out will erase them from the device.'),
+          actions: [
+            { label: L('Effacer et me déconnecter', 'Erase and sign out'), ghost: true, onClick: () => logout(false) },
+            { label: L('Enregistrer sur mon compte', 'Save to my account'), primary: true, onClick: () => logout(true) },
+          ] });
+        return;
+      }
+      logout(false);
+      return;
+    }
   });
   function openAccount() { returnTo = 'home'; renderAccount(); show('account'); if (ON) ON.load().catch(() => accMsg(L('Impossible de joindre le serveur. Vérifie ta connexion.', 'Cannot reach the server. Check your connection.'))); }
   $('btn-account').onclick = openAccount;
