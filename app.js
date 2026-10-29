@@ -6188,15 +6188,15 @@
         html += `<div class="otb-podium">${st.slice(0, 3).map((x, i) => `<div class="p${i + 1}"><span>${['🥇', '🥈', '🥉'][i]}</span><b>${escHtml(x.name)}</b><small>${x.pts} ${t.type === 'team' ? L('pts de match', 'match pts') : L('pts', 'pts')}</small></div>`).join('')}</div>${standingsHtml(t)}`;
       } else {
         const missing = round.tables.filter((p) => !OTB.tableScore(t, p).done || (t.format === 'ko' && p.b != null && OTB.winnerOf(t, p) == null)).length;
-        html += `<div class="otb-tables">${round.tables.map((p, i) => [p, i]).sort((x, y) => (x[0].b == null) - (y[0].b == null)).map(([p, i]) => tableHtml(t, p, i, ro)).join('')}</div>
+        html += `<div class="otb-tables">${round.tables.map((p, i) => [p, i]).sort((x, y) => (x[0].b == null) - (y[0].b == null)).map(([p, i]) => tableHtml(t, p, i, false)).join('')}</div>
           <p class="level-help">${done ? L('Tous les résultats sont saisis.', 'All results are in.') : L(`Résultats à saisir : ${missing}.`, `Results to enter: ${missing}.`)}</p>
-          ${ro ? '' : `<div class="actions"><button type="button" class="btn primary" data-otb="next"${done ? '' : ' disabled'}>${round.no >= t.totalRounds || (t.format === 'ko' && round.tables.length === 1) ? L('Terminer le tournoi', 'Finish the tournament') : L('Ronde suivante', 'Next round')}</button></div>`}`;
+          <div class="actions"><button type="button" class="btn primary" data-otb="next"${done ? '' : ' disabled'}>${round.no >= t.totalRounds || (t.format === 'ko' && round.tables.length === 1) ? L('Terminer le tournoi', 'Finish the tournament') : L('Ronde suivante', 'Next round')}</button></div>`;
       }
-      html += `<div class="actions otb-tools"><button type="button" class="btn" data-otb="big">📺 ${L('Grand écran', 'Big screen')}</button><button type="button" class="btn" data-otb="print">🖨️ ${L('Imprimer', 'Print')}</button>${!ro && (t.rounds.length > 1 || over) ? `<button type="button" class="btn ghost" data-otb="undo">↩️ ${over ? L('Rouvrir la dernière ronde', 'Reopen the last round') : L('Annuler cette ronde', 'Cancel this round')}</button>` : ''}</div>`;
+      html += `<div class="actions otb-tools"><button type="button" class="btn" data-otb="big">📺 ${L('Grand écran', 'Big screen')}</button><button type="button" class="btn" data-otb="print">🖨️ ${L('Imprimer', 'Print')}</button>${t.rounds.length > 1 || over ? `<button type="button" class="btn ghost" data-otb="undo">↩️ ${over ? L('Rouvrir la dernière ronde', 'Reopen the last round') : L('Annuler cette ronde', 'Cancel this round')}</button>` : ''}</div>`;
     }
     if (otbTab === 'table') html += standingsHtml(t);
     if (otbTab === 'people') {
-      const canEdit = t.format === 'swiss' && !over && !ro;
+      const canEdit = t.format === 'swiss' && !over;
       html += `<div class="replay-items">${t.entrants.map((e) => `<div class="btn replay-item otb-person${e.out ? ' otb-out' : ''}"><strong>${who(t, e.no)}</strong>${e.players && e.players.length ? `<span>${e.players.map((p, k) => `${k + 1}. ${escHtml(p)}`).join(' · ')}</span>` : ''}${canEdit ? `<button type="button" class="btn ghost" data-otb-out="${e.no}">${e.out ? L('Réintégrer', 'Bring back') : L('Abandon', 'Withdraw')}</button>` : ''}</div>`).join('')}</div>
         ${canEdit ? `<p class="level-help">${L('Un joueur qui abandonne n’est plus apparié à partir de la ronde suivante. Un retardataire entre à la prochaine ronde avec 0 point.', 'A withdrawn player is not paired from the next round. A latecomer joins the next round with 0 points.')}</p>
           <div class="club-form"><input id="otb-late" maxlength="40" placeholder="${t.type === 'team' ? L('Équipe : joueur 1, joueur 2…', 'Team: player 1, player 2…') : L('Nom du retardataire', 'Latecomer’s name')}"><button type="button" class="btn" data-otb="late">${L('Ajouter', 'Add')}</button></div>`
@@ -6211,8 +6211,12 @@
     }
     if (!ro) html += `<h3 class="train-h">${L('Partage', 'Sharing')}</h3>${shares.length ? `<div class="otb-shares">${shares.map(([uid, name]) => `<span>${escHtml(name)}<button type="button" class="btn ghost" data-otb-unshare="${uid}" aria-label="${L('Ne plus partager', 'Stop sharing')}">✕</button></span>`).join('')}</div>` : `<p class="level-help">${L('Partage ce tournoi avec d’autres joueurs de l’appli : ils suivront les tables, les résultats et le classement en direct, sans pouvoir rien modifier.', 'Share this tournament with other players: they follow the tables, results and standings live, without being able to change anything.')}</p>`}
       <div class="club-form"><input id="otb-share" maxlength="30" autocomplete="off" placeholder="${L('Pseudo du joueur', 'Player’s nickname')}"><button type="button" class="btn" data-otb="share">🔗 ${L('Partager', 'Share')}</button></div>`;
-    html += `<div class="actions"><button type="button" class="btn ghost" data-otb="list">${ro ? L('Retour', 'Back') : L('Mes tournois', 'My tournaments')}</button>${ro ? '' : `<button type="button" class="btn ghost" data-otb="info">✏️ ${L('Infos du tournoi', 'Tournament details')}</button><button type="button" class="btn ghost" data-otb="delete">🗑️ ${L('Supprimer', 'Delete')}</button>`}</div>`;
+    html += `<div class="actions"><button type="button" class="btn ghost" data-otb="list">${ro ? L('Retour', 'Back') : L('Mes tournois', 'My tournaments')}</button><button type="button" class="btn ghost" data-otb="info">✏️ ${L('Infos du tournoi', 'Tournament details')}</button><button type="button" class="btn ghost" data-otb="delete">🗑️ ${L('Supprimer', 'Delete')}</button></div>`;
     $('otb-body').innerHTML = html;
+    // invité : exactement le même écran que l'organisateur, mais rien n'est modifiable (seuls les onglets,
+    // le grand écran, l'impression et le retour restent actifs)
+    $('otb-body').classList.toggle('otb-ro', ro);
+    if (ro) $('otb-body').querySelectorAll('button, input, textarea').forEach((el) => { if (!el.matches('[data-otb-tab], [data-otb="big"], [data-otb="print"], [data-otb="list"]')) el.disabled = true; });
   }
 
   /* ----- Grand écran et impression ----- */
