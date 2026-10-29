@@ -233,12 +233,45 @@
       for (const e of t.entrants) teams.set(nameKey(e.name), { name: e.name, players: e.players || [], sub: (e.players || []).join(', ') }); // la composition la plus récente
     return [...teams.values()].sort((a, b) => a.name.localeCompare(b.name));
   }
+  // Noms qui se ressemblent (accents, majuscules, une lettre de différence…) : on demande s'il s'agit du même joueur
+  const looseKey = (n) => nameKey(n).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+  function lev(a, b) {
+    if (Math.abs(a.length - b.length) > 2) return 3;
+    let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i];
+      for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  const distinctPairs = () => new Set(store.get('otbDistinct', []));
+  const pairKey = (a, b) => [nameKey(a), nameKey(b)].sort().join('|');
+  function similar(a, b) {
+    if (nameKey(a) === nameKey(b) || distinctPairs().has(pairKey(a, b))) return false;
+    const x = looseKey(a), y = looseKey(b), m = Math.min(x.length, y.length);
+    if (x === y) return true;
+    const d = lev(x, y);
+    return (m >= 4 && d <= 1) || (m >= 8 && d <= 2);
+  }
+  // Pose les questions une par une, puis continue avec la réponse ; « même joueur » garde l'écriture déjà connue
+  function askDoubts(doubts, done) {
+    const d = doubts.shift(); if (!d) return done();
+    modal({ title: L('Même joueur ?', 'Same player?'),
+      text: L(`« ${d.a} » ressemble à « ${d.b} »${d.known ? ' (déjà enregistré)' : ''}. Est-ce la même personne ?`, `“${d.a}” looks like “${d.b}”${d.known ? ' (already saved)' : ''}. Is it the same person?`),
+      actions: [
+        { label: L('Deux joueurs différents', 'Two different players'), ghost: true, onClick: () => { store.set('otbDistinct', [...distinctPairs(), pairKey(d.a, d.b)].slice(-500)); askDoubts(doubts, done); } },
+        { label: L(`Oui, c'est ${d.b}`, `Yes, it is ${d.b}`), primary: true, onClick: () => { d.same(); askDoubts(doubts, done); } },
+      ] });
+  }
   function parseEntrants(f) {
     const typed = String(f.text || '').split('\n').map((line) => line.trim()).filter(Boolean).map((line) => {
       if (f.type !== 'team') return { name: line.slice(0, 40) };
       const [name, rest] = line.includes(':') ? [line.slice(0, line.indexOf(':')), line.slice(line.indexOf(':') + 1)] : [line, ''];
       return { name: name.trim().slice(0, 40), players: rest.split(/[,;]/).map((p) => p.trim().slice(0, 30)).filter(Boolean) };
-    });
+    }).filter((e, i, all) => all.findIndex((x) => nameKey(x.name) === nameKey(e.name)) === i); // un nom tapé deux fois ne compte qu'une fois
+    // un joueur déjà enregistré garde son écriture (« awa » tapé devient « Awa »)
+    if (f.type !== 'team') { const known = new Map((otbPlayers() || []).map((n) => [nameKey(n), n])); typed.forEach((e) => { if (known.has(nameKey(e.name))) e.name = known.get(nameKey(e.name)); }); }
     // les joueurs cochés dans la liste des tournois précédents s'ajoutent à ceux tapés (sans doublon)
     const seen = new Set(typed.map((e) => nameKey(e.name)));
     const picked = pastEntrants(f.type).filter((e) => (f.picked || []).includes(nameKey(e.name)) && !seen.has(nameKey(e.name)))
@@ -256,6 +289,27 @@
   function startOtb() {
     readOtbForm();
     let entrants = parseEntrants(otbNew);
+    if (entrants.length < 2) return toast(L('Il faut au moins deux noms.', 'At least two names are needed.'));
+    // noms qui ressemblent à un joueur déjà enregistré ou à un autre nom de la liste : on demande avant de créer
+    if (otbNew.type !== 'team') {
+      const known = directory().map((r) => r.name), doubts = [];
+      entrants.forEach((e, i) => {
+        if (known.some((k) => nameKey(k) === nameKey(e.name))) return;
+        const other = entrants.slice(0, i).find((x) => similar(x.name, e.name));
+        const k = other ? null : known.find((n) => similar(n, e.name));
+        if (other || k) doubts.push({ a: e.name, b: other ? other.name : k, known: !other, same: () => { e.merge = other ? other.name : k; } });
+      });
+      if (doubts.length) return askDoubts(doubts, () => {
+        // « même joueur » : le nom tapé est remplacé par l'écriture connue, sans créer de doublon
+        const seen = new Set(), list = [];
+        for (const e of entrants) { const n = e.merge || e.name; if (!seen.has(nameKey(n))) { seen.add(nameKey(n)); list.push({ ...e, name: n, merge: undefined }); } }
+        otbNew.text = list.filter((e) => !(otbNew.picked || []).includes(nameKey(e.name))).map((e) => e.name).join('\n');
+        createOtb(list);
+      });
+    }
+    createOtb(entrants);
+  }
+  function createOtb(entrants) {
     if (entrants.length < 2) return toast(L('Il faut au moins deux noms.', 'At least two names are needed.'));
     if (otbNew.shuffle) entrants = entrants.map((e) => [Math.random(), e]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
     const t = OTB.create({ ...otbNew, entrants });
@@ -441,7 +495,13 @@
     if (act === 'dir-add') {
       const v = $('otb-dir-add').value.trim(); if (!v) return;
       if (directory().some((r) => r.key === nameKey(v))) return toast(L('Ce joueur est déjà dans la liste.', 'This player is already listed.'));
-      registerPlayers([v]); toast(L(`${v} ajouté.`, `${v} added.`)); return renderOtb();
+      const near = directory().find((r) => similar(r.name, v));
+      const add = () => { registerPlayers([v]); toast(L(`${v} ajouté.`, `${v} added.`)); renderOtb(); };
+      if (near) return modal({ title: L('Même joueur ?', 'Same player?'), text: L(`« ${v} » ressemble à « ${near.name} », déjà enregistré. Est-ce la même personne ?`, `“${v}” looks like “${near.name}”, already saved. Is it the same person?`), actions: [
+        { label: L('Non, l’ajouter', 'No, add it'), ghost: true, onClick: () => { store.set('otbDistinct', [...distinctPairs(), pairKey(v, near.name)].slice(-500)); add(); } },
+        { label: L(`Oui, c'est ${near.name}`, `Yes, it is ${near.name}`), primary: true, onClick: () => toast(L(`${near.name} est déjà dans la liste.`, `${near.name} is already listed.`)) },
+      ] });
+      return add();
     }
     if (b.dataset.otbDirDel) {
       const k = b.dataset.otbDirDel, r = directory().find((x) => x.key === k);
@@ -529,6 +589,7 @@
     if (act === 'late') {
       const v = $('otb-late').value.trim(); if (!v) return;
       const [name, rest] = t.type === 'team' && v.includes(':') ? [v.slice(0, v.indexOf(':')), v.slice(v.indexOf(':') + 1)] : [v, ''];
+      if (t.entrants.some((e) => nameKey(e.name) === nameKey(name))) return toast(L(`${name.trim()} est déjà inscrit à ce tournoi.`, `${name.trim()} is already in this tournament.`));
       const no = OTB.addEntrant(t, name.slice(0, 40), rest.split(/[,;]/).map((p) => p.trim()).filter(Boolean));
       if (no == null) return toast(L('Le tournoi est trop avancé pour accepter un retardataire.', 'The tournament is too far along to accept a latecomer.'));
       registerPlayers(tournamentNames(t));
