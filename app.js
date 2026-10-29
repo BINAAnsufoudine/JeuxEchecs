@@ -6257,7 +6257,7 @@
   $('otb-body').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
     const act = b.dataset.otb;
-    if (act === 'new') { const now = new Date(); otbNew = { date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`, time: '', place: '', referee: '', name: '', type: 'solo', format: 'swiss', rounds: null, boards: 4, text: '', shuffle: false }; return renderOtb(); }
+    if (act === 'new') { const now = new Date(); otbNew = { date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`, time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`, place: '', referee: '', name: '', type: 'solo', format: 'swiss', rounds: null, boards: 4, text: '', shuffle: false }; return renderOtb(); }
     if (act === 'cancel') { otbNew = null; return renderOtb(); }
     if (b.closest('[data-otb-seg]')) { readOtbForm(); const k = b.closest('[data-otb-seg]').dataset.otbSeg; otbNew[k] = b.dataset.value; if (k === 'format') otbNew.rounds = null; return renderOtb(); }
     if (act === 'start') return startOtb();
