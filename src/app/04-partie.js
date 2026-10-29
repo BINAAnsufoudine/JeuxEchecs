@@ -289,6 +289,9 @@
   });
   function renderBoard() {
     const el = $('board');
+    // Deux joueurs sur le même appareil posé à plat : les pièces du joueur d'en face sont retournées vers lui
+    el.classList.toggle('face-to-face', !!(cfg && cfg.mode === 'local' && !replay));
+    el.dataset.top = flipped ? 'w' : 'b';
     if (!minimapMove && !minimapResize) placeMinimap();
     const s = game.state;
     const last = replayAnimationOverride || game.lastMove();
