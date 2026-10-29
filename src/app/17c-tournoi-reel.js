@@ -62,10 +62,17 @@
   function closeOtbView() { if (otbStopWatch) otbStopWatch(); otbStopWatch = null; otbView = null; }
   function openOtb() { returnTo = 'home'; closeOtbView(); otbId = null; otbNew = null; show('otb'); renderOtb(); otbSync().then(() => { if (document.body.dataset.screen === 'otb' && !otbId && !otbNew) renderOtb(); }); }
   $('btn-otb').onclick = openOtb;
+  // Après un rafraîchissement de la page : retour au tournoi qui était ouvert, sur le même onglet
+  function restoreOtb() {
+    const last = store.get('lastOtb', null); // lu avant openOtb, qui le remet à zéro
+    openOtb();
+    if (last && otbList().some((t) => t.id === last.id)) { otbId = last.id; otbTab = last.tab || 'round'; renderOtb(); }
+  }
   updateOtbCount();
 
   function renderOtb() {
     const t = otbGet();
+    store.set('lastOtb', t && !otbReadOnly(t) ? { id: t.id, tab: otbTab } : null); // rouvert après un rafraîchissement
     $('otb-title').textContent = t ? t.name : L('Tournoi en réel', 'Over-the-board tournament');
     if (otbNew) return renderOtbSetup();
     if (!t) return renderOtbHome();

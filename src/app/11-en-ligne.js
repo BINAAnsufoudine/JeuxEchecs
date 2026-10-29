@@ -4,7 +4,7 @@
     { unlim: '3 days per move', '7d': '3 days per move', '3d': '3 days per move', '1d': '1 day per move', pm60: '1 minute per move', pm30: '30 seconds per move', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' });
   const announced = new Set();
   let justSignedUp = false, progressDirty = false, progressRev = 0, progressPushing = false, inviteStop = null, gamesStop = null, onlineInvites = { in: [], out: [] }, onlineGames = [];
-  const SKIP_SYNC = new Set(['lastScreen', 'onlineSession', 'onlineSynced', 'progressDirty', 'progressAt', 'progressEditAt', 'deviceId']);
+  const SKIP_SYNC = new Set(['lastScreen', 'onlineSession', 'onlineSynced', 'progressDirty', 'progressAt', 'progressEditAt', 'deviceId', 'lastOtb', 'lastTrainSection']);
   // toute modification de la progression sera envoyée au compte
   const rawSet = store.set.bind(store);
   // Progression modifiée mais pas encore envoyée : retenu sur l'appareil, pour être envoyé même après

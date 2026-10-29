@@ -3619,7 +3619,7 @@
     { unlim: '3 days per move', '7d': '3 days per move', '3d': '3 days per move', '1d': '1 day per move', pm60: '1 minute per move', pm30: '30 seconds per move', '10m': '10 minutes', '5m': '5 minutes', '2m': '2 minutes', '1m': '1 minute' });
   const announced = new Set();
   let justSignedUp = false, progressDirty = false, progressRev = 0, progressPushing = false, inviteStop = null, gamesStop = null, onlineInvites = { in: [], out: [] }, onlineGames = [];
-  const SKIP_SYNC = new Set(['lastScreen', 'onlineSession', 'onlineSynced', 'progressDirty', 'progressAt', 'progressEditAt', 'deviceId']);
+  const SKIP_SYNC = new Set(['lastScreen', 'onlineSession', 'onlineSynced', 'progressDirty', 'progressAt', 'progressEditAt', 'deviceId', 'lastOtb', 'lastTrainSection']);
   // toute modification de la progression sera envoyée au compte
   const rawSet = store.set.bind(store);
   // Progression modifiée mais pas encore envoyée : retenu sur l'appareil, pour être envoyé même après
@@ -5704,7 +5704,7 @@
     startLesson(lesson.theme, { daily: true });
   }
   function renderTrain(section = trainSection) {
-    trainSection = section;
+    trainSection = section; store.set('lastTrainSection', section);
     $('train-title').textContent = TRAIN_TITLES[section];
     const done = trainDone(), sr = openingsSR(), d = dailyState(), now = Date.now();
     const item = (key, title, sub, extra = '') => `<button type="button" class="btn replay-item" data-train="${key}"><strong>${escHtml(title)}${extra}</strong><span>${escHtml(sub)}</span></button>`;
@@ -6073,10 +6073,17 @@
   function closeOtbView() { if (otbStopWatch) otbStopWatch(); otbStopWatch = null; otbView = null; }
   function openOtb() { returnTo = 'home'; closeOtbView(); otbId = null; otbNew = null; show('otb'); renderOtb(); otbSync().then(() => { if (document.body.dataset.screen === 'otb' && !otbId && !otbNew) renderOtb(); }); }
   $('btn-otb').onclick = openOtb;
+  // Après un rafraîchissement de la page : retour au tournoi qui était ouvert, sur le même onglet
+  function restoreOtb() {
+    const last = store.get('lastOtb', null); // lu avant openOtb, qui le remet à zéro
+    openOtb();
+    if (last && otbList().some((t) => t.id === last.id)) { otbId = last.id; otbTab = last.tab || 'round'; renderOtb(); }
+  }
   updateOtbCount();
 
   function renderOtb() {
     const t = otbGet();
+    store.set('lastOtb', t && !otbReadOnly(t) ? { id: t.id, tab: otbTab } : null); // rouvert après un rafraîchissement
     $('otb-title').textContent = t ? t.name : L('Tournoi en réel', 'Over-the-board tournament');
     if (otbNew) return renderOtbSetup();
     if (!t) return renderOtbHome();
@@ -7093,16 +7100,25 @@
 
   const savedGame = store.get('game', null);
   const savedScreen = store.get('lastScreen', null);
-  const restorableScreens = ['home', 'program', 'champions', 'setup', 'game', 'settings', 'problems', 'stats', 'rules', 'about'];
-  // L'accueil présente le jardin et laisse « Continuer mon aventure » ouvrir les reprises disponibles.
-  const initialScreen = 'home';
-  if (initialScreen === 'game' && savedGame && savedGame.cfg) {
-    startGame(savedGame.cfg, savedGame.moves, savedGame.result, savedGame.flipped, savedGame.terrain, savedGame.weather);
-  } else {
-    if (initialScreen === 'setup') renderSetup();
-    if (initialScreen === 'settings') renderSettings();
-    show(initialScreen);
+  // À l'ouverture de l'appli, l'accueil présente le jardin et « Continuer mon aventure » ouvre les reprises.
+  // Quand on rafraîchit la page, on revient sur l'écran où l'on était (même partie, même tournoi…).
+  const reloaded = (() => { try { const nav = performance.getEntriesByType('navigation')[0]; return nav ? nav.type === 'reload' : performance.navigation && performance.navigation.type === 1; } catch { return false; } })();
+  // Écrans rouverts en rejouant le bouton qui les ouvre (il prépare lui-même leur contenu)
+  const REOPEN = {
+    program: 'btn-program', champions: 'btn-champions', setup: 'btn-new', problems: 'btn-problems', stats: 'btn-stats', rules: 'btn-rules', about: 'btn-about',
+    settings: 'btn-settings', shop: 'btn-shop', profile: 'btn-profile', online: 'btn-online', tournaments: 'btn-tournaments', club: 'btn-club',
+    account: 'btn-account', 'replay-external': 'btn-replay-external',
+  };
+  let restored = false;
+  if (reloaded && savedScreen && savedScreen !== 'home') {
+    try {
+      if (savedScreen === 'game' && savedGame && savedGame.cfg) { startGame(savedGame.cfg, savedGame.moves, savedGame.result, savedGame.flipped, savedGame.terrain, savedGame.weather); restored = true; }
+      else if (savedScreen === 'otb') { restoreOtb(); restored = true; }
+      else if (savedScreen === 'train') { const sec = store.get('lastTrainSection', 'daily'); const b = document.querySelector(`[data-train-section="${sec}"]`); if (b) { b.click(); restored = true; } }
+      else if (REOPEN[savedScreen] && $(REOPEN[savedScreen])) { $(REOPEN[savedScreen]).click(); restored = document.body.dataset.screen === savedScreen; }
+    } catch { restored = false; }
   }
+  if (!restored) show('home');
   if (!playerProfile().nameAsked) setTimeout(promptPlayerName, 250);
   openSharedLink();
   setTimeout(analyseNext, 3000);

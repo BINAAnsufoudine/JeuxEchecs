@@ -387,7 +387,7 @@
     startLesson(lesson.theme, { daily: true });
   }
   function renderTrain(section = trainSection) {
-    trainSection = section;
+    trainSection = section; store.set('lastTrainSection', section);
     $('train-title').textContent = TRAIN_TITLES[section];
     const done = trainDone(), sr = openingsSR(), d = dailyState(), now = Date.now();
     const item = (key, title, sub, extra = '') => `<button type="button" class="btn replay-item" data-train="${key}"><strong>${escHtml(title)}${extra}</strong><span>${escHtml(sub)}</span></button>`;

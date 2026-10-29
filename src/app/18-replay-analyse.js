@@ -744,16 +744,25 @@
 
   const savedGame = store.get('game', null);
   const savedScreen = store.get('lastScreen', null);
-  const restorableScreens = ['home', 'program', 'champions', 'setup', 'game', 'settings', 'problems', 'stats', 'rules', 'about'];
-  // L'accueil présente le jardin et laisse « Continuer mon aventure » ouvrir les reprises disponibles.
-  const initialScreen = 'home';
-  if (initialScreen === 'game' && savedGame && savedGame.cfg) {
-    startGame(savedGame.cfg, savedGame.moves, savedGame.result, savedGame.flipped, savedGame.terrain, savedGame.weather);
-  } else {
-    if (initialScreen === 'setup') renderSetup();
-    if (initialScreen === 'settings') renderSettings();
-    show(initialScreen);
+  // À l'ouverture de l'appli, l'accueil présente le jardin et « Continuer mon aventure » ouvre les reprises.
+  // Quand on rafraîchit la page, on revient sur l'écran où l'on était (même partie, même tournoi…).
+  const reloaded = (() => { try { const nav = performance.getEntriesByType('navigation')[0]; return nav ? nav.type === 'reload' : performance.navigation && performance.navigation.type === 1; } catch { return false; } })();
+  // Écrans rouverts en rejouant le bouton qui les ouvre (il prépare lui-même leur contenu)
+  const REOPEN = {
+    program: 'btn-program', champions: 'btn-champions', setup: 'btn-new', problems: 'btn-problems', stats: 'btn-stats', rules: 'btn-rules', about: 'btn-about',
+    settings: 'btn-settings', shop: 'btn-shop', profile: 'btn-profile', online: 'btn-online', tournaments: 'btn-tournaments', club: 'btn-club',
+    account: 'btn-account', 'replay-external': 'btn-replay-external',
+  };
+  let restored = false;
+  if (reloaded && savedScreen && savedScreen !== 'home') {
+    try {
+      if (savedScreen === 'game' && savedGame && savedGame.cfg) { startGame(savedGame.cfg, savedGame.moves, savedGame.result, savedGame.flipped, savedGame.terrain, savedGame.weather); restored = true; }
+      else if (savedScreen === 'otb') { restoreOtb(); restored = true; }
+      else if (savedScreen === 'train') { const sec = store.get('lastTrainSection', 'daily'); const b = document.querySelector(`[data-train-section="${sec}"]`); if (b) { b.click(); restored = true; } }
+      else if (REOPEN[savedScreen] && $(REOPEN[savedScreen])) { $(REOPEN[savedScreen]).click(); restored = document.body.dataset.screen === savedScreen; }
+    } catch { restored = false; }
   }
+  if (!restored) show('home');
   if (!playerProfile().nameAsked) setTimeout(promptPlayerName, 250);
   openSharedLink();
   setTimeout(analyseNext, 3000);
