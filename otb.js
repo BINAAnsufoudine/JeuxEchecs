@@ -13,6 +13,7 @@
     const entrants = opts.entrants.map((e, i) => ({ no: i + 1, name: String(e.name).trim(), players: type === 'team' ? (e.players || []).map((p) => String(p).trim()).filter(Boolean) : undefined, out: false }));
     const t = {
       id: Date.now(), name: String(opts.name || '').trim() || 'Tournoi', type, format: opts.format || 'swiss',
+      info: { date: opts.date || '', time: opts.time || '', place: String(opts.place || '').trim(), referee: String(opts.referee || '').trim() },
       boards: type === 'team' ? Math.max(1, opts.boards || 4) : 1, entrants, rounds: [], status: 'running', createdAt: Date.now(),
     };
     t.totalRounds = totalRounds(t, opts.rounds);

@@ -1221,3 +1221,8 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
 .otb-big td:first-child { color: #e8b84a; font-weight: 800; width: 2.5em; }
 .otb-big p { opacity: .5; font-size: .6em; margin-top: 1.5em; }
 @media (max-width: 560px) { .otb-match { grid-template-columns: 1fr; } .otb-match .otb-side:last-of-type { text-align: left; } .otb-match.board { grid-template-columns: 1fr auto; } }
+.otb-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.otb-info-grid label { display: block; min-width: 0; }
+.otb-info-grid .wide { grid-column: 1 / -1; }
+.otb-info { margin: 0 0 6px; padding: 8px 12px; border-radius: 10px; background: var(--surface); font-weight: 600; line-height: 1.7; }
+.otb-big-info { font-size: .6em; opacity: .75; margin: -.4em 0 1em; }
