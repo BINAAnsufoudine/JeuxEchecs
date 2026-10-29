@@ -6150,6 +6150,9 @@
     if (!w) return toast(L('Autorise les fenêtres pour imprimer.', 'Allow pop-ups to print.'));
     w.document.write(doc); w.document.close();
   }
+  const KO_ROUNDS = L({ barrage: 'Tour de barrage', final: 'Finale', semi: 'Demi-finales', quarter: 'Quarts de finale', eighth: 'Huitièmes de finale' },
+    { barrage: 'Play-in round', final: 'Final', semi: 'Semi-finals', quarter: 'Quarter-finals', eighth: 'Round of 16' });
+  const roundName = (t, no) => KO_ROUNDS[OTB.koStage(t, no)] || L(`Ronde ${no}`, `Round ${no}`);
   const otbSection = (title, items, card) => (items.length ? `<h3 class="train-h">${title} <span class="otb-count">${items.length}</span></h3><div class="replay-items">${items.map(card).join('')}</div>` : '');
   function renderOtbHome() {
     const list = otbList();
@@ -6174,6 +6177,8 @@
       <label class="field-label">${L('Formule', 'Format')}</label>${seg('format', [['swiss', L('Suisse', 'Swiss')], ['rr', L('Toutes rondes', 'Round robin')], ['rr2', L('Aller-retour', 'Double RR')], ['ko', L('Élimination', 'Knockout')]])}
       <p class="level-help">${{ swiss: L('Chaque ronde oppose des joueurs qui ont le même nombre de points, sans jamais rejouer le même adversaire. Idéal pour un grand groupe.', 'Each round pairs players with the same score, never the same opponent twice. Ideal for a big group.'), rr: L('Chacun rencontre tout le monde une fois.', 'Everyone meets everyone once.'), rr2: L('Chacun rencontre tout le monde deux fois, une fois avec chaque couleur.', 'Everyone meets everyone twice, once with each colour.'), ko: L('Le perdant est éliminé. En cas de nulle, tu désignes qui passe après une partie de départage.', 'The loser is out. After a draw, you choose who goes through after a tie-break game.') }[f.format]}</p>
       ${f.format === 'swiss' ? `<label class="field-label" for="otb-rounds">${L('Nombre de rondes', 'Number of rounds')}</label><input id="otb-rounds" class="otb-input otb-small" type="number" min="1" max="15" value="${f.rounds || OTB.suggestedRounds(Math.max(2, n))}"${f.rounds ? ' data-touched="1"' : ''}><p class="level-help" id="otb-rounds-help">${L(`Conseillé pour ${n} ${team ? 'équipes' : 'joueurs'} : ${OTB.suggestedRounds(Math.max(2, n))} rondes.`, `Advised for ${n} ${team ? 'teams' : 'players'}: ${OTB.suggestedRounds(Math.max(2, n))} rounds.`)}</p>` : ''}
+      ${f.format === 'ko' && OTB.barrageSize(Math.max(2, n)).direct ? `<p class="otb-info">${L(`Avec ${n} ${team ? 'équipes' : 'joueurs'} : tour de barrage entre ${OTB.barrageSize(n).play}, et ${OTB.barrageSize(n).direct} ${OTB.barrageSize(n).direct > 1 ? 'qualifiés directement' : 'qualifié directement'} pour le tour suivant.`, `With ${n} ${team ? 'teams' : 'players'}: play-in round between ${OTB.barrageSize(n).play}, and ${OTB.barrageSize(n).direct} going straight to the next round.`)}</p>
+        <label class="field-label">${L('Qualifiés directement', 'Straight through')}</label>${seg('byes', [['seeds', L('Les premiers numéros', 'Top numbers')], ['random', L('Tirés au sort', 'Drawn at random')]])}` : ''}
       ${team ? `<label class="field-label" for="otb-boards">${L('Échiquiers par équipe', 'Boards per team')}</label><input id="otb-boards" class="otb-input otb-small" type="number" min="1" max="10" value="${f.boards}">` : ''}
       <label class="field-label" for="otb-names">${team ? L('Équipes', 'Teams') : L('Joueurs', 'Players')} (${n})</label>
       <textarea id="otb-names" class="otb-input" rows="10" placeholder="${team ? L('Une équipe par ligne :\nLes Lions : Awa, Moussa, Fatou, Ibrahim\nLes Aigles : Koffi, Aminata, Seydou, Mariam', 'One team per line:\nLions: Awa, Moussa, Fatou, Ibrahim') : L('Un nom par ligne :\nAwa\nMoussa\nFatou', 'One name per line:\nAwa\nMoussa')}">${escHtml(f.text)}</textarea>
@@ -6214,7 +6219,7 @@
   // Nom du joueur d'une équipe à un échiquier, et couleur : l'équipe citée en premier a les Blancs aux échiquiers impairs
   const boardPlayer = (t, no, k) => { const e = OTB.byNo(t, no); return (e && e.players && e.players[k]) || L(`Joueur ${k + 1}`, `Player ${k + 1}`); };
   function tableHtml(t, p, i, locked) {
-    if (p.b == null) return `<div class="otb-table bye"><b>${L('Exempt', 'Bye')}</b><span>${who(t, p.a)}</span><small>${t.format === 'ko' ? L('qualifié d’office pour le tour suivant', 'goes straight to the next round') : t.type === 'team' ? L('+2 points de match', '+2 match points') : L('+1 point', '+1 point')}</small></div>`;
+    if (p.b == null) return `<div class="otb-table bye"><b>${t.format === 'ko' ? L('Qualifié', 'Through') : L('Exempt', 'Bye')}</b><span>${who(t, p.a)}</span><small>${t.format === 'ko' ? L(`qualifié directement pour ${({ final: 'la finale', semi: 'les demi-finales', quarter: 'les quarts de finale', eighth: 'les huitièmes de finale' })[OTB.koStage(t, OTB.current(t).no + 1)] || 'le tour suivant'}`, `goes straight to the ${(KO_ROUNDS[OTB.koStage(t, OTB.current(t).no + 1)] || 'next round').toLowerCase()}`) : t.type === 'team' ? L('+2 points de match', '+2 match points') : L('+1 point', '+1 point')}</small></div>`;
     let html = `<div class="otb-table"><div class="otb-head"><b>${L('Table', 'Table')} ${p.table}</b>`;
     if (t.type !== 'team') {
       html += `</div><div class="otb-match"><span class="otb-side">⚪ ${who(t, p.a)}</span>${resultButtons(`data-t="${i}"`, p.r, locked)}<span class="otb-side">⚫ ${who(t, p.b)}</span></div>`;
@@ -6268,7 +6273,7 @@
   }
   function renderOtbTournament(t) {
     const round = OTB.current(t), done = OTB.roundDone(t, round), over = t.status === 'over', ro = otbReadOnly(t);
-    const tabs = [['round', over ? L('Podium', 'Podium') : L(`Ronde ${round.no}`, `Round ${round.no}`)], ['table', L('Classement', 'Standings')], ['people', t.type === 'team' ? L('Équipes', 'Teams') : L('Joueurs', 'Players')], ['history', L('Rondes', 'Rounds')]];
+    const tabs = [['round', over ? L('Podium', 'Podium') : roundName(t, round.no)], ['table', L('Classement', 'Standings')], ['people', t.type === 'team' ? L('Équipes', 'Teams') : L('Joueurs', 'Players')], ['history', L('Rondes', 'Rounds')]];
     const infoLine = otbInfoLine(t, '<br>');
     const shares = Object.entries(t.shares || {});
     let html = `${ro ? `<p class="otb-shared-note">👁️ ${L(`Tournoi de ${escHtml(otbView.ownerName)}, suivi en direct (lecture seule)`, `${escHtml(otbView.ownerName)}’s tournament, followed live (read only)`)}</p>` : ''}${infoLine ? `<p class="otb-info">${infoLine}</p>` : ''}<p class="level-help">${FORMAT_NAMES[t.format]} · ${t.entrants.length} ${t.type === 'team' ? L(`équipes · ${t.boards} échiquiers`, `teams · ${t.boards} boards`) : L('joueurs', 'players')} · ${over ? L('tournoi terminé', 'finished') : L(`ronde ${round.no} sur ${t.totalRounds}`, `round ${round.no} of ${t.totalRounds}`)}</p>
@@ -6299,7 +6304,7 @@
           : `<p class="level-help">${t.format === 'swiss' ? '' : L('Dans cette formule, la liste est fixée au départ : un joueur absent perd ses parties par forfait (saisis 1-0 ou 0-1).', 'In this format the list is fixed: an absent player loses by forfeit (enter 1-0 or 0-1).')}</p>`}`;
     }
     if (otbTab === 'history') {
-      html += t.rounds.map((r) => `<h3 class="train-h">${L(`Ronde ${r.no}`, `Round ${r.no}`)}</h3><table class="tour-table">${r.tables.map((p) => {
+      html += t.rounds.map((r) => `<h3 class="train-h">${roundName(t, r.no)}</h3><table class="tour-table">${r.tables.map((p) => {
         const s = OTB.tableScore(t, p);
         const res = p.b == null ? L('exempt', 'bye') : s.done ? (t.type === 'team' ? `${s.ga} – ${s.gb}` : { '1-0': '1 – 0', '0-1': '0 – 1', '1/2': '½ – ½' }[p.r]) : '…';
         return `<tr><td>${p.table}</td><td>${who(t, p.a)}</td><td><b>${res}</b>${t.format === 'ko' && s.done && s.a === s.b && p.adv != null ? ` <small>(${L('qualifié par l’organisateur', 'qualified by the organiser')} : ${escHtml(OTB.byNo(t, p.adv).name)})</small>` : ''}${t.format === 'ko' && s.done && s.a === s.b && p.adv == null && OTB.winnerOf(t, p) != null ? ` <small>(${L('départage', 'play-off')} : ${(p.tb || []).map((g) => ({ '1-0': '1-0', '0-1': '0-1', '1/2': '½' }[g.r] || '…')).join(', ')} · ${L('qualifié', 'through')} : ${escHtml(OTB.byNo(t, OTB.winnerOf(t, p)).name)})</small>` : ''}</td><td>${p.b == null ? '' : who(t, p.b)}</td></tr>`;
@@ -6320,7 +6325,7 @@
     const round = OTB.current(t), over = t.status === 'over';
     const box = document.createElement('div');
     box.className = 'otb-big';
-    box.innerHTML = `<h1>${escHtml(t.name)} · ${over ? L('Classement final', 'Final standings') : L(`Ronde ${round.no}`, `Round ${round.no}`)}</h1>${otbInfoLine(t) ? `<div class="otb-big-info">${otbInfoLine(t)}</div>` : ''}`
+    box.innerHTML = `<h1>${escHtml(t.name)} · ${over ? L('Classement final', 'Final standings') : roundName(t, round.no)}</h1>${otbInfoLine(t) ? `<div class="otb-big-info">${otbInfoLine(t)}</div>` : ''}`
       + (over ? `<ol>${OTB.standings(t).slice(0, 10).map((x) => `<li>${escHtml(x.name)} <b>${x.pts}</b></li>`).join('')}</ol>`
         : `<table>${round.tables.map((p) => (p.b == null ? `<tr><td>—</td><td colspan="3">${escHtml(plain(t, p.a))} : ${L('exempt', 'bye')}</td></tr>` : `<tr><td>${p.table}</td><td>⚪ ${escHtml(plain(t, p.a))}</td><td>${L('contre', 'vs')}</td><td>⚫ ${escHtml(plain(t, p.b))}</td></tr>`)).join('')}</table>`)
       + `<p>${L('Toucher l’écran pour fermer', 'Tap to close')}</p>`;
@@ -6337,7 +6342,7 @@
     }).join('');
     const doc = `<!doctype html><html lang="${window.LANG === 'en' ? 'en' : 'fr'}"><head><meta charset="utf-8"><title>${escHtml(t.name)}</title><style>body{font:14px system-ui,sans-serif;margin:24px;color:#000}h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;margin:20px 0 6px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #999;padding:6px 8px;text-align:left}td.r{text-align:center;width:110px}tr.bd td{font-size:12px;color:#333}</style></head><body>
       <h1>${escHtml(t.name)}</h1>${otbInfoLine(t) ? `<div>${otbInfoLine(t)}</div>` : ''}<div>${FORMAT_NAMES[t.format]} · ${over ? L('tournoi terminé', 'finished') : L(`ronde ${round.no} sur ${t.totalRounds}`, `round ${round.no} of ${t.totalRounds}`)}</div>
-      ${over ? '' : `<h2>${L(`Ronde ${round.no} : appariements`, `Round ${round.no}: pairings`)}</h2><table><tr><th>${L('Table', 'Table')}</th><th>${L('Blancs', 'White')}</th><th>${L('Résultat', 'Result')}</th><th>${L('Noirs', 'Black')}</th></tr>${rows}</table>`}
+      ${over ? '' : `<h2>${roundName(t, round.no)} : ${L('appariements', 'pairings')}</h2><table><tr><th>${L('Table', 'Table')}</th><th>${L('Blancs', 'White')}</th><th>${L('Résultat', 'Result')}</th><th>${L('Noirs', 'Black')}</th></tr>${rows}</table>`}
       <h2>${L('Classement', 'Standings')}</h2><table><tr><th>#</th><th>${t.type === 'team' ? L('Équipe', 'Team') : L('Joueur', 'Player')}</th><th>${L('Points', 'Points')}</th>${t.type === 'team' ? `<th>${L('Pts parties', 'Game pts')}</th>` : ''}<th>Buchholz</th></tr>${st.map((x, i) => `<tr><td>${i + 1}</td><td>${escHtml(plain(t, x.no))}</td><td>${x.pts}</td>${t.type === 'team' ? `<td>${x.game}</td>` : ''}<td>${x.buch}</td></tr>`).join('')}</table>
       <script>window.onload=()=>{window.print();}<\/script></body></html>`;
     const w = window.open('', '_blank');
@@ -6358,6 +6363,11 @@
   $('otb-body').addEventListener('input', (e) => {
     if (!otbNew) return;
     if (e.target.id === 'otb-rounds') e.target.dataset.touched = '1';
+    if (e.target.id === 'otb-names' && otbNew.format === 'ko') {
+      const before = otbNew.count, now = parseEntrants({ ...otbNew, text: e.target.value }).length;
+      otbNew.count = now;
+      if (before !== undefined && before !== now) { readOtbForm(); const pos = e.target.selectionStart; renderOtb(); const ta = $('otb-names'); ta.focus(); ta.setSelectionRange(pos, pos); return; }
+    }
     if (e.target.id === 'otb-names') {
       const n = parseEntrants({ ...otbNew, text: e.target.value }).length, sug = OTB.suggestedRounds(Math.max(2, n)), team = otbNew.type === 'team';
       if ($('otb-rounds') && !$('otb-rounds').dataset.touched) $('otb-rounds').value = sug;
@@ -6366,7 +6376,7 @@
   $('otb-body').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
     const act = b.dataset.otb;
-    if (act === 'new') { const now = new Date(); otbNew = { date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`, time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`, place: '', referee: '', name: '', type: 'solo', format: 'swiss', rounds: null, boards: 4, text: '', shuffle: false }; return renderOtb(); }
+    if (act === 'new') { const now = new Date(); otbNew = { date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`, time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`, place: '', referee: '', name: '', type: 'solo', format: 'swiss', rounds: null, boards: 4, text: '', shuffle: false, byes: 'seeds' }; return renderOtb(); }
     if (act === 'cancel') { otbNew = null; return renderOtb(); }
     if (act === 'best') { otbBest = { sel: new Set(otbList().map((t) => t.id)), top: 10, by: 'points' }; return renderOtb(); }
     if (b.dataset.otbBy && otbBest) { otbBest.by = b.dataset.otbBy; return renderOtb(); }

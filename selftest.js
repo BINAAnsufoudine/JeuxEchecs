@@ -170,6 +170,15 @@
         assert(t.status === 'over' && byPlace(1) === 1 && byPlace(2) === 1 && byPlace(3) === 2 && byPlace(5) === 2, `places : ${st.map((x) => x.place).join(',')}`);
         assert(st.find((x) => x.no === 1).pts === 0, 'un exempt ne doit pas marquer de point en élimination directe');
       });
+      await test('Tournoi en réel : tour de barrage en élimination directe', () => {
+        assert(O.barrageSize(6).play === 4 && O.barrageSize(6).direct === 2 && O.barrageSize(8).direct === 0, 'taille du barrage');
+        const t = O.create({ format: 'ko', entrants: names(6), byes: 'random' });
+        const tb = O.current(t).tables, direct = tb.filter((p) => p.b == null).map((p) => p.a);
+        assert(O.koStage(t, 1) === 'barrage' && direct.length === 2 && tb.filter((p) => p.b != null).length === 2, 'barrage mal construit');
+        assert(new Set(tb.flatMap((p) => [p.a, p.b]).filter((x) => x != null)).size === 6, 'un joueur manque au tableau');
+        for (const p of tb) if (p.b != null) p.r = '1-0'; O.next(t);
+        assert(O.koStage(t, 2) === 'semi' && O.current(t).tables.length === 2, 'les demi-finales doivent suivre le barrage');
+      });
       await test('Tournoi en réel : classement cumulé des joueurs sur plusieurs tournois', () => {
         const a = O.create({ format: 'rr', entrants: [{ name: 'Awa' }, { name: 'Moussa' }] });
         O.current(a).tables[0].r = O.current(a).tables[0].a === 1 ? '1-0' : '0-1'; O.next(a); // Awa gagne

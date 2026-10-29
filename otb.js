@@ -17,6 +17,8 @@
       boards: type === 'team' ? Math.max(1, opts.boards || 4) : 1, entrants, rounds: [], status: 'running', createdAt: Date.now(),
     };
     t.totalRounds = totalRounds(t, opts.rounds);
+    // élimination directe : les places du tableau (et donc les qualifiés directs) tirées au sort si demandé
+    if (t.format === 'ko' && opts.byes === 'random') t.seeds = entrants.map((e) => e.no).map((no) => [Math.random(), no]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
     t.rounds.push(pairNext(t));
     return t;
   }
@@ -199,9 +201,12 @@
   }
   function pairKnockout(t, r) {
     if (r === 1) {
+      // Tableau de 2, 4, 8, 16… places : quand il manque des joueurs, le premier tour devient un tour de barrage
+      // et les mieux placés (têtes de série, ou places tirées au sort) sont qualifiés directement pour le tour suivant
       const n = t.entrants.length, size = 2 ** Math.ceil(Math.log2(Math.max(2, n))), order = seedOrder(size), out = [];
+      const seed = (k) => (k <= n ? (t.seeds ? t.seeds[k - 1] : k) : null);
       for (let i = 0; i < size; i += 2) {
-        const a = order[i] <= n ? order[i] : null, b = order[i + 1] <= n ? order[i + 1] : null;
+        const a = seed(order[i]), b = seed(order[i + 1]);
         if (a == null && b == null) continue;
         out.push(a == null ? { a: b, b: null, r: 'bye' } : b == null ? { a, b: null, r: 'bye' } : { a, b, r: null });
       }
@@ -260,6 +265,16 @@
       .sort((p, q) => Math.max(pts(q.a), pts(q.b)) - Math.max(pts(p.a), pts(p.b)) || (pts(q.a) + pts(q.b)) - (pts(p.a) + pts(p.b)) || Math.min(p.a, p.b) - Math.min(q.a, q.b));
     return [...tables, ...out];
   }
+
+  // Nom d'une ronde d'élimination directe : barrage, huitièmes, quarts, demi-finales, finale
+  function koStage(t, no) {
+    if (t.format !== 'ko') return null;
+    const round = t.rounds[no - 1], left = t.totalRounds - no;
+    if (no === 1 && round && round.tables.some((p) => p.b == null) && left > 0) return 'barrage';
+    return left === 0 ? 'final' : left === 1 ? 'semi' : left === 2 ? 'quarter' : left === 3 ? 'eighth' : 'round';
+  }
+  // Avec n joueurs : combien jouent le barrage, combien sont qualifiés directement
+  function barrageSize(n) { const size = 2 ** Math.ceil(Math.log2(Math.max(2, n))), direct = size - n; return { direct: n > 2 && direct ? direct : 0, play: n > 2 && direct ? n - direct : 0 }; }
 
   /* ----- Déroulement ----- */
   const current = (t) => t.rounds[t.rounds.length - 1];
@@ -352,5 +367,5 @@
         : (a, b) => b.pts - a.pts || b.pct - a.pct || b.wins - a.wins || (a.best || 99) - (b.best || 99) || a.name.localeCompare(b.name));
   }
 
-  root.OTB = { aggregate, create, standings, tableScore, roundDone, winnerOf, syncTiebreaks, tiebreakState, addTiebreak, isFinal, next, undoRound, addEntrant, canAddLate, lateUntil, lateJoinRound, current, suggestedRounds, totalRounds, seedOrder, byNo, SCORE };
+  root.OTB = { aggregate, koStage, barrageSize, create, standings, tableScore, roundDone, winnerOf, syncTiebreaks, tiebreakState, addTiebreak, isFinal, next, undoRound, addEntrant, canAddLate, lateUntil, lateJoinRound, current, suggestedRounds, totalRounds, seedOrder, byNo, SCORE };
 })(typeof window !== 'undefined' ? window : globalThis);
