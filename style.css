@@ -173,7 +173,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .captured img { height: 26px; margin-right: -8px; vertical-align: middle; }
 .promo-choices .pc { font-size: clamp(38px, 12vw, 52px); }
 .promo-choices button { background: var(--surface-2) !important; }
-#board { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); width: 100%; height: 100%; touch-action: none; user-select: none; }
+#board { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr)); width: 100%; height: 100%; touch-action: none; user-select: none; container-type: size; }
 .sq { position: relative; display: flex; align-items: center; justify-content: center; }
 .sq.l { background: var(--light); }
 .sq.d { background: var(--dark); }
@@ -208,7 +208,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .pc.b { color: #22201c; -webkit-text-stroke: 0.6px #000; text-shadow: 0 2px 2px rgba(0,0,0,0.25); }
 @media (min-width: 900px) { .pc { font-size: min(5.6vw, 64px, calc((100vh - 140px) / 8 * 0.82)); } }
 .pc.drag { position: fixed; z-index: 50; pointer-events: none; width: auto; height: auto; transform: translate(-50%, -60%) scale(1.15); }
-.pc.move-replay-token { position: absolute; z-index: 6; pointer-events: none; }
+.pc.move-replay-token { position: absolute; z-index: 6; pointer-events: none; width: 12.5%; height: 12.5%; } /* une case, pas tout le plateau */
 .sq.ghost .pc { opacity: 0.3; }
 
 .status { text-align: center; color: var(--muted); min-height: 1.5em; margin-top: 6px; font-weight: 500; }
@@ -1253,3 +1253,6 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
 /* Mode deux joueurs : les pièces du camp du haut sont tournées vers le joueur assis en face */
 #board.face-to-face[data-top="b"] .pc.b:not(.drag), #board.face-to-face[data-top="w"] .pc.w:not(.drag) { transform: rotate(180deg); }
 #board.face-to-face .coord.top { transform: rotate(180deg); }
+/* Les pièces 2D suivent la taille réelle du plateau (vue 2D seule comprise) : sinon une case trop petite
+   pour la pièce élargissait les colonnes, le plateau débordait et les clics tombaient sur la mauvaise case */
+@supports (font-size: 1cqi) { #board .pc:not(.drag) { font-size: 10cqi; } }

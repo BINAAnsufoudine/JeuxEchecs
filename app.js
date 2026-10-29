@@ -1056,9 +1056,11 @@
         token.style.left = `${fromCol * 12.5}%`;
         token.style.top = `${fromRow * 12.5}%`;
         el.appendChild(token);
+        // mode deux joueurs : la pièce du camp du haut reste retournée pendant son déplacement
+        const turned = el.classList.contains('face-to-face') && colorOf(piece) === el.dataset.top ? ' rotate(180deg)' : '';
         const animation = token.animate([
-          { transform: 'translate(0, 0)' },
-          { transform: `translate(${(toCol - fromCol) * 100}%, ${(toRow - fromRow) * 100}%)` },
+          { transform: `translate(0, 0)${turned}` },
+          { transform: `translate(${(toCol - fromCol) * 100}%, ${(toRow - fromRow) * 100}%)${turned}` },
         ], { duration: 800, easing: 'cubic-bezier(.2,.75,.35,1)' });
         animation.onfinish = () => { token.remove(); if (target) target.style.visibility = ''; };
       };
