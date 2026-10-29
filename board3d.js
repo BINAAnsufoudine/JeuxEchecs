@@ -217,7 +217,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const terrain = this.terrain;
       const squareLight = terrain ? terrain.squares[0] : light;
       const squareDark = terrain ? terrain.squares[1] : dark;
-      const key = light + dark + coords + flipped + (terrain ? terrain.name : '') + board.map((p) => p || '.').join('');
+      const key = light + dark + coords + flipped + !!this.faceToFace + (terrain ? terrain.name : '') + board.map((p) => p || '.').join('');
       if (key === this.boardTextureKey) return;
       this.boardTextureKey = key;
       const c = this.boardCanvas.getContext('2d');
@@ -251,6 +251,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           c.save();
           c.translate(x + cell * 0.5, y + cell * 0.5);
           if (flipped) c.rotate(Math.PI);
+          // mode deux joueurs (faceToFace) : l'icône du camp d'en face est tournée vers ce joueur
+          if (this.faceToFace && white === flipped) c.rotate(Math.PI);
           c.font = `${Math.round(cell * 0.94)}px "DejaVu Sans", "Segoe UI Symbol", "Noto Sans Symbols 2", "Apple Symbols", serif`;
           c.textAlign = 'center'; c.textBaseline = 'middle';
           c.lineWidth = cell * 0.065; c.lineJoin = 'round';

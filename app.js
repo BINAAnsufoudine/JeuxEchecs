@@ -777,9 +777,10 @@
       token.style.left = `${(from & 7) * 12.5}%`;
       token.style.top = `${(from >> 3) * 12.5}%`;
       minimap.appendChild(token);
+      const turned = minimap.classList.contains('face-to-face') && colorOf(piece) === minimap.dataset.top ? ' rotate(180deg)' : '';
       token.animate([
-        { transform: 'translate(0, 0)' },
-        { transform: `translate(${((to & 7) - (from & 7)) * 100}%, ${((to >> 3) - (from >> 3)) * 100}%)` },
+        { transform: `translate(0, 0)${turned}` },
+        { transform: `translate(${((to & 7) - (from & 7)) * 100}%, ${((to >> 3) - (from >> 3)) * 100}%)${turned}` },
       ], { duration: 800, easing: 'cubic-bezier(.2,.75,.35,1)' }).onfinish = () => token.remove();
     };
     animatePiece(last.from, last.to, last.piece);
@@ -940,8 +941,9 @@
   function renderBoard() {
     const el = $('board');
     // Deux joueurs sur le même appareil posé à plat : les pièces du joueur d'en face sont retournées vers lui
-    el.classList.toggle('face-to-face', !!(cfg && cfg.mode === 'local' && !replay));
-    el.dataset.top = flipped ? 'w' : 'b';
+    const faceToFace = !!(cfg && cfg.mode === 'local' && !replay);
+    for (const board of [el, $('minimap')]) { board.classList.toggle('face-to-face', faceToFace); board.dataset.top = flipped ? 'w' : 'b'; }
+    if (b3d) b3d.faceToFace = faceToFace; // icônes du plateau 3D (les pièces 3D ne changent pas)
     if (!minimapMove && !minimapResize) placeMinimap();
     const s = game.state;
     const last = replayAnimationOverride || game.lastMove();

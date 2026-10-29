@@ -1256,3 +1256,4 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
 /* Les pièces 2D suivent la taille réelle du plateau (vue 2D seule comprise) : sinon une case trop petite
    pour la pièce élargissait les colonnes, le plateau débordait et les clics tombaient sur la mauvaise case */
 @supports (font-size: 1cqi) { #board .pc:not(.drag) { font-size: 10cqi; } }
+#minimap.face-to-face[data-top="b"] button b.k, #minimap.face-to-face[data-top="w"] button b.w { display: inline-block; transform: rotate(180deg); }
