@@ -172,6 +172,18 @@
         assert(awa.name.trim().toLowerCase() === 'awa' && awa.pts === 1.5 && awa.games === 2 && awa.tournaments === 2 && awa.gold === 2, `Awa : ${JSON.stringify(awa)}`);
         assert(rows.length === 3, 'les joueurs de même nom doivent être regroupés');
       });
+      await test('Tournoi en réel : retardataires acceptés seulement jusqu\'à la ronde fixée', () => {
+        const t = O.create({ format: 'swiss', rounds: 5, entrants: names(6) });
+        assert(O.lateUntil(t) === 3, 'limite par défaut : la moitié des rondes');
+        const n7 = O.addEntrant(t, 'Tard', []);
+        assert(n7 && O.current(t).tables.some((p) => p.a === n7 || p.b === n7), 'ronde 1 pas refaite avec le retardataire');
+        const play = () => { for (const p of O.current(t).tables) if (p.b != null) p.r = '1-0'; O.next(t); };
+        play(); // ronde 2 en cours : un retardataire entrera à la ronde 3
+        assert(O.canAddLate(t) && O.lateJoinRound(t) === 3, 'retardataire refusé trop tôt');
+        play(); // ronde 3 en cours : il entrerait à la ronde 4, au-delà de la limite
+        assert(!O.canAddLate(t) && O.addEntrant(t, 'Trop tard', []) == null, 'retardataire accepté alors que le tournoi est trop avancé');
+        t.lateUntil = 4; assert(O.canAddLate(t), 'la limite réglée par l\'organisateur n\'est pas prise en compte');
+      });
       await test('Tournoi en réel : par équipes, points de match et de parties', () => {
         const t = run({ type: 'team', format: 'swiss', boards: 4, entrants: names(6) }), st = O.standings(t);
         assert(st.every((x) => x.game <= t.rounds.length * 4), 'points de parties impossibles');

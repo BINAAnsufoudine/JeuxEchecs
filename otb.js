@@ -259,9 +259,19 @@
     t.rounds.pop();
     return true;
   }
+  /* ----- Retardataires (système suisse) ----- */
+  // Acceptés jusqu'à une ronde fixée par l'organisateur (par défaut la moitié du tournoi) : au-delà, le tournoi
+  // est trop avancé. Tant qu'aucun résultat de la ronde 1 n'est saisi, la ronde 1 est refaite avec eux ;
+  // sinon ils entrent à la ronde suivante avec 0 point.
+  const lateUntil = (t) => (t.lateUntil != null ? t.lateUntil : Math.ceil(t.totalRounds / 2));
+  const untouched = (t) => t.rounds.length === 1 && current(t).tables.every((p) => p.b == null || (!p.r && !(p.games || []).some((g) => g.r)));
+  const lateJoinRound = (t) => (untouched(t) ? 1 : current(t).no + 1);
+  const canAddLate = (t) => t.format === 'swiss' && t.status !== 'over' && lateJoinRound(t) <= Math.min(lateUntil(t), t.totalRounds);
   function addEntrant(t, name, players) {
-    const no = Math.max(0, ...t.entrants.map((e) => e.no)) + 1;
-    t.entrants.push({ no, name: String(name).trim(), players: t.type === 'team' ? players || [] : undefined, out: false });
+    if (!canAddLate(t)) return null;
+    const no = Math.max(0, ...t.entrants.map((e) => e.no)) + 1, redo = untouched(t);
+    t.entrants.push({ no, name: String(name).trim(), players: t.type === 'team' ? players || [] : undefined, out: false, lateFrom: redo ? 1 : current(t).no + 1 });
+    if (redo) { t.rounds = []; t.rounds.push(pairNext(t)); }
     return no;
   }
 
@@ -320,5 +330,5 @@
       .sort((a, b) => b.pts - a.pts || b.pct - a.pct || b.wins - a.wins || (a.best || 99) - (b.best || 99) || a.name.localeCompare(b.name));
   }
 
-  root.OTB = { aggregate, create, standings, tableScore, roundDone, winnerOf, syncTiebreaks, tiebreakState, addTiebreak, isFinal, next, undoRound, addEntrant, current, suggestedRounds, totalRounds, seedOrder, byNo, SCORE };
+  root.OTB = { aggregate, create, standings, tableScore, roundDone, winnerOf, syncTiebreaks, tiebreakState, addTiebreak, isFinal, next, undoRound, addEntrant, canAddLate, lateUntil, lateJoinRound, current, suggestedRounds, totalRounds, seedOrder, byNo, SCORE };
 })(typeof window !== 'undefined' ? window : globalThis);

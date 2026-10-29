@@ -6273,9 +6273,13 @@
     if (otbTab === 'table') html += standingsHtml(t);
     if (otbTab === 'people') {
       const canEdit = t.format === 'swiss' && !over;
-      html += `<div class="replay-items">${t.entrants.map((e) => `<div class="btn replay-item otb-person${e.out ? ' otb-out' : ''}"><strong>${who(t, e.no)}</strong>${e.players && e.players.length ? `<span>${e.players.map((p, k) => `${k + 1}. ${escHtml(p)}`).join(' · ')}</span>` : ''}${canEdit ? `<button type="button" class="btn ghost" data-otb-out="${e.no}">${e.out ? L('Réintégrer', 'Bring back') : L('Abandon', 'Withdraw')}</button>` : ''}</div>`).join('')}</div>
-        ${canEdit ? `<p class="level-help">${L('Un joueur qui abandonne n’est plus apparié à partir de la ronde suivante. Un retardataire entre à la prochaine ronde avec 0 point.', 'A withdrawn player is not paired from the next round. A latecomer joins the next round with 0 points.')}</p>
+      html += `<div class="replay-items">${t.entrants.map((e) => `<div class="btn replay-item otb-person${e.out ? ' otb-out' : ''}"><strong>${who(t, e.no)}</strong>${e.players && e.players.length ? `<span>${e.players.map((p, k) => `${k + 1}. ${escHtml(p)}`).join(' · ')}</span>` : ''}${e.lateFrom > 1 ? `<span>${L(`arrivé à la ronde ${e.lateFrom}`, `joined at round ${e.lateFrom}`)}</span>` : ''}${canEdit ? `<button type="button" class="btn ghost" data-otb-out="${e.no}">${e.out ? L('Réintégrer', 'Bring back') : L('Abandon', 'Withdraw')}</button>` : ''}</div>`).join('')}</div>
+        ${canEdit ? `<p class="level-help">${L('Un joueur qui abandonne n’est plus apparié à partir de la ronde suivante.', 'A withdrawn player is not paired from the next round.')}</p>
+          <h3 class="train-h">${t.type === 'team' ? L('Équipes en retard', 'Late teams') : L('Retardataires', 'Latecomers')}</h3>
+          <div class="otb-late-rule"><label for="otb-late-until">${L('Acceptés jusqu’à la ronde', 'Accepted up to round')}</label><input id="otb-late-until" class="otb-input otb-small" type="number" min="1" max="${t.totalRounds}" value="${OTB.lateUntil(t)}"><span>${L(`sur ${t.totalRounds}`, `of ${t.totalRounds}`)}</span></div>
+          ${OTB.canAddLate(t) ? `<p class="level-help">${OTB.lateJoinRound(t) === 1 ? L('Aucun résultat n’est encore saisi : la ronde 1 sera refaite en l’incluant.', 'No result entered yet: round 1 will be redone to include them.') : L(`Il entrera à la ronde ${OTB.lateJoinRound(t)} avec 0 point.`, `They will join round ${OTB.lateJoinRound(t)} with 0 points.`)}</p>
           <div class="club-form"><input id="otb-late" maxlength="40" placeholder="${t.type === 'team' ? L('Équipe : joueur 1, joueur 2…', 'Team: player 1, player 2…') : L('Nom du retardataire', 'Latecomer’s name')}"><button type="button" class="btn" data-otb="late">${L('Ajouter', 'Add')}</button></div>`
+            : `<p class="level-help">🚫 ${L(`Le tournoi est trop avancé : les retardataires ne sont plus acceptés (ils l’étaient jusqu’à la ronde ${OTB.lateUntil(t)}).`, `The tournament is too far along: latecomers are no longer accepted (they were up to round ${OTB.lateUntil(t)}).`)}</p>`}`
           : `<p class="level-help">${t.format === 'swiss' ? '' : L('Dans cette formule, la liste est fixée au départ : un joueur absent perd ses parties par forfait (saisis 1-0 ou 0-1).', 'In this format the list is fixed: an absent player loses by forfeit (enter 1-0 or 0-1).')}</p>`}`;
     }
     if (otbTab === 'history') {
@@ -6327,6 +6331,10 @@
 
   /* ----- Clics ----- */
   $('otb-body').addEventListener('change', (e) => {
+    if (e.target.id === 'otb-late-until') {
+      const t = otbGet(); if (!t || otbReadOnly(t)) return;
+      t.lateUntil = Math.max(1, Math.min(t.totalRounds, Number(e.target.value) || 1)); otbSave(t); return renderOtb();
+    }
     if (!otbBest) return;
     if (e.target.dataset.otbPick) { const id = Number(e.target.dataset.otbPick); if (e.target.checked) otbBest.sel.add(id); else otbBest.sel.delete(id); renderOtb(); }
     if (e.target.id === 'otb-top') { otbBest.top = Math.max(1, Math.min(200, Number(e.target.value) || 10)); renderOtb(); }
@@ -6412,7 +6420,9 @@
     if (act === 'late') {
       const v = $('otb-late').value.trim(); if (!v) return;
       const [name, rest] = t.type === 'team' && v.includes(':') ? [v.slice(0, v.indexOf(':')), v.slice(v.indexOf(':') + 1)] : [v, ''];
-      OTB.addEntrant(t, name.slice(0, 40), rest.split(/[,;]/).map((p) => p.trim()).filter(Boolean));
+      const no = OTB.addEntrant(t, name.slice(0, 40), rest.split(/[,;]/).map((p) => p.trim()).filter(Boolean));
+      if (no == null) return toast(L('Le tournoi est trop avancé pour accepter un retardataire.', 'The tournament is too far along to accept a latecomer.'));
+      toast(OTB.byNo(t, no).lateFrom === 1 ? L(`${name.trim()} ajouté : la ronde 1 a été refaite.`, `${name.trim()} added: round 1 has been redone.`) : L(`${name.trim()} ajouté : il jouera dès la ronde ${OTB.byNo(t, no).lateFrom}.`, `${name.trim()} added: plays from round ${OTB.byNo(t, no).lateFrom}.`));
       otbSave(t); return renderOtb();
     }
     if (act === 'info') {

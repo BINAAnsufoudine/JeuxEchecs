@@ -1242,3 +1242,5 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
 .otb-best-tools .btn { padding: 4px 10px; min-height: 0; }
 .otb-best-list { display: grid; gap: 2px; margin-bottom: 8px; }
 .otb-best td:nth-child(n+3), .otb-best th:nth-child(n+3) { text-align: center; }
+.otb-late-rule { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.otb-late-rule .otb-input { margin: 0; width: 80px; }
