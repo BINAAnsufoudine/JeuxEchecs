@@ -1210,7 +1210,7 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
 .otb-person .btn { margin-left: auto; padding: 4px 10px; min-height: 0; }
 .otb-tools { flex-wrap: wrap; }
 .otb-link { margin-top: 10px; }
-.otb-podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; align-items: end; margin: 6px 0 14px; text-align: center; }
+.otb-podium { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; align-items: end; margin: 6px 0 14px; text-align: center; }
 .otb-podium div { background: var(--surface); border-radius: 12px; padding: 12px 6px; display: grid; gap: 2px; }
 .otb-podium .p1 { order: 2; padding-top: 22px; } .otb-podium .p2 { order: 1; } .otb-podium .p3 { order: 3; }
 .otb-podium span { font-size: 1.8rem; }

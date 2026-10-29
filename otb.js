@@ -35,7 +35,10 @@
   // Points d'une table pour chaque camp : en individuel, les points de la partie ; en équipe, les points de match
   // (2 victoire, 1 nulle, 0 défaite) et les points de partie (somme des échiquiers)
   function tableScore(t, p) {
-    if (p.b == null) return { a: t.type === 'team' ? 2 : BYE_POINTS, b: 0, ga: t.type === 'team' ? t.boards * BYE_POINTS : BYE_POINTS, gb: 0, done: true };
+    if (p.b == null) {
+      if (t.format === 'ko') return { a: 0, b: 0, ga: 0, gb: 0, done: true }; // élimination : l'exempt passe le tour, sans point
+      return { a: t.type === 'team' ? 2 : BYE_POINTS, b: 0, ga: t.type === 'team' ? t.boards * BYE_POINTS : BYE_POINTS, gb: 0, done: true };
+    }
     if (t.type !== 'team') {
       const s = SCORE[p.r]; if (!s) return { done: false };
       return { a: s[0], b: s[1], ga: s[0], gb: s[1], done: true };
@@ -111,11 +114,27 @@
       || (t.type === 'team' ? b.game - a.game : 0)
       || (rr ? b.sb - a.sb || b.buch - a.buch : b.buch - a.buch || b.sb - a.sb)
       || b.wins - a.wins || a.no - b.no);
+    list.forEach((x, i) => { x.place = i + 1; });
     if (t.format === 'ko') {
-      // élimination : on est classé par le tour atteint
-      const reached = new Map(t.entrants.map((e) => [e.no, 0]));
-      t.rounds.forEach((round, i) => round.tables.forEach((p) => { reached.set(p.a, i + 1); if (p.b != null) reached.set(p.b, i + 1); const w = winnerOf(t, p); if (w != null && i === t.rounds.length - 1 && t.status === 'over') reached.set(w, i + 2); }));
+      // Élimination directe : on est classé par le tour atteint, et les joueurs éliminés au même tour sont
+      // ex æquo (les deux demi-finalistes battus sont 3es, les quarts de finalistes battus 5es…).
+      // Un exempt passe le tour sans jouer : le tour atteint compte, pas les points.
+      const reached = new Map(t.entrants.map((e) => [e.no, 0])), alive = new Set();
+      t.rounds.forEach((round, i) => round.tables.forEach((p) => {
+        reached.set(p.a, i + 1); if (p.b != null) reached.set(p.b, i + 1);
+        const w = winnerOf(t, p);
+        if (w != null && i === t.rounds.length - 1) { if (t.status === 'over') reached.set(w, i + 2); }
+        if (i === t.rounds.length - 1 && t.status !== 'over' && w == null) { alive.add(p.a); if (p.b != null) alive.add(p.b); }
+        if (i === t.rounds.length - 1 && t.status !== 'over' && w != null) alive.add(w);
+      }));
       list.sort((a, b) => reached.get(b.no) - reached.get(a.no) || b.pts - a.pts || a.no - b.no);
+      list.forEach((x) => {
+        const r = reached.get(x.no), left = t.totalRounds - r;
+        x.place = 1 + list.filter((y) => reached.get(y.no) > r).length;
+        x.tied = list.filter((y) => reached.get(y.no) === r).length > 1 && !alive.has(x.no);
+        x.stage = alive.has(x.no) ? 'alive' : r > t.totalRounds ? 'win' : left === 0 ? 'final' : left === 1 ? 'semi' : left === 2 ? 'quarter' : left === 3 ? 'eighth' : 'round';
+        x.reached = r;
+      });
     }
     return list;
   }
@@ -279,7 +298,7 @@
   // Chaque joueur est reconnu par son nom (sans tenir compte des majuscules ni des espaces en trop).
   // En individuel : les parties du tournoi (départages compris) ; en équipe : les parties de chaque joueur
   // à son échiquier. Classement : points, puis pourcentage, puis victoires, puis meilleure place.
-  function aggregate(list) {
+  function aggregate(list, by = 'points') {
     const key = (n) => String(n || '').trim().replace(/\s+/g, ' ').toLowerCase();
     const map = new Map();
     const P = (name) => {
@@ -317,8 +336,8 @@
       // participation et places
       const names = t.type === 'team' ? t.entrants.flatMap((e) => e.players || []) : t.entrants.map((e) => e.name);
       names.forEach((n) => { const x = P(n); if (x) x.tournaments.add(t.id); });
-      if (t.status === 'over') standings(t).forEach((s, i) => {
-        const members = t.type === 'team' ? (byNo(t, s.no) || {}).players || [] : [s.name];
+      if (t.status === 'over') standings(t).forEach((s) => {
+        const members = t.type === 'team' ? (byNo(t, s.no) || {}).players || [] : [s.name], i = s.place - 1;
         members.forEach((n) => {
           const x = P(n); if (!x) return;
           if (i === 0) x.gold++; else if (i === 1) x.silver++; else if (i === 2) x.bronze++;
@@ -327,7 +346,10 @@
       });
     }
     return [...map.values()].map((x) => ({ ...x, tournaments: x.tournaments.size, pct: x.games ? Math.round((x.wins + x.draws / 2) / x.games * 100) : 0 }))
-      .sort((a, b) => b.pts - a.pts || b.pct - a.pct || b.wins - a.wins || (a.best || 99) - (b.best || 99) || a.name.localeCompare(b.name));
+      .sort(by === 'places'
+        // par places : médailles d'or, puis d'argent, puis de bronze, puis meilleure place, puis points
+        ? (a, b) => b.gold - a.gold || b.silver - a.silver || b.bronze - a.bronze || (a.best || 99) - (b.best || 99) || b.pts - a.pts || a.name.localeCompare(b.name)
+        : (a, b) => b.pts - a.pts || b.pct - a.pct || b.wins - a.wins || (a.best || 99) - (b.best || 99) || a.name.localeCompare(b.name));
   }
 
   root.OTB = { aggregate, create, standings, tableScore, roundDone, winnerOf, syncTiebreaks, tiebreakState, addTiebreak, isFinal, next, undoRound, addEntrant, canAddLate, lateUntil, lateJoinRound, current, suggestedRounds, totalRounds, seedOrder, byNo, SCORE };

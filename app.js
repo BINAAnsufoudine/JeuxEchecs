@@ -6122,23 +6122,25 @@
   }
   function renderOtbBest() {
     const list = otbList(), sel = otbBest.sel, chosen = list.filter((t) => sel.has(t.id));
-    const rows = OTB.aggregate(chosen), top = rows.slice(0, otbBest.top);
+    const rows = OTB.aggregate(chosen, otbBest.by), top = rows.slice(0, otbBest.top);
     const medals = (x) => `${'🥇'.repeat(x.gold)}${'🥈'.repeat(x.silver)}${'🥉'.repeat(x.bronze)}` || '—';
     $('otb-body').innerHTML = `<p class="level-help">${L('Coche les tournois à prendre en compte : l’appli additionne les résultats de chaque joueur (reconnu par son nom) et les classe. En équipe, ce sont les parties de chaque joueur à son échiquier qui comptent.', 'Tick the tournaments to include: the app adds up each player’s results (matched by name) and ranks them. In team events, each player’s own board games count.')}</p>
       <div class="otb-best-tools"><button type="button" class="btn ghost" data-otb="best-all">${L('Tout cocher', 'Select all')}</button><button type="button" class="btn ghost" data-otb="best-none">${L('Tout décocher', 'Clear')}</button></div>
       <div class="otb-best-list">${list.map((t) => `<label class="switch"><input type="checkbox" data-otb-pick="${t.id}"${sel.has(t.id) ? ' checked' : ''}><span>${t.type === 'team' ? '👥' : '♟️'} ${escHtml(t.name)}${t.info && t.info.date ? ` · ${fmtOtbDate(t.info.date)}` : ''}${t.status === 'over' ? '' : ` · ${L('en cours', 'in progress')}`}</span></label>`).join('')}</div>
+      <label class="field-label">${L('Classer par', 'Rank by')}</label>
+      <div class="ed-seg otb-tabs">${[['points', L('Points marqués', 'Points scored')], ['places', L('Places obtenues', 'Places achieved')]].map(([v, label]) => `<button type="button" data-otb-by="${v}" class="${otbBest.by === v ? 'on' : ''}">${label}</button>`).join('')}</div>
       <label class="field-label" for="otb-top">${L('Nombre de joueurs à afficher', 'Number of players to show')}</label>
       <input id="otb-top" class="otb-input otb-small" type="number" min="1" max="200" value="${otbBest.top}">
       <h3 class="train-h">${L(`Les ${top.length} meilleurs joueurs`, `Top ${top.length} players`)} <span class="otb-count">${chosen.length} ${L(chosen.length > 1 ? 'tournois' : 'tournoi', chosen.length === 1 ? 'tournament' : 'tournaments')}</span></h3>
       ${top.length ? `<div class="tour-scroll"><table class="tour-table otb-best"><tr><th>${L('Rang', 'Rank')}</th><th>${L('Joueur', 'Player')}</th><th>${L('Points', 'Points')}</th><th>${L('Parties', 'Games')}</th><th>${L('V', 'W')}</th><th>${L('N', 'D')}</th><th>${L('D', 'L')}</th><th>%</th><th>${L('Tournois', 'Events')}</th><th>${L('Podiums', 'Podiums')}</th><th>${L('Meilleure place', 'Best place')}</th></tr>
         ${top.map((x, i) => `<tr><td>${i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}</td><td><b>${escHtml(x.name)}</b></td><td><b>${x.pts}</b></td><td>${x.games}</td><td>${x.wins}</td><td>${x.draws}</td><td>${x.losses}</td><td>${x.pct}&nbsp;%</td><td>${x.tournaments}</td><td>${medals(x)}</td><td>${x.best ? `${x.best}${x.best === 1 ? L('er', 'st') : L('e', 'th')}` : '—'}</td></tr>`).join('')}</table></div>
-        <p class="level-help">${L('Classement : points, puis pourcentage de points marqués, puis victoires. V/N/D : victoires, nulles, défaites (les forfaits comptent dans les points mais pas dans les parties). Podiums et meilleure place : tournois terminés seulement.', 'Order: points, then score percentage, then wins. W/D/L: wins, draws, losses (forfeits count in points but not as games). Podiums and best place: finished tournaments only.')}</p>
+        <p class="level-help">${otbBest.by === 'places' ? L('Classement par places : titres (🥇), puis 2es places, puis 3es places, puis meilleure place, puis points.', 'By places: wins (🥇), then 2nd places, then 3rd places, then best place, then points.') + ' ' : ''}${L('Points marqués : points, puis pourcentage de points marqués, puis victoires. V/N/D : victoires, nulles, défaites (les forfaits comptent dans les points mais pas dans les parties). Podiums et meilleure place : tournois terminés seulement.', 'Order: points, then score percentage, then wins. W/D/L: wins, draws, losses (forfeits count in points but not as games). Podiums and best place: finished tournaments only.')}</p>
         <div class="actions"><button type="button" class="btn" data-otb="best-print">🖨️ ${L('Imprimer', 'Print')}</button></div>`
         : `<p class="level-help">${L('Coche au moins un tournoi.', 'Tick at least one tournament.')}</p>`}
       <div class="actions"><button type="button" class="btn ghost" data-otb="best-close">${L('Mes tournois', 'My tournaments')}</button></div>`;
   }
   function printOtbBest() {
-    const chosen = otbList().filter((t) => otbBest.sel.has(t.id)), top = OTB.aggregate(chosen).slice(0, otbBest.top);
+    const chosen = otbList().filter((t) => otbBest.sel.has(t.id)), top = OTB.aggregate(chosen, otbBest.by).slice(0, otbBest.top);
     const doc = `<!doctype html><html lang="${window.LANG === 'en' ? 'en' : 'fr'}"><head><meta charset="utf-8"><title>${L('Meilleurs joueurs', 'Best players')}</title><style>body{font:14px system-ui,sans-serif;margin:24px;color:#000}h1{font-size:20px;margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border:1px solid #999;padding:6px 8px;text-align:left}</style></head><body>
       <h1>${L(`Les ${top.length} meilleurs joueurs`, `Top ${top.length} players`)}</h1><div>${chosen.map((t) => escHtml(t.name)).join(' · ')}</div>
       <table><tr><th>#</th><th>${L('Joueur', 'Player')}</th><th>${L('Points', 'Points')}</th><th>${L('Parties', 'Games')}</th><th>${L('V', 'W')}</th><th>${L('N', 'D')}</th><th>${L('D', 'L')}</th><th>%</th><th>${L('Tournois', 'Events')}</th><th>🥇</th><th>🥈</th><th>🥉</th></tr>
@@ -6244,7 +6246,20 @@
     }
     return html + '</div>';
   }
+  // Élimination directe : parcours de chaque joueur
+  const STAGES = L({ win: 'Vainqueur', final: 'Finaliste', semi: 'Demi-finale', quarter: 'Quart de finale', eighth: 'Huitième de finale', alive: 'Encore en course' },
+    { win: 'Winner', final: 'Finalist', semi: 'Semi-final', quarter: 'Quarter-final', eighth: 'Round of 16', alive: 'Still in' });
+  const stageName = (x) => STAGES[x.stage] || L(`Éliminé au tour ${x.reached}`, `Out in round ${x.reached}`);
+  function koStandingsHtml(t) {
+    const st = OTB.standings(t), team = t.type === 'team', over = t.status === 'over';
+    const rank = (x) => (over && x.place <= 3 ? ['🥇', '🥈', '🥉'][x.place - 1] : x.place) + (x.tied ? ` <small>${L('ex æquo', 'tied')}</small>` : '');
+    const hadBye = (no) => t.rounds.some((r) => r.tables.some((p) => p.b == null && p.a === no));
+    return `<div class="tour-scroll"><table class="tour-table otb-standings"><tr><th>${L('Rang', 'Rank')}</th><th>${team ? L('Équipe', 'Team') : L('Joueur', 'Player')}</th><th>${L('Parcours', 'Run')}</th><th>${L('Parties', 'Played')}</th><th>${team ? L('Pts match', 'Match pts') : L('Points', 'Points')}</th></tr>
+      ${st.map((x) => `<tr class="${x.out ? 'otb-out' : ''}"><td>${rank(x)}</td><td>${who(t, x.no)}</td><td>${stageName(x)}${hadBye(x.no) ? ` <small>(${L('exempté au 1er tour', 'bye in round 1')})</small>` : ''}</td><td>${x.played}</td><td>${x.pts}</td></tr>`).join('')}</table></div>
+      <p class="level-help">${L('En élimination directe, on est classé par le tour atteint : les joueurs éliminés au même tour sont ex æquo, quels que soient leurs résultats. Un exempté passe le tour sans jouer et sans marquer de point.', 'In a knockout, players are ranked by the round reached: players knocked out in the same round are tied, whatever their results. A bye goes through without playing or scoring.')}</p>`;
+  }
   function standingsHtml(t) {
+    if (t.format === 'ko') return koStandingsHtml(t);
     const st = OTB.standings(t), team = t.type === 'team', rr = t.format === 'rr' || t.format === 'rr2';
     const medal = (i) => (t.status === 'over' && i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1);
     return `<div class="tour-scroll"><table class="tour-table otb-standings"><tr><th>${L('Rang', 'Rank')}</th><th>${team ? L('Équipe', 'Team') : L('Joueur', 'Player')}</th><th>${team ? L('Pts match', 'Match pts') : L('Points', 'Points')}</th>${team ? `<th>${L('Pts parties', 'Game pts')}</th>` : ''}${t.format === 'ko' ? '' : `<th>${rr ? 'S-B' : 'Buchholz'}</th><th>${rr ? 'Buchholz' : 'S-B'}</th>`}<th>${L('Parties', 'Played')}</th></tr>
@@ -6261,7 +6276,8 @@
     if (otbTab === 'round') {
       if (over) {
         const st = OTB.standings(t);
-        html += `<div class="otb-podium">${st.slice(0, 3).map((x, i) => `<div class="p${i + 1}"><span>${['🥇', '🥈', '🥉'][i]}</span><b>${escHtml(x.name)}</b><small>${x.pts} ${t.type === 'team' ? L('pts de match', 'match pts') : L('pts', 'pts')}</small></div>`).join('')}</div>${standingsHtml(t)}`;
+        const podium = st.filter((x) => x.place <= 3);
+        html += `<div class="otb-podium">${podium.map((x) => `<div class="p${x.place}"><span>${['🥇', '🥈', '🥉'][x.place - 1]}</span><b>${escHtml(x.name)}</b><small>${t.format === 'ko' ? stageName(x) : `${x.pts} ${t.type === 'team' ? L('pts de match', 'match pts') : L('pts', 'pts')}`}</small></div>`).join('')}</div>${standingsHtml(t)}`;
       } else {
         const missing = round.tables.filter((p) => !OTB.tableScore(t, p).done || (t.format === 'ko' && p.b != null && OTB.winnerOf(t, p) == null)).length;
         html += `<div class="otb-tables">${round.tables.map((p, i) => [p, i]).sort((x, y) => (x[0].b == null) - (y[0].b == null)).map(([p, i]) => tableHtml(t, p, i, false)).join('')}</div>
@@ -6352,7 +6368,8 @@
     const act = b.dataset.otb;
     if (act === 'new') { const now = new Date(); otbNew = { date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`, time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`, place: '', referee: '', name: '', type: 'solo', format: 'swiss', rounds: null, boards: 4, text: '', shuffle: false }; return renderOtb(); }
     if (act === 'cancel') { otbNew = null; return renderOtb(); }
-    if (act === 'best') { otbBest = { sel: new Set(otbList().map((t) => t.id)), top: 10 }; return renderOtb(); }
+    if (act === 'best') { otbBest = { sel: new Set(otbList().map((t) => t.id)), top: 10, by: 'points' }; return renderOtb(); }
+    if (b.dataset.otbBy && otbBest) { otbBest.by = b.dataset.otbBy; return renderOtb(); }
     if (act === 'best-close') { otbBest = null; return renderOtb(); }
     if (act === 'best-all') { otbList().forEach((t) => otbBest.sel.add(t.id)); return renderOtb(); }
     if (act === 'best-none') { otbBest.sel.clear(); return renderOtb(); }

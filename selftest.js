@@ -162,6 +162,14 @@
         const t4 = O.create({ format: 'ko', entrants: names(4) }), p4 = O.current(t4).tables[0];
         p4.r = '1/2'; assert(!O.addTiebreak(t4, p4) && O.tiebreakState(t4, p4) === 'choose', 'avant la finale, une nulle ne se rejoue pas');
       });
+      await test('Tournoi en réel : élimination directe, classement par tour atteint et ex æquo', () => {
+        const t = O.create({ format: 'ko', entrants: names(6) }); // 1 et 2 exemptés au 1er tour
+        for (const p of O.current(t).tables) if (p.b != null) { p.r = '1/2'; p.adv = p.a; }
+        O.next(t); for (const p of O.current(t).tables) p.r = '0-1'; O.next(t); O.current(t).tables[0].r = '1-0'; O.next(t);
+        const st = O.standings(t), byPlace = (k) => st.filter((x) => x.place === k).length;
+        assert(t.status === 'over' && byPlace(1) === 1 && byPlace(2) === 1 && byPlace(3) === 2 && byPlace(5) === 2, `places : ${st.map((x) => x.place).join(',')}`);
+        assert(st.find((x) => x.no === 1).pts === 0, 'un exempt ne doit pas marquer de point en élimination directe');
+      });
       await test('Tournoi en réel : classement cumulé des joueurs sur plusieurs tournois', () => {
         const a = O.create({ format: 'rr', entrants: [{ name: 'Awa' }, { name: 'Moussa' }] });
         O.current(a).tables[0].r = O.current(a).tables[0].a === 1 ? '1-0' : '0-1'; O.next(a); // Awa gagne
