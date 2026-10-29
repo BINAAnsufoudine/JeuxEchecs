@@ -12,9 +12,15 @@
   const otbGet = () => (otbView && otbId === otbView.key ? otbView.t : otbList().find((t) => t.id === otbId) || null);
   // Enregistré sur l'appareil, puis (compte connecté) sur le compte en ligne, quelques instants après la dernière saisie
   let otbUpload = null;
+  // Nombre de tournois en cours, affiché sur le bouton du menu
+  function updateOtbCount() {
+    const n = otbList().filter((t) => t.status !== 'over').length, el = $('otb-count');
+    el.hidden = !n; el.textContent = n;
+    el.title = L(`${n} tournoi${n > 1 ? 's' : ''} en cours`, `${n} tournament${n === 1 ? '' : 's'} in progress`);
+  }
   function otbSave(t) {
     t.updatedAt = Date.now();
-    const list = otbList().filter((x) => x.id !== t.id); list.unshift(t); store.set('otb', list.slice(0, 50));
+    const list = otbList().filter((x) => x.id !== t.id); list.unshift(t); store.set('otb', list.slice(0, 50)); updateOtbCount();
     if (!ON || !ON.user) return;
     clearTimeout(otbUpload);
     otbUpload = setTimeout(() => ON.saveOtb(t).catch(() => {}), 1500);
@@ -29,7 +35,7 @@
       for (const t of mine) { const l = byId.get(t.id); if (!l || (t.updatedAt || 0) > (l.updatedAt || 0)) byId.set(t.id, t); }
       // les tournois de l'appareil pas encore envoyés partent sur le compte
       for (const t of local) if (!mine.some((m) => m.id === t.id)) ON.saveOtb(t).catch(() => {});
-      store.set('otb', [...byId.values()].sort((a, b) => (b.updatedAt || b.id) - (a.updatedAt || a.id)).slice(0, 50));
+      store.set('otb', [...byId.values()].sort((a, b) => (b.updatedAt || b.id) - (a.updatedAt || a.id)).slice(0, 50)); updateOtbCount();
       otbShared = shared;
     } catch { /* hors ligne : on garde l'appareil */ }
   }
@@ -56,6 +62,7 @@
   function closeOtbView() { if (otbStopWatch) otbStopWatch(); otbStopWatch = null; otbView = null; }
   function openOtb() { returnTo = 'home'; closeOtbView(); otbId = null; otbNew = null; show('otb'); renderOtb(); otbSync().then(() => { if (document.body.dataset.screen === 'otb' && !otbId && !otbNew) renderOtb(); }); }
   $('btn-otb').onclick = openOtb;
+  updateOtbCount();
 
   function renderOtb() {
     const t = otbGet();
@@ -64,13 +71,15 @@
     if (!t) return renderOtbHome();
     renderOtbTournament(t);
   }
+  const otbSection = (title, items, card) => (items.length ? `<h3 class="train-h">${title} <span class="otb-count">${items.length}</span></h3><div class="replay-items">${items.map(card).join('')}</div>` : '');
   function renderOtbHome() {
     const list = otbList();
     $('otb-body').innerHTML = `<p class="level-help">${L('Pour un tournoi joué sur de vrais échiquiers : saisis les noms, l’appli annonce à chaque ronde qui joue contre qui, tu entres les résultats, et elle s’occupe du reste jusqu’au classement final.', 'For a tournament played on real boards: enter the names, the app announces each round who plays whom, you enter the results, and it handles the rest up to the final standings.')}</p>
       <button type="button" class="btn primary wide" data-otb="new">➕ ${L('Nouveau tournoi', 'New tournament')}</button>
       ${ON && ON.user ? '' : `<p class="level-help">${L('Connecte-toi pour garder l’historique de tes tournois sur ton compte et les partager avec d’autres joueurs.', 'Sign in to keep your tournament history on your account and share it with other players.')}</p>`}
       ${otbShared.length ? `<h3 class="train-h">${L('Partagés avec moi', 'Shared with me')}</h3><div class="replay-items">${otbShared.map((s) => `<button type="button" class="btn replay-item" data-otb-shared="${s.docId}"><strong>👁️ ${escHtml(s.t.name)}</strong><span>${L(`Organisé par ${escHtml(s.ownerName)}`, `Organised by ${escHtml(s.ownerName)}`)}${s.t.info && s.t.info.date ? ` · ${fmtOtbDate(s.t.info.date)}` : ''} · ${s.t.status === 'over' ? L('terminé', 'finished') : L(`ronde ${s.t.rounds.length} sur ${s.t.totalRounds}`, `round ${s.t.rounds.length} of ${s.t.totalRounds}`)}</span></button>`).join('')}</div>` : ''}
-      ${list.length ? `<h3 class="train-h">${L('Mes tournois', 'My tournaments')}</h3><div class="replay-items">${list.map((t) => `<button type="button" class="btn replay-item" data-otb-open="${t.id}"><strong>${t.type === 'team' ? '👥' : '♟️'} ${escHtml(t.name)}</strong><span>${t.info && t.info.date ? `${fmtOtbDate(t.info.date)} · ` : ''}${FORMAT_NAMES[t.format]} · ${t.entrants.length} ${t.type === 'team' ? L('équipes', 'teams') : L('joueurs', 'players')} · ${t.status === 'over' ? L('terminé', 'finished') : L(`ronde ${t.rounds.length} sur ${t.totalRounds}`, `round ${t.rounds.length} of ${t.totalRounds}`)}</span></button>`).join('')}</div>` : ''}`;
+      ${otbSection(L('Tournois en cours', 'Tournaments in progress'), list.filter((t) => t.status !== 'over'), (t) => `<button type="button" class="btn replay-item" data-otb-open="${t.id}"><strong>${t.type === 'team' ? '👥' : '♟️'} ${escHtml(t.name)}</strong><span>${t.info && t.info.date ? `${fmtOtbDate(t.info.date)} · ` : ''}${FORMAT_NAMES[t.format]} · ${t.entrants.length} ${t.type === 'team' ? L('équipes', 'teams') : L('joueurs', 'players')} · ${t.status === 'over' ? L('terminé', 'finished') : L(`ronde ${t.rounds.length} sur ${t.totalRounds}`, `round ${t.rounds.length} of ${t.totalRounds}`)}</span></button>`)}
+      ${otbSection(L('Tournois terminés', 'Finished tournaments'), list.filter((t) => t.status === 'over'), (t) => `<button type="button" class="btn replay-item" data-otb-open="${t.id}"><strong>${t.type === 'team' ? '👥' : '♟️'} ${escHtml(t.name)}</strong><span>${t.info && t.info.date ? `${fmtOtbDate(t.info.date)} · ` : ''}${FORMAT_NAMES[t.format]} · ${t.entrants.length} ${t.type === 'team' ? L('équipes', 'teams') : L('joueurs', 'players')} · ${t.status === 'over' ? L('terminé', 'finished') : L(`ronde ${t.rounds.length} sur ${t.totalRounds}`, `round ${t.rounds.length} of ${t.totalRounds}`)}</span></button>`)}`;
   }
 
   /* ----- Création ----- */
@@ -308,7 +317,7 @@
     if (act === 'delete') {
       return modal({ title: L('Supprimer ce tournoi ?', 'Delete this tournament?'), text: t.name, actions: [
         { label: L('Annuler', 'Cancel'), ghost: true },
-        { label: L('Supprimer', 'Delete'), primary: true, onClick: () => { store.set('otb', otbList().filter((x) => x.id !== t.id)); if (ON && ON.user) ON.deleteOtb(t); otbId = null; renderOtb(); } },
+        { label: L('Supprimer', 'Delete'), primary: true, onClick: () => { store.set('otb', otbList().filter((x) => x.id !== t.id)); updateOtbCount(); if (ON && ON.user) ON.deleteOtb(t); otbId = null; renderOtb(); } },
       ] });
     }
     if (b.dataset.otbOut) { const en = OTB.byNo(t, Number(b.dataset.otbOut)); en.out = !en.out; otbSave(t); return renderOtb(); }

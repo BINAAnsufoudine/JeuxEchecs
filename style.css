@@ -1235,3 +1235,5 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
 .otb-ro button:disabled { cursor: default; }
 .otb-ro .otb-res button:disabled { opacity: 1; }
 .otb-ro .otb-res button:disabled:not(.on), .otb-ro .actions button:disabled, .otb-ro .otb-adv button:disabled, .otb-ro .otb-person button:disabled { opacity: .55; }
+.menu-badge.menu-count { background: var(--surface-2); color: var(--text); }
+.otb-count { display: inline-grid; place-items: center; min-width: 1.6em; height: 1.6em; padding: 0 6px; margin-left: 6px; border-radius: 999px; background: #e8b84a; color: #241b05; font-size: .8em; font-weight: 800; vertical-align: middle; }
