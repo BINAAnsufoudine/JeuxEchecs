@@ -37,6 +37,7 @@
           <button id="btn-new" class="btn"><span class="menu-icon" aria-hidden="true">🗡️</span>Nouvelle partie</button>
           <button id="btn-online" class="btn"><span class="menu-icon" aria-hidden="true">🌐</span>Jouer en ligne<span id="online-badge" class="menu-badge" hidden></span></button>
           <button id="btn-tournaments" class="btn"><span class="menu-icon" aria-hidden="true">🏆</span>Tournois<span id="tour-badge" class="menu-badge" hidden></span></button>
+          <button id="btn-otb" class="btn"><span class="menu-icon" aria-hidden="true">♟️</span>Tournoi en réel</button>
           <button id="btn-club" class="btn"><span class="menu-icon" aria-hidden="true">🏫</span>Club ou école</button>
           <button id="btn-editor" class="btn"><span class="menu-icon" aria-hidden="true">🧩</span>Construire une position</button>
         </div>
@@ -353,6 +354,12 @@
     <div class="panel" id="tour-body"></div>
   </section>
 
+  <!-- Tournoi en réel : appariements et résultats d'un tournoi joué sur de vrais échiquiers -->
+  <section id="otb" class="screen" aria-label="Tournoi en réel">
+    <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2 id="otb-title">Tournoi en réel</h2></header>
+    <div class="panel" id="otb-body"></div>
+  </section>
+
   <!-- Club ou école : membres et progression -->
   <section id="club" class="screen" aria-label="Club ou école">
     <header class="bar"><button class="icon-btn back" aria-label="Retour">‹</button><h2 id="club-title">Club ou école</h2></header>
@@ -492,6 +499,7 @@
   <script src="warriors3d.js"></script>
   <script src="board3d.js"></script>
   <script src="online.js"></script>
+  <script src="otb.js"></script>
   <script src="app.js"></script>
   <script src="button-icons.js"></script>
 

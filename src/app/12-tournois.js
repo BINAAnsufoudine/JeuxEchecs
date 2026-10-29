@@ -253,7 +253,8 @@
   function renderTournaments() {
     const body = $('tour-body'), u = ON && ON.user;
     $('tour-title').textContent = tourDoc ? tourDoc.name : L('Tournois', 'Tournaments');
-    if (!u) { body.innerHTML = `<p class="level-help">${L('Les tournois se jouent en ligne : connecte-toi ou crée un compte.', 'Tournaments are played online: sign in or create an account.')}</p><button id="tour-login" class="btn primary wide" type="button">${L('Se connecter', 'Sign in')}</button>`; return; }
+    const otbLink = `<button id="tour-otb" class="btn wide otb-link" type="button">♟️ ${L('Tournoi en réel, sur de vrais échiquiers', 'Over-the-board tournament, on real boards')}</button>`;
+    if (!u) { body.innerHTML = `<p class="level-help">${L('Les tournois se jouent en ligne : connecte-toi ou crée un compte.', 'Tournaments are played online: sign in or create an account.')}</p><button id="tour-login" class="btn primary wide" type="button">${L('Se connecter', 'Sign in')}</button>${otbLink}`; return; }
     if (tourDoc) { renderTournamentDetail(); return; }
     const seg = (name, opts) => `<div class="ed-seg" data-tour="${name}">${opts.map(([v, label]) => `<button type="button" data-value="${v}" class="${String(tourForm[name]) === String(v) ? 'on' : ''}">${label}</button>`).join('')}</div>`;
     const tcOpts = Object.keys(TC_LABELS).map((k) => `<option value="${k}"${k === tourForm.tc ? ' selected' : ''}>${TC_LABELS[k]}</option>`).join('');
@@ -437,6 +438,7 @@
       renderTournaments(); return;
     }
     if (t.id === 'tour-login') return openAccount();
+    if (t.id === 'tour-otb') return openOtb();
     if (t.id === 'tour-back') return closeTournament();
     if (t.dataset.tourOpen) return openTournament(t.dataset.tourOpen);
     if (t.id === 'tour-create') return run(async () => {

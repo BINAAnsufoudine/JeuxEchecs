@@ -101,7 +101,9 @@
           frame(true);
           await sleep(delay);
         }
-        await sleep(3500);
+        // on laisse aux dernières animations le temps de finir (machine de test lente : jusqu'à 15 s)
+        for (let waited = 0; waited < 15000 && (board3d.dying.length || board3d.busyLeftMs() > 0); waited += 250) await sleep(250);
+        await sleep(500);
         const onBoard = g.state.board.filter(Boolean).length;
         assert(board3d.chars.size === onBoard, `${board3d.chars.size} figurines affichées pour ${onBoard} pièces`);
         assert(board3d.dying.length === 0, `${board3d.dying.length} animation(s) de mort restée(s) à l'écran`);
@@ -109,6 +111,46 @@
       await drive(OPERA, 120, '3D : partie de l\'Opéra en coups rapides (prises de fous, de dames, mat)');
       await drive(OPERA.split(' 9. ')[0], 1100, '3D : début de partie au rythme normal');
       await test('3D : mode léger activable à chaud', () => { board3d.setLite(true); board3d.setLite(false); });
+    }
+
+    // Tournoi en réel : appariements complets et justes, du début à la fin, dans chaque formule
+    if (window.OTB) {
+      const O = window.OTB, names = (n) => Array.from({ length: n }, (_, i) => ({ name: `J${i + 1}`, players: ['a', 'b', 'c', 'd'] }));
+      let seed = 5; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const run = (opts) => {
+        const t = O.create(opts);
+        for (let guard = 0; t.status !== 'over'; guard++) {
+          assert(guard < 40, 'le tournoi ne se termine pas');
+          for (const p of O.current(t).tables) {
+            if (p.b == null) continue;
+            const pick = () => ['1-0', '0-1', '1/2'][Math.floor(rnd() * 3)];
+            if (p.games) p.games.forEach((g) => { g.r = pick(); }); else p.r = pick();
+            if (t.format === 'ko' && O.winnerOf(t, p) == null) p.adv = p.a;
+          }
+          assert(O.next(t), 'ronde complète refusée');
+        }
+        return t;
+      };
+      const pairsOf = (t) => t.rounds.flatMap((r) => r.tables.filter((p) => p.b != null).map((p) => [p.a, p.b].sort((x, y) => x - y).join('-')));
+      await test('Tournoi en réel : toutes rondes, chacun rencontre tout le monde une fois', () => {
+        for (const n of [4, 7, 10]) { const ps = pairsOf(run({ format: 'rr', entrants: names(n) })); assert(ps.length === n * (n - 1) / 2 && new Set(ps).size === ps.length, `${n} joueurs : ${ps.length} parties`); }
+      });
+      await test('Tournoi en réel : système suisse sans revoir le même adversaire', () => {
+        for (const n of [6, 9, 16, 25]) {
+          const t = run({ format: 'swiss', entrants: names(n) }), ps = pairsOf(t);
+          assert(new Set(ps).size === ps.length, `${n} joueurs : un adversaire rejoué`);
+          const byes = t.rounds.flatMap((r) => r.tables.filter((p) => p.b == null).map((p) => p.a));
+          assert(new Set(byes).size === byes.length, `${n} joueurs : deux exempts pour le même joueur`);
+        }
+      });
+      await test("Tournoi en réel : élimination directe jusqu'au vainqueur", () => {
+        for (const n of [2, 5, 8, 13]) { const t = run({ format: 'ko', entrants: names(n) }); assert(t.rounds[t.rounds.length - 1].tables.length === 1, `${n} joueurs : pas de finale`); }
+      });
+      await test('Tournoi en réel : par équipes, points de match et de parties', () => {
+        const t = run({ type: 'team', format: 'swiss', boards: 4, entrants: names(6) }), st = O.standings(t);
+        assert(st.every((x) => x.game <= t.rounds.length * 4), 'points de parties impossibles');
+        assert(st.reduce((n, x) => n + x.pts, 0) === t.rounds.length * 3 * 2, 'total des points de match faux');
+      });
     }
 
     const ok = results.every((r) => r.ok);

@@ -1187,3 +1187,37 @@ body.recording-video #rp-video { background: #c62828; color: #fff; }
 #club-code { text-transform: uppercase; letter-spacing: .15em; }
 .club-table td:nth-child(n+2), .club-table th:nth-child(n+2) { text-align: center; }
 .club-kick { padding: 2px 8px; min-height: 0; }
+/* Tournoi en réel */
+.otb-input { width: 100%; padding: 9px 11px; border: 1px solid var(--surface-2); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; margin-bottom: 6px; }
+textarea.otb-input { resize: vertical; line-height: 1.5; }
+.otb-small { max-width: 110px; }
+.otb-tabs { margin: 8px 0 12px; }
+.otb-no { display: inline-grid; place-items: center; min-width: 1.7em; height: 1.7em; padding: 0 4px; border-radius: 6px; background: var(--surface-2); font-size: .78em; font-weight: 800; }
+.otb-tables { display: grid; gap: 8px; }
+.otb-table { background: var(--surface); border-radius: 12px; padding: 10px 12px; }
+.otb-table.bye { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; opacity: .85; }
+.otb-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; }
+.otb-match { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; }
+.otb-match.board { grid-template-columns: 1fr auto 1fr auto; padding: 4px 0; border-top: 1px solid rgba(127,127,127,.15); font-size: .9rem; }
+.otb-match .otb-side:last-of-type { text-align: right; }
+.otb-board { opacity: .6; }
+.otb-res { display: inline-flex; gap: 4px; }
+.otb-res button { min-width: 44px; padding: 7px 6px; border: 1px solid var(--surface-2); border-radius: 8px; background: transparent; color: var(--text); font-weight: 800; cursor: pointer; }
+.otb-res button.on { background: var(--accent, #e8b84a); border-color: transparent; color: #241b05; }
+.otb-adv { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; font-size: .9rem; }
+.otb-out { opacity: .55; }
+.otb-person { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.otb-person .btn { margin-left: auto; padding: 4px 10px; min-height: 0; }
+.otb-tools { flex-wrap: wrap; }
+.otb-link { margin-top: 10px; }
+.otb-podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; align-items: end; margin: 6px 0 14px; text-align: center; }
+.otb-podium div { background: var(--surface); border-radius: 12px; padding: 12px 6px; display: grid; gap: 2px; }
+.otb-podium .p1 { order: 2; padding-top: 22px; } .otb-podium .p2 { order: 1; } .otb-podium .p3 { order: 3; }
+.otb-podium span { font-size: 1.8rem; }
+.otb-big { position: fixed; inset: 0; z-index: 9999; background: #0d1512; color: #fff; padding: 4vh 4vw; overflow: auto; font-size: clamp(18px, 2.6vw, 34px); }
+.otb-big h1 { font-size: 1.4em; margin: 0 0 .6em; }
+.otb-big table { width: 100%; border-collapse: collapse; }
+.otb-big td { padding: .35em .4em; border-bottom: 1px solid rgba(255,255,255,.15); }
+.otb-big td:first-child { color: #e8b84a; font-weight: 800; width: 2.5em; }
+.otb-big p { opacity: .5; font-size: .6em; margin-top: 1.5em; }
+@media (max-width: 560px) { .otb-match { grid-template-columns: 1fr; } .otb-match .otb-side:last-of-type { text-align: left; } .otb-match.board { grid-template-columns: 1fr auto; } }
