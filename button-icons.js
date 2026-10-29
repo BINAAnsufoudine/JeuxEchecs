@@ -55,7 +55,7 @@
     delete button.dataset.uiIcon;
     // Les cases du mini-échiquier affichent les pièces de la position : ne pas
     // leur ajouter l’icône Ninja de repli, y compris sur les cases vides.
-    if (button.closest('.minimap, .ed-board, .otb-res, .otb-tabs, .otb-adv, .otb-best-tools') || button.matches('.home-collection-tab') || button.querySelector('.menu-icon')) return;
+    if (button.closest('.minimap, .ed-board, .otb-res, .otb-tabs, .otb-adv, .otb-best-tools, .otb-pick') || button.matches('.home-collection-tab') || button.querySelector('.menu-icon')) return;
     // Priorité à l’icône visible du bouton (ex. les commandes de replay) avant
     // les libellés accessibles, qui ne contiennent souvent que le nom d’action.
     const visible = button.innerText || button.textContent || '';

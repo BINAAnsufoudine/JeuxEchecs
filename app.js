@@ -6186,15 +6186,39 @@
       <label class="field-label" for="otb-names">${team ? L('Équipes', 'Teams') : L('Joueurs', 'Players')} (${n})</label>
       <textarea id="otb-names" class="otb-input" rows="10" placeholder="${team ? L('Une équipe par ligne :\nLes Lions : Awa, Moussa, Fatou, Ibrahim\nLes Aigles : Koffi, Aminata, Seydou, Mariam', 'One team per line:\nLions: Awa, Moussa, Fatou, Ibrahim') : L('Un nom par ligne :\nAwa\nMoussa\nFatou', 'One name per line:\nAwa\nMoussa')}">${escHtml(f.text)}</textarea>
       <p class="level-help">${team ? L('Range les joueurs de chaque équipe dans l’ordre des échiquiers (le premier joue à l’échiquier 1).', 'List each team’s players in board order (the first plays board 1).') : L('Chaque nom reçoit un numéro dans l’ordre de la liste.', 'Each name gets a number in list order.')}</p>
+      ${(() => {
+        const past = pastEntrants(f.type), picked = new Set(f.picked || []);
+        if (!past.length) return '';
+        return `<label class="field-label">${team ? L('Équipes des tournois précédents', 'Teams from previous tournaments') : L('Joueurs des tournois précédents', 'Players from previous tournaments')} <span class="otb-count">${picked.size}</span></label>
+          <p class="level-help">${L('Touche un nom pour l’ajouter ; les nouveaux se tapent dans la liste ci-dessus.', 'Tap a name to add it; type new ones in the list above.')}</p>
+          ${past.length > 12 ? `<input id="otb-pick-search" class="otb-input" placeholder="${L('Rechercher un nom…', 'Search a name…')}" autocomplete="off">` : ''}
+          <div class="otb-pick">${past.map((e) => `<button type="button" class="${picked.has(nameKey(e.name)) ? 'on' : ''}" data-otb-pick-name="${escHtml(nameKey(e.name))}" title="${escHtml(e.sub || '')}">${picked.has(nameKey(e.name)) ? '✓ ' : ''}${escHtml(e.name)}${team && e.sub ? `<small>${escHtml(e.sub)}</small>` : ''}</button>`).join('')}</div>
+          <div class="otb-best-tools"><button type="button" class="btn ghost" data-otb="pick-all">${L('Tout cocher', 'Select all')}</button><button type="button" class="btn ghost" data-otb="pick-none">${L('Tout décocher', 'Clear')}</button></div>`;
+      })()}
       <label class="switch"><input type="checkbox" id="otb-shuffle"${f.shuffle ? ' checked' : ''}><span>${L('Tirer les numéros au sort', 'Draw the numbers at random')}</span></label>
       <div class="actions"><button type="button" class="btn ghost" data-otb="cancel">${L('Annuler', 'Cancel')}</button><button type="button" class="btn primary" data-otb="start">${L('Commencer le tournoi', 'Start the tournament')}</button></div>`;
   }
+  // Joueurs (ou équipes) des tournois précédents, à cocher au lieu de les retaper
+  const nameKey = (n) => String(n || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  function pastEntrants(type) {
+    if (type !== 'team') return OTB.aggregate(otbList().filter((t) => t.type !== 'team')).map((x) => ({ name: x.name, sub: L(`${x.tournaments} tournoi${x.tournaments > 1 ? 's' : ''}`, `${x.tournaments} event${x.tournaments === 1 ? '' : 's'}`) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const teams = new Map();
+    for (const t of otbList().filter((x) => x.type === 'team').sort((a, b) => (a.updatedAt || a.id) - (b.updatedAt || b.id)))
+      for (const e of t.entrants) teams.set(nameKey(e.name), { name: e.name, players: e.players || [], sub: (e.players || []).join(', ') }); // la composition la plus récente
+    return [...teams.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
   function parseEntrants(f) {
-    return String(f.text || '').split('\n').map((line) => line.trim()).filter(Boolean).map((line) => {
+    const typed = String(f.text || '').split('\n').map((line) => line.trim()).filter(Boolean).map((line) => {
       if (f.type !== 'team') return { name: line.slice(0, 40) };
       const [name, rest] = line.includes(':') ? [line.slice(0, line.indexOf(':')), line.slice(line.indexOf(':') + 1)] : [line, ''];
       return { name: name.trim().slice(0, 40), players: rest.split(/[,;]/).map((p) => p.trim().slice(0, 30)).filter(Boolean) };
     });
+    // les joueurs cochés dans la liste des tournois précédents s'ajoutent à ceux tapés (sans doublon)
+    const seen = new Set(typed.map((e) => nameKey(e.name)));
+    const picked = pastEntrants(f.type).filter((e) => (f.picked || []).includes(nameKey(e.name)) && !seen.has(nameKey(e.name)))
+      .map((e) => (f.type === 'team' ? { name: e.name, players: e.players.slice() } : { name: e.name }));
+    return [...picked, ...typed];
   }
   function readOtbForm() {
     if (!otbNew || !$('otb-names')) return;
@@ -6365,6 +6389,7 @@
   });
   $('otb-body').addEventListener('input', (e) => {
     if (!otbNew) return;
+    if (e.target.id === 'otb-pick-search') { const k = nameKey(e.target.value); document.querySelectorAll('.otb-pick button').forEach((x) => { x.hidden = !!k && !x.dataset.otbPickName.includes(k); }); return; }
     if (e.target.id === 'otb-rounds') e.target.dataset.touched = '1';
     if (e.target.id === 'otb-names' && otbNew.format === 'ko') {
       const before = otbNew.count, now = parseEntrants({ ...otbNew, text: e.target.value }).length;
@@ -6381,13 +6406,22 @@
     const act = b.dataset.otb;
     if (act === 'new') { const now = new Date(); otbNew = { date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`, time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`, place: '', referee: '', name: '', type: 'solo', format: 'swiss', rounds: null, boards: 4, text: '', shuffle: false, byes: 'seeds', koMode: 'barrage' }; return renderOtb(); }
     if (act === 'cancel') { otbNew = null; return renderOtb(); }
+    if (otbNew && (b.dataset.otbPickName || act === 'pick-all' || act === 'pick-none')) {
+      readOtbForm();
+      const set = new Set(otbNew.picked || []);
+      if (act === 'pick-all') pastEntrants(otbNew.type).forEach((e) => set.add(nameKey(e.name)));
+      else if (act === 'pick-none') set.clear();
+      else if (set.has(b.dataset.otbPickName)) set.delete(b.dataset.otbPickName); else set.add(b.dataset.otbPickName);
+      otbNew.picked = [...set];
+      const y = window.scrollY; renderOtb(); window.scrollTo(0, y); return;
+    }
     if (act === 'best') { otbBest = { sel: new Set(otbList().map((t) => t.id)), top: 10, by: 'points' }; return renderOtb(); }
     if (b.dataset.otbBy && otbBest) { otbBest.by = b.dataset.otbBy; return renderOtb(); }
     if (act === 'best-close') { otbBest = null; return renderOtb(); }
     if (act === 'best-all') { otbList().forEach((t) => otbBest.sel.add(t.id)); return renderOtb(); }
     if (act === 'best-none') { otbBest.sel.clear(); return renderOtb(); }
     if (act === 'best-print') return printOtbBest();
-    if (b.closest('[data-otb-seg]')) { readOtbForm(); const k = b.closest('[data-otb-seg]').dataset.otbSeg; otbNew[k] = b.dataset.value; if (k === 'format') otbNew.rounds = null; return renderOtb(); }
+    if (b.closest('[data-otb-seg]')) { readOtbForm(); const k = b.closest('[data-otb-seg]').dataset.otbSeg; otbNew[k] = b.dataset.value; if (k === 'format') otbNew.rounds = null; if (k === 'type') otbNew.picked = []; return renderOtb(); }
     if (act === 'start') return startOtb();
     if (b.dataset.otbOpen) { closeOtbView(); otbId = Number(b.dataset.otbOpen); otbTab = 'round'; return renderOtb(); }
     if (b.dataset.otbShared) {

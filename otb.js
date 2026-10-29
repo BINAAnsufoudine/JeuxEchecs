@@ -343,7 +343,10 @@
     const P = (name) => {
       const k = key(name); if (!k) return null;
       if (!map.has(k)) map.set(k, { name: String(name).trim(), tournaments: new Set(), games: 0, wins: 0, draws: 0, losses: 0, pts: 0, white: 0, gold: 0, silver: 0, bronze: 0, best: null });
-      return map.get(k);
+      const x = map.get(k), clean = String(name).trim();
+      const mixed = (v) => v !== v.toLowerCase() && v !== v.toUpperCase();
+      if (!mixed(x.name) && mixed(clean)) x.name = clean; // on garde l'écriture « Awa » plutôt que « awa » ou « AWA »
+      return x;
     };
     const game = (wName, bName, r) => {
       const s = SCORE[r]; if (!s) return;
