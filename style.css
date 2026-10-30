@@ -1287,3 +1287,9 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
 .home-welcome[data-theme-bg="ninjas"] { background-image: linear-gradient(100deg, rgba(10,8,22,.7) 0%, rgba(10,8,22,.35) 42%, rgba(10,8,22,0) 70%), url(fond_ecran/banniere/ninjas.webp); background-position: 62% center; }
 .home-welcome[data-theme-bg="ocean"] { background-image: linear-gradient(100deg, rgba(4,28,40,.72) 0%, rgba(4,28,40,.38) 42%, rgba(4,28,40,0) 70%), url(fond_ecran/banniere/ocean.webp); background-position: 62% center; }
 .home-welcome[data-theme-bg="plants"] { background-image: linear-gradient(100deg, rgba(10,30,14,.72) 0%, rgba(10,30,14,.38) 42%, rgba(10,30,14,0) 70%), url(fond_ecran/banniere/plants.webp); background-position: 62% center; }
+.home-welcome[data-theme-bg="land"] { background-image: linear-gradient(100deg, rgba(30,16,4,.72) 0%, rgba(30,16,4,.38) 42%, rgba(30,16,4,0) 70%), url(fond_ecran/banniere/land.webp); }
+.home-welcome[data-theme-bg="birds"] { background-image: linear-gradient(100deg, rgba(8,24,36,.72) 0%, rgba(8,24,36,.38) 42%, rgba(8,24,36,0) 70%), url(fond_ecran/banniere/birds.webp); }
+.home-welcome[data-theme-bg="ancient"] { background-image: linear-gradient(100deg, rgba(30,14,6,.72) 0%, rgba(30,14,6,.38) 42%, rgba(30,14,6,0) 70%), url(fond_ecran/banniere/ancient.webp); }
+.home-welcome[data-theme-bg="modern"] { background-image: linear-gradient(100deg, rgba(20,10,6,.72) 0%, rgba(20,10,6,.38) 42%, rgba(20,10,6,0) 70%), url(fond_ecran/banniere/modern.webp); }
+/* Maître Sissa n'est plus dans la bannière : sur un écran étroit, on montre surtout la droite de l'image, où se trouve le sujet */
+.home-welcome[data-theme-bg] { background-position: 72% center; }
