@@ -45,7 +45,7 @@
     'Réglages': 'Settings',
     'Ton jardin prend vie': 'Your garden is coming to life',
     'Prêt à faire grandir ton jardin ?': 'Ready to grow your garden?',
-    'Maître Sissa a un nouveau défi pour toi !': 'Master Sissa has a new challenge for you!',
+    'Un nouveau défi t’attend !': 'A new challenge awaits you!',
     'Mon jardin tropical 🌴': 'My tropical garden 🌴',
     'Mes collections tropicales 🌴': 'My tropical collections 🌴',
     'Thème Ninjas 🥷': 'Ninjas theme 🥷',
