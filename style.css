@@ -1271,3 +1271,5 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
 }
 /* bouton « Jouer ce thème » du bandeau de saison : texte lisible sur fond sombre */
 .home-season .btn { background: #24382c; color: #fff; border-color: transparent; }
+/* Accueil sur mobile : pas de carte « Programme personnalisé » (il reste accessible par Progresser > Programme personnalisé) */
+@media (max-width: 999px) { #coach-program { display: none !important; } }
