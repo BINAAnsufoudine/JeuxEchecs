@@ -1273,3 +1273,13 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
 .home-season .btn { background: #24382c; color: #fff; border-color: transparent; }
 /* Accueil sur mobile : pas de carte « Programme personnalisé » (il reste accessible par Progresser > Programme personnalisé) */
 @media (max-width: 999px) { #coach-program { display: none !important; } }
+/* Bannière d'accueil : l'image couvre tout le cadre (plus de bande vide sur mobile, plus de seul ciel sur grand écran),
+   centrée sur le sujet de chaque illustration */
+.home-welcome[data-theme-bg] { background-size: cover; }
+.home-welcome[data-theme-bg="ninjas"] { background-position: center 40%; }
+.home-welcome[data-theme-bg="ocean"] { background-position: center 45%; }
+.home-welcome[data-theme-bg="plants"] { background-position: center 35%; }
+.home-welcome[data-theme-bg="land"] { background-position: center 35%; }
+.home-welcome[data-theme-bg="birds"] { background-position: center 40%; }
+.home-welcome[data-theme-bg="ancient"] { background-position: center 45%; }
+.home-welcome[data-theme-bg="modern"] { background-position: center 40%; }
