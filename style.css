@@ -1257,3 +1257,17 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
    pour la pièce élargissait les colonnes, le plateau débordait et les clics tombaient sur la mauvaise case */
 @supports (font-size: 1cqi) { #board .pc:not(.drag) { font-size: 10cqi; } }
 #minimap.face-to-face[data-top="b"] button b.k, #minimap.face-to-face[data-top="w"] button b.w { display: inline-block; transform: rotate(180deg); }
+/* Accueil : le trésor passe sous la collection, en bandeau sur toute la largeur */
+#home .home-tropical-layout { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 481px) {
+  #home .home-rice-card { display: grid; grid-template-columns: minmax(150px, auto) minmax(0, 1fr) auto; align-items: center; gap: 4px 22px; padding: 14px 20px; }
+  #home .home-rice-top { grid-column: 1; grid-row: 1 / span 4; width: auto; gap: 14px; justify-content: flex-start; }
+  #home .home-rice-sack { grid-column: auto; grid-row: auto; order: -1; font-size: 2.2rem; }
+  #home .home-rice-amount { grid-column: 2; grid-row: 1; }
+  #home .home-rice-progress { grid-column: 2; grid-row: 2; }
+  #home .home-rice-conversion { grid-column: 2; grid-row: 3; min-height: 0; }
+  #home .home-rice-next { grid-column: 2; grid-row: 4; min-height: 0; }
+  #home .home-rice-shop { grid-column: 3; grid-row: 1 / span 4; width: auto; padding: 10px 16px; }
+}
+/* bouton « Jouer ce thème » du bandeau de saison : texte lisible sur fond sombre */
+.home-season .btn { background: #24382c; color: #fff; border-color: transparent; }
