@@ -654,64 +654,106 @@
   };
 
   /* ================= ÉCHECS CLASSIQUES : pièces sculptées en bois ================= */
+  const woodMaterials = new Map();
+  function woodenMaterial(dark) {
+    const key = dark ? 'walnut' : 'maple';
+    if (woodMaterials.has(key)) return woodMaterials.get(key);
+    const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    const light = dark ? '#8a4c26' : '#f2cf8e', mid = dark ? '#623419' : '#d9ac65', shade = dark ? '#482512' : '#bd8745';
+    const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+    gradient.addColorStop(0, light); gradient.addColorStop(.48, mid); gradient.addColorStop(1, light);
+    ctx.fillStyle = gradient; ctx.fillRect(0, 0, 512, 512);
+    for (let i = 0; i <= 32; i++) {
+      const x = i * 16, phase = i * Math.PI * 2 / 32;
+      ctx.beginPath();
+      for (let y = 0; y <= 512; y += 8) {
+        const xx = x + Math.sin(y / 57 + phase) * 3 + Math.sin(y / 19 + phase * 1.7) * .8;
+        if (!y) ctx.moveTo(xx, y); else ctx.lineTo(xx, y);
+      }
+      ctx.strokeStyle = i % 4 === 0 ? shade : (i % 2 ? 'rgba(255,236,190,.20)' : 'rgba(70,35,14,.16)');
+      ctx.globalAlpha = i % 4 === 0 ? .28 : .55; ctx.lineWidth = i % 4 === 0 ? 2.2 : 1.1; ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    const texture = new T.CanvasTexture(canvas); texture.wrapS = T.RepeatWrapping; texture.anisotropy = 4;
+    if (T.SRGBColorSpace) texture.colorSpace = T.SRGBColorSpace;
+    else if (T.sRGBEncoding) texture.encoding = T.sRGBEncoding;
+    const material = new T.MeshStandardMaterial({ map: texture, color: '#ffffff', roughness: dark ? .27 : .32, metalness: .01 });
+    woodMaterials.set(key, material); return material;
+  }
   function woodenSet(piece) {
     const dark = piece === piece.toLowerCase();
-    const wood = dark ? '#684328' : '#e8c58d';
+    const wood = woodenMaterial(dark);
     const shade = dark ? '#392719' : '#b78850';
     const kind = piece.toLowerCase();
     const p = base(0.22), shape = new T.Group();
     p.torso.add(shape); shape.position.y = -0.22;
-    const profile = kind === 'p'
-      ? [[0,0],[0.12,0],[0.15,0.035],[0.13,0.07],[0.085,0.09],[0.065,0.17],[0.1,0.2],[0.08,0.235],[0,0.235]]
-      : kind === 'r'
-        ? [[0,0],[0.14,0],[0.16,0.04],[0.14,0.08],[0.08,0.1],[0.075,0.37],[0.12,0.39],[0.12,0.46],[0.1,0.49],[0,0.49]]
-        : kind === 'b'
-          ? [[0,0],[0.14,0],[0.16,0.04],[0.14,0.08],[0.08,0.1],[0.065,0.22],[0.085,0.25],[0.105,0.3],[0.095,0.34],[0.07,0.37],[0.055,0.4],[0,0.43]]
-          : [[0,0],[0.14,0],[0.16,0.04],[0.14,0.08],[0.085,0.1],[0.07,0.2],[0.1,0.23],[0.085,0.27],[0.055,0.3],[0.045,0.37],[0.09,0.4],[0.07,0.45],[0,0.47]];
-    const lathe = new T.LatheGeometry(profile.map(([r, y]) => new T.Vector2(r, y)), 32);
+    const foot = [[0,0],[.13,0],[.16,.012],[.178,.032],[.176,.052],[.15,.071],[.12,.082],[.112,.096]];
+    const stem = {
+      p: [[.095,.105],[.078,.13],[.06,.17],[.055,.225],[.073,.25],[.084,.275],[.074,.295],[0,.295]],
+      r: [[.11,.105],[.085,.135],[.075,.18],[.075,.48],[.105,.5],[.112,.53],[.1,.55],[.105,.57],[.1,.59],[0,.59]],
+      b: [[.108,.105],[.078,.14],[.061,.2],[.068,.27],[.082,.32],[.1,.37],[.09,.4],[.068,.43],[.057,.46],[.074,.48],[.072,.5],[0,.5]],
+      n: [[.108,.105],[.078,.14],[.066,.21],[.08,.28],[.108,.33],[.12,.37],[.103,.4],[.08,.43],[.065,.46],[.09,.49],[.075,.52],[0,.52]],
+      q: [[.108,.105],[.08,.14],[.067,.2],[.075,.28],[.096,.33],[.09,.37],[.064,.4],[.06,.43],[.08,.46],[.083,.49],[.07,.51],[.08,.54],[0,.54]],
+      k: [[.108,.105],[.08,.14],[.066,.2],[.073,.29],[.095,.34],[.091,.39],[.063,.42],[.062,.46],[.083,.49],[.084,.52],[.073,.55],[.085,.58],[0,.58]],
+    };
+    const profile = [...foot, ...stem[kind]];
+    const lathe = new T.LatheGeometry(profile.map(([r, y]) => new T.Vector2(r, y)), 64);
     lathe.computeVertexNormals();
-    shape.add(mesh(lathe, mat(wood, { rough: 0.34, metal: 0.02 })));
+    shape.add(mesh(lathe, wood));
     // Fine bagues tournées dans le bois, pour un aspect de pièce réellement sculptée.
-    for (const [y, radius] of [[0.065,0.135],[0.105,0.083],[0.23,0.085]]) {
-      const ring = mesh(new T.TorusGeometry(radius, 0.009, 7, 28), mat(shade, { rough: 0.42 }), 0, y, 0);
+    for (const [y, radius, tube] of [[.038,.174,.008],[.076,.132,.006],[.105,.112,.006],[.145,.08,.004],[.49,.105,.006]]) {
+      const ring = mesh(new T.TorusGeometry(radius, tube, 8, 48), mat(shade, { rough: .38 }), 0, y, 0);
       ring.rotation.x = Math.PI / 2; shape.add(ring);
     }
     if (kind === 'p') {
-      shape.add(mesh(sphere(0.078, 18, 14), mat(wood, { rough: 0.3 }), 0, 0.29, 0));
+      shape.add(mesh(sphere(.073, 24, 18), wood, 0, .335, 0));
     } else if (kind === 'r') {
-      shape.add(mesh(cyl(0.105, 0.105, 0.07, 24), mat(wood, { rough: 0.34 }), 0, 0.51, 0));
+      shape.add(mesh(cyl(.105, .105, .075, 48), wood, 0, .615, 0));
       for (let i = 0; i < 8; i++) {
-        const a = i * Math.PI / 4, b = mesh(box(0.052, 0.065, 0.052), mat(wood), Math.cos(a) * 0.082, 0.57, Math.sin(a) * 0.082);
+        const a = i * Math.PI / 4, b = mesh(box(.05, .075, .05), wood, Math.cos(a) * .08, .685, Math.sin(a) * .08);
         shape.add(b);
       }
     } else if (kind === 'b') {
-      // Mitre élancée et fente oblique, détails traditionnels du fou Staunton.
-      const miter = mesh(cone(0.073, 0.17, 24), mat(wood, { rough: 0.3 }), 0, 0.505, 0); shape.add(miter);
-      const cut = mesh(box(0.016, 0.105, 0.04), mat(shade, { rough: 0.42 }), 0, 0.51, 0.061); cut.rotation.z = -0.48; shape.add(cut);
-    } else if (kind === 'q' || kind === 'k') {
-      shape.add(mesh(cyl(0.084, 0.09, 0.055, 24), mat(wood), 0, 0.48, 0));
-      for (let i = 0; i < (kind === 'q' ? 7 : 5); i++) {
-        const a = i * Math.PI * 2 / (kind === 'q' ? 7 : 5), x = Math.cos(a) * 0.073, z = Math.sin(a) * 0.073;
-        shape.add(mesh(sphere(0.022, 10, 8), mat(wood), x, 0.55, z));
+      // Corps bulbeux et mitre fendue, fidèle au fou sculpté de l'image de référence.
+      shape.add(mesh(sphere(.071, 24, 18), wood, 0, .515, 0));
+      shape.add(mesh(cone(.058, .115, 32), wood, 0, .58, 0));
+      const cut = mesh(box(.013, .093, .018), mat(shade, { rough: .46 }), 0, .56, .066); cut.rotation.z = -.42; shape.add(cut);
+      shape.add(mesh(sphere(.022, 14, 10), wood, 0, .65, 0));
+    } else if (kind === 'q') {
+      shape.add(mesh(cyl(.075, .082, .04, 40), wood, 0, .555, 0));
+      const crown = new T.LatheGeometry([[0,0],[.052,0],[.062,.035],[.092,.09],[.116,.14],[.103,.165],[.07,.148],[.04,.135],[0,.135]].map(([r,y]) => new T.Vector2(r,y)), 48);
+      shape.add(mesh(crown, wood, 0, .575, 0));
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4;
+        shape.add(mesh(sphere(.018, 12, 10), wood, Math.cos(a) * .085, .735 + (i % 2) * .012, Math.sin(a) * .085));
       }
-      if (kind === 'k') {
-        shape.add(mesh(box(0.026, 0.15, 0.026), mat(wood), 0, 0.62, 0));
-        shape.add(mesh(box(0.105, 0.025, 0.026), mat(wood), 0, 0.65, 0));
-      }
+      shape.add(mesh(sphere(.022, 14, 12), wood, 0, .76, 0));
+    } else if (kind === 'k') {
+      shape.add(mesh(cyl(.078, .09, .045, 40), wood, 0, .59, 0));
+      const crown = new T.LatheGeometry([[0,0],[.05,0],[.065,.035],[.095,.11],[.1,.15],[.072,.17],[.04,.145],[0,.145]].map(([r,y]) => new T.Vector2(r,y)), 48);
+      shape.add(mesh(crown, wood, 0, .61, 0));
+      for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5; shape.add(mesh(sphere(.015, 12, 10), wood, Math.cos(a) * .082, .765, Math.sin(a) * .082)); }
+      shape.add(mesh(box(.035, .14, .035), wood, 0, .82, 0));
+      shape.add(mesh(box(.13, .035, .035), wood, 0, .835, 0));
     } else if (kind === 'n') {
-      // Profil de cheval plus net : encolure inclinée, chanfrein, naseaux, yeux et crinière.
-      const neck = mesh(sphere(0.09, 20, 16), mat(wood), 0, 0.385, -0.012); neck.scale.set(0.78, 1.62, 0.82); neck.rotation.x = 0.36; neck.rotation.z = -0.16; shape.add(neck);
-      const skull = mesh(sphere(0.065, 20, 14), mat(wood), 0, 0.535, 0.042); skull.scale.set(0.9, 0.9, 1.15); skull.rotation.x = 0.12; shape.add(skull);
-      const muzzle = mesh(sphere(0.047, 16, 12), mat(wood), 0, 0.49, 0.105); muzzle.scale.set(0.92, 0.78, 1.3); shape.add(muzzle);
-      const jaw = mesh(sphere(0.04, 14, 10), mat(shade), 0, 0.452, 0.09); jaw.scale.set(0.8, 0.42, 1.1); shape.add(jaw);
-      for (const s of [-1, 1]) {
-        const ear = mesh(cone(0.019, 0.105, 8), mat(wood), s * 0.035, 0.617, 0.008); ear.rotation.z = -s * 0.16; ear.rotation.x = 0.12; shape.add(ear);
-        ell(shape, shade, 0.009, 0.01, 0.007, s * 0.052, 0.55, 0.077); // œil
-        ell(shape, shade, 0.007, 0.008, 0.006, s * 0.032, 0.495, 0.157); // naseau
-      }
-      for (let i = 0; i < 7; i++) {
-        const tuft = mesh(cone(0.014, 0.055, 6), mat(shade), 0, 0.32 + i * 0.037, -0.067 + i * 0.008);
-        tuft.rotation.x = -Math.PI / 2; tuft.rotation.z = -0.15; shape.add(tuft);
+      // Silhouette sculptée de tête et d'encolure, extrudée puis orientée vers le camp adverse.
+      const profileShape = new T.Shape();
+      profileShape.moveTo(-.105,.02); profileShape.quadraticCurveTo(-.07,.12,-.035,.23); profileShape.lineTo(-.048,.39);
+      profileShape.quadraticCurveTo(-.02,.46,.015,.42); profileShape.lineTo(.04,.36); profileShape.quadraticCurveTo(.105,.39,.145,.34);
+      profileShape.lineTo(.155,.30); profileShape.lineTo(.11,.275); profileShape.lineTo(.08,.245); profileShape.quadraticCurveTo(.075,.19,.045,.13);
+      profileShape.lineTo(.115,.055); profileShape.lineTo(.09,.02); profileShape.closePath();
+      const horseGeo = new T.ExtrudeGeometry(profileShape, { depth: .09, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: .012, bevelThickness: .012, curveSegments: 10 });
+      horseGeo.translate(0, .28, -.045);
+      const horse = mesh(horseGeo, wood); horse.rotation.y = -Math.PI / 2; shape.add(horse);
+      for (const side of [-1, 1]) {
+        const ear = mesh(cone(.018, .09, 10), wood, 0, .72, side * .035); ear.rotation.z = -.12; horse.add(ear);
+        ell(horse, '#24170f', .008, .011, .006, .055, .62, side * .05); // œil incrusté
+        ell(horse, shade, .007, .008, .006, .12, .56, side * .05); // naseau
+        for (let i = 0; i < 6; i++) {
+          const mane = mesh(cone(.012, .065, 8), mat(shade, { rough: .34 }), -.045 + (i % 2) * .014, .37 + i * .047, side * .045);
+          mane.rotation.z = .38; horse.add(mane);
+        }
       }
     }
     p.weapon = 'none'; p.noHeadScale = true; p.scaleK = 1;
