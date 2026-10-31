@@ -4740,7 +4740,9 @@
       ['Bois clair', 'Light wood', '🤍'], ['Bois de hêtre', 'Beechwood', '🌳'], ['Bois de bouleau', 'Birchwood', '🪵'], ['Bois de chêne', 'Oakwood', '🌿'], ['Bois de cerisier', 'Cherrywood', '🌸'], ['Bois de noyer', 'Walnut wood', '🌰'], ['Bois d’acajou', 'Mahogany', '🪵'], ['Bois d’ébène', 'Ebony', '⚫'], ['Échiquier précieux', 'Precious chessboard', '♟️'], ['Grand maître ébéniste', 'Master woodworker', '👑'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
   ];
-  const NATURE_COLLECTION_ORDER = ['ninjas', 'plants', 'kingdom', 'wood', 'land', 'birds', 'ocean', 'ancient', 'modern'];
+  // Progression visuelle : du déplacement le plus sobre aux animations de combat les plus spectaculaires.
+  // Le monde Ninjas reste sélectionné par défaut, même s’il arrive en dernier dans ce parcours.
+  const NATURE_COLLECTION_ORDER = ['wood', 'kingdom', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern', 'ninjas'];
   NATURE_COLLECTIONS.sort((a, b) => NATURE_COLLECTION_ORDER.indexOf(a.id) - NATURE_COLLECTION_ORDER.indexOf(b.id));
   // Saison mensuelle : chaque mois, un thème est à l'honneur (récompenses ×1,5 quand on joue avec lui)
   const SEASON_BONUS = 1.5;
