@@ -4711,7 +4711,8 @@
     { name: L('Palmier tropical', 'Tropical palm'), icon: '🌴' }, { name: L('Grand baobab', 'Great baobab'), icon: '🌳' },
   ];
   const NATURE_PREVIEW_ALL_UNLOCKED = true;
-  const HOME_BACKGROUNDS = ['ninjas', 'ocean', 'plants', 'land', 'birds', 'ancient', 'modern']; // images dans fond_ecran/
+  const HOME_BACKGROUNDS = ['ninjas', 'ocean', 'plants', 'land', 'birds', 'ancient', 'modern', 'kingdom']; // images dans fond_ecran/
+  const HOME_BACKGROUND_IMAGES = { kingdom: 'fond_ecran/kingdom.png' };
   const NATURE_COLLECTIONS = [
     { id: 'plants', name: L('Plantes', 'Plants'), icon: '🌱', unlockGrade: 1, items: GARDEN_PLANTS },
     { id: 'land', name: L('Animaux terrestres', 'Land animals'), icon: '🐒', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 2, items: [
@@ -4998,7 +4999,8 @@
     }
     $('home-collection-tabs').innerHTML = AVAILABLE_NATURE_COLLECTIONS.map((item) => {
       const available = grade >= item.unlockGrade, selected = collection.id === item.id;
-      return `<button type="button" class="home-collection-tab${selected ? ' selected' : ''}${available ? '' : ' locked'}" data-nature-collection="${item.id}" ${available ? '' : `aria-label="${escHtml(L(`${item.name}, se débloque au grade ${item.unlockGrade}`, `${item.name}, unlocks at rank ${item.unlockGrade}`))}"`} aria-pressed="${selected}" title="${escHtml(available ? item.name : L(`Débloqué au grade ${item.unlockGrade}`, `Unlocks at rank ${item.unlockGrade}`))}"${HOME_BACKGROUNDS.includes(item.id) ? ` style="background-image:url('fond_ecran/mini/${item.id}.webp?v=2')"` : ''}><span>${item.id === seasonTheme() ? '🏆 ' : ''}${item.icon} ${escHtml(item.name)}${available ? '' : ` · 🔒 ${item.unlockGrade}`}</span></button>`;
+      const themeImage = HOME_BACKGROUND_IMAGES[item.id] || `fond_ecran/mini/${item.id}.webp?v=2`;
+      return `<button type="button" class="home-collection-tab${selected ? ' selected' : ''}${available ? '' : ' locked'}" data-nature-collection="${item.id}" ${available ? '' : `aria-label="${escHtml(L(`${item.name}, se débloque au grade ${item.unlockGrade}`, `${item.name}, unlocks at rank ${item.unlockGrade}`))}"`} aria-pressed="${selected}" title="${escHtml(available ? item.name : L(`Débloqué au grade ${item.unlockGrade}`, `Unlocks at rank ${item.unlockGrade}`))}"${HOME_BACKGROUNDS.includes(item.id) ? ` style="background-image:url('${themeImage}')"` : ''}><span>${item.id === seasonTheme() ? '🏆 ' : ''}${item.icon} ${escHtml(item.name)}${available ? '' : ` · 🔒 ${item.unlockGrade}`}</span></button>`;
     }).join('');
     // carrousel : le thème choisi reste visible au centre
     const pickedTab = $('home-collection-tabs').querySelector('.selected');

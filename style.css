@@ -1338,3 +1338,12 @@ body:has(#game.game-fullscreen) .mobile-menu-toggle { display: none !important; 
   #game.game-fullscreen .game-tools { width: min(24vw, 260px); max-height: 100%; overflow-y: auto; }
   #game.game-fullscreen .board-controls .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Royaume des animaux : la même illustration source sert au bandeau et à sa vignette. */
+#home .home-welcome[data-theme-bg="kingdom"] {
+  background-image: linear-gradient(100deg, rgba(17, 49, 28, .22) 0%, rgba(17, 49, 28, .08) 48%, rgba(17, 49, 28, .04) 100%), url("fond_ecran/kingdom.png");
+  background-size: cover; background-position: center;
+}
+@media (max-width: 999px) {
+  #home .home-welcome[data-theme-bg="kingdom"] { background-position: 58% center; }
+}
