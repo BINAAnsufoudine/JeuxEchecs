@@ -1613,6 +1613,35 @@
   $('btn-menu').onclick = () => { if (replay) { exitReplay(); return; } save(); show('home'); };
   $('btn-game-settings').onclick = () => { returnTo = 'game'; renderSettings(); show('settings'); };
 
+  let gameFullscreenBrowser = false;
+  const setGameFullscreen = (enabled) => {
+    const gameScreen = $('game');
+    const button = $('btn-game-fullscreen');
+    gameScreen.classList.toggle('game-fullscreen', enabled);
+    button.textContent = enabled ? '⤡' : '⛶';
+    const label = L(enabled ? 'Quitter le plein écran' : 'Plein écran', enabled ? 'Exit fullscreen' : 'Fullscreen');
+    button.setAttribute('aria-label', label);
+    button.title = label;
+  };
+  $('btn-game-fullscreen').onclick = async () => {
+    const entering = !$('game').classList.contains('game-fullscreen');
+    setGameFullscreen(entering);
+    if (entering && $('game').requestFullscreen) {
+      gameFullscreenBrowser = true;
+      try { await $('game').requestFullscreen({ navigationUI: 'hide' }); }
+      catch { gameFullscreenBrowser = false; }
+    } else if (!entering && document.fullscreenElement) {
+      gameFullscreenBrowser = false;
+      try { await document.exitFullscreen(); } catch { /* Le mode CSS suffit si la sortie native échoue. */ }
+    }
+  };
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && gameFullscreenBrowser) {
+      gameFullscreenBrowser = false;
+      setGameFullscreen(false);
+    }
+  });
+
   /* ---------- Statistiques ---------- */
   function estimatedElo() {
     const player = playerProfile();
