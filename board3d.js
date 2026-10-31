@@ -1165,9 +1165,14 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         const white = m.piece === m.piece.toUpperCase();
         let duel = null, toss = null, shot = null, knightAttack = null, escort = null;
         const kind = m.piece.toLowerCase();
+        const quietTheme = root.NO_ATTACK_ANIMATION_THEMES && root.NO_ATTACK_ANIMATION_THEMES.has(root.themeOf(m.piece));
         const vSq = m.flag === 'ep' ? m.to + (white ? 8 : -8) : m.to;
         const far = Math.max(Math.abs((m.from & 7) - (vSq & 7)), Math.abs((m.from >> 3) - (vSq >> 3))) > 1;
-        if (m.captured && !o.mateUltimate) {
+        if (m.captured && !o.mateUltimate && quietTheme) {
+          // Dans les univers animaux et bois, la prise est immédiate : aucun duel ni effet d'attaque.
+          const victim = take(vSq);
+          if (victim) { if (victim.anim) this.endToss(victim); victim.anim = null; this.pieces.remove(victim.holder); }
+        } else if (m.captured && !o.mateUltimate) {
           const v = take(vSq);
           if (v && v.anim) { this.endToss(v); v.anim = null; } // la pièce prise arrête net sa propre attaque en cours (sinon ses effets restaient figés)
           const a = this.sqToPos(m.from), b = this.sqToPos(vSq);
@@ -1340,7 +1345,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         this.addBoardQuake(at);
         this.addPermanentCracks(o.last.to, at, o.ply);
       }
-      if (o.mateUltimate && o.animate && o.mateUltimate.id !== this.mateUltimateKey) {
+      if (o.mateUltimate && o.animate && !(root.NO_ATTACK_ANIMATION_THEMES && root.NO_ATTACK_ANIMATION_THEMES.has(root.themeOf(o.mateUltimate.piece))) && o.mateUltimate.id !== this.mateUltimateKey) {
         const actor = next.get(o.mateUltimate.attackerTo);
         this.mateUltimateKey = o.mateUltimate.id;
         this.mateUltimate = actor ? {

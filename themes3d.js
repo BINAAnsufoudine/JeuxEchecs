@@ -710,6 +710,7 @@
   root.ThemeKit = { use(THREE) { T = THREE; }, mat, mesh, sphere, cone, cyl, box, ell, stick, base, eyes, smile, crown, tiara, quad, quadPose, apePose };
 
   const THEMES = { plants: PLANTS, land: LAND, birds: BIRDS, kingdom: KINGDOM, wood: WOOD };
+  root.NO_ATTACK_ANIMATION_THEMES = new Set(['kingdom', 'wood']);
   root.ThemeModels = root.ThemeModels || {};
   for (const [id, B] of Object.entries(THEMES)) {
     root.ThemeModels[id] = {
