@@ -4919,6 +4919,8 @@
     ancient: [['ancient-1', L('Légionnaire', 'Legionary')], ['ancient-2', L('Centurion', 'Centurion')], ['ancient-3', L('Maître des machines', 'Siege master')], ['ancient-4', L('Général', 'General')], ['ancient-5', L('Empereur', 'Emperor')]],
     modern: [['modern-1', L('Soldat', 'Soldier')], ['modern-2', L('Sergent', 'Sergeant')], ['modern-3', L('Tankiste', 'Tank commander')], ['modern-4', L('Pilote de chasse', 'Fighter pilot')], ['modern-5', L('Général', 'General')]],
     ninjas: [['ecuyer', L('Genin', 'Genin')], ['chevalier', L('Chûnin', 'Chunin')], ['seigneur', L('Jônin', 'Jonin')], ['vizir', L('Kage', 'Kage')], ['roi', L('Hokage', 'Hokage')]],
+    kingdom: [['kingdom-1', L('Petit poussin', 'Little chick')], ['kingdom-2', L('Jeune singe', 'Young monkey')], ['kingdom-3', L('Gardien de la savane', 'Savanna guardian')], ['kingdom-4', L('Protecteur du royaume', 'Kingdom protector')], ['kingdom-5', L('Roi des animaux', 'King of the animals')]],
+    wood: [['wood-1', L('Débutant', 'Beginner')], ['wood-2', L('Facile', 'Easy')], ['wood-3', L('Intermédiaire', 'Intermediate')], ['wood-4', L('Difficile', 'Hard')], ['wood-5', L('Expert', 'Expert')]],
   };
   const SHOP_TITLE_ILLUSTRATIONS = {
     plants: ['🌱', '🧑🏽‍🌾', '🍎', '🌲', '🌳'],
@@ -4928,6 +4930,8 @@
     ninjas: ['🥷', '🗡️', '🛡️', '🐉', '🏯'],
     ancient: ['🛡️', '⚔️', '🏹', '🦅', '👑'],
     modern: ['🪖', '📡', '🛡️', '✈️', '⭐'],
+    kingdom: ['🐥', '🐒', '🦒', '🐘', '🦁'],
+    wood: ['♟️', '♙', '♝', '♜', '👑'],
   };
   function shopTitleItems() {
     const prices = [80, 200, 400, 700, 1200], levels = [1, 5, 10, 20, 30];
