@@ -623,25 +623,24 @@
      perroquet, éléphant, taureau, cheval et poussin. Ils réutilisent les mêmes articulations et
      animations que les autres personnages pour rester compatibles avec les coups. */
   const KINGDOM = {
-    P() { // phacochère trapu, avec groin, défenses et crinière
-      const coat = '#a9784f';
-      const p = quad({ h: .22, color: coat, w: .072, bh: .065, len: .145, leg: '#765237', legR: .018, hoof: '#30241b', tail: true, tuft: '#3f3024', neckY: .04, belly: '#d3b08a' });
-      p.head.position.set(0, .045, .17);
-      ell(p.head, coat, .052, .053, .061, 0, .005, .015);
-      ell(p.head, '#68482f', .043, .032, .041, 0, -.025, .058); // large groin
-      ell(p.head, '#29221d', .03, .021, .012, 0, -.02, .091); // bout du groin
+    P() { // petit lionceau, version jeune du roi du royaume
+      const coat = '#e5ad4d', mane = '#b86e2b';
+      const p = quad({ h: .22, color: coat, w: .07, bh: .065, len: .145, leg: '#b87c36', legR: .018, hoof: '#52351e', tail: true, tuft: mane, neckY: .045, belly: '#f1d59b' });
+      p.head.position.set(0, .07, .17);
+      // Petite crinière en cercle autour du visage, plus courte que celle du roi.
+      for (let i = 0; i < 10; i++) {
+        const a = i * Math.PI * 2 / 10;
+        ell(p.head, mane, .025, .03, .022, Math.cos(a) * .045, Math.sin(a) * .045, -.01);
+      }
+      ell(p.head, coat, .047, .046, .047, 0, 0, .01);
+      ell(p.head, '#f3d7a5', .032, .023, .025, 0, -.02, .045);
+      ell(p.head, '#50351f', .009, .008, .006, 0, -.012, .069);
       for (const s of [-1, 1]) {
-        ell(p.head, '#211b17', .006, .007, .005, s * .014, -.02, .1); // narine
-        const tusk = mesh(cone(.012, .065, 10), mat('#f3e3bd'), s * .039, .015, .055);
-        tusk.rotation.z = -s * .38; tusk.rotation.x = .15; p.head.add(tusk);
-        const ear = mesh(cone(.014, .055, 8), mat(coat), s * .034, .075, -.015); ear.rotation.z = -s * .45; p.head.add(ear);
+        const ear = ell(p.head, mane, .016, .02, .012, s * .035, .037, -.005);
+        ell(p.head, '#f3c987', .008, .011, .006, s * .035, .038, .006);
       }
-      eyes(p.head, .032, .025, .038, .011, '#271b12', .35);
-      for (let i = 0; i < 5; i++) {
-        const mane = mesh(cone(.012, .055, 7), mat('#493323'), 0, .07, .13 - i * .045);
-        mane.rotation.x = -.22; p.torso.add(mane);
-      }
-      p.pose = quadPose; p.scaleK = 1.18;
+      eyes(p.head, .023, .014, .035, .011, '#3a2918', .35);
+      p.pose = quadPose; p.scaleK = 1.16;
       return p;
     },
     N() { // cheval, avec encolure, tête allongée et crinière
