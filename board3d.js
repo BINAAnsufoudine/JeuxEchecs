@@ -1168,8 +1168,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         const quietTheme = root.NO_ATTACK_ANIMATION_THEMES && root.NO_ATTACK_ANIMATION_THEMES.has(root.themeOf(m.piece));
         const vSq = m.flag === 'ep' ? m.to + (white ? 8 : -8) : m.to;
         const far = Math.max(Math.abs((m.from & 7) - (vSq & 7)), Math.abs((m.from >> 3) - (vSq >> 3))) > 1;
-        if (m.captured && !o.mateUltimate && quietTheme && root.themeOf(m.piece) === 'kingdom' && m.flag !== 'ep') {
-          // Le Royaume des animaux : l'attaquant avance pendant que sa cible est poussée hors de la case.
+        if (m.captured && !o.mateUltimate && quietTheme && m.flag !== 'ep') {
+          // Royaume des animaux et Échecs en bois : l'attaquant avance et pousse sa cible hors de la case.
           const victim = take(vSq);
           if (victim) {
             if (victim.anim) this.endToss(victim);
@@ -1179,7 +1179,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             capture = { from, to, victim };
           }
         } else if (m.captured && !o.mateUltimate && quietTheme) {
-          // Le thème en bois conserve une prise immédiate, sans duel ni effet d'attaque.
+          // Prise en passant : la pièce capturée n'est pas sur la case d'arrivée de l'attaquant.
           const victim = take(vSq);
           if (victim) { if (victim.anim) this.endToss(victim); victim.anim = null; this.pieces.remove(victim.holder); }
         } else if (m.captured && !o.mateUltimate) {
