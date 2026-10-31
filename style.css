@@ -1333,15 +1333,15 @@ body:has(#game.game-fullscreen) .mobile-menu-toggle { display: none !important; 
 #game.game-fullscreen .replay-info, #game.game-fullscreen .replay-legend, #game.game-fullscreen .rp-tools { display: none !important; }
 @media (max-height: 560px) {
   #game.game-fullscreen .game-layout { flex-direction: row !important; gap: 10px; }
-  #game.game-fullscreen .board-col { width: min(calc(100dvh - 24px), 72vw, 900px) !important; }
-  #game.game-fullscreen .board-wrap { max-height: calc(100dvh - 20px); }
+  #game.game-fullscreen .board-col { width: min(calc(100dvh - 16px), 72vw) !important; }
+  #game.game-fullscreen .board-wrap { max-height: calc(100dvh - 16px); }
   #game.game-fullscreen .game-tools { width: min(24vw, 260px); max-height: 100%; overflow-y: auto; }
   #game.game-fullscreen .board-controls .actions { display: grid; grid-template-columns: max-content; width: max-content; }
 }
 @media (min-width: 900px) and (min-height: 561px) {
   #game.game-fullscreen .game-layout { flex-direction: row !important; gap: clamp(12px, 2vw, 28px); }
-  #game.game-fullscreen .board-col { width: min(calc(100dvh - 24px), calc(100vw - 390px), 900px) !important; flex: 0 1 auto; }
-  #game.game-fullscreen .board-wrap { max-height: calc(100dvh - 20px); }
+  #game.game-fullscreen .board-col { width: min(calc(100dvh - 16px), calc(100vw - 390px)) !important; flex: 0 1 auto; }
+  #game.game-fullscreen .board-wrap { max-height: calc(100dvh - 16px); }
   #game.game-fullscreen .game-tools { width: min(340px, 28vw); max-height: calc(100dvh - 24px); overflow-y: auto; }
   #game.game-fullscreen .board-controls .actions { display: grid; grid-template-columns: max-content; width: max-content; }
   #game.game-fullscreen .board-controls .act { align-self: stretch; width: 100%; min-width: 0; padding-inline: 10px; }
