@@ -4781,6 +4781,8 @@
   }
   function natureCurrency(grade = adventureGrade(levelOf(walletState().xp).level)) {
     if (activeNatureCollection === 'plants') return { key: 'wheat', icon: '💧', name: L('Gouttes d’eau', 'Water drops'), unit: L('gouttes d’eau', 'water drops') };
+    if (activeNatureCollection === 'kingdom') return { key: 'wheat', icon: '🍬', name: L('Bonbons', 'Candy'), unit: L('bonbons', 'candy') };
+    if (activeNatureCollection === 'wood') return { key: 'wheat', icon: '⭐', name: L('Étoiles jaunes', 'Yellow stars'), unit: L('étoiles jaunes', 'yellow stars') };
     if (activeNatureCollection === 'ocean') return { key: 'wheat', icon: '🦪', name: L('Perles', 'Pearls'), unit: L('perles', 'pearls') };
     if (activeNatureCollection === 'ninjas') return { key: 'wheat', icon: '🪙', name: L('Pièces d’or', 'Gold coins'), unit: L('pièces d’or', 'gold coins') };
     if (activeNatureCollection === 'ancient') return { key: 'wheat', icon: '🏺', name: L('Sesterces', 'Sesterces'), unit: L('sesterces', 'sesterces') };
