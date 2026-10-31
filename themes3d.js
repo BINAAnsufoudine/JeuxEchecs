@@ -623,9 +623,25 @@
      perroquet, éléphant, taureau, cheval et poussin. Ils réutilisent les mêmes articulations et
      animations que les autres personnages pour rester compatibles avec les coups. */
   const KINGDOM = {
-    P() { // poussin jaune
-      const p = bird({ color: '#ffd54f', w: 0.05, bh: 0.07, len: 0.075, hr: 0.052, beak: 0.045, beakR: 0.018, beakColor: '#f28c28', wing: '#ffca28', belly: '#fff0a6', tailLen: 0.035, legLen: 0.035, headColor: '#ffe16a', tilt: -0.35, legColor: '#ed9631' });
-      p.scaleK = 1.35;
+    P() { // phacochère trapu, avec groin, défenses et crinière
+      const coat = '#a9784f';
+      const p = quad({ h: .22, color: coat, w: .072, bh: .065, len: .145, leg: '#765237', legR: .018, hoof: '#30241b', tail: true, tuft: '#3f3024', neckY: .04, belly: '#d3b08a' });
+      p.head.position.set(0, .045, .17);
+      ell(p.head, coat, .052, .053, .061, 0, .005, .015);
+      ell(p.head, '#68482f', .043, .032, .041, 0, -.025, .058); // large groin
+      ell(p.head, '#29221d', .03, .021, .012, 0, -.02, .091); // bout du groin
+      for (const s of [-1, 1]) {
+        ell(p.head, '#211b17', .006, .007, .005, s * .014, -.02, .1); // narine
+        const tusk = mesh(cone(.012, .065, 10), mat('#f3e3bd'), s * .039, .015, .055);
+        tusk.rotation.z = -s * .38; tusk.rotation.x = .15; p.head.add(tusk);
+        const ear = mesh(cone(.014, .055, 8), mat(coat), s * .034, .075, -.015); ear.rotation.z = -s * .45; p.head.add(ear);
+      }
+      eyes(p.head, .032, .025, .038, .011, '#271b12', .35);
+      for (let i = 0; i < 5; i++) {
+        const mane = mesh(cone(.012, .055, 7), mat('#493323'), 0, .07, .13 - i * .045);
+        mane.rotation.x = -.22; p.torso.add(mane);
+      }
+      p.pose = quadPose; p.scaleK = 1.18;
       return p;
     },
     N() { // cheval, avec encolure, tête allongée et crinière
