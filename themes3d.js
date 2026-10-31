@@ -50,7 +50,9 @@
   function eyes(head, x, y, z, r = 0.03, pupil = '#111', side = 0) {
     for (const s of [-1, 1]) {
       const g = new T.Group(); g.position.set(s * x, y, z); g.rotation.y = s * side; head.add(g);
-      g.add(mesh(sphere(r, 12, 10), mat('#ffffff', { rough: 0.25 })));
+      const sclera = mesh(sphere(r, 12, 10), mat('#ffffff', { rough: 0.25 }));
+      sclera.userData.keepTeamWhite = true;
+      g.add(sclera);
       g.add(mesh(sphere(r * 0.55, 10, 8), mat(pupil, { rough: 0.2 }), 0, 0, r * 0.7));
       g.add(mesh(sphere(r * 0.18, 6, 4), mat('#ffffff', { emissive: '#ffffff' }), r * 0.2, r * 0.25, r * 0.95));
     }
@@ -729,14 +731,14 @@
         T = THREE;
         const parts = (B[piece] || B[piece.toUpperCase()])(piece);
         if (id === 'kingdom' && piece === piece.toLowerCase()) {
-          // Les animaux des Noirs gardent leur espèce, avec des tons plus chauds et foncés.
+          // Les deux camps gardent les mêmes espèces, mais les Noirs ont une robe brun sombre nettement distincte.
           const brown = new T.Color('#68452f');
           parts.root.traverse((o) => {
             if (!o.isMesh || !o.material || !o.material.color) return;
             const materials = Array.isArray(o.material) ? o.material : [o.material];
             const tinted = materials.map((source) => {
               const m = source.clone(), c = m.color;
-              if (!(c.r > 0.92 && c.g > 0.92 && c.b > 0.92)) c.lerp(brown, 0.36);
+              if (!o.userData.keepTeamWhite && c.r + c.g + c.b > 0.12) c.multiplyScalar(0.42).lerp(brown, 0.36);
               return m;
             });
             o.material = Array.isArray(o.material) ? tinted : tinted[0];
