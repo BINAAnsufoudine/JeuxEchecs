@@ -619,8 +619,8 @@
   };
 
   /* ================= ROYAUME DES ANIMAUX : animaux joyeux en 3D =================
-     Les personnages reprennent les animaux de la maquette enfant : lion, perroquet,
-     éléphant, girafe, singe et poussin. Ils réutilisent les mêmes articulations et
+     Les personnages reprennent les animaux de la maquette enfant : lion, lionne,
+     perroquet, éléphant, taureau, cheval et poussin. Ils réutilisent les mêmes articulations et
      animations que les autres personnages pour rester compatibles avec les coups. */
   const KINGDOM = {
     P() { // poussin jaune
@@ -628,28 +628,44 @@
       p.scaleK = 1.35;
       return p;
     },
-    N() { // petit singe espiègle
-      const p = base(0.2), brown = '#a96539', light = '#f0c39a';
-      ell(p.torso, brown, 0.09, 0.12, 0.075, 0, 0.02, 0);
-      ell(p.torso, light, 0.062, 0.075, 0.025, 0, 0.015, 0.066);
-      p.head.position.set(0, 0.2, 0.015);
+    N() { // cheval, avec encolure, tête allongée et crinière
+      const coat = '#a96539', mane = '#49301f';
+      const p = quad({ h: .29, color: coat, w: .078, bh: .075, len: .18, leg: '#754523', legR: .022, hoof: '#332319', tail: true, tuft: mane, neckY: .11, belly: '#d9ae7e' });
+      stick(p.torso, coat, .052, .068, [0, .015, .09], [0, .19, .17]);
+      p.head.position.set(0, .2, .18);
+      const skull = ell(p.head, coat, .044, .056, .073, 0, .005, .025); skull.rotation.x = .25;
+      ell(p.head, '#d8ae82', .031, .026, .052, 0, -.027, .083); // chanfrein et museau
+      ell(p.head, '#4b2f20', .016, .012, .012, 0, -.026, .128);
       for (const s of [-1, 1]) {
-        ell(p.head, brown, 0.03, 0.035, 0.018, s * 0.06, 0, -0.004);
-        ell(p.head, '#edb78a', 0.018, 0.021, 0.012, s * 0.06, 0, 0.012);
+        const ear = mesh(cone(.014, .075, 8), mat(coat), s * .027, .064, -.005); ear.rotation.z = -s * .2; p.head.add(ear);
+        ell(p.head, '#302117', .008, .01, .007, s * .035, .014, .048);
       }
-      ell(p.head, brown, 0.067, 0.065, 0.06);
-      ell(p.head, light, 0.046, 0.035, 0.027, 0, -0.018, 0.047);
-      eyes(p.head, 0.027, 0.014, 0.05, 0.014);
-      smile(p.head, -0.035, 0.07, 0.018);
-      const tail = new T.Group(); tail.position.set(0, 0.02, -0.065); p.torso.add(tail);
-      stick(tail, brown, 0.012, 0.01, [0, 0, 0], [0.03, 0.04, -0.06]);
-      const curl = mesh(new T.TorusGeometry(0.035, 0.009, 6, 12, Math.PI * 1.6), mat(brown), 0.03, 0.06, -0.06); curl.rotation.z = -0.5; tail.add(curl);
-      p.tail = tail; p.pose = apePose; p.scaleK = 1.2;
+      for (let i = 0; i < 7; i++) {
+        const lock = mesh(cone(.012, .055, 7), mat(mane), (i - 3) * .014, .115 - Math.abs(i - 3) * .008, -.035);
+        lock.rotation.z = .3; p.head.add(lock);
+      }
+      p.pose = quadPose; p.scaleK = 1.2;
       return p;
     },
-    B() { return LAND.B(); }, // girafe au long cou
+    B() { // taureau robuste, aux cornes recourbées
+      const coat = '#b8783e', horn = '#f0dfb8';
+      const p = quad({ h: .29, color: coat, w: .105, bh: .09, len: .18, leg: '#744629', legR: .027, hoof: '#30231b', tail: true, tuft: '#51321f', neckY: .07, belly: '#e2bd8b' });
+      ell(p.torso, '#9b5d32', .095, .09, .075, 0, .025, .105); // garrot
+      p.head.position.set(0, .09, .205);
+      ell(p.head, coat, .065, .061, .073, 0, 0, .01);
+      ell(p.head, '#e3c49d', .046, .034, .042, 0, -.028, .066);
+      for (const s of [-1, 1]) {
+        const baseHorn = new T.Vector3(s * .04, .037, -.01), midHorn = new T.Vector3(s * .085, .075, -.018), tipHorn = new T.Vector3(s * .093, .135, .005);
+        stick(p.head, horn, .012, .016, baseHorn.toArray(), midHorn.toArray());
+        stick(p.head, horn, .006, .012, midHorn.toArray(), tipHorn.toArray());
+        ell(p.head, '#2d1d14', .009, .01, .008, s * .04, .012, .067);
+      }
+      eyes(p.head, .043, .018, .026, .012, '#3b2416', .35);
+      p.pose = quadPose; p.scaleK = 1.22;
+      return p;
+    },
     R() { return LAND.R(); }, // éléphant
-    Q() { return BIRDS.N(); }, // perroquet coloré
+    Q() { return LAND.Q(); }, // lionne couronnée
     K() { return LAND.K(); }, // lion couronné
   };
 
