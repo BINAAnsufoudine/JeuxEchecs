@@ -4532,6 +4532,8 @@
   const GRADE_STEPS = [[0, '⚪'], [100, '🟢'], [250, '🔵'], [450, '🟣'], [700, '🟠'], [1000, '🔴'], [1400, '👑']];
   const GRADE_NAMES = {
     ninjas: [['Apprenti', 'Apprentice'], ['Genin', 'Genin'], ['Chûnin', 'Chunin'], ['Jônin', 'Jonin'], ['Sannin', 'Sannin'], ['Kage', 'Kage'], ['Légende', 'Legend']],
+    kingdom: [['Petit explorateur', 'Little explorer'], ['Ami des animaux', 'Animal friend'], ['Gardien de la savane', 'Savanna guardian'], ['Protecteur de la jungle', 'Jungle protector'], ['Maître des animaux', 'Animal master'], ['Roi du royaume', 'King of the kingdom'], ['Légende animale', 'Animal legend']],
+    wood: [['Apprenti sculpteur', 'Novice carver'], ['Tourneur sur bois', 'Wood turner'], ['Artisan du plateau', 'Board artisan'], ['Sculpteur de pièces', 'Piece sculptor'], ['Maître ébéniste', 'Master woodworker'], ['Gardien de l’échiquier', 'Chessboard guardian'], ['Légende du bois', 'Wood legend']],
     plants: [['Graine', 'Seed'], ['Pousse', 'Sprout'], ['Bourgeon', 'Bud'], ['Fleur', 'Flower'], ['Arbuste', 'Shrub'], ['Grand arbre', 'Great tree'], ['Baobab légendaire', 'Legendary baobab']],
     land: [['Lionceau', 'Cub'], ['Pisteur', 'Tracker'], ['Éclaireur', 'Scout'], ['Chasseur', 'Hunter'], ['Chef de meute', 'Pack leader'], ['Roi de la savane', 'King of the savanna'], ['Légende', 'Legend']],
     birds: [['Oisillon', 'Fledgling'], ['Moineau', 'Sparrow'], ['Perroquet', 'Parrot'], ['Faucon', 'Falcon'], ['Aigle', 'Eagle'], ['Aigle royal', 'Golden eagle'], ['Légende du ciel', 'Sky legend']],
@@ -4664,6 +4666,12 @@
     ninjas: [
       ['Étudiant de l’Académie', 'Academy student', '📜'], ['Genin', 'Genin', '🥷'], ['Genin confirmé', 'Senior Genin', '🌀'], ['Chûnin', 'Chunin', '🎯'], ['Chûnin d’élite', 'Elite Chunin', '⚔️'], ['Jônin', 'Jonin', '🛡️'], ['Jônin spécial', 'Special Jonin', '🥷'], ['ANBU', 'ANBU', '🎭'], ['Kage', 'Kage', '🏯'], ['Hokage', 'Hokage', '👑'],
     ],
+    kingdom: [
+      ['La basse-cour', 'The farmyard', '🐥'], ['Le jardin des amis', 'The friends’ garden', '🐒'], ['La rivière joyeuse', 'The happy river', '🦛'], ['La savane dorée', 'The golden savanna', '🦁'], ['La forêt des singes', 'The monkey forest', '🐵'], ['Les arbres géants', 'The giant trees', '🦒'], ['Le sentier des éléphants', 'The elephant trail', '🐘'], ['La jungle colorée', 'The colourful jungle', '🦜'], ['Le cœur de la jungle', 'The heart of the jungle', '🌴'], ['Le grand royaume animal', 'The great animal kingdom', '👑'],
+    ],
+    wood: [
+      ['Bois clair', 'Light wood', '🤍'], ['Bois de hêtre', 'Beechwood', '🌳'], ['Bois de bouleau', 'Birchwood', '🪵'], ['Bois de chêne', 'Oakwood', '🌿'], ['Bois de cerisier', 'Cherrywood', '🌸'], ['Bois de noyer', 'Walnut wood', '🌰'], ['Bois d’acajou', 'Mahogany', '🪵'], ['Bois d’ébène', 'Ebony', '⚫'], ['Échiquier précieux', 'Precious chessboard', '♟️'], ['Grand maître ébéniste', 'Master woodworker', '👑'],
+    ],
   };
   const natureGradesFor = (collectionId = activeNatureCollection) => (NATURE_GRADE_PATHS[collectionId] || NATURE_GRADE_PATHS.plants).map(([fr, en, icon]) => ({ name: L(fr, en), icon }));
   const GARDEN_PLANTS = [
@@ -4695,14 +4703,20 @@
     { id: 'ninjas', name: L('Ninjas', 'Ninjas'), icon: '🥷', unlockGrade: 1, items: [
       ['Étudiant de l’Académie', 'Academy student', '📜'], ['Genin', 'Genin', '🥷'], ['Genin confirmé', 'Senior Genin', '🌀'], ['Chûnin', 'Chunin', '🎯'], ['Chûnin d’élite', 'Elite Chunin', '⚔️'], ['Jônin', 'Jonin', '🛡️'], ['Jônin spécial', 'Special Jonin', '🥷'], ['ANBU', 'ANBU', '🎭'], ['Kage', 'Kage', '🏯'], ['Hokage', 'Hokage', '👑'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
+    { id: 'kingdom', name: L('Royaume des animaux', 'Animal Kingdom'), icon: '🐾', unlockGrade: 1, items: [
+      ['La basse-cour', 'The farmyard', '🐥'], ['Le jardin des amis', 'The friends’ garden', '🐒'], ['La rivière joyeuse', 'The happy river', '🦛'], ['La savane dorée', 'The golden savanna', '🦁'], ['La forêt des singes', 'The monkey forest', '🐵'], ['Les arbres géants', 'The giant trees', '🦒'], ['Le sentier des éléphants', 'The elephant trail', '🐘'], ['La jungle colorée', 'The colourful jungle', '🦜'], ['Le cœur de la jungle', 'The heart of the jungle', '🌴'], ['Le grand royaume animal', 'The great animal kingdom', '👑'],
+    ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
+    { id: 'wood', name: L('Échecs en bois', 'Wooden chess'), icon: '🪵', unlockGrade: 1, items: [
+      ['Bois clair', 'Light wood', '🤍'], ['Bois de hêtre', 'Beechwood', '🌳'], ['Bois de bouleau', 'Birchwood', '🪵'], ['Bois de chêne', 'Oakwood', '🌿'], ['Bois de cerisier', 'Cherrywood', '🌸'], ['Bois de noyer', 'Walnut wood', '🌰'], ['Bois d’acajou', 'Mahogany', '🪵'], ['Bois d’ébène', 'Ebony', '⚫'], ['Échiquier précieux', 'Precious chessboard', '♟️'], ['Grand maître ébéniste', 'Master woodworker', '👑'],
+    ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
   ];
-  const NATURE_COLLECTION_ORDER = ['ninjas', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern'];
+  const NATURE_COLLECTION_ORDER = ['ninjas', 'plants', 'kingdom', 'wood', 'land', 'birds', 'ocean', 'ancient', 'modern'];
   NATURE_COLLECTIONS.sort((a, b) => NATURE_COLLECTION_ORDER.indexOf(a.id) - NATURE_COLLECTION_ORDER.indexOf(b.id));
   // Saison mensuelle : chaque mois, un thème est à l'honneur (récompenses ×1,5 quand on joue avec lui)
   const SEASON_BONUS = 1.5;
   const seasonTheme = (d = new Date()) => NATURE_COLLECTION_ORDER[(d.getFullYear() * 12 + d.getMonth()) % NATURE_COLLECTION_ORDER.length];
   const seasonMonth = (d = new Date()) => d.toLocaleDateString(LOCALE, { month: 'long' });
-  const BUILT_NATURE_COLLECTION_IDS = new Set(['plants', 'land', 'birds', 'ocean', 'ninjas', 'ancient', 'modern']);
+  const BUILT_NATURE_COLLECTION_IDS = new Set(['plants', 'land', 'birds', 'ocean', 'ninjas', 'ancient', 'modern', 'kingdom', 'wood']);
   const AVAILABLE_NATURE_COLLECTIONS = NATURE_COLLECTIONS.filter((item) => BUILT_NATURE_COLLECTION_IDS.has(item.id));
   if (!store.get('natureNinjaDefaultMigrated', false)) {
     const previousCollection = store.get('natureCollection', null);
@@ -4717,6 +4731,8 @@
   const NATURE_TERRAIN_PATHS = {
     plants: ['grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest'],
     land: ['grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'mud', 'mud', 'mud'],
+    kingdom: ['grass', 'grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'mud', 'mud', 'forest'],
+    wood: ['forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest'],
     birds: ['grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest'],
     ocean: ['beach', 'beach', 'rock', 'rock', 'water', 'water', 'water', 'water', 'water', 'water'],
     ninjas: ['dojo', 'dojo', 'rock', 'rock', 'dojo', 'dojo', 'dojo', 'forest', 'forest', 'dojo'],
@@ -4927,6 +4943,8 @@
     if (card) card.setAttribute('aria-label', L(`Thème ${collection.name}`, `${collection.name} theme`));
     const HERO = {
       ninjas: [L('Ton chemin de ninja', 'Your ninja path'), L('Prêt à devenir Hokage ?', 'Ready to become Hokage?')],
+      kingdom: [L('Le Royaume des animaux', 'The Animal Kingdom'), L('Prêt à rencontrer tes nouveaux amis ?', 'Ready to meet your new friends?')],
+      wood: [L('L’atelier des échecs en bois', 'The wooden chess workshop'), L('Prêt à jouer comme les grands ?', 'Ready to play like the grown-ups?')],
       plants: [L('Ton jardin prend vie', 'Your garden comes alive'), L('Prêt à faire grandir ton jardin ?', 'Ready to grow your garden?')],
       land: [L('Ta réserve s’agrandit', 'Your reserve is growing'), L('Prêt à rencontrer de nouveaux animaux ?', 'Ready to meet new animals?')],
       birds: [L('Ta volière s’agrandit', 'Your aviary is growing'), L('Prêt à faire chanter ta volière ?', 'Ready to make your aviary sing?')],

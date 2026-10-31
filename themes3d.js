@@ -616,14 +616,122 @@
     },
   };
 
+  /* ================= ROYAUME DES ANIMAUX : animaux joyeux en 3D =================
+     Les personnages reprennent les animaux de la maquette enfant : lion, perroquet,
+     éléphant, girafe, singe et poussin. Ils réutilisent les mêmes articulations et
+     animations que les autres personnages pour rester compatibles avec les coups. */
+  const KINGDOM = {
+    P() { // poussin jaune
+      const p = bird({ color: '#ffd54f', w: 0.05, bh: 0.07, len: 0.075, hr: 0.052, beak: 0.045, beakR: 0.018, beakColor: '#f28c28', wing: '#ffca28', belly: '#fff0a6', tailLen: 0.035, legLen: 0.035, headColor: '#ffe16a', tilt: -0.35, legColor: '#ed9631' });
+      p.scaleK = 1.35;
+      return p;
+    },
+    N() { // petit singe espiègle
+      const p = base(0.2), brown = '#a96539', light = '#f0c39a';
+      ell(p.torso, brown, 0.09, 0.12, 0.075, 0, 0.02, 0);
+      ell(p.torso, light, 0.062, 0.075, 0.025, 0, 0.015, 0.066);
+      p.head.position.set(0, 0.2, 0.015);
+      for (const s of [-1, 1]) {
+        ell(p.head, brown, 0.03, 0.035, 0.018, s * 0.06, 0, -0.004);
+        ell(p.head, '#edb78a', 0.018, 0.021, 0.012, s * 0.06, 0, 0.012);
+      }
+      ell(p.head, brown, 0.067, 0.065, 0.06);
+      ell(p.head, light, 0.046, 0.035, 0.027, 0, -0.018, 0.047);
+      eyes(p.head, 0.027, 0.014, 0.05, 0.014);
+      smile(p.head, -0.035, 0.07, 0.018);
+      const tail = new T.Group(); tail.position.set(0, 0.02, -0.065); p.torso.add(tail);
+      stick(tail, brown, 0.012, 0.01, [0, 0, 0], [0.03, 0.04, -0.06]);
+      const curl = mesh(new T.TorusGeometry(0.035, 0.009, 6, 12, Math.PI * 1.6), mat(brown), 0.03, 0.06, -0.06); curl.rotation.z = -0.5; tail.add(curl);
+      p.tail = tail; p.pose = apePose; p.scaleK = 1.2;
+      return p;
+    },
+    B() { return LAND.B(); }, // girafe au long cou
+    R() { return LAND.R(); }, // éléphant
+    Q() { return BIRDS.N(); }, // perroquet coloré
+    K() { return LAND.K(); }, // lion couronné
+  };
+
+  /* ================= ÉCHECS CLASSIQUES : pièces sculptées en bois ================= */
+  function woodenSet(piece) {
+    const dark = piece === piece.toLowerCase();
+    const wood = dark ? '#684328' : '#e8c58d';
+    const shade = dark ? '#392719' : '#b78850';
+    const p = base(0.22), shape = new T.Group();
+    p.torso.add(shape); shape.position.y = -0.22;
+    const profile = piece.toLowerCase() === 'p'
+      ? [[0,0],[0.12,0],[0.15,0.035],[0.13,0.07],[0.085,0.09],[0.065,0.17],[0.1,0.2],[0.08,0.235],[0,0.235]]
+      : piece.toLowerCase() === 'r'
+        ? [[0,0],[0.14,0],[0.16,0.04],[0.14,0.08],[0.08,0.1],[0.075,0.37],[0.12,0.39],[0.12,0.46],[0.1,0.49],[0,0.49]]
+        : [[0,0],[0.14,0],[0.16,0.04],[0.14,0.08],[0.085,0.1],[0.07,0.2],[0.1,0.23],[0.085,0.27],[0.055,0.3],[0.045,0.37],[0.09,0.4],[0.07,0.45],[0,0.47]];
+    const lathe = new T.LatheGeometry(profile.map(([r, y]) => new T.Vector2(r, y)), 32);
+    lathe.computeVertexNormals();
+    shape.add(mesh(lathe, mat(wood, { rough: 0.34, metal: 0.02 })));
+    // Fine bagues tournées dans le bois, pour un aspect de pièce réellement sculptée.
+    for (const [y, radius] of [[0.065,0.135],[0.105,0.083],[0.23,0.085]]) {
+      const ring = mesh(new T.TorusGeometry(radius, 0.009, 7, 28), mat(shade, { rough: 0.42 }), 0, y, 0);
+      ring.rotation.x = Math.PI / 2; shape.add(ring);
+    }
+    const kind = piece.toLowerCase();
+    if (kind === 'p') {
+      shape.add(mesh(sphere(0.078, 18, 14), mat(wood, { rough: 0.3 }), 0, 0.29, 0));
+    } else if (kind === 'r') {
+      shape.add(mesh(cyl(0.105, 0.105, 0.07, 24), mat(wood, { rough: 0.34 }), 0, 0.51, 0));
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4, b = mesh(box(0.052, 0.065, 0.052), mat(wood), Math.cos(a) * 0.082, 0.57, Math.sin(a) * 0.082);
+        shape.add(b);
+      }
+    } else if (kind === 'b') {
+      const miter = mesh(cone(0.072, 0.16, 24), mat(wood, { rough: 0.3 }), 0, 0.51, 0); shape.add(miter);
+      const cut = mesh(box(0.012, 0.08, 0.035), mat(shade, { rough: 0.42 }), 0, 0.51, 0.062); cut.rotation.z = -0.35; shape.add(cut);
+    } else if (kind === 'q' || kind === 'k') {
+      shape.add(mesh(cyl(0.084, 0.09, 0.055, 24), mat(wood), 0, 0.48, 0));
+      for (let i = 0; i < (kind === 'q' ? 7 : 5); i++) {
+        const a = i * Math.PI * 2 / (kind === 'q' ? 7 : 5), x = Math.cos(a) * 0.073, z = Math.sin(a) * 0.073;
+        shape.add(mesh(sphere(0.022, 10, 8), mat(wood), x, 0.55, z));
+      }
+      if (kind === 'k') {
+        shape.add(mesh(box(0.026, 0.15, 0.026), mat(wood), 0, 0.62, 0));
+        shape.add(mesh(box(0.105, 0.025, 0.026), mat(wood), 0, 0.65, 0));
+      }
+    } else if (kind === 'n') {
+      // Tête de cheval sculptée : encolure inclinée, naseau et oreilles distinctes.
+      const neck = mesh(sphere(0.09, 18, 14), mat(wood), 0, 0.39, 0); neck.scale.set(0.72, 1.55, 0.75); neck.rotation.z = -0.28; shape.add(neck);
+      const head = mesh(sphere(0.071, 18, 14), mat(wood), 0.005, 0.53, 0.035); head.scale.set(0.78, 0.95, 0.78); shape.add(head);
+      for (const s of [-1, 1]) { const ear = mesh(cone(0.022, 0.09, 8), mat(wood), s * 0.036, 0.62, 0.025); ear.rotation.z = -s * 0.18; shape.add(ear); }
+      ell(shape, shade, 0.012, 0.012, 0.008, -0.025, 0.54, 0.094);
+      ell(shape, shade, 0.012, 0.012, 0.008, 0.035, 0.54, 0.094);
+    }
+    p.weapon = 'none'; p.noHeadScale = true; p.scaleK = 1;
+    return p;
+  }
+  const WOOD = { P: woodenSet, N: woodenSet, B: woodenSet, R: woodenSet, Q: woodenSet, K: woodenSet, p: woodenSet, n: woodenSet, b: woodenSet, r: woodenSet, q: woodenSet, k: woodenSet };
+
   // boîte à outils partagée avec les autres thèmes (warriors3d.js)
   root.ThemeKit = { use(THREE) { T = THREE; }, mat, mesh, sphere, cone, cyl, box, ell, stick, base, eyes, smile, crown, tiara, quad, quadPose, apePose };
 
-  const THEMES = { plants: PLANTS, land: LAND, birds: BIRDS };
+  const THEMES = { plants: PLANTS, land: LAND, birds: BIRDS, kingdom: KINGDOM, wood: WOOD };
   root.ThemeModels = root.ThemeModels || {};
   for (const [id, B] of Object.entries(THEMES)) {
     root.ThemeModels[id] = {
-      build(THREE, piece) { T = THREE; return (B[piece] || B[piece.toUpperCase()])(); },
+      build(THREE, piece) {
+        T = THREE;
+        const parts = (B[piece] || B[piece.toUpperCase()])(piece);
+        if (id === 'kingdom' && piece === piece.toLowerCase()) {
+          // Les animaux des Noirs gardent leur espèce, avec des tons plus chauds et foncés.
+          const brown = new T.Color('#68452f');
+          parts.root.traverse((o) => {
+            if (!o.isMesh || !o.material || !o.material.color) return;
+            const materials = Array.isArray(o.material) ? o.material : [o.material];
+            const tinted = materials.map((source) => {
+              const m = source.clone(), c = m.color;
+              if (!(c.r > 0.92 && c.g > 0.92 && c.b > 0.92)) c.lerp(brown, 0.36);
+              return m;
+            });
+            o.material = Array.isArray(o.material) ? tinted : tinted[0];
+          });
+        }
+        return parts;
+      },
     };
   }
 })(window);
