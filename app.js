@@ -2840,12 +2840,14 @@
     else $('puzzle').querySelector('.board-col').insertBefore($('coach'), $('puzzle-slot'));
     attachBoard('puzzle');
     if (!$('puzzle').classList.contains('active')) { randomScenery(); show('puzzle'); }
+    applyBoardView(false);
   }
   function leavePuzzle() {
     hush();
     if (pz && pz.autoAdvanceTimer) clearTimeout(pz.autoAdvanceTimer);
     const back = pz && pz.lesson && pz.lesson.back ? pz.lesson.back : pz && pz.lesson && pz.lesson.champion ? 'champions' : 'problems';
     pz = null; marks = null; game = null;
+    applyBoardView(false);
     if (back === 'train') renderTrain();
     show(back);
   }
@@ -7714,14 +7716,20 @@
     wrap.classList.toggle('view-2d', view === '2d');
     wrap.classList.toggle('view-3d', view === '3d');
     $('view-switch').hidden = !b3d;
-    for (const b of $('view-switch').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
+    const puzzleSwitch = $('puzzle-view-switch');
+    if (puzzleSwitch) puzzleSwitch.hidden = !b3d || !(pz && pz.lesson && pz.lesson.champion);
+    for (const control of [$('view-switch'), puzzleSwitch].filter(Boolean)) {
+      for (const b of control.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
+    }
     if (rerender && game) { if (b3d && view !== '2d') b3d.resize(); renderBoard(); }
   }
-  $('view-switch').addEventListener('click', (e) => {
+  function selectBoardView(e) {
     const b = e.target.closest('button[data-view]'); if (!b) return;
     settings.boardView = b.dataset.view; store.set('settings', settings);
     applyBoardView(true);
-  });
+  }
+  $('view-switch').addEventListener('click', selectBoardView);
+  $('puzzle-view-switch').addEventListener('click', selectBoardView);
   applyBoardView(false);
   applyAnimSpeed();
   applyBlackTheme();

@@ -496,12 +496,14 @@
     else $('puzzle').querySelector('.board-col').insertBefore($('coach'), $('puzzle-slot'));
     attachBoard('puzzle');
     if (!$('puzzle').classList.contains('active')) { randomScenery(); show('puzzle'); }
+    applyBoardView(false);
   }
   function leavePuzzle() {
     hush();
     if (pz && pz.autoAdvanceTimer) clearTimeout(pz.autoAdvanceTimer);
     const back = pz && pz.lesson && pz.lesson.back ? pz.lesson.back : pz && pz.lesson && pz.lesson.champion ? 'champions' : 'problems';
     pz = null; marks = null; game = null;
+    applyBoardView(false);
     if (back === 'train') renderTrain();
     show(back);
   }
