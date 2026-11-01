@@ -1423,25 +1423,30 @@ body:has(#game.game-fullscreen) .mobile-menu-toggle { display: none !important; 
 
 /* Replay PC : conserver une vraie largeur au panneau d'analyse et à Sissa. */
 @media (min-width: 900px) {
-  #game .game-layout:has(.replay-bar:not([hidden])) {
-    grid-template-columns: minmax(0, 1.15fr) minmax(min(320px, 38vw), .9fr);
+  #game .game-layout:has(#rp-review:not([hidden])) {
+    grid-template-columns: minmax(0, 1.1fr) minmax(min(360px, 42vw), .9fr);
     column-gap: clamp(12px, 1.4vw, 20px);
   }
-  #game .side-col:has(.replay-bar:not([hidden])) {
+  #game .side-col:has(#rp-review:not([hidden])) {
     grid-column: 2;
     grid-row: 3;
     width: 100%;
-    min-width: 0;
+    min-width: min(100%, 360px);
     max-width: none;
     align-self: start;
   }
-  #game .rp-review,
+  #game #rp-review,
   #game .rp-coach,
   #game .replay-bar {
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
   }
+  #game .rp-coach-message { flex: 1 1 0; min-width: 0; }
+}
+@media (max-width: 899px) {
+  #game .rp-review { width: min(100%, 560px); }
+  #game .rp-coach { width: 100%; min-width: 0; }
   #game .rp-coach-message { flex: 1 1 0; min-width: 0; }
 }
 
