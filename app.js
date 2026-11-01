@@ -1164,15 +1164,27 @@
   function renderClockControls() {
     const wrap = $('local-clock-controls'), button = $('btn-local-clock-pass');
     if (!wrap || !button) return;
-    const showManual = !!(cfg && cfg.mode === 'local' && cfg.localClock && localClockState && localClockState.mode === 'manual' && localClockState.waitingManual && !result);
-    wrap.hidden = !showManual;
+    const isClockGame = !!(cfg && cfg.mode === 'local' && cfg.localClock && localClockState && !result);
+    const showManual = !!(isClockGame && localClockState.mode === 'manual' && localClockState.waitingManual);
+    const fullscreen = $('game').classList.contains('game-fullscreen');
+    wrap.hidden = !showManual || fullscreen;
     if (showManual) {
       const next = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
       button.textContent = L(`▶ Démarrer la pendule des ${next}`, `▶ Start ${next}’ clock`);
       button.setAttribute('aria-label', button.textContent);
     }
+    const clocks = $('fullscreen-clocks');
+    clocks.hidden = !isClockGame;
+    if (!isClockGame) { clocks.innerHTML = ''; return; }
+    clocks.innerHTML = ['b', 'w'].map((side) => {
+      const name = side === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
+      const active = localClockState.active === side;
+      const canPass = showManual && active;
+      const next = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
+      return `<div class="fullscreen-clock${active && !localClockState.waitingManual ? ' active' : ''}"><strong>${name}</strong><span>${fmtClock(localClockRemaining(side))}</span>${canPass ? `<button type="button" class="btn primary fullscreen-clock-pass" data-clock-pass="${side}">${L(`Démarrer ${next}`, `Start ${next}`)} ▶</button>` : ''}</div>`;
+    }).join('');
   }
-  $('btn-local-clock-pass').onclick = () => {
+  function activateManualClock() {
     if (!localClockState || !localClockState.waitingManual || result) return;
     const side = localClockState.active, now = Date.now();
     if (localClockConsume(now) <= 0) { localClockTimeout(side); return; }
@@ -1182,7 +1194,12 @@
     cfg.localClockSnapshot = localClockSnapshot();
     localClockShownSecond = null;
     save(); render();
-  };
+  }
+  $('btn-local-clock-pass').onclick = activateManualClock;
+  $('fullscreen-clocks').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-clock-pass]');
+    if (button && button.dataset.clockPass === localClockState?.active) activateManualClock();
+  });
   function startLocalClock(conf) {
     if (localClockTimer) clearInterval(localClockTimer);
     localClockTimer = null; localClockState = null; localClockShownSecond = null;
@@ -1745,6 +1762,7 @@
     const label = L(enabled ? 'Quitter le plein écran' : 'Plein écran', enabled ? 'Exit fullscreen' : 'Fullscreen');
     button.setAttribute('aria-label', label);
     button.title = label;
+    renderClockControls();
   };
   $('btn-game-fullscreen').onclick = async () => {
     const entering = !$('game').classList.contains('game-fullscreen');
