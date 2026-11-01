@@ -5320,6 +5320,15 @@
     store.set('natureCollection', selected.id);
     renderHomeRewards();
   });
+  const worldJourneyToggle = $('world-journey-toggle'), worldJourneyContent = $('world-journey-content');
+  const setWorldJourneyExpanded = (expanded) => {
+    worldJourneyContent.hidden = !expanded;
+    worldJourneyToggle.setAttribute('aria-expanded', String(expanded));
+    $('world-journey').classList.toggle('expanded', expanded);
+    store.set('worldJourneyExpanded', expanded);
+  };
+  setWorldJourneyExpanded(!!store.get('worldJourneyExpanded', false));
+  worldJourneyToggle.addEventListener('click', () => setWorldJourneyExpanded(worldJourneyContent.hidden));
   $('world-journey-track').addEventListener('click', (event) => {
     const button = event.target.closest('[data-world-collection]');
     if (!button) return;

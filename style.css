@@ -127,8 +127,12 @@ button[data-ui-icon]::before { content: attr(data-ui-icon); display: inline-bloc
 .local-clock-controls .btn { width: min(100%, 420px); }
 .world-journey.panel { width: 100%; max-width: none; margin: 18px 0; padding: 16px; }
 .world-journey-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.world-journey-head h2 { margin: 0 0 4px; font-size: 1.08rem; }
-.world-journey-head p { margin: 0; color: var(--muted); font-size: .84rem; }
+.world-journey-head h2 { margin: 0; font-size: 1.08rem; }
+.world-journey-toggle { display: inline-flex; align-items: center; gap: 9px; padding: 2px 0; border: 0; background: transparent; color: var(--text); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.world-journey-toggle:hover { color: var(--accent); }
+.world-journey-chevron { display: inline-block; color: var(--muted); transition: transform .18s ease; }
+.world-journey.expanded .world-journey-chevron { transform: rotate(180deg); }
+.world-journey-description { margin: 6px 0 0; color: var(--muted); font-size: .84rem; }
 .world-journey-head > strong { flex: none; color: var(--accent); white-space: nowrap; }
 .world-journey-progress, .world-node-progress { display: block; overflow: hidden; height: 8px; border-radius: 999px; background: var(--surface-2); }
 .world-journey-progress { margin: 12px 0; }

@@ -110,12 +110,15 @@
           <button id="btn-home-rice-shop" class="btn ghost home-rice-shop" type="button">🎁 Voir la boutique</button>
         </section>
       </div>
-      <section class="world-journey panel" aria-labelledby="world-journey-title">
-        <div class="world-journey-head"><div><h2 id="world-journey-title">Parcours des mondes</h2><p>Gagne des points dans toute l’application et collectionne les cinq titres de chaque monde.</p></div><strong id="world-journey-score">0 points</strong></div>
-        <div class="world-journey-progress" role="progressbar" aria-label="Progression du parcours des mondes" aria-valuemin="0" aria-valuemax="6000" aria-valuenow="0"><i id="world-journey-progress"></i></div>
-        <div id="world-journey-track" class="world-journey-track" aria-label="Étapes du parcours des mondes"></div>
-        <p id="world-journey-next" class="world-journey-next" aria-live="polite"></p>
-        <small class="world-journey-open-note">Tous les mondes restent accessibles à l’exploration pour le moment.</small>
+      <section id="world-journey" class="world-journey panel" aria-labelledby="world-journey-title">
+        <div class="world-journey-head"><h2><button id="world-journey-toggle" class="world-journey-toggle" type="button" aria-expanded="false" aria-controls="world-journey-content"><span id="world-journey-title">Parcours des mondes</span><span class="world-journey-chevron" aria-hidden="true">⌄</span></button></h2><strong id="world-journey-score">0 points</strong></div>
+        <div id="world-journey-content" class="world-journey-content" hidden>
+          <p class="world-journey-description">Gagne des points dans toute l’application et collectionne les cinq titres de chaque monde.</p>
+          <div class="world-journey-progress" role="progressbar" aria-label="Progression du parcours des mondes" aria-valuemin="0" aria-valuemax="6000" aria-valuenow="0"><i id="world-journey-progress"></i></div>
+          <div id="world-journey-track" class="world-journey-track" aria-label="Étapes du parcours des mondes"></div>
+          <p id="world-journey-next" class="world-journey-next" aria-live="polite"></p>
+          <small class="world-journey-open-note">Tous les mondes restent accessibles à l’exploration pour le moment.</small>
+        </div>
       </section>
       <div class="home-section-heading"><h2>Qu’est-ce qu’on fait ?</h2><span>Choisis ton activité</span></div>
       <div class="home-activity-grid">
