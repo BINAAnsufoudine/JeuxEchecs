@@ -205,11 +205,10 @@
     </header>
     <div class="game-layout">
       <div class="board-col">
-        <div class="player top"><span class="name" id="name-top"></span><span class="captured" id="cap-top"></span></div>
+        <div class="player top"><span class="name" id="name-top"></span><span class="captured" id="cap-top"></span><button class="clock-player-pass" id="btn-clock-pass-top" type="button" data-clock-pass="b" hidden></button></div>
         <div class="board-wrap" id="board-wrap"><div id="board" role="grid" aria-label="Échiquier"></div><button type="button" id="btn-skip-anim" class="skip-anim" hidden>⏩ Passer</button><div id="minimap" class="minimap" aria-label="Aperçu 2D jouable ; le faire glisser pour le déplacer, tirer sur le bord gauche ou inférieur pour redimensionner"></div></div>
-        <div class="player bottom"><span class="name" id="name-bottom"></span><span class="captured" id="cap-bottom"></span></div>
+        <div class="player bottom"><span class="name" id="name-bottom"></span><span class="captured" id="cap-bottom"></span><button class="clock-player-pass" id="btn-clock-pass-bottom" type="button" data-clock-pass="w" hidden></button></div>
         <div id="status" class="status" aria-live="polite"></div>
-        <div id="local-clock-controls" class="local-clock-controls" hidden><button id="btn-local-clock-pass" class="btn primary" type="button"></button></div>
       </div>
       <div class="game-tools">
       <div class="board-validation">
@@ -229,9 +228,9 @@
           <button class="act" id="btn-draw" aria-label="Proposer la nulle"><span>½</span>Nulle</button>
           <button class="act" id="btn-resign"><span>⚑</span>Abandon</button>
         </div>
-        <div id="fullscreen-clocks" class="fullscreen-clocks" hidden aria-label="Pendules des joueurs"></div>
       </div>
       <div class="side-col">
+        <div id="fullscreen-clocks" class="fullscreen-clocks" hidden aria-label="Pendules des joueurs"></div>
         <div id="rp-review" class="rp-review" hidden>
           <div class="rp-coach">
             <div class="rp-coach-portrait"><img id="rp-coach-img" src="sissa/sissa-face.jpg" alt="Maître Sissa"><button type="button" class="legend-link" data-legend>La légende de Sissa</button></div>

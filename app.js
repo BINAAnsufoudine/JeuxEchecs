@@ -707,6 +707,7 @@
     const entryPrefix = entryLastMove ? uciMoves.slice(0, -1) : uciMoves;
     for (const u of entryPrefix) if (!game.playUci(u)) { entryPrefixValid = false; break; }
     cfg = conf;
+    $('game').classList.toggle('has-local-clock', !!(cfg.mode === 'local' && cfg.localClock));
     if (cfg.mode === 'coach') cfg.coachTheme = coachPlan().theme;
     result = res;
     startLocalClock(cfg);
@@ -1162,24 +1163,26 @@
     }
   }
   function renderClockControls() {
-    const wrap = $('local-clock-controls'), button = $('btn-local-clock-pass');
-    if (!wrap || !button) return;
     const isClockGame = !!(cfg && cfg.mode === 'local' && cfg.localClock && localClockState && !result);
     const showManual = !!(isClockGame && localClockState.mode === 'manual' && localClockState.waitingManual);
-    const fullscreen = $('game').classList.contains('game-fullscreen');
-    wrap.hidden = !showManual || fullscreen;
-    if (showManual) {
-      const next = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
-      button.textContent = L(`▶ Démarrer la pendule des ${next}`, `▶ Start ${next}’ clock`);
-      button.setAttribute('aria-label', button.textContent);
+    const compact = window.matchMedia('(max-width: 899px)').matches;
+    for (const [pos, side] of [['top', flipped ? 'w' : 'b'], ['bottom', flipped ? 'b' : 'w']]) {
+      const button = $(`btn-clock-pass-${pos}`);
+      const canPass = isClockGame && compact && showManual && localClockState.active === side;
+      button.hidden = !canPass;
+      if (canPass) {
+        const next = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
+        button.textContent = L(`Démarrer ${next} ▶`, `Start ${next} ▶`);
+        button.setAttribute('aria-label', L(`Démarrer la pendule des ${next}`, `Start ${next}’ clock`));
+      }
     }
     const clocks = $('fullscreen-clocks');
-    clocks.hidden = !isClockGame;
+    clocks.hidden = !isClockGame || compact;
     if (!isClockGame) { clocks.innerHTML = ''; return; }
     clocks.innerHTML = ['b', 'w'].map((side) => {
       const name = side === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
       const active = localClockState.active === side;
-      const canPass = showManual && active;
+      const canPass = showManual && active && !compact;
       const next = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
       return `<div class="fullscreen-clock${active && !localClockState.waitingManual ? ' active' : ''}"><strong>${name}</strong><span>${fmtClock(localClockRemaining(side))}</span>${canPass ? `<button type="button" class="btn primary fullscreen-clock-pass" data-clock-pass="${side}">${L(`Démarrer ${next}`, `Start ${next}`)} ▶</button>` : ''}</div>`;
     }).join('');
@@ -1195,10 +1198,15 @@
     localClockShownSecond = null;
     save(); render();
   }
-  $('btn-local-clock-pass').onclick = activateManualClock;
+  $('btn-clock-pass-top').onclick = activateManualClock;
+  $('btn-clock-pass-bottom').onclick = activateManualClock;
   $('fullscreen-clocks').addEventListener('click', (event) => {
     const button = event.target.closest('[data-clock-pass]');
     if (button && button.dataset.clockPass === localClockState?.active) activateManualClock();
+  });
+  window.addEventListener('resize', () => {
+    if (!game || !cfg || !cfg.localClock) return;
+    renderPlayers(); renderClockControls();
   });
   function startLocalClock(conf) {
     if (localClockTimer) clearInterval(localClockTimer);
@@ -1228,7 +1236,7 @@
       if (replay && (c === 'w' ? replay.white : replay.black)) return c === 'w' ? replay.white : replay.black;
       if (cfg.mode === 'local') {
         const side = c === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
-        return cfg.localClock && localClockState ? `${side} · ${fmtClock(localClockRemaining(c))}` : side;
+        return cfg.localClock && localClockState && window.matchMedia('(max-width: 899px)').matches ? `${side} · ${fmtClock(localClockRemaining(c))}` : side;
       }
       if (cfg.mode === 'online' && onlineGame) {
         const g = onlineGame, t = onlineTimeLeft(g, c);
@@ -1762,6 +1770,7 @@
     const label = L(enabled ? 'Quitter le plein écran' : 'Plein écran', enabled ? 'Exit fullscreen' : 'Fullscreen');
     button.setAttribute('aria-label', label);
     button.title = label;
+    if (game && cfg) renderPlayers();
     renderClockControls();
   };
   $('btn-game-fullscreen').onclick = async () => {
