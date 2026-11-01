@@ -1166,6 +1166,8 @@
     const isClockGame = !!(cfg && cfg.mode === 'local' && cfg.localClock && localClockState && !result);
     const showManual = !!(isClockGame && localClockState.mode === 'manual' && localClockState.waitingManual);
     const compact = window.matchMedia('(max-width: 899px)').matches;
+    const boardWidth = $('board-wrap').getBoundingClientRect().width;
+    if (boardWidth > 0) $('game').style.setProperty('--clock-rank-size', `${boardWidth / 8}px`);
     for (const [pos, side] of [['top', flipped ? 'w' : 'b'], ['bottom', flipped ? 'b' : 'w']]) {
       const button = $(`btn-clock-pass-${pos}`);
       const canPass = isClockGame && compact && showManual && localClockState.active === side;
@@ -1248,6 +1250,12 @@
     for (const [pos, c] of [['bottom', bottomColor], ['top', topColor]]) {
       const name = $('name-' + pos);
       name.textContent = label(c);
+      if (cfg.mode === 'local' && cfg.localClock && localClockState && window.matchMedia('(max-width: 899px)').matches) {
+        const sideLabel = document.createElement('span'), timer = document.createElement('span');
+        sideLabel.className = 'clock-side-label'; sideLabel.textContent = c === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
+        timer.className = 'clock-mobile-time'; timer.textContent = fmtClock(localClockRemaining(c));
+        name.replaceChildren(sideLabel, timer);
+      }
       const champ = !replay && cfg.mode === 'coach' && c !== cfg.playerColor && activeChampion();
       if (champ && champ.photo) { const im = document.createElement('img'); im.className = 'player-photo'; im.src = champ.photo.src; im.alt = ''; name.prepend(im); }
       const ph = cfg.mode === 'online' && onlineGame ? onlinePhotos[c === 'w' ? onlineGame.white : onlineGame.black] : !replay && cfg.mode !== 'local' && c === cfg.playerColor ? playerProfile().photo : null;
