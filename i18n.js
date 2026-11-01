@@ -144,6 +144,7 @@
     'Devine le coup': 'Guess the move',
     'Replay': 'Replay',
     'Contre ordinateur': 'Against the computer',
+    'Ordinateur avec pendule': 'Computer with a clock',
     'Deux joueurs': 'Two players',
     'Deux joueurs avec pendule': 'Two players with a clock',
     'Durée de la pendule pour chaque joueur': 'Clock time for each player',

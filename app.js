@@ -52,6 +52,7 @@
   const weakDevice = !!((navigator.deviceMemory && navigator.deviceMemory <= 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4));
   const settings = Object.assign({ anim: 'full', boardView: 'both', theme: 'foret', colorTheme: 'dark', showMoves: true, coords: true, sound: true, autoQueen: false, voice: true, coachEnabled: true, lite: weakDevice }, store.get('settings', {}));
   const setup = Object.assign({ mode: 'ai', color: 'w', level: 1, clockMinutes: 10, clockMode: 'auto' }, store.get('setup', {}));
+  const CLOCK_DURATIONS = [1, 3, 5, 10, 15, 20];
   // Ancien réglage sur 5 niveaux : on repart du niveau débloqué
   if (!store.get('unlocked', 0)) { store.del('stats'); store.set('unlocked', 1); setup.level = 1; }
   const unlocked = () => Math.max(1, Math.min(MAX_GAME_LEVEL, store.get('unlocked', 1)));
@@ -656,14 +657,19 @@
     });
     $('ai-options').hidden = setup.mode === 'local' || setup.mode === 'local-clock';
     const clockSelect = $('local-clock-duration');
-    if (!clockSelect.options.length) for (let minute = 1; minute <= 30; minute++) {
+    if (!clockSelect.options.length) for (const minute of CLOCK_DURATIONS) {
       const option = document.createElement('option'); option.value = String(minute); option.textContent = `${minute} ${L('minute', 'minute')}${minute > 1 ? L('s', 's') : ''}`; clockSelect.appendChild(option);
     }
-    clockSelect.value = String(Math.max(1, Math.min(30, Number(setup.clockMinutes) || 10)));
-    $('local-clock-options').hidden = setup.mode !== 'local-clock';
-    $('local-clock-help').textContent = setup.clockMode === 'manual'
-      ? L('Après chaque coup, appuyez sur le bouton sous le plateau pour lancer la pendule de l’adversaire.', 'After each move, press the button below the board to start your opponent’s clock.')
-      : L('La pendule passe automatiquement à l’adversaire après chaque coup.', 'The clock switches automatically to the opponent after every move.');
+    if (!CLOCK_DURATIONS.includes(Number(setup.clockMinutes))) setup.clockMinutes = 10;
+    clockSelect.value = String(setup.clockMinutes);
+    $('local-clock-options').hidden = !['local-clock', 'ai-clock'].includes(setup.mode);
+    $('local-clock-help').textContent = setup.mode === 'ai-clock'
+      ? setup.clockMode === 'manual'
+        ? L('Après ton coup, appuie sur ton bouton pour lancer la pendule de l’ordinateur. Après son coup, ta pendule repart automatiquement.', 'After your move, press your button to start the computer’s clock. After its move, your clock starts automatically.')
+        : L('La pendule passe automatiquement entre toi et l’ordinateur après chaque coup.', 'The clock switches automatically between you and the computer after every move.')
+      : setup.clockMode === 'manual'
+        ? L('Après chaque coup, appuyez sur le bouton de votre côté pour lancer la pendule de l’adversaire.', 'After each move, press the button on your side to start your opponent’s clock.')
+        : L('La pendule passe automatiquement à l’adversaire après chaque coup.', 'The clock switches automatically to your opponent after every move.');
     $('level-name').textContent = `${LEVEL_NAMES[setup.level]} (Elo ${LEVEL_ELO[setup.level]})`;
     $('level-grid').innerHTML = levelGridHtml(setup.level);
   }
@@ -683,7 +689,7 @@
       setup[seg.dataset.name] = b.dataset.value; renderSetup();
     });
   });
-  $('local-clock-duration').addEventListener('change', (event) => { setup.clockMinutes = Number(event.target.value) || 10; store.set('setup', setup); });
+  $('local-clock-duration').addEventListener('change', (event) => { setup.clockMinutes = CLOCK_DURATIONS.includes(Number(event.target.value)) ? Number(event.target.value) : 10; store.set('setup', setup); });
   $('level-grid').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-level]'); if (!b || b.disabled) return;
     setup.level = +b.dataset.level; store.set('setup', setup); renderSetup();
@@ -707,7 +713,7 @@
     const entryPrefix = entryLastMove ? uciMoves.slice(0, -1) : uciMoves;
     for (const u of entryPrefix) if (!game.playUci(u)) { entryPrefixValid = false; break; }
     cfg = conf;
-    $('game').classList.toggle('has-local-clock', !!(cfg.mode === 'local' && cfg.localClock));
+    $('game').classList.toggle('has-local-clock', hasGameClock(cfg));
     if (cfg.mode === 'coach') cfg.coachTheme = coachPlan().theme;
     result = res;
     startLocalClock(cfg);
@@ -715,7 +721,7 @@
     flipped = flip !== undefined ? flip : conf.mode !== 'local' && conf.playerColor === 'b';
     selected = -1; hint = null; animateNext = false;
     const drillOf = conf.drill && window.TRAINER && window.TRAINER.ENDGAMES.find((x) => x.id === conf.drill);
-    $('game-title').textContent = conf.mode === 'online' ? (conf.online.tournament ? `${conf.online.tournament} · ${L('ronde', 'round')} ${conf.online.round}` : `${L('En ligne', 'Online')} · ${TC_LABELS[conf.online.tc] || ''}`) : (drillOf ? `${drillOf.name} · ` : conf.fen ? L('Position libre · ', 'Custom position · ') : '') + (conf.mode === 'local' ? (conf.localClock ? `${L('Deux joueurs avec pendule', 'Two players with clock')} · ${conf.clockMinutes} min · ${conf.clockMode === 'manual' ? L('manuelle', 'manual') : L('auto', 'automatic')}` : L('Deux joueurs', 'Two players')) : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`);
+    $('game-title').textContent = conf.mode === 'online' ? (conf.online.tournament ? `${conf.online.tournament} · ${L('ronde', 'round')} ${conf.online.round}` : `${L('En ligne', 'Online')} · ${TC_LABELS[conf.online.tc] || ''}`) : (drillOf ? `${drillOf.name} · ` : conf.fen ? L('Position libre · ', 'Custom position · ') : '') + (conf.mode === 'local' ? (conf.localClock ? `${L('Deux joueurs avec pendule', 'Two players with clock')} · ${conf.clockMinutes} min · ${conf.clockMode === 'manual' ? L('manuelle', 'manual') : L('auto', 'automatic')}` : L('Deux joueurs', 'Two players')) : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})${conf.aiClock ? ` · ${conf.clockMinutes} min · ${conf.clockMode === 'manual' ? L('manuelle', 'manual') : L('auto', 'automatic')}` : ''}`);
     show('game');
     if (entryLastMove && entryPrefixValid) {
       if (b3d) {
@@ -1112,6 +1118,9 @@
     return sum;
   }
 
+  function hasGameClock(conf = cfg) {
+    return !!(conf && ((conf.mode === 'local' && conf.localClock) || (conf.mode === 'ai' && conf.aiClock)));
+  }
   function localClockSnapshot() {
     if (!localClockState) return null;
     const now = Date.now(), remaining = { ...localClockState.remaining };
@@ -1141,10 +1150,14 @@
     finish();
   }
   function advanceLocalClockAfterMove() {
-    if (!localClockState || !cfg || !cfg.localClock || result) return;
+    if (!localClockState || !hasGameClock(cfg) || result) return;
     const now = Date.now(), side = localClockState.active;
     if (localClockConsume(now) <= 0) { localClockTimeout(side); return; }
+    const mover = side;
     if (localClockState.mode === 'auto') {
+      localClockState.active = game.turn;
+      localClockState.waitingManual = false;
+    } else if (cfg.aiClock && mover !== cfg.playerColor) {
       localClockState.active = game.turn;
       localClockState.waitingManual = false;
     } else localClockState.waitingManual = true;
@@ -1153,7 +1166,7 @@
     localClockShownSecond = null;
   }
   function localClockTick() {
-    if (!localClockState || !cfg || cfg.mode !== 'local' || result) return;
+    if (!localClockState || !hasGameClock(cfg) || result) return;
     const side = localClockState.active, remaining = localClockRemaining(side);
     if (remaining <= 0) { localClockTimeout(side); return; }
     const shown = Math.ceil(remaining / 1000);
@@ -1163,14 +1176,14 @@
     }
   }
   function renderClockControls() {
-    const isClockGame = !!(cfg && cfg.mode === 'local' && cfg.localClock && localClockState && !result);
+    const isClockGame = !!(hasGameClock(cfg) && localClockState && !result);
     const showManual = !!(isClockGame && localClockState.mode === 'manual' && localClockState.waitingManual);
     const compact = window.matchMedia('(max-width: 899px)').matches;
     const boardWidth = $('board-wrap').getBoundingClientRect().width;
     if (boardWidth > 0) $('game').style.setProperty('--clock-rank-size', `${boardWidth / 8}px`);
     for (const [pos, side] of [['top', flipped ? 'w' : 'b'], ['bottom', flipped ? 'b' : 'w']]) {
       const button = $(`btn-clock-pass-${pos}`);
-      const canPass = isClockGame && compact && showManual && localClockState.active === side;
+      const canPass = isClockGame && compact && showManual && localClockState.active === side && (!cfg.aiClock || side === cfg.playerColor);
       button.hidden = !canPass;
       if (canPass) {
         const next = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
@@ -1184,7 +1197,7 @@
     clocks.innerHTML = ['b', 'w'].map((side) => {
       const name = side === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
       const active = localClockState.active === side;
-      const canPass = showManual && active && !compact;
+      const canPass = showManual && active && !compact && (!cfg.aiClock || side === cfg.playerColor);
       const next = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
       const pass = canPass ? `<button type="button" class="btn primary fullscreen-clock-pass" data-clock-pass="${side}">${L(`Démarrer ${next}`, `Start ${next}`)} ▶</button>` : '';
       const time = `<span>${fmtClock(localClockRemaining(side))}</span>`;
@@ -1201,6 +1214,7 @@
     cfg.localClockSnapshot = localClockSnapshot();
     localClockShownSecond = null;
     save(); render();
+    if (cfg.aiClock) maybeAiMove();
   }
   $('btn-clock-pass-top').onclick = activateManualClock;
   $('btn-clock-pass-bottom').onclick = activateManualClock;
@@ -1209,13 +1223,13 @@
     if (button && button.dataset.clockPass === localClockState?.active) activateManualClock();
   });
   window.addEventListener('resize', () => {
-    if (!game || !cfg || !cfg.localClock) return;
+    if (!game || !hasGameClock(cfg)) return;
     renderPlayers(); renderClockControls();
   });
   function startLocalClock(conf) {
     if (localClockTimer) clearInterval(localClockTimer);
     localClockTimer = null; localClockState = null; localClockShownSecond = null;
-    if (!conf || !conf.localClock || conf.mode !== 'local' || result) return;
+    if (!conf || !hasGameClock(conf) || result) return;
     const durationMs = Math.max(1, Math.min(30, Number(conf.clockMinutes) || 10)) * 60000;
     const saved = conf.localClockSnapshot;
     const valid = saved && Number(saved.durationMs) > 0 && saved.remaining && Number.isFinite(saved.remaining.w) && Number.isFinite(saved.remaining.b);
@@ -1240,7 +1254,7 @@
       if (replay && (c === 'w' ? replay.white : replay.black)) return c === 'w' ? replay.white : replay.black;
       if (cfg.mode === 'local') {
         const side = c === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
-        return cfg.localClock && localClockState && window.matchMedia('(max-width: 899px)').matches ? `${side} · ${fmtClock(localClockRemaining(c))}` : side;
+        return side;
       }
       if (cfg.mode === 'online' && onlineGame) {
         const g = onlineGame, t = onlineTimeLeft(g, c);
@@ -1252,12 +1266,12 @@
     for (const [pos, c] of [['bottom', bottomColor], ['top', topColor]]) {
       const name = $('name-' + pos);
       const player = document.querySelector(`.player.${pos}`);
-      player.classList.toggle('clock-side-black', !!(cfg.mode === 'local' && cfg.localClock && c === 'b'));
-      player.classList.toggle('clock-side-white', !!(cfg.mode === 'local' && cfg.localClock && c === 'w'));
+      player.classList.toggle('clock-side-black', !!(hasGameClock(cfg) && c === 'b'));
+      player.classList.toggle('clock-side-white', !!(hasGameClock(cfg) && c === 'w'));
       name.textContent = label(c);
-      if (cfg.mode === 'local' && cfg.localClock && localClockState && window.matchMedia('(max-width: 899px)').matches) {
+      if (hasGameClock(cfg) && localClockState && window.matchMedia('(max-width: 899px)').matches) {
         const sideLabel = document.createElement('span'), timer = document.createElement('span');
-        sideLabel.className = 'clock-side-label'; sideLabel.textContent = c === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
+        sideLabel.className = 'clock-side-label'; sideLabel.textContent = label(c);
         timer.className = 'clock-mobile-time'; timer.textContent = fmtClock(localClockRemaining(c));
         name.replaceChildren(sideLabel, timer);
       }
@@ -1291,7 +1305,11 @@
     if (thinking) { st.textContent = L("L'ordinateur réfléchit…", 'The computer is thinking…'); return; }
     const side = game.turn === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
     if (game.inCheck()) { st.textContent = L('Échec !', 'Check!'); st.classList.add('alert'); return; }
-    if (cfg.mode === 'local' && cfg.localClock && localClockState && localClockState.mode === 'manual' && localClockState.waitingManual) {
+    if (hasGameClock(cfg) && localClockState && localClockState.mode === 'manual' && localClockState.waitingManual) {
+      if (cfg.aiClock) {
+        st.textContent = L('Appuie sur ton bouton pour lancer la pendule de l’ordinateur.', 'Press your button to start the computer’s clock.');
+        return;
+      }
       const next = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
       st.textContent = L(`À ${next} de jouer : appuyez sur le bouton pour lancer sa pendule.`, `It is ${next}’ turn: press the button to start their clock.`);
       return;
@@ -1303,7 +1321,7 @@
     const plies = game.history.length;
     const myPlies = cfg.mode === 'online' ? game.history.filter((h, i) => (i % 2 === 0 ? 'w' : 'b') === cfg.playerColor).length : 0;
     // parties rapides (à la pendule) : pas de reprise de coup
-    const rapid = (cfg.mode === 'online' && !isDeferred()) || !!(cfg.mode === 'local' && cfg.localClock);
+    const rapid = (cfg.mode === 'online' && !isDeferred()) || hasGameClock(cfg);
     $('btn-undo').hidden = rapid;
     $('btn-undo').disabled = rapid || !!result || plies === 0 || !!pendingMove || (cfg.mode === 'online' ? myPlies === 0 : cfg.mode !== 'local' && plies < (cfg.playerColor === 'w' ? 1 : 2));
     $('btn-draw').hidden = !humanVsHuman();
@@ -1627,6 +1645,7 @@
   }
   function maybeAiMove() {
     if (!game || result || cfg.mode === 'local' || cfg.mode === 'online') return;
+    if (cfg.aiClock && localClockState && localClockState.waitingManual) return;
     // pendant que le joueur réfléchit, le moteur Stockfish se charge déjà (le premier chargement est long)
     if (game.turn === cfg.playerColor) { if (usesSf(cfg.level)) try { getSf(); } catch { /* repli sur l'IA maison */ } return; }
     thinking = true;
@@ -3687,6 +3706,7 @@
   $('btn-start').onclick = () => {
     store.set('setup', setup);
     if (setup.mode === 'local-clock') startGame({ mode: 'local', playerColor: 'w', level: 1, localClock: true, clockMinutes: Number(setup.clockMinutes) || 10, clockMode: setup.clockMode === 'manual' ? 'manual' : 'auto' }, [], null, false);
+    else if (setup.mode === 'ai-clock') startGame({ mode: 'ai', playerColor: randomColor(), level: setup.level, aiClock: true, clockMinutes: CLOCK_DURATIONS.includes(Number(setup.clockMinutes)) ? Number(setup.clockMinutes) : 10, clockMode: setup.clockMode === 'manual' ? 'manual' : 'auto' });
     else startGame({ mode: setup.mode, playerColor: setup.mode === 'local' ? 'w' : randomColor(), level: setup.level }, [], null, setup.mode === 'local' ? false : undefined);
   };
   /* ---------- Construire une position ---------- */
