@@ -1186,7 +1186,9 @@
       const active = localClockState.active === side;
       const canPass = showManual && active && !compact;
       const next = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
-      return `<div class="fullscreen-clock${active && !localClockState.waitingManual ? ' active' : ''}"><strong>${name}</strong><span>${fmtClock(localClockRemaining(side))}</span>${canPass ? `<button type="button" class="btn primary fullscreen-clock-pass" data-clock-pass="${side}">${L(`Démarrer ${next}`, `Start ${next}`)} ▶</button>` : ''}</div>`;
+      const pass = canPass ? `<button type="button" class="btn primary fullscreen-clock-pass" data-clock-pass="${side}">${L(`Démarrer ${next}`, `Start ${next}`)} ▶</button>` : '';
+      const time = `<span>${fmtClock(localClockRemaining(side))}</span>`;
+      return `<div class="fullscreen-clock ${side === 'b' ? 'clock-side-black' : 'clock-side-white'}${active && !localClockState.waitingManual ? ' active' : ''}"><strong>${name}</strong>${side === 'b' ? pass + time : time + pass}</div>`;
     }).join('');
   }
   function activateManualClock() {
@@ -1249,6 +1251,9 @@
     };
     for (const [pos, c] of [['bottom', bottomColor], ['top', topColor]]) {
       const name = $('name-' + pos);
+      const player = document.querySelector(`.player.${pos}`);
+      player.classList.toggle('clock-side-black', !!(cfg.mode === 'local' && cfg.localClock && c === 'b'));
+      player.classList.toggle('clock-side-white', !!(cfg.mode === 'local' && cfg.localClock && c === 'w'));
       name.textContent = label(c);
       if (cfg.mode === 'local' && cfg.localClock && localClockState && window.matchMedia('(max-width: 899px)').matches) {
         const sideLabel = document.createElement('span'), timer = document.createElement('span');
