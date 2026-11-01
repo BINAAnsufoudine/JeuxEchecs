@@ -1421,6 +1421,30 @@ body:has(#game.game-fullscreen) .mobile-menu-toggle { display: none !important; 
   #game.game-fullscreen.has-local-clock #moves { max-height: 78px !important; }
 }
 
+/* Replay PC : conserver une vraie largeur au panneau d'analyse et à Sissa. */
+@media (min-width: 900px) {
+  #game .game-layout:has(.replay-bar:not([hidden])) {
+    grid-template-columns: minmax(0, 1.15fr) minmax(min(320px, 38vw), .9fr);
+    column-gap: clamp(12px, 1.4vw, 20px);
+  }
+  #game .side-col:has(.replay-bar:not([hidden])) {
+    grid-column: 2;
+    grid-row: 3;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    align-self: start;
+  }
+  #game .rp-review,
+  #game .rp-coach,
+  #game .replay-bar {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  #game .rp-coach-message { flex: 1 1 0; min-width: 0; }
+}
+
 /* Royaume des animaux : la même illustration source sert au bandeau et à sa vignette. */
 #home .home-welcome[data-theme-bg="kingdom"] {
   background-image: linear-gradient(100deg, rgba(17, 49, 28, .22) 0%, rgba(17, 49, 28, .08) 48%, rgba(17, 49, 28, .04) 100%), url("fond_ecran/kingdom.png");
