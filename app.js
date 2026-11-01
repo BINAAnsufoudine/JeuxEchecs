@@ -51,7 +51,7 @@
   // Appareil modeste (peu de mémoire ou de cœurs) : 3D allégée par défaut
   const weakDevice = !!((navigator.deviceMemory && navigator.deviceMemory <= 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4));
   const settings = Object.assign({ anim: 'full', boardView: 'both', theme: 'foret', colorTheme: 'dark', showMoves: true, coords: true, sound: true, autoQueen: false, voice: true, coachEnabled: true, lite: weakDevice }, store.get('settings', {}));
-  const setup = Object.assign({ mode: 'ai', color: 'w', level: 1 }, store.get('setup', {}));
+  const setup = Object.assign({ mode: 'ai', color: 'w', level: 1, clockMinutes: 10, clockMode: 'auto' }, store.get('setup', {}));
   // Ancien réglage sur 5 niveaux : on repart du niveau débloqué
   if (!store.get('unlocked', 0)) { store.del('stats'); store.set('unlocked', 1); setup.level = 1; }
   const unlocked = () => Math.max(1, Math.min(MAX_GAME_LEVEL, store.get('unlocked', 1)));
@@ -61,6 +61,7 @@
   let replay = null;       // { moves, sans, fen, index, title, back } pendant la visualisation d'une partie
   let replayTimer = null;
   let cfg = null;          // { mode, playerColor, level }
+  let localClockState = null, localClockTimer = null, localClockShownSecond = null;
   let result = null;       // { result, reason }
   let flipped = false;
   let selected = -1;
@@ -653,7 +654,16 @@
     document.querySelectorAll('.segmented').forEach((seg) => {
       seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.value === setup[seg.dataset.name]));
     });
-    $('ai-options').hidden = setup.mode === 'local';
+    $('ai-options').hidden = setup.mode === 'local' || setup.mode === 'local-clock';
+    const clockSelect = $('local-clock-duration');
+    if (!clockSelect.options.length) for (let minute = 1; minute <= 30; minute++) {
+      const option = document.createElement('option'); option.value = String(minute); option.textContent = `${minute} ${L('minute', 'minute')}${minute > 1 ? L('s', 's') : ''}`; clockSelect.appendChild(option);
+    }
+    clockSelect.value = String(Math.max(1, Math.min(30, Number(setup.clockMinutes) || 10)));
+    $('local-clock-options').hidden = setup.mode !== 'local-clock';
+    $('local-clock-help').textContent = setup.clockMode === 'manual'
+      ? L('Après chaque coup, appuyez sur le bouton sous le plateau pour lancer la pendule de l’adversaire.', 'After each move, press the button below the board to start your opponent’s clock.')
+      : L('La pendule passe automatiquement à l’adversaire après chaque coup.', 'The clock switches automatically to the opponent after every move.');
     $('level-name').textContent = `${LEVEL_NAMES[setup.level]} (Elo ${LEVEL_ELO[setup.level]})`;
     $('level-grid').innerHTML = levelGridHtml(setup.level);
   }
@@ -673,6 +683,7 @@
       setup[seg.dataset.name] = b.dataset.value; renderSetup();
     });
   });
+  $('local-clock-duration').addEventListener('change', (event) => { setup.clockMinutes = Number(event.target.value) || 10; store.set('setup', setup); });
   $('level-grid').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-level]'); if (!b || b.disabled) return;
     setup.level = +b.dataset.level; store.set('setup', setup); renderSetup();
@@ -681,6 +692,8 @@
   /* ---------- Partie ---------- */
   function startGame(conf, uciMoves = [], res = null, flip, terrainId, weatherId) {
     if (document.body.classList.contains('admin-mode')) { toast(L('Le compte administrateur ne peut pas jouer.', 'The administrator account cannot play.')); show('admin'); return; }
+    if (localClockTimer) clearInterval(localClockTimer);
+    localClockTimer = null; localClockState = null;
     $('chat').hidden = true; $('online-switch').hidden = true;
     pendingMove = null;
     cancelAi();
@@ -696,11 +709,12 @@
     cfg = conf;
     if (cfg.mode === 'coach') cfg.coachTheme = coachPlan().theme;
     result = res;
+    startLocalClock(cfg);
     $('terrain-name').textContent = randomScenery(terrainId, weatherId);
     flipped = flip !== undefined ? flip : conf.mode !== 'local' && conf.playerColor === 'b';
     selected = -1; hint = null; animateNext = false;
     const drillOf = conf.drill && window.TRAINER && window.TRAINER.ENDGAMES.find((x) => x.id === conf.drill);
-    $('game-title').textContent = conf.mode === 'online' ? (conf.online.tournament ? `${conf.online.tournament} · ${L('ronde', 'round')} ${conf.online.round}` : `${L('En ligne', 'Online')} · ${TC_LABELS[conf.online.tc] || ''}`) : (drillOf ? `${drillOf.name} · ` : conf.fen ? L('Position libre · ', 'Custom position · ') : '') + (conf.mode === 'local' ? L('Deux joueurs', 'Two players') : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`);
+    $('game-title').textContent = conf.mode === 'online' ? (conf.online.tournament ? `${conf.online.tournament} · ${L('ronde', 'round')} ${conf.online.round}` : `${L('En ligne', 'Online')} · ${TC_LABELS[conf.online.tc] || ''}`) : (drillOf ? `${drillOf.name} · ` : conf.fen ? L('Position libre · ', 'Custom position · ') : '') + (conf.mode === 'local' ? (conf.localClock ? `${L('Deux joueurs avec pendule', 'Two players with clock')} · ${conf.clockMinutes} min · ${conf.clockMode === 'manual' ? L('manuelle', 'manual') : L('auto', 'automatic')}` : L('Deux joueurs', 'Two players')) : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`);
     show('game');
     if (entryLastMove && entryPrefixValid) {
       if (b3d) {
@@ -735,13 +749,14 @@
 
   function save() {
     if (!game || pz || replay || (cfg && cfg.mode === 'online')) return;
+    if (cfg && localClockState) cfg.localClockSnapshot = localClockSnapshot();
     store.set('game', { cfg, moves: game.uciList(), result, flipped, terrain: currentTerrain, weather: currentWeather });
   }
 
   const isHumanTurn = () => cfg.mode === 'local' || game.turn === cfg.playerColor;
   // Une animation 3D (déplacement, duel, technique de prise ou de mat) doit finir avant tout nouveau mouvement
   const animBusy = () => !!(b3d && b3d.busyLeftMs() > 0);
-  const canInteract = (ignoreAnim = false) => (replay ? false : !ignoreAnim && animBusy() ? false : pz ? !!(pz.item && pz.item.line) && !pz.done && !pz.locked : !result && !thinking && !judging && !(cfg.mode === 'coach' && speechBusy()) && isHumanTurn());
+  const canInteract = (ignoreAnim = false) => (replay ? false : !ignoreAnim && animBusy() ? false : pz ? !!(pz.item && pz.item.line) && !pz.done && !pz.locked : !result && !thinking && !judging && !(cfg.mode === 'coach' && speechBusy()) && isHumanTurn() && !(localClockState && localClockState.mode === 'manual' && localClockState.active !== game.turn));
 
   function render() { if (replay) { renderReplay(); return; } renderBoard(); renderPlayers(); renderMoves(); renderStatus(); renderActions(); }
 
@@ -1096,6 +1111,97 @@
     return sum;
   }
 
+  function localClockSnapshot() {
+    if (!localClockState) return null;
+    const now = Date.now(), remaining = { ...localClockState.remaining };
+    if (!result && !localClockState.waitingManual && localClockState.active) remaining[localClockState.active] = Math.max(0, remaining[localClockState.active] - (now - localClockState.lastTick));
+    return { durationMs: localClockState.durationMs, remaining, active: localClockState.active, mode: localClockState.mode, waitingManual: !!localClockState.waitingManual };
+  }
+  function localClockRemaining(side, now = Date.now()) {
+    if (!localClockState) return null;
+    const base = Number(localClockState.remaining[side]) || 0;
+    return Math.max(0, base - (!result && !localClockState.waitingManual && localClockState.active === side ? now - localClockState.lastTick : 0));
+  }
+  function localClockConsume(now = Date.now()) {
+    if (!localClockState || !localClockState.active) return null;
+    const side = localClockState.active;
+    localClockState.remaining[side] = localClockRemaining(side, now);
+    localClockState.lastTick = now;
+    return localClockState.remaining[side];
+  }
+  function localClockTimeout(side) {
+    if (!localClockState || result) return;
+    localClockState.remaining[side] = 0;
+    localClockState.waitingManual = false;
+    if (localClockTimer) clearInterval(localClockTimer);
+    localClockTimer = null;
+    if (cfg) cfg.localClockSnapshot = localClockSnapshot();
+    result = { result: side === 'w' ? '0-1' : '1-0', reason: 'temps' };
+    finish();
+  }
+  function advanceLocalClockAfterMove() {
+    if (!localClockState || !cfg || !cfg.localClock || result) return;
+    const now = Date.now(), side = localClockState.active;
+    if (localClockConsume(now) <= 0) { localClockTimeout(side); return; }
+    if (localClockState.mode === 'auto') {
+      localClockState.active = game.turn;
+      localClockState.waitingManual = false;
+    } else localClockState.waitingManual = true;
+    localClockState.lastTick = now;
+    cfg.localClockSnapshot = localClockSnapshot();
+    localClockShownSecond = null;
+  }
+  function localClockTick() {
+    if (!localClockState || !cfg || cfg.mode !== 'local' || result) return;
+    const side = localClockState.active, remaining = localClockRemaining(side);
+    if (remaining <= 0) { localClockTimeout(side); return; }
+    const shown = Math.ceil(remaining / 1000);
+    if (shown !== localClockShownSecond) {
+      localClockShownSecond = shown;
+      renderPlayers(); renderStatus(); renderClockControls();
+    }
+  }
+  function renderClockControls() {
+    const wrap = $('local-clock-controls'), button = $('btn-local-clock-pass');
+    if (!wrap || !button) return;
+    const showManual = !!(cfg && cfg.mode === 'local' && cfg.localClock && localClockState && localClockState.mode === 'manual' && localClockState.waitingManual && !result);
+    wrap.hidden = !showManual;
+    if (showManual) {
+      const next = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
+      button.textContent = L(`▶ Démarrer la pendule des ${next}`, `▶ Start ${next}’ clock`);
+      button.setAttribute('aria-label', button.textContent);
+    }
+  }
+  $('btn-local-clock-pass').onclick = () => {
+    if (!localClockState || !localClockState.waitingManual || result) return;
+    const side = localClockState.active, now = Date.now();
+    if (localClockConsume(now) <= 0) { localClockTimeout(side); return; }
+    localClockState.active = game.turn;
+    localClockState.waitingManual = false;
+    localClockState.lastTick = now;
+    cfg.localClockSnapshot = localClockSnapshot();
+    localClockShownSecond = null;
+    save(); render();
+  };
+  function startLocalClock(conf) {
+    if (localClockTimer) clearInterval(localClockTimer);
+    localClockTimer = null; localClockState = null; localClockShownSecond = null;
+    if (!conf || !conf.localClock || conf.mode !== 'local' || result) return;
+    const durationMs = Math.max(1, Math.min(30, Number(conf.clockMinutes) || 10)) * 60000;
+    const saved = conf.localClockSnapshot;
+    const valid = saved && Number(saved.durationMs) > 0 && saved.remaining && Number.isFinite(saved.remaining.w) && Number.isFinite(saved.remaining.b);
+    localClockState = {
+      durationMs,
+      remaining: valid ? { w: Math.min(durationMs, saved.remaining.w), b: Math.min(durationMs, saved.remaining.b) } : { w: durationMs, b: durationMs },
+      active: valid && ['w', 'b'].includes(saved.active) ? saved.active : 'w',
+      mode: conf.clockMode === 'manual' ? 'manual' : 'auto',
+      waitingManual: !!(valid && saved.waitingManual),
+      lastTick: Date.now(),
+    };
+    conf.localClockSnapshot = localClockSnapshot();
+    localClockTimer = setInterval(localClockTick, 200);
+  }
+
   function renderPlayers() {
     const bottomColor = flipped ? 'b' : 'w';
     const topColor = flipped ? 'w' : 'b';
@@ -1103,7 +1209,10 @@
     const label = (c) => {
       // Replay : les noms des joueurs du PGN remplacent « Blancs » et « Noirs »
       if (replay && (c === 'w' ? replay.white : replay.black)) return c === 'w' ? replay.white : replay.black;
-      if (cfg.mode === 'local') return c === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
+      if (cfg.mode === 'local') {
+        const side = c === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
+        return cfg.localClock && localClockState ? `${side} · ${fmtClock(localClockRemaining(c))}` : side;
+      }
       if (cfg.mode === 'online' && onlineGame) {
         const g = onlineGame, t = onlineTimeLeft(g, c);
         return `${c === 'w' ? g.whiteName : g.blackName} (${c === 'w' ? g.whiteElo : g.blackElo})${t != null ? ` · ${fmtClock(t)}` : ''}`;
@@ -1144,6 +1253,11 @@
     if (thinking) { st.textContent = L("L'ordinateur réfléchit…", 'The computer is thinking…'); return; }
     const side = game.turn === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
     if (game.inCheck()) { st.textContent = L('Échec !', 'Check!'); st.classList.add('alert'); return; }
+    if (cfg.mode === 'local' && cfg.localClock && localClockState && localClockState.mode === 'manual' && localClockState.waitingManual) {
+      const next = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
+      st.textContent = L(`À ${next} de jouer : appuyez sur le bouton pour lancer sa pendule.`, `It is ${next}’ turn: press the button to start their clock.`);
+      return;
+    }
     st.textContent = cfg.mode !== 'local' ? (isHumanTurn() ? L('À vous de jouer', 'Your move') : cfg.mode === 'coach' ? L(`${coachName()} réfléchit…`, `${coachName()} is thinking…`) : cfg.mode === 'online' && onlineGame ? L(`Au tour de ${game.turn === 'w' ? onlineGame.whiteName : onlineGame.blackName}`, `${game.turn === 'w' ? onlineGame.whiteName : onlineGame.blackName} to move`) : '') : L(`Au tour des ${side}`, `${side} to move`);
   }
 
@@ -1151,7 +1265,7 @@
     const plies = game.history.length;
     const myPlies = cfg.mode === 'online' ? game.history.filter((h, i) => (i % 2 === 0 ? 'w' : 'b') === cfg.playerColor).length : 0;
     // parties rapides (à la pendule) : pas de reprise de coup
-    const rapid = cfg.mode === 'online' && !isDeferred();
+    const rapid = (cfg.mode === 'online' && !isDeferred()) || !!(cfg.mode === 'local' && cfg.localClock);
     $('btn-undo').hidden = rapid;
     $('btn-undo').disabled = rapid || !!result || plies === 0 || !!pendingMove || (cfg.mode === 'online' ? myPlies === 0 : cfg.mode !== 'local' && plies < (cfg.playerColor === 'w' ? 1 : 2));
     $('btn-draw').hidden = !humanVsHuman();
@@ -1159,6 +1273,7 @@
     renderConfirm();
     $('btn-hint').disabled = cfg.mode === 'online' || !canInteract(true);
     $('btn-resign').disabled = !!result;
+    renderClockControls();
   }
 
   function resultText() {
@@ -1209,6 +1324,10 @@
   }
 
   function playMove(from, to, promo, insight) {
+    if (localClockState && (localClockState.active !== game.turn || localClockRemaining(game.turn) <= 0)) {
+      if (localClockState.active === game.turn && localClockRemaining(game.turn) <= 0) localClockTimeout(game.turn);
+      return;
+    }
     const res = game.play(from, to, promo);
     if (!res) return;
     selected = -1; hint = null;
@@ -1242,6 +1361,8 @@
 
   function afterMove(res, insight) {
     animateNext = true;
+    advanceLocalClockAfterMove();
+    if (result) return;
     if (cfg.mode === 'coach' && colorOf(res.move.piece) === cfg.playerColor) coachHintLevel = 0;
     const st = game.status();
     if (st.over) {
@@ -1295,6 +1416,8 @@
   }
 
   function finish() {
+    if (localClockTimer) clearInterval(localClockTimer);
+    localClockTimer = null;
     render();
     save();
     let outcome = 'draw';
@@ -3523,7 +3646,8 @@
   $('btn-new').onclick = () => { renderSetup(); returnTo = 'home'; show('setup'); };
   $('btn-start').onclick = () => {
     store.set('setup', setup);
-    startGame({ mode: setup.mode, playerColor: randomColor(), level: setup.level });
+    if (setup.mode === 'local-clock') startGame({ mode: 'local', playerColor: 'w', level: 1, localClock: true, clockMinutes: Number(setup.clockMinutes) || 10, clockMode: setup.clockMode === 'manual' ? 'manual' : 'auto' }, [], null, false);
+    else startGame({ mode: setup.mode, playerColor: setup.mode === 'local' ? 'w' : randomColor(), level: setup.level }, [], null, setup.mode === 'local' ? false : undefined);
   };
   /* ---------- Construire une position ---------- */
   const ED_PIECES = ['K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p'];
@@ -4825,11 +4949,12 @@
       wheat = Math.round(wheat * SEASON_BONUS); xp = Math.round(xp * SEASON_BONUS);
       why = `${why ? `${why} · ` : ''}${L('saison ×1,5', 'season ×1.5')}`;
     }
-    const w = walletState(), before = levelOf(w.xp).level;
+    const w = walletState(), beforePoints = Number(w.xp) || 0, before = levelOf(w.xp).level;
     const beforeGrade = adventureGrade(before);
     w.xp += xp;
     const after = levelOf(w.xp).level;
     const afterGrade = adventureGrade(after);
+    const newWorldTitles = syncWorldTitleOwnership(w, beforePoints, w.xp);
     const rewardCurrency = natureCurrency(afterGrade);
     w[rewardCurrency.key] = (Number(w[rewardCurrency.key]) || 0) + wheat;
     if (after > before) w[rewardCurrency.key] += 50 * (after - before);
@@ -4839,6 +4964,7 @@
       renderBoard();
     }
     rewardPop(`${why ? `${why} · ` : ''}+${natureCurrencyAmount(rewardCurrency, wheat, true)} · +${xp} XP`);
+    newWorldTitles.forEach((title, index) => setTimeout(() => rewardPop(L(`Nouveau titre du parcours : ${title.name} !`, `New journey title: ${title.name}!`), true), 500 + index * 350));
     if (after > before) { rewardPop(L(`Niveau ${after} atteint ! +${natureCurrencyAmount(rewardCurrency, 50 * (after - before), true)}`, `Level ${after} reached! +${natureCurrencyAmount(rewardCurrency, 50 * (after - before), true)}`), true); sounds.win(); }
     if (afterGrade > beforeGrade) {
       const collection = NATURE_COLLECTIONS.find((item) => item.id === activeNatureCollection) || NATURE_COLLECTIONS[0];
@@ -4935,6 +5061,51 @@
     kingdom: ['🐥', '🐒', '🦒', '🐘', '🦁'],
     wood: ['♟️', '♙', '♝', '♜', '👑'],
   };
+  const WORLD_POINT_THRESHOLDS = [0, 200, 500, 900, 1400, 2000, 2800, 3700, 4800, 6000];
+  function worldTitleMilestones(points = 0) {
+    return NATURE_COLLECTION_ORDER.map((collection, worldIndex) => {
+      const from = WORLD_POINT_THRESHOLDS[worldIndex], to = WORLD_POINT_THRESHOLDS[worldIndex + 1];
+      const titles = SHOP_TITLE_PATHS[collection] || [];
+      return { collection, from, to, titles: titles.map(([key, name], index) => ({ key, name, points: Math.ceil(from + ((to - from) * (index + 1)) / titles.length) })) };
+    });
+  }
+  function syncWorldTitleOwnership(wallet, beforePoints = 0, afterPoints = Number(wallet.xp) || 0) {
+    wallet.owned = Array.isArray(wallet.owned) ? wallet.owned : [];
+    const owned = new Set(wallet.owned), earned = [];
+    for (const world of worldTitleMilestones(afterPoints)) for (const title of world.titles) {
+      const id = `title:${title.key}`;
+      if (title.points <= afterPoints && !owned.has(id)) {
+        wallet.owned.push(id); owned.add(id);
+        if (title.points > beforePoints) earned.push({ ...title, collection: world.collection, id });
+      }
+    }
+    return earned;
+  }
+  function renderWorldJourney(wallet = walletState()) {
+    const points = Math.max(0, Number(wallet.xp) || 0), worlds = worldTitleMilestones(points);
+    const now = worlds.map((world) => ({ ...world, earned: world.titles.filter((title) => title.points <= points).length }));
+    const current = now.find((world) => world.earned < world.titles.length);
+    const maxPoints = WORLD_POINT_THRESHOLDS[WORLD_POINT_THRESHOLDS.length - 1];
+    $('world-journey-score').textContent = L(`${points.toLocaleString(LOCALE)} points`, `${points.toLocaleString(LOCALE)} points`);
+    const progress = $('world-journey-progress');
+    progress.style.width = `${Math.min(100, (points / maxPoints) * 100)}%`;
+    progress.parentElement.setAttribute('aria-valuenow', String(Math.min(maxPoints, points)));
+    $('world-journey-track').innerHTML = now.map((world) => {
+      const collection = NATURE_COLLECTIONS.find((item) => item.id === world.collection) || { name: world.collection, icon: '♟️' };
+      const complete = world.earned === world.titles.length;
+      const currentWorld = !!current && current.collection === world.collection;
+      const nextCut = world.titles[world.earned];
+      const within = nextCut ? Math.max(0, points - world.from) / Math.max(1, world.to - world.from) : 1;
+      return `<button type="button" class="world-journey-node${complete ? ' complete' : ''}${currentWorld ? ' current' : ''}" data-world-collection="${world.collection}" title="${escHtml(L(`Explorer ${collection.name}`, `Explore ${collection.name}`))}"><span class="world-node-icon">${collection.icon}</span><strong>${escHtml(collection.name)}</strong><small>${world.earned}/5 ${L('titres', 'titles')}</small><i class="world-node-progress"><b style="width:${Math.min(100, within * 100)}%"></b></i><em>${complete ? L('Monde parcouru ✓', 'World completed ✓') : currentWorld ? L(`Titre ${world.earned + 1}/5`, `Title ${world.earned + 1}/5`) : L('À découvrir', 'To explore')}</em></button>`;
+    }).join('');
+    if (current) {
+      const title = current.titles[current.earned];
+      const remaining = Math.max(0, title.points - points);
+      $('world-journey-next').textContent = remaining
+        ? L(`Prochain titre : ${title.name} · encore ${remaining.toLocaleString(LOCALE)} points. Les cinq titres font avancer vers le monde suivant.`, `Next title: ${title.name} · ${remaining.toLocaleString(LOCALE)} more points. All five titles move you toward the next world.`)
+        : L(`Prochain titre : ${title.name} · prêt à être gagné !`, `Next title: ${title.name} · ready to earn!`);
+    } else $('world-journey-next').textContent = L('Parcours des mondes terminé ! Tous les titres sont à toi.', 'World journey complete! You have every title.');
+  }
   function shopTitleItems() {
     const prices = [80, 200, 400, 700, 1200], levels = [1, 5, 10, 20, 30];
     return Object.entries(SHOP_TITLE_PATHS).flatMap(([collection, titles]) => titles.map(([key, name], i) => ({
@@ -4954,6 +5125,7 @@
   const titleName = (k) => { const it = shopTitleItems().find((x) => x.key === k); return it ? it.name : ''; };
   function renderHomeRewards() {
     const w = walletState(), lv = levelOf(w.xp), q = questState();
+    if (syncWorldTitleOwnership(w, 0, w.xp).length) store.set('wallet', w);
     const done = q.ids.filter((id) => q.claimed[id]).length;
     const grade = adventureGrade(lv.level), gradeInfo = natureGradesFor()[grade - 1], gradePct = adventureProgress(w.xp, grade);
     const balance = currentNatureBalance(w, grade);
@@ -5053,6 +5225,7 @@
     }
     $('home-player-photo').className = 'profile-photo' + (w.frame ? ` frame-${w.frame}` : '');
     $('home-player-title').hidden = !w.title; $('home-player-title').textContent = w.title ? `« ${titleName(w.title)} »` : '';
+    renderWorldJourney(w);
   }
   let shopCategory = 'theme';
   function renderShop() {
@@ -5143,6 +5316,15 @@
     const selected = AVAILABLE_NATURE_COLLECTIONS.find((item) => item.id === button.dataset.natureCollection);
     const grade = adventureGrade(levelOf(walletState().xp).level);
     if (!selected || grade < selected.unlockGrade) return;
+    activeNatureCollection = selected.id;
+    store.set('natureCollection', selected.id);
+    renderHomeRewards();
+  });
+  $('world-journey-track').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-world-collection]');
+    if (!button) return;
+    const selected = AVAILABLE_NATURE_COLLECTIONS.find((item) => item.id === button.dataset.worldCollection);
+    if (!selected) return;
     activeNatureCollection = selected.id;
     store.set('natureCollection', selected.id);
     renderHomeRewards();

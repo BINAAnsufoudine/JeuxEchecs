@@ -117,6 +117,35 @@ button[data-ui-icon]::before { content: attr(data-ui-icon); display: inline-bloc
 .segmented button { flex: 1; border: 0; background: none; padding: 10px 6px; border-radius: 10px; font-weight: 600; color: var(--muted); }
 .segmented button.on { background: var(--surface-2); color: var(--text); }
 .game-modes button { min-width: 0; padding: 9px 4px; font-size: 0.78rem; }
+#setup .game-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#setup .game-modes button { width: 100%; min-height: 42px; }
+.local-clock-options { display: grid; gap: 8px; margin: 14px 0; padding: 14px; border: 1px solid rgba(160, 180, 170, .25); border-radius: var(--radius); background: var(--surface); }
+.local-clock-options .field-label { margin: 0; }
+.local-clock-options .profile-name-input { width: 100%; box-sizing: border-box; }
+.local-clock-options .level-help { margin: 0; }
+.local-clock-controls { display: flex; justify-content: center; margin-top: 7px; }
+.local-clock-controls .btn { width: min(100%, 420px); }
+.world-journey.panel { width: 100%; max-width: none; margin: 18px 0; padding: 16px; }
+.world-journey-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.world-journey-head h2 { margin: 0 0 4px; font-size: 1.08rem; }
+.world-journey-head p { margin: 0; color: var(--muted); font-size: .84rem; }
+.world-journey-head > strong { flex: none; color: var(--accent); white-space: nowrap; }
+.world-journey-progress, .world-node-progress { display: block; overflow: hidden; height: 8px; border-radius: 999px; background: var(--surface-2); }
+.world-journey-progress { margin: 12px 0; }
+.world-journey-progress > i, .world-node-progress > b { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #7acb8c, var(--accent)); transition: width .3s ease; }
+.world-journey-track { display: flex; gap: 9px; overflow-x: auto; padding: 2px 1px 9px; scroll-snap-type: x proximity; scrollbar-width: thin; }
+.world-journey-node { display: flex; flex: 0 0 132px; min-width: 0; flex-direction: column; align-items: center; gap: 5px; padding: 10px 8px; border: 1px solid rgba(160, 180, 170, .25); border-radius: 14px; background: var(--surface); color: var(--text); cursor: pointer; scroll-snap-align: start; text-align: center; }
+.world-journey-node:hover { border-color: var(--accent); transform: translateY(-1px); }
+.world-journey-node.complete { border-color: #61b879; background: color-mix(in srgb, #61b879 13%, var(--surface)); }
+.world-journey-node.current { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
+.world-node-icon { font-size: 1.65rem; line-height: 1.15; }
+.world-journey-node strong { min-height: 2.3em; font-size: .78rem; line-height: 1.15; }
+.world-journey-node small { color: var(--muted); font-size: .72rem; }
+.world-node-progress { width: 100%; height: 5px; }
+.world-journey-node em { color: var(--muted); font-size: .66rem; font-style: normal; }
+.world-journey-node.complete em { color: #61b879; font-weight: 700; }
+.world-journey-next { margin: 8px 0 4px; color: var(--text); font-size: .84rem; font-weight: 650; }
+.world-journey-open-note { color: var(--muted); }
 input[type=range] { width: 100%; accent-color: var(--accent); }
 .range-ends { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.8rem; }
 
@@ -828,6 +857,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .home-progress-card { cursor: pointer; }
 @media(max-width:999px) { #home .home-tropical-layout { width: 100%; grid-template-columns: minmax(0, 1fr) minmax(220px, .72fr); } }
 @media(max-width:700px) { #home .home-tropical-layout { grid-template-columns: 1fr; } #home .home-garden-card { min-height: 225px; } #home .home-rice-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px 12px; } #home .home-rice-top, #home .home-rice-amount, #home .home-rice-conversion, #home .home-rice-progress, #home .home-rice-next { grid-column: 1; } #home .home-rice-sack { grid-column: 2; grid-row: 1; } #home .home-rice-shop { grid-column: 2; grid-row: 2 / span 4; width: auto; } }
+@media(max-width:700px) { .world-journey.panel { padding: 12px; } .world-journey-head { flex-direction: column; gap: 5px; } .world-journey-node { flex-basis: 116px; } }
 @media(max-width:480px) { #home .home-garden-card { min-height: 212px; padding: 11px; } #home .home-garden-plants { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; } #home .home-garden-plant { min-height: 72px; padding: 5px 1px; } #home .home-garden-plant small { font-size: .54rem; } #home .home-rice-card { display: flex; } #home .home-rice-shop { width: 100%; } }
 .minimap b { font-size: min(88cqi, 38px); line-height: 1; font-weight: 400; pointer-events: none; }
 .minimap b.w { color: #fff; text-shadow: 0 0 1px #000, 0 0 1px #000, 0 0 2px #000; }

@@ -41,6 +41,7 @@
           <button id="btn-editor" class="btn"><span class="menu-icon" aria-hidden="true">🧩</span>Construire une position</button>
         </div>
       </div>
+      <button id="btn-tutorial" class="btn" data-train-section="tutorial" type="button"><span class="menu-icon" aria-hidden="true">🥋</span>Tutoriel débutant</button>
       <div class="menu-group">
         <button id="btn-progress-menu" class="btn primary" type="button" aria-expanded="false" aria-controls="progress-submenu"><span class="menu-icon" aria-hidden="true">🎯</span>Progresser</button>
         <div id="progress-submenu" class="menu-submenu" hidden>
@@ -52,7 +53,6 @@
       <div class="menu-group">
         <button id="btn-train-menu" class="btn primary" type="button" aria-expanded="false" aria-controls="train-submenu"><span class="menu-icon" aria-hidden="true">📜</span>Apprendre</button>
         <div id="train-submenu" class="menu-submenu" hidden>
-          <button class="btn" data-train-section="tutorial"><span class="menu-icon" aria-hidden="true">🥋</span>Tutoriel débutant</button>
           <button class="btn" data-train-section="lesson"><span class="menu-icon" aria-hidden="true">📖</span>Leçon du jour</button>
           <button class="btn" data-train-section="daily"><span class="menu-icon" aria-hidden="true">🎯</span>Défi du jour</button>
           <button class="btn" data-train-section="mates"><span class="menu-icon" aria-hidden="true">⚡</span>Les mats</button>
@@ -110,6 +110,13 @@
           <button id="btn-home-rice-shop" class="btn ghost home-rice-shop" type="button">🎁 Voir la boutique</button>
         </section>
       </div>
+      <section class="world-journey panel" aria-labelledby="world-journey-title">
+        <div class="world-journey-head"><div><h2 id="world-journey-title">Parcours des mondes</h2><p>Gagne des points dans toute l’application et collectionne les cinq titres de chaque monde.</p></div><strong id="world-journey-score">0 points</strong></div>
+        <div class="world-journey-progress" role="progressbar" aria-label="Progression du parcours des mondes" aria-valuemin="0" aria-valuemax="6000" aria-valuenow="0"><i id="world-journey-progress"></i></div>
+        <div id="world-journey-track" class="world-journey-track" aria-label="Étapes du parcours des mondes"></div>
+        <p id="world-journey-next" class="world-journey-next" aria-live="polite"></p>
+        <small class="world-journey-open-note">Tous les mondes restent accessibles à l’exploration pour le moment.</small>
+      </section>
       <div class="home-section-heading"><h2>Qu’est-ce qu’on fait ?</h2><span>Choisis ton activité</span></div>
       <div class="home-activity-grid">
         <button id="btn-home-progress" class="home-activity-card progress-card" type="button"><span class="home-card-icon">🗺️</span><strong>Mon parcours</strong><small>Avance d’étape en étape et gagne des trésors.</small><span class="home-card-arrow">›</span></button>
@@ -155,6 +162,17 @@
         <button data-value="ai" class="on">Ordinateur</button>
         <button data-value="coach">Partie coachée</button>
         <button data-value="local">Deux joueurs</button>
+        <button data-value="local-clock">Deux joueurs avec pendule</button>
+      </div>
+      <div id="local-clock-options" class="local-clock-options" hidden>
+        <label class="field-label" for="local-clock-duration">Durée de la pendule pour chaque joueur</label>
+        <select id="local-clock-duration" class="profile-name-input"></select>
+        <label class="field-label">Changement de pendule</label>
+        <div class="segmented" data-name="clockMode">
+          <button data-value="auto" class="on" type="button">Pendule auto</button>
+          <button data-value="manual" type="button">Pendule manuelle</button>
+        </div>
+        <p id="local-clock-help" class="level-help"></p>
       </div>
       <button id="btn-start" class="btn primary wide">Commencer</button>
       <div id="ai-options">
@@ -188,6 +206,7 @@
         <div class="board-wrap" id="board-wrap"><div id="board" role="grid" aria-label="Échiquier"></div><button type="button" id="btn-skip-anim" class="skip-anim" hidden>⏩ Passer</button><div id="minimap" class="minimap" aria-label="Aperçu 2D jouable ; le faire glisser pour le déplacer, tirer sur le bord gauche ou inférieur pour redimensionner"></div></div>
         <div class="player bottom"><span class="name" id="name-bottom"></span><span class="captured" id="cap-bottom"></span></div>
         <div id="status" class="status" aria-live="polite"></div>
+        <div id="local-clock-controls" class="local-clock-controls" hidden><button id="btn-local-clock-pass" class="btn primary" type="button"></button></div>
       </div>
       <div class="game-tools">
       <div class="board-validation">
