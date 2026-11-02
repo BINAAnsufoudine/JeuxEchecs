@@ -586,11 +586,15 @@
     renderBoard();
     if (!good) {
       pz.failed = true; pz.locked = true; pz.misses = (pz.misses || 0) + 1;
+      const session = pz, lessonIndex = pz.idx, position = game;
       sounds.lose();
       setPzStatus('bad', L('Pas le bon coup, réessaie.', 'Not the right move, try again.'));
       say(lessonStep && lessonStep.wrong ? lessonStep.wrong : L(`Pas tout à fait. ${PZ[it.theme].tip}`, `Not quite. ${PZ[it.theme].tip}`), 'sad');
       pzButtons();
-      setTimeout(() => { if (!pz) return; game.undo(); pz.locked = false; renderBoard(); pzButtons(); }, busyDelay(700));
+      setTimeout(() => {
+        if (pz !== session || pz.item !== it || pz.idx !== lessonIndex || game !== position) return;
+        game.undo(); pz.locked = false; renderBoard(); pzButtons();
+      }, busyDelay(700));
       return;
     }
     res.move.captured ? sounds.capture() : sounds.move();
