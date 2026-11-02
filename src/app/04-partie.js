@@ -98,7 +98,11 @@
   function displayToBoard(i) { return flipped ? 63 - i : i; }
 
   // Petit échiquier 2D en haut à droite : la position exacte, en icônes
-  const MINI = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
+  const MINI = {
+    w: { k: '♔', q: '♕', r: '♖', b: '♗', n: '♘', p: '♙' },
+    b: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' },
+  };
+  const miniGlyph = (piece) => MINI[piece === piece.toUpperCase() ? 'w' : 'b'][piece.toLowerCase()];
   function renderMinimap(board, last, selectedSq = -1, targets = [], mateFire = [], arrows = [], hintMark = null, tutorialStars = []) {
     const el = $('minimap');
     let html = '';
@@ -113,7 +117,7 @@
       const capture = target && (!!p || targets.some((m) => m.to === sq && m.flag === 'ep'));
       const coords = `${row === 0 ? `<span class="mini-coord file top ${dark ? 'd' : 'l'}">${name[0]}</span>` : ''}${row === 7 ? `<span class="mini-coord file bottom ${dark ? 'd' : 'l'}">${name[0]}</span>` : ''}${col === 0 ? `<span class="mini-coord rank left ${dark ? 'd' : 'l'}">${name[1]}</span>` : ''}${col === 7 ? `<span class="mini-coord rank right ${dark ? 'd' : 'l'}">${name[1]}</span>` : ''}`;
       const star = tutorialStars.includes(sq);
-      html += `<button type="button" class="${dark ? 'd' : 'l'}${lit ? ' last' : ''}${selected ? ' sel' : ''}${hinted ? ' hint-piece' : ''}${mateFire.includes(sq) ? ' mate-fire' : ''}${star ? ' tutorial-star' : ''}${target ? ` target${capture ? ' capture' : ''}` : ''}" data-sq="${sq}" aria-label="${name} ${star ? L('étoile à récupérer', 'star to collect') : p ? pieceName(p) : mateFire.includes(sq) ? L('case vide en feu', 'empty square on fire') : L('case vide', 'empty square')}"${selected ? ' aria-pressed="true"' : ''}>${p ? `<b class="${p === p.toUpperCase() ? 'w' : 'k'}">${MINI[p.toLowerCase()]}</b>` : ''}${star ? '<span class="mini-tutorial-star">★</span>' : ''}${coords}</button>`;
+      html += `<button type="button" class="${dark ? 'd' : 'l'}${lit ? ' last' : ''}${selected ? ' sel' : ''}${hinted ? ' hint-piece' : ''}${mateFire.includes(sq) ? ' mate-fire' : ''}${star ? ' tutorial-star' : ''}${target ? ` target${capture ? ' capture' : ''}` : ''}" data-sq="${sq}" aria-label="${name} ${star ? L('étoile à récupérer', 'star to collect') : p ? pieceName(p) : mateFire.includes(sq) ? L('case vide en feu', 'empty square on fire') : L('case vide', 'empty square')}"${selected ? ' aria-pressed="true"' : ''}>${p ? `<b class="${p === p.toUpperCase() ? 'w' : 'k'}">${miniGlyph(p)}</b>` : ''}${star ? '<span class="mini-tutorial-star">★</span>' : ''}${coords}</button>`;
     }
     el.innerHTML = html + arrowsSvg(arrows);
   }
@@ -123,7 +127,7 @@
       const from = flipped ? 63 - fromSq : fromSq, to = flipped ? 63 - toSq : toSq;
       const token = document.createElement('b');
       token.className = `mini-move-replay-token ${colorOf(piece)}`;
-      token.textContent = MINI[piece.toLowerCase()];
+      token.textContent = miniGlyph(piece);
       token.style.left = `${(from & 7) * 12.5}%`;
       token.style.top = `${(from >> 3) * 12.5}%`;
       minimap.appendChild(token);
