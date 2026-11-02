@@ -838,7 +838,7 @@
     $('puzzle-title').textContent = pz.lesson.title;
     $('pz-count').textContent = L(`Étape ${pz.idx + 1} / ${pz.steps.length}`, `Step ${pz.idx + 1} / ${pz.steps.length}`);
     const tutorialArrival = pz.lesson.resume && pz.lesson.resume.startsWith('tutorial:') && pz.idx === 0;
-    const stepText = st.line ? st.text : `${st.text} ${lessonCue()}`;
+    const stepText = st.line && !(pz.lesson.champion) ? st.text : `${st.text} ${lessonCue()}`;
     const spokenText = tutorialArrival
       ? `${pz.lesson.title}. ${st.demoIntroText || stepText}`
       : st.demoIntroText;
@@ -846,7 +846,7 @@
     const syncOpeningDemo = st.syncDemoWithVoice && st.demoMoves && st.demoMoves.length;
     const openingMoveSpeech = syncOpeningDemo && (st.demoSpeech && st.demoSpeech[0] || openingMoveSpeechForStep(st));
     const syncedVoiceText = syncOpeningDemo
-      ? `${st.text} ${L('Regarde le coup :', 'Watch the move:')} ${openingMoveSpeech}`
+      ? `${st.text} ${L('Regarde le coup :', 'Watch the move:')} ${openingMoveSpeech} ${lessonCue()}`
       : spokenText;
     const openingCueIndex = syncOpeningDemo ? syncedVoiceText.indexOf(openingMoveSpeech) : -1;
     let narration = Promise.resolve();

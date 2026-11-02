@@ -175,9 +175,14 @@
               ? L(`Ce coup poursuit mon idée : ${lc(p.title)}.`, `This move continues my idea: ${lc(p.title)}.`)
               : L('Observe la réponse adverse : elle montre pourquoi le coup précédent était important.', 'Watch the opponent’s reply: it shows why the previous move mattered.');
           const finalExampleMove = moveIndex === example.line.length - 1;
+          const moveArrow = {
+            from: window.Chess.sqIndex(uci.slice(0, 2)),
+            to: window.Chess.sqIndex(uci.slice(2, 4)),
+            color: played.move.captured ? 'red' : 'green',
+          };
           steps.push({
             text: L(`Exemple guidé · ${moveLabel}. ${explanation}`, `Guided example · ${moveLabel}. ${explanation}`),
-            fen, demoMoves: [uci], demoSpeech: openingSpeechLine(fen, [uci]), annotateRelations: true, syncDemoWithVoice: true,
+            fen, demoMoves: [uci], demoSpeech: openingSpeechLine(fen, [uci]), arrows: [moveArrow], annotateRelations: true, syncDemoWithVoice: true,
             demoStartText: L(`Regarde ${moveLabel} : les flèches montrent le coup, ses attaques et ses défenses.`, `Watch ${moveLabel}: the arrows show the move, its attacks and defenses.`),
             demoDoneText: finalExampleMove
               ? L(`Exemple terminé. À toi d’appliquer « ${p.title} » dans un nouveau problème : appuie sur Continuer.`, `Example complete. Now apply “${p.title}” in a new puzzle: press Continue.`)
