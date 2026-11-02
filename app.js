@@ -2909,7 +2909,7 @@
     $('pz-hint').disabled = !task || pz.done || pz.locked;
     $('pz-solution').disabled = !task || pz.done || pz.locked;
     $('pz-next').innerHTML = `<span>→</span>${pz.kind === 'lesson' ? lessonNextLabel() : pz.kind === 'themed' ? L('Prochain défi', 'Next challenge') : L('Suivant', 'Next')}`;
-    $('pz-next').disabled = !pz.done;
+    $('pz-next').disabled = !(pz.kind === 'lesson' && pz.lesson && pz.lesson.champion) && !pz.done;
   }
   // Libellé du bouton du bas pendant un cours, et la phrase de l'entraîneur qui invite à l'utiliser
   function lessonNextLabel() {
@@ -3094,7 +3094,7 @@
     commit(window.Chess.sqIndex(u.slice(0, 2)), window.Chess.sqIndex(u.slice(2, 4)), u[4]);
   };
   $('pz-next').onclick = () => {
-    if (!pz || !pz.done) return;
+    if (!pz || (!pz.done && !(pz.kind === 'lesson' && pz.lesson && pz.lesson.champion))) return;
     if (pz.kind === 'lesson') return nextLessonStep();
     if (pz.kind === 'themed') return nextThemedPuzzle();
     nextActivity();
