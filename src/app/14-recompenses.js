@@ -548,6 +548,7 @@
     $('home-player-photo').className = 'profile-photo' + (w.frame ? ` frame-${w.frame}` : '');
     $('home-player-title').hidden = !w.title; $('home-player-title').textContent = w.title ? `« ${titleName(w.title)} »` : '';
     renderWorldJourney(w);
+    try { applyHomeAccordion(); } catch { /* accueil mobile pas encore prêt au tout premier affichage */ }
   }
   let shopCategory = 'theme';
   function renderShop() {
