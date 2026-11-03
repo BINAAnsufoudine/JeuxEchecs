@@ -66,7 +66,7 @@ Les constantes sont dans `src/board3d/00-constantes.js`, les mats dans `src/boar
 |---|---|---|
 | Pion | suricate | hyène |
 | Cavalier | zèbre | gnou |
-| Fou | girafe | cobra |
+| Fou | phacochère | cobra |
 | Tour | éléphant | rhinocéros |
 | Dame | lionne | panthère noire |
 | Roi | lion | gorille |

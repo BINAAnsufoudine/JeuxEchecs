@@ -387,16 +387,30 @@
       p.scaleK = 1.25;
       return p;
     },
-    B() { // girafe : très long cou
-      const p = quad({ h: 0.3, color: '#f2c14e', w: 0.07, bh: 0.075, len: 0.14, leg: '#f2c14e', legR: 0.018, hoof: '#4e342e', tail: true, tuft: '#4e342e' });
-      for (let i = 0; i < 8; i++) ell(p.torso, '#a0522d', 0.03, 0.025, 0.03, (i % 2 ? 1 : -1) * 0.055, 0.02 + (i % 3) * 0.02, -0.1 + i * 0.03);
-      stick(p.torso, '#f2c14e', 0.025, 0.035, [0, 0.03, 0.1], [0, 0.34, 0.17]);
-      for (let i = 0; i < 4; i++) p.torso.add(mesh(sphere(0.018, 6, 4), mat('#a0522d'), 0.02, 0.1 + i * 0.065, 0.12 + i * 0.013));
-      p.head.position.set(0, 0.37, 0.19);
-      const hd = ell(p.head, '#f2c14e', 0.03, 0.03, 0.06, 0, 0, 0.03); hd.rotation.x = 0.3;
-      for (const s of [-1, 1]) { stick(p.head, '#f2c14e', 0.006, 0.006, [s * 0.015, 0.02, -0.01], [s * 0.018, 0.06, -0.015]); p.head.add(mesh(sphere(0.01, 6, 4), mat('#4e342e'), s * 0.018, 0.065, -0.015)); }
-      eyes(p.head, 0.026, 0.01, 0.01, 0.011, '#111', 0.9);
-      p.scaleK = 1.05;
+    B() { // phacochère : trapu, pattes courtes, crinière hérissée, grosse tête plate à groin, défenses recourbées, queue dressée
+      const col = '#6f6259', dark = '#3b2f28';
+      const p = quad({ h: 0.17, color: col, w: 0.085, bh: 0.08, len: 0.15, leg: '#5d5149', legR: 0.02, hoof: '#2b231e', neckY: 0.035 });
+      // crinière hérissée tout le long du dos
+      for (let i = 0; i < 9; i++) { const c = mesh(cone(0.016, 0.06 - Math.abs(i - 3) * 0.004, 5), mat(dark), 0, 0.075, 0.12 - i * 0.03); c.rotation.x = -0.35; p.torso.add(c); }
+      // queue fine dressée vers le ciel, touffe au bout
+      const tail = new T.Group(); tail.position.set(0, 0.04, -0.15); p.torso.add(tail);
+      stick(tail, col, 0.008, 0.006, [0, 0, 0], [0, 0.1, -0.02]); tail.add(mesh(sphere(0.018, 6, 5), mat(dark), 0, 0.11, -0.02)); p.tail = tail;
+      // grosse tête large et plate, portée bas
+      p.head.position.set(0, 0.0, 0.18);
+      const hd = ell(p.head, col, 0.075, 0.06, 0.08, 0, 0, 0.02); hd.rotation.x = 0.45;
+      const snout = mesh(cyl(0.04, 0.045, 0.05, 14), mat('#5d5149'), 0, -0.05, 0.09); snout.rotation.x = Math.PI / 2 + 0.45; p.head.add(snout);
+      const disc = mesh(cyl(0.04, 0.04, 0.008, 14), mat('#3a2e27'), 0, -0.062, 0.112); disc.rotation.x = Math.PI / 2 + 0.45; p.head.add(disc);
+      for (const s2 of [-1, 1]) {
+        p.head.add(mesh(sphere(0.006, 6, 4), mat('#1a1410'), s2 * 0.014, -0.064, 0.117)); // narines
+        ell(p.head, col, 0.02, 0.016, 0.02, s2 * 0.062, -0.01, 0.05); // verrues
+        // grandes défenses blanches qui sortent sur les côtés et remontent en courbe
+        const t1 = mesh(cone(0.012, 0.07, 7), mat('#f5ecd2'), s2 * 0.05, -0.04, 0.095); t1.rotation.set(-0.3, 0, s2 * -1.0); p.head.add(t1);
+        const t2 = mesh(cone(0.007, 0.05, 6), mat('#f5ecd2'), s2 * 0.075, -0.005, 0.1); t2.rotation.set(-0.15, 0, s2 * -0.25); p.head.add(t2);
+        const ear = ell(p.head, '#5d5149', 0.012, 0.035, 0.022, s2 * 0.055, 0.055, -0.03); ear.rotation.z = s2 * 0.6;
+      }
+      p.head.add(mesh(box(0.012, 0.03, 0.08), mat(dark), 0, 0.055, -0.02)); // crinière qui commence sur la tête
+      eyes(p.head, 0.034, 0.025, 0.045, 0.012, '#1a1410', 0.5);
+      p.scaleK = 1.3;
       return p;
     },
     R() { // éléphant
