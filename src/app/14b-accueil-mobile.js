@@ -8,7 +8,7 @@
       sum: () => [homeAccText('#home-player-name'), homeAccText('#home-player-elo')].filter(Boolean).join(' · ') },
     { id: 'welcome', icon: '✨', title: () => homeAccText('#home-hero-kicker') || L('Ton aventure', 'Your adventure'), nodes: ['#home .home-welcome'],
       sum: () => homeAccText('#home-hero-title') },
-    { id: 'theme', icon: '🌍', title: () => homeAccText('#home-theme-heading') || L('Ton thème', 'Your theme'), nodes: ['#home .home-garden-heading', '#home-tropical-layout'],
+    { id: 'theme', icon: '🌍', title: () => homeAccText('#home-theme-heading') || L('Ton thème', 'Your theme'), nodes: ['#home .home-garden-heading', '#home .home-tropical-layout'],
       sum: () => [homeAccText('#home-garden-grade'), homeAccText('#home-rice-amount')].filter(Boolean).join(' · ') },
     { id: 'journey', icon: '🗺️', title: () => homeAccText('#world-journey-title') || L('Parcours des mondes', 'World journey'), nodes: ['#world-journey'],
       sum: () => homeAccText('#world-journey-next') || L('Collectionne les titres de chaque monde', 'Collect each world’s titles'),
