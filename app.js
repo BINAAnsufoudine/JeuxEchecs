@@ -7782,7 +7782,7 @@
     wrap.classList.toggle('view-3d', view === '3d');
     $('view-switch').hidden = !b3d;
     const puzzleSwitch = $('puzzle-view-switch');
-    if (puzzleSwitch) puzzleSwitch.hidden = !b3d || !(pz && pz.lesson && pz.lesson.champion);
+    if (puzzleSwitch) puzzleSwitch.hidden = !b3d; // problèmes, leçons, tutoriel, mats, finales, champions : le choix de vue est toujours là
     for (const control of [$('view-switch'), puzzleSwitch].filter(Boolean)) {
       for (const b of control.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.view === view));
     }
