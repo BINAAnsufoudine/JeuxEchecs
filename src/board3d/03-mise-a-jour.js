@@ -53,7 +53,7 @@
         g.position.set(p.x, 0.03, p.z); g.userData.pulse = sq; this.overlay.add(g);
       }
       this.setMateFire((o.mateUltimate && o.mateUltimate.piece.toLowerCase() === 'q') || THEME_MATE[root.themeOf(o.mateUltimate ? o.mateUltimate.piece : 'K')] ? [] : o.mateFire || []);
-      let capture = null;
+      let capture = null, pushedVictim = null;
       const mark = (sq, color, opacity) => {
         if (sq < 0 || sq == null) return;
         const m = this.square(color, opacity); const p = this.sqToPos(sq);
@@ -107,9 +107,24 @@
         const white = m.piece === m.piece.toUpperCase();
         let duel = null, toss = null, shot = null, knightAttack = null, escort = null;
         const kind = m.piece.toLowerCase();
+        const quietTheme = root.NO_ATTACK_ANIMATION_THEMES && root.NO_ATTACK_ANIMATION_THEMES.has(root.themeOf(m.piece));
         const vSq = m.flag === 'ep' ? m.to + (white ? 8 : -8) : m.to;
         const far = Math.max(Math.abs((m.from & 7) - (vSq & 7)), Math.abs((m.from >> 3) - (vSq >> 3))) > 1;
-        if (m.captured && !o.mateUltimate) {
+        if (m.captured && !o.mateUltimate && quietTheme && m.flag !== 'ep') {
+          // Royaume des animaux et Échecs en bois : l'attaquant avance et pousse sa cible hors de la case.
+          const victim = take(vSq);
+          if (victim) {
+            if (victim.anim) this.endToss(victim);
+            victim.anim = null;
+            const from = this.sqToPos(m.from), to = this.sqToPos(vSq), length = Math.hypot(to.x - from.x, to.z - from.z) || 1;
+            pushedVictim = { c: victim, base: victim.parts.root.scale.x, from: to, dx: (to.x - from.x) / length, dz: (to.z - from.z) / length };
+            capture = { from, to, victim };
+          }
+        } else if (m.captured && !o.mateUltimate && quietTheme) {
+          // Prise en passant : la pièce capturée n'est pas sur la case d'arrivée de l'attaquant.
+          const victim = take(vSq);
+          if (victim) { if (victim.anim) this.endToss(victim); victim.anim = null; this.pieces.remove(victim.holder); }
+        } else if (m.captured && !o.mateUltimate) {
           const v = take(vSq);
           if (v && v.anim) { this.endToss(v); v.anim = null; } // la pièce prise arrête net sa propre attaque en cours (sinon ses effets restaient figés)
           const a = this.sqToPos(m.from), b = this.sqToPos(vSq);
@@ -217,6 +232,11 @@
           if (duel) mover.anim.dur = duel.approach;
           if (toss || shot) { mover.anim.t0 = now + EXR; mover.anim.pre = now; } // la cible tire d'abord
           if (escort) { mover.anim.t0 = now + escort.wait; mover.anim.wait = true; this.addEscort(escort, now); }
+          if (pushedVictim) {
+            const duration = 0.42, start = now + Math.max(0, mover.anim.dur - duration);
+            this.dying.push(Object.assign({ t0: start, push: true }, pushedVictim));
+            this.busyUntil = Math.max(this.busyUntil || now, start + duration);
+          }
           const followAttack = (shot || toss || knightAttack) && Math.hypot(mover.anim.to.x - mover.anim.from.x, mover.anim.to.z - mover.anim.from.z) > 2;
           this.busyUntil = now + mover.anim.dur + (escort ? escort.wait + 0.2 : 0) + (duel ? duel.len + 0.35 : 0) + (toss ? EXR + toss.runStart : 0) + (shot ? EXR + shot.runStart : 0) + (knightAttack ? 0.35 : 0);
           // laisse la victime embrochée finir d'être éjectée avant tout autre coup
@@ -269,7 +289,7 @@
         c.watch = seen == null ? null : this.sqToPos(seen);
       }
       this.chars = next;
-      if (capture && capture.victim && !attackCameraStarted) this.startCaptureCamera(capture.from, capture.to, capture.victim, now);
+      if (capture && capture.victim && !attackCameraStarted && !(root.NO_ATTACK_ANIMATION_THEMES && root.NO_ATTACK_ANIMATION_THEMES.has(root.themeOf(o.last && o.last.piece)))) this.startCaptureCamera(capture.from, capture.to, capture.victim, now);
       // Pièce liée au moment de prendre : sa technique est plus puissante (onde d'énergie, éclat, tremblement renforcé)
       if (capture && capture.victim && o.last && (this.ropes || []).some(([a, b]) => a === o.last.from || b === o.last.from)) {
         const d = this.dying.find((x) => x.c === capture.victim);
@@ -282,7 +302,7 @@
         this.addBoardQuake(at);
         this.addPermanentCracks(o.last.to, at, o.ply);
       }
-      if (o.mateUltimate && o.animate && o.mateUltimate.id !== this.mateUltimateKey) {
+      if (o.mateUltimate && o.animate && !(root.NO_ATTACK_ANIMATION_THEMES && root.NO_ATTACK_ANIMATION_THEMES.has(root.themeOf(o.mateUltimate.piece))) && o.mateUltimate.id !== this.mateUltimateKey) {
         const actor = next.get(o.mateUltimate.attackerTo);
         this.mateUltimateKey = o.mateUltimate.id;
         this.mateUltimate = actor ? {

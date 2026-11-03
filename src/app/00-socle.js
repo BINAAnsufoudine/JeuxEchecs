@@ -51,7 +51,8 @@
   // Appareil modeste (peu de mémoire ou de cœurs) : 3D allégée par défaut
   const weakDevice = !!((navigator.deviceMemory && navigator.deviceMemory <= 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4));
   const settings = Object.assign({ anim: 'full', boardView: 'both', theme: 'foret', colorTheme: 'dark', showMoves: true, coords: true, sound: true, autoQueen: false, voice: true, coachEnabled: true, lite: weakDevice }, store.get('settings', {}));
-  const setup = Object.assign({ mode: 'ai', color: 'w', level: 1 }, store.get('setup', {}));
+  const setup = Object.assign({ mode: 'ai', color: 'w', level: 1, clockMinutes: 10, clockMode: 'auto' }, store.get('setup', {}));
+  const CLOCK_DURATIONS = [1, 3, 5, 10, 15, 20];
   // Ancien réglage sur 5 niveaux : on repart du niveau débloqué
   if (!store.get('unlocked', 0)) { store.del('stats'); store.set('unlocked', 1); setup.level = 1; }
   const unlocked = () => Math.max(1, Math.min(MAX_GAME_LEVEL, store.get('unlocked', 1)));
@@ -61,6 +62,7 @@
   let replay = null;       // { moves, sans, fen, index, title, back } pendant la visualisation d'une partie
   let replayTimer = null;
   let cfg = null;          // { mode, playerColor, level }
+  let localClockState = null, localClockTimer = null, localClockShownSecond = null;
   let result = null;       // { result, reason }
   let flipped = false;
   let selected = -1;

@@ -37,6 +37,10 @@
   }
 
   function playMove(from, to, promo, insight) {
+    if (localClockState && (localClockState.active !== game.turn || localClockRemaining(game.turn) <= 0)) {
+      if (localClockState.active === game.turn && localClockRemaining(game.turn) <= 0) localClockTimeout(game.turn);
+      return;
+    }
     const res = game.play(from, to, promo);
     if (!res) return;
     selected = -1; hint = null;
@@ -70,6 +74,8 @@
 
   function afterMove(res, insight) {
     animateNext = true;
+    advanceLocalClockAfterMove();
+    if (result) return;
     if (cfg.mode === 'coach' && colorOf(res.move.piece) === cfg.playerColor) coachHintLevel = 0;
     const st = game.status();
     if (st.over) {
@@ -123,6 +129,8 @@
   }
 
   function finish() {
+    if (localClockTimer) clearInterval(localClockTimer);
+    localClockTimer = null;
     render();
     save();
     let outcome = 'draw';
@@ -294,6 +302,7 @@
   }
   function maybeAiMove() {
     if (!game || result || cfg.mode === 'local' || cfg.mode === 'online') return;
+    if (cfg.aiClock && localClockState && localClockState.waitingManual) return;
     // pendant que le joueur réfléchit, le moteur Stockfish se charge déjà (le premier chargement est long)
     if (game.turn === cfg.playerColor) { if (usesSf(cfg.level)) try { getSf(); } catch { /* repli sur l'IA maison */ } return; }
     thinking = true;
@@ -440,4 +449,35 @@
   };
   $('btn-menu').onclick = () => { if (replay) { exitReplay(); return; } save(); show('home'); };
   $('btn-game-settings').onclick = () => { returnTo = 'game'; renderSettings(); show('settings'); };
+
+  let gameFullscreenBrowser = false;
+  const setGameFullscreen = (enabled) => {
+    const gameScreen = $('game');
+    const button = $('btn-game-fullscreen');
+    gameScreen.classList.toggle('game-fullscreen', enabled);
+    button.textContent = enabled ? '⤡' : '⛶';
+    const label = L(enabled ? 'Quitter le plein écran' : 'Plein écran', enabled ? 'Exit fullscreen' : 'Fullscreen');
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    if (game && cfg) renderPlayers();
+    renderClockControls();
+  };
+  $('btn-game-fullscreen').onclick = async () => {
+    const entering = !$('game').classList.contains('game-fullscreen');
+    setGameFullscreen(entering);
+    if (entering && $('game').requestFullscreen) {
+      gameFullscreenBrowser = true;
+      try { await $('game').requestFullscreen({ navigationUI: 'hide' }); }
+      catch { gameFullscreenBrowser = false; }
+    } else if (!entering && document.fullscreenElement) {
+      gameFullscreenBrowser = false;
+      try { await document.exitFullscreen(); } catch { /* Le mode CSS suffit si la sortie native échoue. */ }
+    }
+  };
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && gameFullscreenBrowser) {
+      gameFullscreenBrowser = false;
+      setGameFullscreen(false);
+    }
+  });
 

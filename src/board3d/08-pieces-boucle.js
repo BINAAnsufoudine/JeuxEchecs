@@ -227,6 +227,14 @@
       }
       // Pièces prises : K.O., projetées, emportées ou brûlées, puis disparues
       this.dying = this.dying.filter((d) => {
+        if (d.push) {
+          const u = Math.min(1, Math.max(0, (t - d.t0) / 0.42)), eased = u * u * (3 - 2 * u);
+          d.c.holder.position.set(d.from.x + d.dx * 0.7 * eased, 0, d.from.z + d.dz * 0.7 * eased);
+          d.c.parts.root.rotation.set(-d.dx * 0.42 * eased, 0, d.dz * 0.42 * eased);
+          d.c.parts.root.position.y = Math.sin(Math.PI * u) * 0.06;
+          if (u >= 1) { this.pieces.remove(d.c.holder); d.c.parts.root.rotation.set(0, 0, 0); d.c.parts.root.position.set(0, 0, 0); return false; }
+          return true;
+        }
         if (d.knightAttack) {
           if (this.tickKnightVictim(d, t, M)) return true;
           this.pieces.remove(d.c.holder);

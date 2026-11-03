@@ -7,6 +7,8 @@
   const GRADE_STEPS = [[0, '⚪'], [100, '🟢'], [250, '🔵'], [450, '🟣'], [700, '🟠'], [1000, '🔴'], [1400, '👑']];
   const GRADE_NAMES = {
     ninjas: [['Apprenti', 'Apprentice'], ['Genin', 'Genin'], ['Chûnin', 'Chunin'], ['Jônin', 'Jonin'], ['Sannin', 'Sannin'], ['Kage', 'Kage'], ['Légende', 'Legend']],
+    kingdom: [['Petit explorateur', 'Little explorer'], ['Ami des animaux', 'Animal friend'], ['Gardien de la savane', 'Savanna guardian'], ['Protecteur de la jungle', 'Jungle protector'], ['Maître des animaux', 'Animal master'], ['Roi du royaume', 'King of the kingdom'], ['Légende animale', 'Animal legend']],
+    wood: [['Apprenti sculpteur', 'Novice carver'], ['Tourneur sur bois', 'Wood turner'], ['Artisan du plateau', 'Board artisan'], ['Sculpteur de pièces', 'Piece sculptor'], ['Maître ébéniste', 'Master woodworker'], ['Gardien de l’échiquier', 'Chessboard guardian'], ['Légende du bois', 'Wood legend']],
     plants: [['Graine', 'Seed'], ['Pousse', 'Sprout'], ['Bourgeon', 'Bud'], ['Fleur', 'Flower'], ['Arbuste', 'Shrub'], ['Grand arbre', 'Great tree'], ['Baobab légendaire', 'Legendary baobab']],
     land: [['Lionceau', 'Cub'], ['Pisteur', 'Tracker'], ['Éclaireur', 'Scout'], ['Chasseur', 'Hunter'], ['Chef de meute', 'Pack leader'], ['Roi de la savane', 'King of the savanna'], ['Légende', 'Legend']],
     birds: [['Oisillon', 'Fledgling'], ['Moineau', 'Sparrow'], ['Perroquet', 'Parrot'], ['Faucon', 'Falcon'], ['Aigle', 'Eagle'], ['Aigle royal', 'Golden eagle'], ['Légende du ciel', 'Sky legend']],
@@ -139,6 +141,12 @@
     ninjas: [
       ['Étudiant de l’Académie', 'Academy student', '📜'], ['Genin', 'Genin', '🥷'], ['Genin confirmé', 'Senior Genin', '🌀'], ['Chûnin', 'Chunin', '🎯'], ['Chûnin d’élite', 'Elite Chunin', '⚔️'], ['Jônin', 'Jonin', '🛡️'], ['Jônin spécial', 'Special Jonin', '🥷'], ['ANBU', 'ANBU', '🎭'], ['Kage', 'Kage', '🏯'], ['Hokage', 'Hokage', '👑'],
     ],
+    kingdom: [
+      ['La basse-cour', 'The farmyard', '🐥'], ['Le jardin des amis', 'The friends’ garden', '🐒'], ['La rivière joyeuse', 'The happy river', '🦛'], ['La savane dorée', 'The golden savanna', '🦁'], ['La forêt des singes', 'The monkey forest', '🐵'], ['Les arbres géants', 'The giant trees', '🦒'], ['Le sentier des éléphants', 'The elephant trail', '🐘'], ['La jungle colorée', 'The colourful jungle', '🦜'], ['Le cœur de la jungle', 'The heart of the jungle', '🌴'], ['Le grand royaume animal', 'The great animal kingdom', '👑'],
+    ],
+    wood: [
+      ['Bois clair', 'Light wood', '🤍'], ['Bois de hêtre', 'Beechwood', '🌳'], ['Bois de bouleau', 'Birchwood', '🪵'], ['Bois de chêne', 'Oakwood', '🌿'], ['Bois de cerisier', 'Cherrywood', '🌸'], ['Bois de noyer', 'Walnut wood', '🌰'], ['Bois d’acajou', 'Mahogany', '🪵'], ['Bois d’ébène', 'Ebony', '⚫'], ['Échiquier précieux', 'Precious chessboard', '♟️'], ['Grand maître ébéniste', 'Master woodworker', '👑'],
+    ],
   };
   const natureGradesFor = (collectionId = activeNatureCollection) => (NATURE_GRADE_PATHS[collectionId] || NATURE_GRADE_PATHS.plants).map(([fr, en, icon]) => ({ name: L(fr, en), icon }));
   const GARDEN_PLANTS = [
@@ -149,7 +157,8 @@
     { name: L('Palmier tropical', 'Tropical palm'), icon: '🌴' }, { name: L('Grand baobab', 'Great baobab'), icon: '🌳' },
   ];
   const NATURE_PREVIEW_ALL_UNLOCKED = true;
-  const HOME_BACKGROUNDS = ['ninjas', 'ocean', 'plants', 'land', 'birds', 'ancient', 'modern']; // images dans fond_ecran/
+  const HOME_BACKGROUNDS = ['ninjas', 'ocean', 'plants', 'land', 'birds', 'ancient', 'modern', 'kingdom', 'wood']; // images dans fond_ecran/
+  const HOME_BACKGROUND_IMAGES = { kingdom: 'fond_ecran/kingdom.png', wood: 'fond_ecran/wood.png' };
   const NATURE_COLLECTIONS = [
     { id: 'plants', name: L('Plantes', 'Plants'), icon: '🌱', unlockGrade: 1, items: GARDEN_PLANTS },
     { id: 'land', name: L('Animaux terrestres', 'Land animals'), icon: '🐒', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 2, items: [
@@ -170,14 +179,22 @@
     { id: 'ninjas', name: L('Ninjas', 'Ninjas'), icon: '🥷', unlockGrade: 1, items: [
       ['Étudiant de l’Académie', 'Academy student', '📜'], ['Genin', 'Genin', '🥷'], ['Genin confirmé', 'Senior Genin', '🌀'], ['Chûnin', 'Chunin', '🎯'], ['Chûnin d’élite', 'Elite Chunin', '⚔️'], ['Jônin', 'Jonin', '🛡️'], ['Jônin spécial', 'Special Jonin', '🥷'], ['ANBU', 'ANBU', '🎭'], ['Kage', 'Kage', '🏯'], ['Hokage', 'Hokage', '👑'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
+    { id: 'kingdom', name: L('Royaume des animaux', 'Animal Kingdom'), icon: '🐾', unlockGrade: 1, items: [
+      ['La basse-cour', 'The farmyard', '🐥'], ['Le jardin des amis', 'The friends’ garden', '🐒'], ['La rivière joyeuse', 'The happy river', '🦛'], ['La savane dorée', 'The golden savanna', '🦁'], ['La forêt des singes', 'The monkey forest', '🐵'], ['Les arbres géants', 'The giant trees', '🦒'], ['Le sentier des éléphants', 'The elephant trail', '🐘'], ['La jungle colorée', 'The colourful jungle', '🦜'], ['Le cœur de la jungle', 'The heart of the jungle', '🌴'], ['Le grand royaume animal', 'The great animal kingdom', '👑'],
+    ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
+    { id: 'wood', name: L('Échecs en bois', 'Wooden chess'), icon: '🪵', unlockGrade: 1, items: [
+      ['Bois clair', 'Light wood', '🤍'], ['Bois de hêtre', 'Beechwood', '🌳'], ['Bois de bouleau', 'Birchwood', '🪵'], ['Bois de chêne', 'Oakwood', '🌿'], ['Bois de cerisier', 'Cherrywood', '🌸'], ['Bois de noyer', 'Walnut wood', '🌰'], ['Bois d’acajou', 'Mahogany', '🪵'], ['Bois d’ébène', 'Ebony', '⚫'], ['Échiquier précieux', 'Precious chessboard', '♟️'], ['Grand maître ébéniste', 'Master woodworker', '👑'],
+    ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
   ];
-  const NATURE_COLLECTION_ORDER = ['ninjas', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern'];
+  // Progression visuelle : du déplacement le plus sobre aux animations de combat les plus spectaculaires.
+  // Le monde Ninjas reste sélectionné par défaut, même s’il arrive en dernier dans ce parcours.
+  const NATURE_COLLECTION_ORDER = ['wood', 'kingdom', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern', 'ninjas'];
   NATURE_COLLECTIONS.sort((a, b) => NATURE_COLLECTION_ORDER.indexOf(a.id) - NATURE_COLLECTION_ORDER.indexOf(b.id));
   // Saison mensuelle : chaque mois, un thème est à l'honneur (récompenses ×1,5 quand on joue avec lui)
   const SEASON_BONUS = 1.5;
   const seasonTheme = (d = new Date()) => NATURE_COLLECTION_ORDER[(d.getFullYear() * 12 + d.getMonth()) % NATURE_COLLECTION_ORDER.length];
   const seasonMonth = (d = new Date()) => d.toLocaleDateString(LOCALE, { month: 'long' });
-  const BUILT_NATURE_COLLECTION_IDS = new Set(['plants', 'land', 'birds', 'ocean', 'ninjas', 'ancient', 'modern']);
+  const BUILT_NATURE_COLLECTION_IDS = new Set(['plants', 'land', 'birds', 'ocean', 'ninjas', 'ancient', 'modern', 'kingdom', 'wood']);
   const AVAILABLE_NATURE_COLLECTIONS = NATURE_COLLECTIONS.filter((item) => BUILT_NATURE_COLLECTION_IDS.has(item.id));
   if (!store.get('natureNinjaDefaultMigrated', false)) {
     const previousCollection = store.get('natureCollection', null);
@@ -192,6 +209,8 @@
   const NATURE_TERRAIN_PATHS = {
     plants: ['grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest'],
     land: ['grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'mud', 'mud', 'mud'],
+    kingdom: ['grass', 'grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'mud', 'mud', 'forest'],
+    wood: ['forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest'],
     birds: ['grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest'],
     ocean: ['beach', 'beach', 'rock', 'rock', 'water', 'water', 'water', 'water', 'water', 'water'],
     ninjas: ['dojo', 'dojo', 'rock', 'rock', 'dojo', 'dojo', 'dojo', 'forest', 'forest', 'dojo'],
@@ -210,6 +229,8 @@
   }
   function natureCurrency(grade = adventureGrade(levelOf(walletState().xp).level)) {
     if (activeNatureCollection === 'plants') return { key: 'wheat', icon: '💧', name: L('Gouttes d’eau', 'Water drops'), unit: L('gouttes d’eau', 'water drops') };
+    if (activeNatureCollection === 'kingdom') return { key: 'wheat', icon: '🍬', name: L('Bonbons', 'Candy'), unit: L('bonbons', 'candy') };
+    if (activeNatureCollection === 'wood') return { key: 'wheat', icon: '⭐', name: L('Étoiles jaunes', 'Yellow stars'), unit: L('étoiles jaunes', 'yellow stars') };
     if (activeNatureCollection === 'ocean') return { key: 'wheat', icon: '🦪', name: L('Perles', 'Pearls'), unit: L('perles', 'pearls') };
     if (activeNatureCollection === 'ninjas') return { key: 'wheat', icon: '🪙', name: L('Pièces d’or', 'Gold coins'), unit: L('pièces d’or', 'gold coins') };
     if (activeNatureCollection === 'ancient') return { key: 'wheat', icon: '🏺', name: L('Sesterces', 'Sesterces'), unit: L('sesterces', 'sesterces') };
@@ -250,11 +271,12 @@
       wheat = Math.round(wheat * SEASON_BONUS); xp = Math.round(xp * SEASON_BONUS);
       why = `${why ? `${why} · ` : ''}${L('saison ×1,5', 'season ×1.5')}`;
     }
-    const w = walletState(), before = levelOf(w.xp).level;
+    const w = walletState(), beforePoints = Number(w.xp) || 0, before = levelOf(w.xp).level;
     const beforeGrade = adventureGrade(before);
     w.xp += xp;
     const after = levelOf(w.xp).level;
     const afterGrade = adventureGrade(after);
+    const newWorldTitles = syncWorldTitleOwnership(w, beforePoints, w.xp);
     const rewardCurrency = natureCurrency(afterGrade);
     w[rewardCurrency.key] = (Number(w[rewardCurrency.key]) || 0) + wheat;
     if (after > before) w[rewardCurrency.key] += 50 * (after - before);
@@ -264,6 +286,7 @@
       renderBoard();
     }
     rewardPop(`${why ? `${why} · ` : ''}+${natureCurrencyAmount(rewardCurrency, wheat, true)} · +${xp} XP`);
+    newWorldTitles.forEach((title, index) => setTimeout(() => rewardPop(L(`Nouveau titre du parcours : ${title.name} !`, `New journey title: ${title.name}!`), true), 500 + index * 350));
     if (after > before) { rewardPop(L(`Niveau ${after} atteint ! +${natureCurrencyAmount(rewardCurrency, 50 * (after - before), true)}`, `Level ${after} reached! +${natureCurrencyAmount(rewardCurrency, 50 * (after - before), true)}`), true); sounds.win(); }
     if (afterGrade > beforeGrade) {
       const collection = NATURE_COLLECTIONS.find((item) => item.id === activeNatureCollection) || NATURE_COLLECTIONS[0];
@@ -346,6 +369,8 @@
     ancient: [['ancient-1', L('Légionnaire', 'Legionary')], ['ancient-2', L('Centurion', 'Centurion')], ['ancient-3', L('Maître des machines', 'Siege master')], ['ancient-4', L('Général', 'General')], ['ancient-5', L('Empereur', 'Emperor')]],
     modern: [['modern-1', L('Soldat', 'Soldier')], ['modern-2', L('Sergent', 'Sergeant')], ['modern-3', L('Tankiste', 'Tank commander')], ['modern-4', L('Pilote de chasse', 'Fighter pilot')], ['modern-5', L('Général', 'General')]],
     ninjas: [['ecuyer', L('Genin', 'Genin')], ['chevalier', L('Chûnin', 'Chunin')], ['seigneur', L('Jônin', 'Jonin')], ['vizir', L('Kage', 'Kage')], ['roi', L('Hokage', 'Hokage')]],
+    kingdom: [['kingdom-1', L('Petit poussin', 'Little chick')], ['kingdom-2', L('Jeune singe', 'Young monkey')], ['kingdom-3', L('Gardien de la savane', 'Savanna guardian')], ['kingdom-4', L('Protecteur du royaume', 'Kingdom protector')], ['kingdom-5', L('Roi des animaux', 'King of the animals')]],
+    wood: [['wood-1', L('Débutant', 'Beginner')], ['wood-2', L('Facile', 'Easy')], ['wood-3', L('Intermédiaire', 'Intermediate')], ['wood-4', L('Difficile', 'Hard')], ['wood-5', L('Expert', 'Expert')]],
   };
   const SHOP_TITLE_ILLUSTRATIONS = {
     plants: ['🌱', '🧑🏽‍🌾', '🍎', '🌲', '🌳'],
@@ -355,7 +380,54 @@
     ninjas: ['🥷', '🗡️', '🛡️', '🐉', '🏯'],
     ancient: ['🛡️', '⚔️', '🏹', '🦅', '👑'],
     modern: ['🪖', '📡', '🛡️', '✈️', '⭐'],
+    kingdom: ['🐥', '🐒', '🦒', '🐘', '🦁'],
+    wood: ['♟️', '♙', '♝', '♜', '👑'],
   };
+  const WORLD_POINT_THRESHOLDS = [0, 200, 500, 900, 1400, 2000, 2800, 3700, 4800, 6000];
+  function worldTitleMilestones(points = 0) {
+    return NATURE_COLLECTION_ORDER.map((collection, worldIndex) => {
+      const from = WORLD_POINT_THRESHOLDS[worldIndex], to = WORLD_POINT_THRESHOLDS[worldIndex + 1];
+      const titles = SHOP_TITLE_PATHS[collection] || [];
+      return { collection, from, to, titles: titles.map(([key, name], index) => ({ key, name, points: Math.ceil(from + ((to - from) * (index + 1)) / titles.length) })) };
+    });
+  }
+  function syncWorldTitleOwnership(wallet, beforePoints = 0, afterPoints = Number(wallet.xp) || 0) {
+    wallet.owned = Array.isArray(wallet.owned) ? wallet.owned : [];
+    const owned = new Set(wallet.owned), earned = [];
+    for (const world of worldTitleMilestones(afterPoints)) for (const title of world.titles) {
+      const id = `title:${title.key}`;
+      if (title.points <= afterPoints && !owned.has(id)) {
+        wallet.owned.push(id); owned.add(id);
+        if (title.points > beforePoints) earned.push({ ...title, collection: world.collection, id });
+      }
+    }
+    return earned;
+  }
+  function renderWorldJourney(wallet = walletState()) {
+    const points = Math.max(0, Number(wallet.xp) || 0), worlds = worldTitleMilestones(points);
+    const now = worlds.map((world) => ({ ...world, earned: world.titles.filter((title) => title.points <= points).length }));
+    const current = now.find((world) => world.earned < world.titles.length);
+    const maxPoints = WORLD_POINT_THRESHOLDS[WORLD_POINT_THRESHOLDS.length - 1];
+    $('world-journey-score').textContent = L(`${points.toLocaleString(LOCALE)} points`, `${points.toLocaleString(LOCALE)} points`);
+    const progress = $('world-journey-progress');
+    progress.style.width = `${Math.min(100, (points / maxPoints) * 100)}%`;
+    progress.parentElement.setAttribute('aria-valuenow', String(Math.min(maxPoints, points)));
+    $('world-journey-track').innerHTML = now.map((world) => {
+      const collection = NATURE_COLLECTIONS.find((item) => item.id === world.collection) || { name: world.collection, icon: '♟️' };
+      const complete = world.earned === world.titles.length;
+      const currentWorld = !!current && current.collection === world.collection;
+      const nextCut = world.titles[world.earned];
+      const within = nextCut ? Math.max(0, points - world.from) / Math.max(1, world.to - world.from) : 1;
+      return `<button type="button" class="world-journey-node${complete ? ' complete' : ''}${currentWorld ? ' current' : ''}" data-world-collection="${world.collection}" title="${escHtml(L(`Explorer ${collection.name}`, `Explore ${collection.name}`))}"><span class="world-node-icon">${collection.icon}</span><strong>${escHtml(collection.name)}</strong><small>${world.earned}/5 ${L('titres', 'titles')}</small><i class="world-node-progress"><b style="width:${Math.min(100, within * 100)}%"></b></i><em>${complete ? L('Monde parcouru ✓', 'World completed ✓') : currentWorld ? L(`Titre ${world.earned + 1}/5`, `Title ${world.earned + 1}/5`) : L('À découvrir', 'To explore')}</em></button>`;
+    }).join('');
+    if (current) {
+      const title = current.titles[current.earned];
+      const remaining = Math.max(0, title.points - points);
+      $('world-journey-next').textContent = remaining
+        ? L(`Prochain titre : ${title.name} · encore ${remaining.toLocaleString(LOCALE)} points. Les cinq titres font avancer vers le monde suivant.`, `Next title: ${title.name} · ${remaining.toLocaleString(LOCALE)} more points. All five titles move you toward the next world.`)
+        : L(`Prochain titre : ${title.name} · prêt à être gagné !`, `Next title: ${title.name} · ready to earn!`);
+    } else $('world-journey-next').textContent = L('Parcours des mondes terminé ! Tous les titres sont à toi.', 'World journey complete! You have every title.');
+  }
   function shopTitleItems() {
     const prices = [80, 200, 400, 700, 1200], levels = [1, 5, 10, 20, 30];
     return Object.entries(SHOP_TITLE_PATHS).flatMap(([collection, titles]) => titles.map(([key, name], i) => ({
@@ -375,6 +447,7 @@
   const titleName = (k) => { const it = shopTitleItems().find((x) => x.key === k); return it ? it.name : ''; };
   function renderHomeRewards() {
     const w = walletState(), lv = levelOf(w.xp), q = questState();
+    if (syncWorldTitleOwnership(w, 0, w.xp).length) store.set('wallet', w);
     const done = q.ids.filter((id) => q.claimed[id]).length;
     const grade = adventureGrade(lv.level), gradeInfo = natureGradesFor()[grade - 1], gradePct = adventureProgress(w.xp, grade);
     const balance = currentNatureBalance(w, grade);
@@ -402,6 +475,8 @@
     if (card) card.setAttribute('aria-label', L(`Thème ${collection.name}`, `${collection.name} theme`));
     const HERO = {
       ninjas: [L('Ton chemin de ninja', 'Your ninja path'), L('Prêt à devenir Hokage ?', 'Ready to become Hokage?')],
+      kingdom: [L('Le Royaume des animaux', 'The Animal Kingdom'), L('Prêt à rencontrer tes nouveaux amis ?', 'Ready to meet your new friends?')],
+      wood: [L('L’atelier des échecs en bois', 'The wooden chess workshop'), L('Prêt à jouer comme les grands ?', 'Ready to play like the grown-ups?')],
       plants: [L('Ton jardin prend vie', 'Your garden comes alive'), L('Prêt à faire grandir ton jardin ?', 'Ready to grow your garden?')],
       land: [L('Ta réserve s’agrandit', 'Your reserve is growing'), L('Prêt à rencontrer de nouveaux animaux ?', 'Ready to meet new animals?')],
       birds: [L('Ta volière s’agrandit', 'Your aviary is growing'), L('Prêt à faire chanter ta volière ?', 'Ready to make your aviary sing?')],
@@ -426,7 +501,8 @@
     }
     $('home-collection-tabs').innerHTML = AVAILABLE_NATURE_COLLECTIONS.map((item) => {
       const available = grade >= item.unlockGrade, selected = collection.id === item.id;
-      return `<button type="button" class="home-collection-tab${selected ? ' selected' : ''}${available ? '' : ' locked'}" data-nature-collection="${item.id}" ${available ? '' : `aria-label="${escHtml(L(`${item.name}, se débloque au grade ${item.unlockGrade}`, `${item.name}, unlocks at rank ${item.unlockGrade}`))}"`} aria-pressed="${selected}" title="${escHtml(available ? item.name : L(`Débloqué au grade ${item.unlockGrade}`, `Unlocks at rank ${item.unlockGrade}`))}"${HOME_BACKGROUNDS.includes(item.id) ? ` style="background-image:url('fond_ecran/mini/${item.id}.webp?v=2')"` : ''}><span>${item.id === seasonTheme() ? '🏆 ' : ''}${item.icon} ${escHtml(item.name)}${available ? '' : ` · 🔒 ${item.unlockGrade}`}</span></button>`;
+      const themeImage = HOME_BACKGROUND_IMAGES[item.id] || `fond_ecran/mini/${item.id}.webp?v=2`;
+      return `<button type="button" class="home-collection-tab${selected ? ' selected' : ''}${available ? '' : ' locked'}" data-nature-collection="${item.id}" ${available ? '' : `aria-label="${escHtml(L(`${item.name}, se débloque au grade ${item.unlockGrade}`, `${item.name}, unlocks at rank ${item.unlockGrade}`))}"`} aria-pressed="${selected}" title="${escHtml(available ? item.name : L(`Débloqué au grade ${item.unlockGrade}`, `Unlocks at rank ${item.unlockGrade}`))}"${HOME_BACKGROUNDS.includes(item.id) ? ` style="background-image:url('${themeImage}')"` : ''}><span>${item.id === seasonTheme() ? '🏆 ' : ''}${item.icon} ${escHtml(item.name)}${available ? '' : ` · 🔒 ${item.unlockGrade}`}</span></button>`;
     }).join('');
     // carrousel : le thème choisi reste visible au centre
     const pickedTab = $('home-collection-tabs').querySelector('.selected');
@@ -471,6 +547,7 @@
     }
     $('home-player-photo').className = 'profile-photo' + (w.frame ? ` frame-${w.frame}` : '');
     $('home-player-title').hidden = !w.title; $('home-player-title').textContent = w.title ? `« ${titleName(w.title)} »` : '';
+    renderWorldJourney(w);
   }
   let shopCategory = 'theme';
   function renderShop() {
@@ -561,6 +638,24 @@
     const selected = AVAILABLE_NATURE_COLLECTIONS.find((item) => item.id === button.dataset.natureCollection);
     const grade = adventureGrade(levelOf(walletState().xp).level);
     if (!selected || grade < selected.unlockGrade) return;
+    activeNatureCollection = selected.id;
+    store.set('natureCollection', selected.id);
+    renderHomeRewards();
+  });
+  const worldJourneyToggle = $('world-journey-toggle'), worldJourneyContent = $('world-journey-content');
+  const setWorldJourneyExpanded = (expanded) => {
+    worldJourneyContent.hidden = !expanded;
+    worldJourneyToggle.setAttribute('aria-expanded', String(expanded));
+    $('world-journey').classList.toggle('expanded', expanded);
+    store.set('worldJourneyExpanded', expanded);
+  };
+  setWorldJourneyExpanded(!!store.get('worldJourneyExpanded', false));
+  worldJourneyToggle.addEventListener('click', () => setWorldJourneyExpanded(worldJourneyContent.hidden));
+  $('world-journey-track').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-world-collection]');
+    if (!button) return;
+    const selected = AVAILABLE_NATURE_COLLECTIONS.find((item) => item.id === button.dataset.worldCollection);
+    if (!selected) return;
     activeNatureCollection = selected.id;
     store.set('natureCollection', selected.id);
     renderHomeRewards();

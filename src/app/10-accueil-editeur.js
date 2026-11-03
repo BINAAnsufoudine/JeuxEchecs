@@ -48,7 +48,9 @@
   $('btn-new').onclick = () => { renderSetup(); returnTo = 'home'; show('setup'); };
   $('btn-start').onclick = () => {
     store.set('setup', setup);
-    startGame({ mode: setup.mode, playerColor: randomColor(), level: setup.level });
+    if (setup.mode === 'local-clock') startGame({ mode: 'local', playerColor: 'w', level: 1, localClock: true, clockMinutes: Number(setup.clockMinutes) || 10, clockMode: setup.clockMode === 'manual' ? 'manual' : 'auto' }, [], null, false);
+    else if (setup.mode === 'ai-clock') startGame({ mode: 'ai', playerColor: randomColor(), level: setup.level, aiClock: true, clockMinutes: CLOCK_DURATIONS.includes(Number(setup.clockMinutes)) ? Number(setup.clockMinutes) : 10, clockMode: setup.clockMode === 'manual' ? 'manual' : 'auto' });
+    else startGame({ mode: setup.mode, playerColor: setup.mode === 'local' ? 'w' : randomColor(), level: setup.level }, [], null, setup.mode === 'local' ? false : undefined);
   };
   /* ---------- Construire une position ---------- */
   const ED_PIECES = ['K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p'];

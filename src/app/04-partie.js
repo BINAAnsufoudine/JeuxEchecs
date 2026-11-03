@@ -3,7 +3,21 @@
     document.querySelectorAll('.segmented').forEach((seg) => {
       seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.value === setup[seg.dataset.name]));
     });
-    $('ai-options').hidden = setup.mode === 'local';
+    $('ai-options').hidden = setup.mode === 'local' || setup.mode === 'local-clock';
+    const clockSelect = $('local-clock-duration');
+    if (!clockSelect.options.length) for (const minute of CLOCK_DURATIONS) {
+      const option = document.createElement('option'); option.value = String(minute); option.textContent = `${minute} ${L('minute', 'minute')}${minute > 1 ? L('s', 's') : ''}`; clockSelect.appendChild(option);
+    }
+    if (!CLOCK_DURATIONS.includes(Number(setup.clockMinutes))) setup.clockMinutes = 10;
+    clockSelect.value = String(setup.clockMinutes);
+    $('local-clock-options').hidden = !['local-clock', 'ai-clock'].includes(setup.mode);
+    $('local-clock-help').textContent = setup.mode === 'ai-clock'
+      ? setup.clockMode === 'manual'
+        ? L('Après ton coup, appuie sur ton bouton pour lancer la pendule de l’ordinateur. Après son coup, ta pendule repart automatiquement.', 'After your move, press your button to start the computer’s clock. After its move, your clock starts automatically.')
+        : L('La pendule passe automatiquement entre toi et l’ordinateur après chaque coup.', 'The clock switches automatically between you and the computer after every move.')
+      : setup.clockMode === 'manual'
+        ? L('Après chaque coup, appuyez sur le bouton de votre côté pour lancer la pendule de l’adversaire.', 'After each move, press the button on your side to start your opponent’s clock.')
+        : L('La pendule passe automatiquement à l’adversaire après chaque coup.', 'The clock switches automatically to your opponent after every move.');
     $('level-name').textContent = `${LEVEL_NAMES[setup.level]} (Elo ${LEVEL_ELO[setup.level]})`;
     $('level-grid').innerHTML = levelGridHtml(setup.level);
   }
@@ -23,6 +37,7 @@
       setup[seg.dataset.name] = b.dataset.value; renderSetup();
     });
   });
+  $('local-clock-duration').addEventListener('change', (event) => { setup.clockMinutes = CLOCK_DURATIONS.includes(Number(event.target.value)) ? Number(event.target.value) : 10; store.set('setup', setup); });
   $('level-grid').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-level]'); if (!b || b.disabled) return;
     setup.level = +b.dataset.level; store.set('setup', setup); renderSetup();
@@ -31,6 +46,8 @@
   /* ---------- Partie ---------- */
   function startGame(conf, uciMoves = [], res = null, flip, terrainId, weatherId) {
     if (document.body.classList.contains('admin-mode')) { toast(L('Le compte administrateur ne peut pas jouer.', 'The administrator account cannot play.')); show('admin'); return; }
+    if (localClockTimer) clearInterval(localClockTimer);
+    localClockTimer = null; localClockState = null;
     $('chat').hidden = true; $('online-switch').hidden = true;
     pendingMove = null;
     cancelAi();
@@ -44,13 +61,15 @@
     const entryPrefix = entryLastMove ? uciMoves.slice(0, -1) : uciMoves;
     for (const u of entryPrefix) if (!game.playUci(u)) { entryPrefixValid = false; break; }
     cfg = conf;
+    $('game').classList.toggle('has-local-clock', hasGameClock(cfg));
     if (cfg.mode === 'coach') cfg.coachTheme = coachPlan().theme;
     result = res;
+    startLocalClock(cfg);
     $('terrain-name').textContent = randomScenery(terrainId, weatherId);
     flipped = flip !== undefined ? flip : conf.mode !== 'local' && conf.playerColor === 'b';
     selected = -1; hint = null; animateNext = false;
     const drillOf = conf.drill && window.TRAINER && window.TRAINER.ENDGAMES.find((x) => x.id === conf.drill);
-    $('game-title').textContent = conf.mode === 'online' ? (conf.online.tournament ? `${conf.online.tournament} · ${L('ronde', 'round')} ${conf.online.round}` : `${L('En ligne', 'Online')} · ${TC_LABELS[conf.online.tc] || ''}`) : (drillOf ? `${drillOf.name} · ` : conf.fen ? L('Position libre · ', 'Custom position · ') : '') + (conf.mode === 'local' ? L('Deux joueurs', 'Two players') : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})`);
+    $('game-title').textContent = conf.mode === 'online' ? (conf.online.tournament ? `${conf.online.tournament} · ${L('ronde', 'round')} ${conf.online.round}` : `${L('En ligne', 'Online')} · ${TC_LABELS[conf.online.tc] || ''}`) : (drillOf ? `${drillOf.name} · ` : conf.fen ? L('Position libre · ', 'Custom position · ') : '') + (conf.mode === 'local' ? (conf.localClock ? `${L('Deux joueurs avec pendule', 'Two players with clock')} · ${conf.clockMinutes} min · ${conf.clockMode === 'manual' ? L('manuelle', 'manual') : L('auto', 'automatic')}` : L('Deux joueurs', 'Two players')) : conf.mode === 'coach' ? `${conf.champion && champById(conf.champion) ? L(`Face à ${champShort(champById(conf.champion))}`, `Against ${champShort(champById(conf.champion))}`) : L('Partie coachée', 'Coached game')} · ${LEVEL_NAMES[conf.level]}` : `${LEVEL_NAMES[conf.level]} (Elo ${LEVEL_ELO[conf.level]})${conf.aiClock ? ` · ${conf.clockMinutes} min · ${conf.clockMode === 'manual' ? L('manuelle', 'manual') : L('auto', 'automatic')}` : ''}`);
     show('game');
     if (entryLastMove && entryPrefixValid) {
       if (b3d) {
@@ -85,13 +104,14 @@
 
   function save() {
     if (!game || pz || replay || (cfg && cfg.mode === 'online')) return;
+    if (cfg && localClockState) cfg.localClockSnapshot = localClockSnapshot();
     store.set('game', { cfg, moves: game.uciList(), result, flipped, terrain: currentTerrain, weather: currentWeather });
   }
 
   const isHumanTurn = () => cfg.mode === 'local' || game.turn === cfg.playerColor;
   // Une animation 3D (déplacement, duel, technique de prise ou de mat) doit finir avant tout nouveau mouvement
   const animBusy = () => !!(b3d && b3d.busyLeftMs() > 0);
-  const canInteract = (ignoreAnim = false) => (replay ? false : !ignoreAnim && animBusy() ? false : pz ? !!(pz.item && pz.item.line) && !pz.done && !pz.locked : !result && !thinking && !judging && !(cfg.mode === 'coach' && speechBusy()) && isHumanTurn());
+  const canInteract = (ignoreAnim = false) => (replay ? false : !ignoreAnim && animBusy() ? false : pz ? !!(pz.item && pz.item.line) && !pz.done && !pz.locked : !result && !thinking && !judging && !(cfg.mode === 'coach' && speechBusy()) && isHumanTurn() && !(localClockState && localClockState.mode === 'manual' && localClockState.active !== game.turn));
 
   function render() { if (replay) { renderReplay(); return; } renderBoard(); renderPlayers(); renderMoves(); renderStatus(); renderActions(); }
 
@@ -450,6 +470,133 @@
     return sum;
   }
 
+  function hasGameClock(conf = cfg) {
+    return !!(conf && ((conf.mode === 'local' && conf.localClock) || (conf.mode === 'ai' && conf.aiClock)));
+  }
+  function localClockSnapshot() {
+    if (!localClockState) return null;
+    const now = Date.now(), remaining = { ...localClockState.remaining };
+    if (!result && !localClockState.waitingManual && localClockState.active) remaining[localClockState.active] = Math.max(0, remaining[localClockState.active] - (now - localClockState.lastTick));
+    return { durationMs: localClockState.durationMs, remaining, active: localClockState.active, mode: localClockState.mode, waitingManual: !!localClockState.waitingManual };
+  }
+  function localClockRemaining(side, now = Date.now()) {
+    if (!localClockState) return null;
+    const base = Number(localClockState.remaining[side]) || 0;
+    return Math.max(0, base - (!result && !localClockState.waitingManual && localClockState.active === side ? now - localClockState.lastTick : 0));
+  }
+  function localClockConsume(now = Date.now()) {
+    if (!localClockState || !localClockState.active) return null;
+    const side = localClockState.active;
+    localClockState.remaining[side] = localClockRemaining(side, now);
+    localClockState.lastTick = now;
+    return localClockState.remaining[side];
+  }
+  function localClockTimeout(side) {
+    if (!localClockState || result) return;
+    localClockState.remaining[side] = 0;
+    localClockState.waitingManual = false;
+    if (localClockTimer) clearInterval(localClockTimer);
+    localClockTimer = null;
+    if (cfg) cfg.localClockSnapshot = localClockSnapshot();
+    result = { result: side === 'w' ? '0-1' : '1-0', reason: 'temps' };
+    finish();
+  }
+  function advanceLocalClockAfterMove() {
+    if (!localClockState || !hasGameClock(cfg) || result) return;
+    const now = Date.now(), side = localClockState.active;
+    if (localClockConsume(now) <= 0) { localClockTimeout(side); return; }
+    const mover = side;
+    if (localClockState.mode === 'auto') {
+      localClockState.active = game.turn;
+      localClockState.waitingManual = false;
+    } else if (cfg.aiClock && mover !== cfg.playerColor) {
+      localClockState.active = game.turn;
+      localClockState.waitingManual = false;
+    } else localClockState.waitingManual = true;
+    localClockState.lastTick = now;
+    cfg.localClockSnapshot = localClockSnapshot();
+    localClockShownSecond = null;
+  }
+  function localClockTick() {
+    if (!localClockState || !hasGameClock(cfg) || result) return;
+    const side = localClockState.active, remaining = localClockRemaining(side);
+    if (remaining <= 0) { localClockTimeout(side); return; }
+    const shown = Math.ceil(remaining / 1000);
+    if (shown !== localClockShownSecond) {
+      localClockShownSecond = shown;
+      renderPlayers(); renderStatus(); renderClockControls();
+    }
+  }
+  function renderClockControls() {
+    const isClockGame = !!(hasGameClock(cfg) && localClockState && !result);
+    const showManual = !!(isClockGame && localClockState.mode === 'manual' && localClockState.waitingManual);
+    const compact = window.matchMedia('(max-width: 899px)').matches;
+    const boardWidth = $('board-wrap').getBoundingClientRect().width;
+    if (boardWidth > 0) $('game').style.setProperty('--clock-rank-size', `${boardWidth / 8}px`);
+    for (const [pos, side] of [['top', flipped ? 'w' : 'b'], ['bottom', flipped ? 'b' : 'w']]) {
+      const button = $(`btn-clock-pass-${pos}`);
+      const canPass = isClockGame && compact && showManual && localClockState.active === side && (!cfg.aiClock || side === cfg.playerColor);
+      button.hidden = !canPass;
+      if (canPass) {
+        const next = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
+        button.textContent = L(`Démarrer ${next} ▶`, `Start ${next} ▶`);
+        button.setAttribute('aria-label', L(`Démarrer la pendule des ${next}`, `Start ${next}’ clock`));
+      }
+    }
+    const clocks = $('fullscreen-clocks');
+    clocks.hidden = !isClockGame || compact;
+    if (!isClockGame) { clocks.innerHTML = ''; return; }
+    clocks.innerHTML = ['b', 'w'].map((side) => {
+      const name = side === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
+      const active = localClockState.active === side;
+      const canPass = showManual && active && !compact && (!cfg.aiClock || side === cfg.playerColor);
+      const next = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
+      const pass = canPass ? `<button type="button" class="btn primary fullscreen-clock-pass" data-clock-pass="${side}">${L(`Démarrer ${next}`, `Start ${next}`)} ▶</button>` : '';
+      const time = `<span>${fmtClock(localClockRemaining(side))}</span>`;
+      return `<div class="fullscreen-clock ${side === 'b' ? 'clock-side-black' : 'clock-side-white'}${active && !localClockState.waitingManual ? ' active' : ''}"><strong>${name}</strong>${side === 'b' ? pass + time : time + pass}</div>`;
+    }).join('');
+  }
+  function activateManualClock() {
+    if (!localClockState || !localClockState.waitingManual || result) return;
+    const side = localClockState.active, now = Date.now();
+    if (localClockConsume(now) <= 0) { localClockTimeout(side); return; }
+    localClockState.active = game.turn;
+    localClockState.waitingManual = false;
+    localClockState.lastTick = now;
+    cfg.localClockSnapshot = localClockSnapshot();
+    localClockShownSecond = null;
+    save(); render();
+    if (cfg.aiClock) maybeAiMove();
+  }
+  $('btn-clock-pass-top').onclick = activateManualClock;
+  $('btn-clock-pass-bottom').onclick = activateManualClock;
+  $('fullscreen-clocks').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-clock-pass]');
+    if (button && button.dataset.clockPass === localClockState?.active) activateManualClock();
+  });
+  window.addEventListener('resize', () => {
+    if (!game || !hasGameClock(cfg)) return;
+    renderPlayers(); renderClockControls();
+  });
+  function startLocalClock(conf) {
+    if (localClockTimer) clearInterval(localClockTimer);
+    localClockTimer = null; localClockState = null; localClockShownSecond = null;
+    if (!conf || !hasGameClock(conf) || result) return;
+    const durationMs = Math.max(1, Math.min(30, Number(conf.clockMinutes) || 10)) * 60000;
+    const saved = conf.localClockSnapshot;
+    const valid = saved && Number(saved.durationMs) > 0 && saved.remaining && Number.isFinite(saved.remaining.w) && Number.isFinite(saved.remaining.b);
+    localClockState = {
+      durationMs,
+      remaining: valid ? { w: Math.min(durationMs, saved.remaining.w), b: Math.min(durationMs, saved.remaining.b) } : { w: durationMs, b: durationMs },
+      active: valid && ['w', 'b'].includes(saved.active) ? saved.active : 'w',
+      mode: conf.clockMode === 'manual' ? 'manual' : 'auto',
+      waitingManual: !!(valid && saved.waitingManual),
+      lastTick: Date.now(),
+    };
+    conf.localClockSnapshot = localClockSnapshot();
+    localClockTimer = setInterval(localClockTick, 200);
+  }
+
   function renderPlayers() {
     const bottomColor = flipped ? 'b' : 'w';
     const topColor = flipped ? 'w' : 'b';
@@ -457,7 +604,10 @@
     const label = (c) => {
       // Replay : les noms des joueurs du PGN remplacent « Blancs » et « Noirs »
       if (replay && (c === 'w' ? replay.white : replay.black)) return c === 'w' ? replay.white : replay.black;
-      if (cfg.mode === 'local') return c === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
+      if (cfg.mode === 'local') {
+        const side = c === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
+        return side;
+      }
       if (cfg.mode === 'online' && onlineGame) {
         const g = onlineGame, t = onlineTimeLeft(g, c);
         return `${c === 'w' ? g.whiteName : g.blackName} (${c === 'w' ? g.whiteElo : g.blackElo})${t != null ? ` · ${fmtClock(t)}` : ''}`;
@@ -467,7 +617,16 @@
     };
     for (const [pos, c] of [['bottom', bottomColor], ['top', topColor]]) {
       const name = $('name-' + pos);
+      const player = document.querySelector(`.player.${pos}`);
+      player.classList.toggle('clock-side-black', !!(hasGameClock(cfg) && c === 'b'));
+      player.classList.toggle('clock-side-white', !!(hasGameClock(cfg) && c === 'w'));
       name.textContent = label(c);
+      if (hasGameClock(cfg) && localClockState && window.matchMedia('(max-width: 899px)').matches) {
+        const sideLabel = document.createElement('span'), timer = document.createElement('span');
+        sideLabel.className = 'clock-side-label'; sideLabel.textContent = label(c);
+        timer.className = 'clock-mobile-time'; timer.textContent = fmtClock(localClockRemaining(c));
+        name.replaceChildren(sideLabel, timer);
+      }
       const champ = !replay && cfg.mode === 'coach' && c !== cfg.playerColor && activeChampion();
       if (champ && champ.photo) { const im = document.createElement('img'); im.className = 'player-photo'; im.src = champ.photo.src; im.alt = ''; name.prepend(im); }
       const ph = cfg.mode === 'online' && onlineGame ? onlinePhotos[c === 'w' ? onlineGame.white : onlineGame.black] : !replay && cfg.mode !== 'local' && c === cfg.playerColor ? playerProfile().photo : null;
@@ -498,6 +657,15 @@
     if (thinking) { st.textContent = L("L'ordinateur réfléchit…", 'The computer is thinking…'); return; }
     const side = game.turn === 'w' ? L('Blancs', 'White') : L('Noirs', 'Black');
     if (game.inCheck()) { st.textContent = L('Échec !', 'Check!'); st.classList.add('alert'); return; }
+    if (hasGameClock(cfg) && localClockState && localClockState.mode === 'manual' && localClockState.waitingManual) {
+      if (cfg.aiClock) {
+        st.textContent = L('Appuie sur ton bouton pour lancer la pendule de l’ordinateur.', 'Press your button to start the computer’s clock.');
+        return;
+      }
+      const next = game.turn === 'w' ? L('les Blancs', 'White') : L('les Noirs', 'Black');
+      st.textContent = L(`À ${next} de jouer : appuyez sur le bouton pour lancer sa pendule.`, `It is ${next}’ turn: press the button to start their clock.`);
+      return;
+    }
     st.textContent = cfg.mode !== 'local' ? (isHumanTurn() ? L('À vous de jouer', 'Your move') : cfg.mode === 'coach' ? L(`${coachName()} réfléchit…`, `${coachName()} is thinking…`) : cfg.mode === 'online' && onlineGame ? L(`Au tour de ${game.turn === 'w' ? onlineGame.whiteName : onlineGame.blackName}`, `${game.turn === 'w' ? onlineGame.whiteName : onlineGame.blackName} to move`) : '') : L(`Au tour des ${side}`, `${side} to move`);
   }
 
@@ -505,7 +673,7 @@
     const plies = game.history.length;
     const myPlies = cfg.mode === 'online' ? game.history.filter((h, i) => (i % 2 === 0 ? 'w' : 'b') === cfg.playerColor).length : 0;
     // parties rapides (à la pendule) : pas de reprise de coup
-    const rapid = cfg.mode === 'online' && !isDeferred();
+    const rapid = (cfg.mode === 'online' && !isDeferred()) || hasGameClock(cfg);
     $('btn-undo').hidden = rapid;
     $('btn-undo').disabled = rapid || !!result || plies === 0 || !!pendingMove || (cfg.mode === 'online' ? myPlies === 0 : cfg.mode !== 'local' && plies < (cfg.playerColor === 'w' ? 1 : 2));
     $('btn-draw').hidden = !humanVsHuman();
@@ -513,6 +681,7 @@
     renderConfirm();
     $('btn-hint').disabled = cfg.mode === 'online' || !canInteract(true);
     $('btn-resign').disabled = !!result;
+    renderClockControls();
   }
 
   function resultText() {
