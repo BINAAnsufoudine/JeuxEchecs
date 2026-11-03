@@ -1487,3 +1487,10 @@ body:has(#game.game-fullscreen) .mobile-menu-toggle { display: none !important; 
   /* le titre du panneau sert déjà d'en-tête : pas de deuxième titre identique dans le contenu déplié */
   #home .home-section-heading.m-acc-item { display: none !important; }
 }
+/* Accueil sur mobile : le menu s'affiche aussi en bas de la page, sous les panneaux dépliables
+   (le bouton ☰ continue de l'ouvrir en tiroir sur les autres écrans) */
+@media (max-width: 999px) {
+  body[data-screen="home"]:not(.mobile-menu-open) #home .home-sidebar .menu { order: 10; display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 100%; max-width: none; margin: 6px 0 24px; padding: 0; border: 0; background: transparent; overflow: visible; }
+  body[data-screen="home"]:not(.mobile-menu-open) #home .home-sidebar .menu .btn { width: 100%; text-align: left; padding: 11px 14px; font-size: .94rem; }
+  body[data-screen="home"] #home .home-dashboard { order: 5; }
+}
