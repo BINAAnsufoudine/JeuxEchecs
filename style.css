@@ -168,7 +168,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 @media (min-width: 900px) {
   #game .game-layout { display: grid; grid-template-columns: minmax(320px, 1.2fr) minmax(250px, 1fr); justify-content: center; align-items: start; gap: 8px 12px; }
   #game .board-col { grid-column: 1; grid-row: 1; width: auto; min-width: 0; }
-  #game .game-tools { grid-column: 2; grid-row: 1; width: 100%; display: grid; grid-template-columns: 76px minmax(0, 1fr); grid-template-rows: auto auto; align-content: start; align-items: start; gap: 8px 12px; }
+  #game .game-tools { grid-column: 2; grid-row: 1; width: 100%; display: grid; grid-template-columns: max-content minmax(0, 1fr); grid-template-rows: auto auto; align-content: start; align-items: start; gap: 8px 12px; }
   #game .side-col { grid-column: 2; grid-row: 3; display: flex; flex-direction: column; align-self: start; width: 100%; }
   #game .moves { grid-column: 2; grid-row: 2; }
   #game.has-local-clock .side-col { grid-row: 2; }
@@ -176,8 +176,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #game .moves { width: 100%; max-height: 260px !important; }
   #game .chat { width: 100%; margin-top: 0; }
   #game .board-validation { grid-column: 1 / span 2; grid-row: 1; width: 100%; display: flex; flex-direction: column; gap: 4px; }
-  #game .board-controls { grid-column: 1; grid-row: 2; width: 76px; }
-  #game .actions { width: 100%; grid-template-columns: minmax(0, 1fr); }
+  #game .board-controls { grid-column: 1; grid-row: 2; width: max-content; }
+  #game .actions { grid-template-columns: minmax(0, 1fr); }
   #game .online-switch { width: 100%; }
 }
 .player { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; padding: 2px 4px; }
@@ -264,7 +264,10 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .moves:empty::before { content: "Aucun coup joué"; color: var(--muted); }
 
 .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.act { border: 0; background: var(--surface); border-radius: var(--radius); padding: 8px 2px; font-size: 0.8rem; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); }
+/* Boutons de contrôle des écrans de jeu : tous de la même taille, celle du bouton au libellé le plus long. */
+#game-actions, .replay-actions, .learning-controls .actions { width: max-content; max-width: 100%; margin-inline: auto; grid-auto-rows: 1fr; }
+#game-actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.act { min-width: 0; border: 0; background: var(--surface); border-radius: var(--radius); padding: 8px 10px; font-size: 0.8rem; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); }
 .act span { font-size: 1.3rem; color: var(--text); }
 .act:disabled { opacity: 0.4; }
 
@@ -438,7 +441,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .status.good { color: #8fd6a2; }
 .status.bad { color: #f19a8c; }
 .actions.three { grid-template-columns: repeat(3, 1fr); }
-.replay-actions { grid-template-columns: repeat(3, 1fr); }
+.replay-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .replay-bar { display: flex; flex-direction: column; gap: 8px; }
 .learning-coach-slot { width: min(100%, 560px); }
 .learning-coach-slot:empty { display: none; }
@@ -447,8 +450,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #puzzle.guided-learning .game-layout { width: min(1440px, 100%); margin: 0 auto; display: grid; grid-template-columns: minmax(300px, 1.4fr) minmax(240px, 0.8fr); align-content: start; align-items: start; justify-content: center; column-gap: clamp(12px, 1.5vw, 24px); row-gap: 0; }
   #puzzle.guided-learning .board-col { grid-column: 1; grid-row: 1; width: 100%; min-width: 0; }
   #puzzle.guided-learning .learning-controls { width: 100%; margin-top: 0; }
-  #puzzle.guided-learning .learning-controls .actions { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; width: 100%; }
-  #puzzle.guided-learning .learning-controls .act { width: max-content; min-height: 72px; flex-direction: column; justify-content: center; gap: 6px; padding: 8px 16px; text-align: center; font-size: 0.76rem; }
+  #puzzle.guided-learning .learning-controls .actions { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-inline: 0; }
+  #puzzle.guided-learning .learning-controls .act { min-height: 72px; flex-direction: column; justify-content: center; gap: 6px; padding: 8px 16px; text-align: center; font-size: 0.76rem; }
   #puzzle.guided-learning .learning-coach-slot { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; align-items: stretch; gap: 0; width: 100%; min-width: 0; }
   #puzzle.guided-learning .coach { display: grid; grid-template-columns: 80px minmax(0, 1fr); align-items: start; gap: 8px; min-width: 0; margin: 0; padding: 14px; border: 1px solid var(--surface-2); border-radius: 16px; background: var(--surface); box-shadow: 0 10px 28px rgba(0,0,0,0.2); }
   #puzzle.guided-learning .coach img { width: 64px; height: 96px; object-fit: contain; object-position: center; border-radius: 0; }
@@ -460,14 +463,14 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #puzzle.guided-learning .coach .voice-btn { top: 8px; right: 8px; }
   #puzzle.guided-learning .pz-prompt { text-align: left; }
   #game .replay-bar { align-self: start; width: 100%; }
-  #game .replay-bar .actions { grid-column: auto; grid-row: auto; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #game .replay-bar .actions { grid-column: auto; grid-row: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #game .game-layout:has(.replay-bar:not([hidden])) { grid-template-columns: minmax(320px, 1.2fr) minmax(250px, 1fr); column-gap: 8px; }
   #game .game-tools:has(.replay-bar:not([hidden])) { grid-template-columns: minmax(0, 1fr); }
   #game .game-tools:has(.replay-bar:not([hidden])) .side-col { grid-column: 1; }
 }
 @media (max-width: 899px) {
   #game .replay-bar { order: 1; width: min(100%, 560px); gap: 5px; }
-  #game .replay-bar .replay-actions { grid-template-columns: repeat(3, 1fr); }
+  #game .replay-bar .replay-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   #game .replay-legend, #game .replay-info { font-size: 0.74rem; }
 }
 .replay-bar[hidden], #game-actions[hidden] { display: none; }
@@ -632,7 +635,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #game .board-col { flex: 0 1 auto; width: auto; min-width: 0; }
   #game .moves { max-height: 92px !important; }
   #game .actions { grid-template-columns: minmax(0, 1fr); gap: 6px; }
-  #game .act { flex-direction: column; justify-content: center; gap: 4px; padding: 7px 2px; text-align: center; font-size: 0.74rem; }
+  #game .act { flex-direction: column; justify-content: center; gap: 4px; padding: 7px 10px; text-align: center; font-size: 0.74rem; }
   #game .act span { min-width: 0; text-align: center; }
   .panel { width: min(680px, 100%); }
 }
@@ -677,13 +680,14 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   #game .board-col { order: 0; }
   #game .board-validation { order: 1; width: min(100%, 560px); display: flex; flex-direction: column; gap: 4px; }
   #game .board-controls { order: 2; width: min(100%, 560px); }
-  #game .confirm-bar, #game .auto-confirm, #game .actions { width: 100%; }
+  #game .confirm-bar, #game .auto-confirm { width: 100%; }
+  #game .actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   #game .chat { order: 4; width: min(100%, 560px); }
   #game .online-switch { order: 5; width: min(100%, 560px); }
   #game .replay-bar { order: 4; width: min(100%, 560px); }
   .moves { max-height: 76px; min-height: 38px; font-size: 0.85rem; padding: 6px; }
   .actions { gap: 5px; }
-  .act { padding: 6px 2px; font-size: 0.74rem; }
+  .act { padding: 6px 6px; font-size: 0.74rem; }
   .act span { font-size: 1.1rem; }
   .coach-dock { right: 10px; bottom: max(10px, env(safe-area-inset-bottom)); width: min(300px, calc(100vw - 20px)); }
   .coach-dock-panel p { max-height: 24dvh; }
@@ -1372,8 +1376,8 @@ body:has(#game.game-fullscreen) .mobile-menu-toggle { display: none !important; 
 #game.game-fullscreen .game-tools { display: flex !important; flex-direction: column; width: min(94vw, calc(100dvh - 190px), 900px); gap: 5px; flex: 0 0 auto; }
 #game.game-fullscreen .board-validation, #game.game-fullscreen .board-controls { display: flex !important; flex-direction: column; width: 100%; }
 #game.game-fullscreen .board-validation { gap: 3px; }
-#game.game-fullscreen .board-controls .actions { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; width: 100%; }
-#game.game-fullscreen .board-controls .act { min-width: 0; min-height: 44px; padding: 5px 2px; }
+#game.game-fullscreen .board-controls .actions { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+#game.game-fullscreen .board-controls .act { min-height: 44px; padding: 5px 4px; }
 .fullscreen-clocks { display: flex; flex-direction: column; gap: 8px; }
 .fullscreen-clock { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: calc(var(--clock-rank-size, 48px) * 2); padding: 10px; border: 1px solid var(--surface-2); border-radius: 12px; background: var(--surface); container-type: inline-size; box-sizing: border-box; }
 .fullscreen-clock strong { font-size: .82rem; }
@@ -1394,7 +1398,7 @@ body:has(#game.game-fullscreen) .mobile-menu-toggle { display: none !important; 
   #game.game-fullscreen .board-wrap { max-height: calc(100dvh - 16px); }
   #game.game-fullscreen .game-tools { width: min(24vw, 260px); max-height: 100%; overflow-y: auto; }
   #game.game-fullscreen .board-controls { flex-direction: row; align-items: flex-start; gap: 8px; }
-  #game.game-fullscreen .board-controls .actions { display: grid; grid-template-columns: max-content; width: max-content; }
+  #game.game-fullscreen .board-controls .actions { grid-template-columns: minmax(0, 1fr); flex: 0 0 auto; }
   #game.game-fullscreen #fullscreen-clocks:not([hidden]) { flex: 1 1 0; }
 }
 @media (min-width: 900px) and (min-height: 561px) {
@@ -1406,8 +1410,8 @@ body:has(#game.game-fullscreen) .mobile-menu-toggle { display: none !important; 
   #game.game-fullscreen .board-validation { grid-column: 1 / span 2; grid-row: 1; }
   #game.game-fullscreen .board-controls { grid-column: 1; grid-row: 2; }
   #game.game-fullscreen .side-col:has(#fullscreen-clocks:not([hidden])) { grid-column: 2; grid-row: 2; }
-  #game.game-fullscreen .board-controls .actions { display: grid; grid-template-columns: max-content; width: max-content; flex: 0 0 auto; }
-  #game.game-fullscreen .board-controls .act { align-self: stretch; width: 100%; min-width: 0; padding-inline: 10px; }
+  #game.game-fullscreen .board-controls .actions { grid-template-columns: minmax(0, 1fr); flex: 0 0 auto; }
+  #game.game-fullscreen .board-controls .act { padding-inline: 10px; }
   #game.game-fullscreen #fullscreen-clocks:not([hidden]) { display: flex; flex: 1 1 auto; flex-direction: column; width: auto; min-width: 130px; }
 }
 @media (max-width: 899px) {
