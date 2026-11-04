@@ -5482,6 +5482,15 @@
     }
   }
   setupHomeAccordion();
+  // Sur mobile, le « Bonjour » passe au-dessus du profil ; il reprend sa place en vue PC (téléphone tourné en paysage)
+  const homeMobileMq = window.matchMedia('(max-width: 999px)');
+  function placeHomeGreeting() {
+    const line = homeAccQ('#home .home-topline'), profile = homeAccQ('.m-acc[data-m-acc="profile"]');
+    if (!line || !profile) return;
+    if (homeMobileMq.matches) profile.before(line); else homeAccQ('#home .home-dashboard').prepend(line);
+  }
+  placeHomeGreeting();
+  homeMobileMq.addEventListener('change', placeHomeGreeting);
   /* ---------- Joueurs : liste, adversaire proposé, chat coupé ---------- */
   let onlineSection = null, onlinePlayers = null, playersQuery = '', playersLoading = false;
   const isConnected = (p) => Date.now() - (p.lastSeen || 0) < 3 * 60000;

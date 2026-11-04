@@ -1494,3 +1494,6 @@ body:has(#game.game-fullscreen) .mobile-menu-toggle { display: none !important; 
   body[data-screen="home"]:not(.mobile-menu-open) #home .home-sidebar .menu .btn { width: 100%; text-align: left; padding: 11px 14px; font-size: .94rem; }
   body[data-screen="home"] #home .home-dashboard { order: 5; }
 }
+
+/* Accueil sur mobile : le « Bonjour » au-dessus du profil, sur toute la largeur */
+@media (max-width: 999px) { #home .hero-top > .home-topline { width: 100%; margin-bottom: 0; } }
