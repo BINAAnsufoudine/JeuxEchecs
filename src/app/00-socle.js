@@ -4,6 +4,23 @@
   const { Game, sqName, colorOf, positionKey } = window.Chess;
   const $ = (id) => document.getElementById(id);
 
+  // Téléphone en paysage : la page est mise en page sur 1100 px puis réduite à l'écran, pour retrouver la vue PC
+  (function phoneLandscapeAsDesktop() {
+    const meta = document.querySelector('meta[name=viewport]');
+    if (!meta) return;
+    const portrait = meta.content;
+    const apply = () => {
+      const type = screen.orientation && screen.orientation.type;
+      const landscape = type ? type.startsWith('landscape') : Math.abs(window.orientation) === 90;
+      const phone = Math.max(screen.width, screen.height) < 1000 && window.matchMedia('(pointer: coarse)').matches;
+      const content = phone && landscape ? 'width=1100' : portrait;
+      if (meta.content !== content) meta.content = content;
+    };
+    apply();
+    if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', apply);
+    window.addEventListener('orientationchange', apply);
+  })();
+
   const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
   const glyph = (p) => GLYPH[p.toLowerCase()] + '︎';
   const pieceName = (p) => window.Characters.NAMES[colorOf(p)][p.toLowerCase()];
