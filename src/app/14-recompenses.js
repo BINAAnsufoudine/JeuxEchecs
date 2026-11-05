@@ -531,7 +531,7 @@
       ocean: [L('Ton lagon s’éveille', 'Your lagoon awakens'), L('Prêt à plonger dans l’océan Indien ?', 'Ready to dive into the Indian Ocean?')],
       ancient: [L('Ta légion se rassemble', 'Your legion gathers'), L('Prêt à conquérir l’Antiquité ?', 'Ready to conquer the ancient world?')],
       modern: [L('Ton bataillon se prépare', 'Your battalion gets ready'), L('Prêt pour la mission ?', 'Ready for the mission?')],
-      dinos: [L('La terre tremble', 'The ground is shaking'), L('Prêt à régner sur l’Âge des Géants ?', 'Ready to rule the Age of Giants?')],
+      dinos: [L('La terre tremble', 'The ground is shaking'), L('Prêt à régner sur les Géants ?', 'Ready to rule the Giants?')],
       baobabs: [L('Les tambours t’appellent', 'The drums are calling you'), L('Prêt à régner sur les Baobabs ?', 'Ready to rule the Baobabs?')],
       sabres: [L('Ton clan se rassemble', 'Your clan gathers'), L('Prêt à défendre Hakuro ?', 'Ready to defend Hakuro?')],
       auras: [L('Ton aura s’éveille', 'Your aura awakens'), L('Prêt à monter dans l’Arène du Ciel ?', 'Ready to enter the Sky Arena?')],
