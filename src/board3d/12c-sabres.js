@@ -70,6 +70,21 @@
       }, end: () => this.disposeGroup(g) });
     }
 
+    // Déplacement à très haute vitesse : un sillage de feu qui suit la pièce et s'efface, un éclat à l'arrivée
+    sabreDash(from, to, white, t, dur) {
+      const T = this.THREE, pal = this.sabrePal(white), g = new T.Group(), d = new T.Vector3(to.x - from.x, 0, to.z - from.z), L = Math.max(0.01, d.length()), fade = 0.55;
+      g.position.set(from.x, 0, from.z); g.rotation.y = Math.atan2(d.x, d.z); this.scene.add(g);
+      const box = new T.BoxGeometry(1, 1, 1), lines = [[0, 0.8, 0.2, pal.hot], [-0.2, 0.5, 0.09, pal.mid], [0.2, 0.5, 0.09, pal.mid], [-0.1, 1.15, 0.06, pal.deep], [0.1, 0.2, 0.06, pal.deep]].map(([x, y, w, color]) => {
+        const m = new T.Mesh(box, this.sabreFire(color, 0.9)); m.position.set(x, y, 0); m.userData.w = w; g.add(m); return m;
+      });
+      let arrived = false;
+      this.addEffect({ start: t, dur: dur + fade, tick: (e, now) => {
+        const k = Math.min(1, e / dur), out = Math.max(0, (e - dur) / fade);
+        for (const m of lines) { m.scale.set(m.userData.w * (1 - out), m.userData.w * (1 - out), Math.max(0.01, L * k)); m.position.z = L * k / 2; m.material.opacity = 0.9 * (1 - out); }
+        if (!arrived && e >= dur) { arrived = true; this.sabreBurst(to, now, [pal.mid, pal.hot], 12, 0.7); }
+      }, end: () => this.disposeGroup(g) });
+    }
+
     /* ---------- Préparation d'une attaque ---------- */
     sabreAttack(kind, white, from, target, to, victim, now, len, dir) {
       const a = { style: 'sabre', sabre: kind === 'k' && white ? 'K' : kind, white, start: now, from, target, to, victim, dir, len, fx: [], pal: this.sabrePal(white) };
@@ -301,6 +316,7 @@
     makeSabreMate(u, at, keep, basic, std) {
       const T = this.THREE, P = u.target, g = u.fx, style = u.themed, A = this.sqToPos(u.attackerTo), white = u.piece === u.piece.toUpperCase(), pal = this.sabrePal(white);
       const s = u.sabre = { white, pal, A, dir: new T.Vector3(P.x - A.x, 0, P.z - A.z), flames: [] };
+      g.visible = false; // rien ne se montre avant le début du mat, pendant que l'attaquant rejoint sa case
       s.len = Math.max(0.01, s.dir.length()); s.dir.normalize();
       const yaw = this.viewYaw();
       const crestBits = (color) => {
@@ -353,6 +369,7 @@
           for (let i = 0; i < 3; i++) { const fang = new T.Mesh(new T.ConeGeometry(0.04, 0.16, 4), new T.MeshBasicMaterial({ color: 0xffffff })); fang.rotation.x = Math.PI; fang.position.set(k * 0.17, -0.1, 0.5 + i * 0.17); head.add(fang); }
         }
         head.visible = false;
+        s.handFire = this.sabreFlames(white, 0.14, 0.55, 8); g.add(s.handFire);
         s.embers = [];
         const spark = new T.SphereGeometry(0.05, 6, 4);
         for (let i = 0; i < 60; i++) { const m = new T.Mesh(spark, hot); m.visible = false; g.add(m); s.embers.push(m); }
@@ -423,6 +440,7 @@
     }
     tickSabreMateFx(u, t, e, clamp, smooth, hit, after) {
       const T = this.THREE, s = u.sabre, P = u.target, style = u.themed, fade = (d) => (after > 0 ? Math.max(0, 1 - after / d) : 1), A = s.A;
+      u.fx.visible = true;
       if (this.checkGroup) this.checkGroup.visible = false;
       if (s.stop && e > 0.8) { u.pillar.material.opacity = 0; u.aura.material.opacity = 0; }
       const breakCrest = () => {
@@ -456,9 +474,10 @@
         for (const m of s.ash) { const d = m.userData; m.visible = after > -0.2 && after < 2.2; m.position.set(d.x, ((d.y - after * d.sp) % 7 + 7) % 7, d.z); m.rotation.set(t * 2, t, 0); }
         breakCrest(); dropBits();
       } else if (style === 'dragonw' || style === 'dragonb') {
-        this.skyDim = Math.max(this.skyDim || 0, smooth(e / 1) * 0.88 * fade(2.8));
-        s.cloudMat.opacity = smooth(e / 0.9) * 0.9 * fade(3);
-        const q = e - 0.5, end = hit + 2.9;
+        this.skyDim = Math.max(this.skyDim || 0, smooth((e - 0.7) / 0.8) * 0.88 * fade(2.8));
+        s.cloudMat.opacity = smooth((e - 0.7) / 0.8) * 0.9 * fade(3);
+        const q = e - 1.1, end = hit + 2.9;
+        if (u.actor.parts.tip) { u.actor.parts.tip.getWorldPosition(s.handFire.position); this.sabreFlicker(s.handFire, t, smooth((e - 0.3) / 0.4) * fade(0.6)); }
         s.segs.forEach((m, i) => { const q2 = q - i * 0.02; m.visible = q2 > 0 && e < end; if (m.visible) { m.position.copy(this.sabreDragonPos(s, P, q2)); m.lookAt(this.sabreDragonPos(s, P, q2 + 0.03)); m.scale.setScalar(1 - smooth((e - end + 0.7) / 0.7) * 0.9); } });
         s.head.visible = q > 0 && e < end;
         if (s.head.visible) {
@@ -561,6 +580,12 @@
           if (e < hit - 0.55) { M.animate(p, t, 'idle'); const up = smooth(e / 1.5); p.armR.rotation.set(-2.9 * up - 0.9 * (1 - up), 0, -0.45); p.armL.rotation.set(-2.9 * up - 0.9 * (1 - up), 0, 0.45); }
           else if (e < hit) { M.animate(p, t, 'idle'); const k = smooth((e - hit + 0.55) / 0.2); p.armR.rotation.set(-2.9 + k * 2.2, 0, -0.45); p.armL.rotation.set(-2.9 + k * 2.2, 0, 0.45); p.torso.rotation.x = 0.4 * k; }
           else M.animate(p, t, 'victory', 1);
+        } else if (style === 'dragonw' || style === 'dragonb') {
+          // les mains et la naginata se lèvent vers le ciel pour invoquer le dragon
+          const k = smooth(e / 0.6), shake = Math.sin(t * 9) * 0.03 * k;
+          face(); M.animate(p, t, after < 0 ? 'idle' : 'victory', 1);
+          if (after < 0) { p.armR.rotation.set(0, 0, 0.3 + 2.4 * k + shake); p.armL.rotation.set(0, 0, -0.3 - 2.4 * k - shake); p.head.rotation.x = -0.55 * k; p.torso.rotation.x = -0.12 * k; }
+          if (p.naginata) p.naginata.rotation.x = Math.PI / 2 * k;
         } else { face(); M.animate(p, t, e < hit ? 'cast' : 'victory', e < hit ? clamp(e / 0.6) : 1); }
         this.tickThemeMateFx(u, t, e, clamp, smooth, hit, after);
         return true;
@@ -636,6 +661,6 @@
       if (this.checkGroup) this.checkGroup.visible = true;
       if (s.weatherShown != null && this.weatherGroup) this.weatherGroup.visible = s.weatherShown;
       if (s.swept) for (const [c, d] of s.swept) { c.holder.position.copy(d.position); c.holder.visible = d.visible; c.parts.root.rotation.copy(d.rotation); c.parts.root.position.set(0, 0, 0); if (c.shadow) c.shadow.visible = true; }
-      if (u.actor) { const p = u.actor.parts; p.rear = 0; if (p.ball) p.ball.visible = true; if (p.lance) p.lance.rotation.x = 0; if (p.rider) p.rider.rotation.x = 0; }
+      if (u.actor) { const p = u.actor.parts; p.rear = 0; if (p.naginata) p.naginata.rotation.x = 0; if (p.ball) p.ball.visible = true; if (p.lance) p.lance.rotation.x = 0; if (p.rider) p.rider.rotation.x = 0; }
     }
 

@@ -234,6 +234,12 @@
           if (knightAttack) mover.anim.dur = knightAttack.duration;
           else if (knightLeap) mover.anim.dur = (white ? 0.38 : 0.68) + Math.hypot(mover.anim.to.x - mover.anim.from.x, mover.anim.to.z - mover.anim.from.z) * (white ? 0.045 : 0.07);
           if (duel) mover.anim.dur = duel.approach;
+          // L'Âge des Sabres, Dragon de feu : la dame file à très haute vitesse jusqu'à sa case, puis invoque le dragon
+          const mu = o.mateUltimate;
+          if (mu && mu.piece.toLowerCase() === 'q' && mu.attackerTo === m.to && root.themeOf(mu.piece) === 'sabres') {
+            mover.anim.dur = 0.14 + Math.hypot(mover.anim.to.x - mover.anim.from.x, mover.anim.to.z - mover.anim.from.z) * 0.02;
+            this.sabreDash(mover.anim.from, mover.anim.to, white, now, mover.anim.dur);
+          }
           if (toss || shot) { mover.anim.t0 = now + EXR; mover.anim.pre = now; } // la cible tire d'abord
           if (escort) { mover.anim.t0 = now + escort.wait; mover.anim.wait = true; this.addEscort(escort, now); }
           if (pushedVictim) {
