@@ -403,7 +403,10 @@
     }
     let resolveSpeech;
     const finished = new Promise((resolve) => { resolveSpeech = resolve; activeSpeechResolve = resolve; });
+    // Certains navigateurs ne signalent jamais la fin d'une longue phrase : la leçon ne doit pas l'attendre sans fin
+    let speechGuard = 0;
     const done = () => {
+      clearTimeout(speechGuard);
       cueTimers.forEach(clearTimeout); cueTimers.clear();
       if (activeSpeechCueCancel) activeSpeechCueCancel = null;
       if (lastUtterance === u) { speechUntil = 0; if (game && !replay && !pz) renderActions(); }
@@ -413,6 +416,7 @@
     lastUtterance = u;
     u.onend = done; u.onerror = done;
     speechUntil = performance.now() + Math.min(45000, 3000 + text.length * 90);
+    speechGuard = setTimeout(done, Math.min(45000, 3000 + text.length * 90));
     tts.speak(u);
     return finished;
   }
@@ -560,12 +564,14 @@
     renderBoard();
     pzButtons();
   }
+  // Cours des champions, ou démonstration en cours : on peut passer à la suite sans attendre
+  const canSkipLessonStep = () => pz.kind === 'lesson' && !!(pz.lesson && pz.lesson.champion || pz.locked && pz.steps[pz.idx].demoMoves?.length);
   function pzButtons() {
     const task = pz.item && pz.item.line;
     $('pz-hint').disabled = !task || pz.done || pz.locked;
     $('pz-solution').disabled = !task || pz.done || pz.locked;
     $('pz-next').innerHTML = `<span>→</span>${pz.kind === 'lesson' ? lessonNextLabel() : pz.kind === 'themed' ? L('Prochain défi', 'Next challenge') : L('Suivant', 'Next')}`;
-    $('pz-next').disabled = !(pz.kind === 'lesson' && pz.lesson && pz.lesson.champion) && !pz.done;
+    $('pz-next').disabled = !canSkipLessonStep() && !pz.done;
   }
   // Libellé du bouton du bas pendant un cours, et la phrase de l'entraîneur qui invite à l'utiliser
   function lessonNextLabel() {
@@ -754,7 +760,7 @@
     commit(window.Chess.sqIndex(u.slice(0, 2)), window.Chess.sqIndex(u.slice(2, 4)), u[4]);
   };
   $('pz-next').onclick = () => {
-    if (!pz || (!pz.done && !(pz.kind === 'lesson' && pz.lesson && pz.lesson.champion))) return;
+    if (!pz || (!pz.done && !canSkipLessonStep())) return;
     if (pz.kind === 'lesson') return nextLessonStep();
     if (pz.kind === 'themed') return nextThemedPuzzle();
     nextActivity();
@@ -940,7 +946,7 @@
       await Promise.all([speech, speechCompletion || Promise.resolve(), new Promise((resolve) => setTimeout(resolve, Math.max(850, busyDelay(250))))]);
       advance();
     };
-    setPzStatus('', step.demoStartText || L('Regarde les coups de ta partie…', 'Watch the moves from your game…'));
+    setPzStatus('', step.demoStartText || L('Regarde la démonstration, ou appuie sur « Continuer » pour passer.', 'Watch the demonstration, or press “Continue” to skip it.'));
     Promise.resolve(narration).then(() => { if (pz === session && pz.idx === index) setTimeout(advance, 250); });
   }
   function scheduleTutorialAdvance(speech, session, index, textLength = 0) {
