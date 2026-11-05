@@ -11,7 +11,7 @@ let failed = false;
 
 async function suite() {
   const page = await browser.newPage();
-  await page.goto(BASE + 'tests.html');
+  await page.goto(BASE + 'tests.html', { timeout: 300000 });
   await page.waitForFunction(() => window.__tests && window.__tests.done, null, { timeout: 180000 });
   const t = await page.evaluate(() => window.__tests);
   for (const r of t.results) {
@@ -26,7 +26,7 @@ async function suite() {
 async function suite3d() {
   const page = await browser.newPage();
   page.on('pageerror', (e) => console.log(`::error title=tests3d.html::${e.message}`));
-  await page.goto(BASE + 'tests3d.html');
+  await page.goto(BASE + 'tests3d.html', { timeout: 300000 }); // les tests tournent pendant le chargement de la page
   await page.waitForFunction(() => window.__tests3d && window.__tests3d.done, null, { timeout: 300000 });
   const t = await page.evaluate(() => window.__tests3d);
   for (const r of t.results) {
@@ -42,7 +42,7 @@ async function boot() {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|firestore|firebase|net::/i.test(m.text())) errors.push(m.text()); });
-  await page.goto(BASE + 'index.html');
+  await page.goto(BASE + 'index.html', { timeout: 120000 });
   await page.waitForTimeout(4000);
   const screen = await page.evaluate(() => document.body.dataset.screen || '');
   console.log(`${screen ? '✓' : '✗'} démarrage de l'appli (écran « ${screen} »)`);
@@ -54,13 +54,13 @@ async function boot() {
 
 async function reloadTheme() {
   const page = await browser.newPage({ viewport: { width: 412, height: 915 } });
-  await page.goto(BASE + 'index.html');
+  await page.goto(BASE + 'index.html', { timeout: 120000 });
   await page.evaluate(() => {
     localStorage.setItem('cavalier.natureCollection', JSON.stringify('sabres'));
     localStorage.setItem('cavalier.game', JSON.stringify({ cfg: { mode: 'local', playerColor: 'w', level: 1 }, moves: ['e2e4', 'e7e5'], result: null, flipped: false }));
     localStorage.setItem('cavalier.lastScreen', JSON.stringify('game'));
   });
-  await page.reload();
+  await page.reload({ timeout: 120000 });
   await page.waitForTimeout(3000);
   const r = await page.evaluate(() => ({ screen: document.body.dataset.screen, theme: window.PieceTheme }));
   const ok = r.screen === 'game' && r.theme === 'sabres';
