@@ -314,8 +314,8 @@
   });
   function renderBoard() {
     const el = $('board');
-    // Deux joueurs sur le même appareil posé à plat : les pièces du joueur d'en face sont retournées vers lui
-    const faceToFace = !!(cfg && cfg.mode === 'local' && !replay);
+    // Partie à deux joueurs sur le même appareil posé à plat (jamais pendant un problème, une leçon ou un replay) : les pièces du joueur d'en face sont retournées vers lui
+    const faceToFace = !!(cfg && cfg.mode === 'local' && !replay && !pz);
     for (const board of [el, $('minimap')]) { board.classList.toggle('face-to-face', faceToFace); board.dataset.top = flipped ? 'w' : 'b'; }
     if (b3d) b3d.faceToFace = faceToFace; // icônes du plateau 3D (les pièces 3D ne changent pas)
     if (!minimapMove && !minimapResize) placeMinimap();
