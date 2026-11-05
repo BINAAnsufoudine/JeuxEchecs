@@ -4931,7 +4931,7 @@
     { name: L('Palmier tropical', 'Tropical palm'), icon: '🌴' }, { name: L('Grand baobab', 'Great baobab'), icon: '🌳' },
   ];
   const NATURE_PREVIEW_ALL_UNLOCKED = true;
-  const HOME_BACKGROUNDS = ['ninjas', 'ocean', 'plants', 'land', 'birds', 'ancient', 'modern', 'kingdom', 'wood']; // images dans fond_ecran/
+  const HOME_BACKGROUNDS = ['ninjas', 'ocean', 'plants', 'land', 'birds', 'ancient', 'modern', 'auras', 'kingdom', 'wood']; // images dans fond_ecran/
   const HOME_BACKGROUND_IMAGES = { kingdom: 'fond_ecran/kingdom.png', wood: 'fond_ecran/wood.png' };
   const NATURE_COLLECTIONS = [
     { id: 'plants', name: L('Plantes', 'Plants'), icon: '🌱', unlockGrade: 1, items: GARDEN_PLANTS },

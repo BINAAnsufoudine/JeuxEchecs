@@ -77,6 +77,26 @@
         u.jets = [];
         for (const s of [-1, 1]) { const jet = new T.Group(); const b = new T.Mesh(new T.ConeGeometry(0.15, 1, 8), std(0x9e9e9e, { metalness: 0.5 })); b.rotation.x = Math.PI / 2; jet.add(b); const w = new T.Mesh(new T.BoxGeometry(1.1, 0.03, 0.35), std(0x757575)); jet.add(w); g.add(jet); u.jets.push(keep(jet, { s })); }
         for (let i = 0; i < 6; i++) { const m = new T.Group(); const c = new T.Mesh(new T.CylinderGeometry(0.04, 0.04, 0.4, 6), std(0xeceff1)); m.add(c); const f = new T.Mesh(new T.SphereGeometry(0.06, 6, 4), new T.MeshBasicMaterial({ color: 0xff9100 })); f.position.y = 0.22; m.add(f); g.add(m); keep(m, { missile: true, x: (Math.random() - 0.5) * 1.2, z: (Math.random() - 0.5) * 1.2, delay: 1.5 + i * 0.18 }); }
+      } else if (style === 'constellation') {
+        // Sorën trace une constellation au-dessus du roi noir ; les étoiles se relient puis s'abattent sur lui
+        const pts = [[-1.7, 6.1], [-0.9, 6.9], [-0.1, 6.2], [0.7, 7.1], [1.6, 6.3], [0.5, 5.4], [-0.6, 5.3]];
+        const starMat = () => new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false });
+        u.stars = pts.map(([x, y], i) => { const s = at(new T.Mesh(new T.OctahedronGeometry(0.3, 0), starMat()), x, y, 0); s.add(new T.Mesh(new T.SphereGeometry(0.34, 10, 8), this.glow(0x4cc3ff, 0.4))); s.userData.delay = 0.3 + i * 0.22; return s; });
+        u.links = pts.map(([x, y], i) => {
+          const [x2, y2] = pts[(i + 1) % pts.length], len = Math.hypot(x2 - x, y2 - y);
+          const l = at(new T.Mesh(new T.CylinderGeometry(0.04, 0.04, len, 6), new T.MeshBasicMaterial({ color: 0x7fd8ff, transparent: true, opacity: 0, depthWrite: false })), (x + x2) / 2, (y + y2) / 2, 0);
+          l.rotation.z = Math.atan2(x - x2, y2 - y); l.userData.delay = 0.5 + i * 0.22; return l;
+        });
+        for (let i = 0; i < 26; i++) { const s = new T.Mesh(new T.CylinderGeometry(0.05, 0.02, 1.1, 6), new T.MeshBasicMaterial({ color: i % 3 ? 0x7fd8ff : 0xffffff, transparent: true, opacity: 0.95, depthWrite: false })); g.add(s); keep(s, { x: (Math.random() - 0.5) * 3.4, z: (Math.random() - 0.5) * 1.6, tx: (Math.random() - 0.5) * 1.1, tz: (Math.random() - 0.5) * 1.1, delay: 2.2 + Math.random() * 0.8 }); }
+      } else if (style === 'nova') {
+        // Vorax lève son sceptre : ses éclats se rassemblent en une boule rouge qui grossit, puis descend sur le roi blanc
+        const k = [...this.chars.values()].find((c) => c.piece === 'k'), src = k ? k.holder.position.clone() : new T.Vector3(u.fromPos.x, 0, u.fromPos.z);
+        u.novaFrom = new T.Vector3(src.x, 3, src.z);
+        u.nova = new T.Mesh(new T.SphereGeometry(1, 28, 18), new T.MeshBasicMaterial({ color: 0xff3d3d, transparent: true, opacity: 0.92 })); g.add(u.nova);
+        u.novaCore = new T.Mesh(new T.SphereGeometry(0.72, 20, 14), new T.MeshBasicMaterial({ color: 0xffd0a0 })); u.nova.add(u.novaCore);
+        u.novaHalo = new T.Mesh(new T.SphereGeometry(1.25, 24, 16), new T.MeshBasicMaterial({ color: 0xff3d6e, transparent: true, opacity: 0.35, depthWrite: false, side: T.BackSide })); u.nova.add(u.novaHalo);
+        for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, s = new T.Mesh(new T.OctahedronGeometry(0.1, 0), new T.MeshBasicMaterial({ color: 0xc04bff })); g.add(s); keep(s, { shard: true, a, r: 2.2 + (i % 3) * 0.6 }); }
+        for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2 + Math.random() * 0.3, crack = at(new T.Mesh(new T.BoxGeometry(0.06, 0.02, 1.4 + Math.random() * 1.4), basic(0xff3d6e, 0.95)), Math.cos(a) * 1, 0.02, Math.sin(a) * 1); crack.rotation.y = -a + Math.PI / 2; keep(crack, { crack: true }); }
       } else if (style === 'orbital') {
         u.target3 = at(new T.Mesh(new T.RingGeometry(0.5, 0.62, 32), basic(0xff1744, 0.9)), 0, 0.04, 0); u.target3.rotation.x = -Math.PI / 2;
         u.beam = at(new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 30, 20, 1, true), new T.MeshBasicMaterial({ color: 0xff1744, transparent: true, opacity: 0.8, blending: T.AdditiveBlending, depthWrite: false })), 0, 15, 0);
@@ -85,8 +105,8 @@
       }
       // éclair d'impact commun
       u.flash = at(new T.Mesh(new T.SphereGeometry(1, 18, 12), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false })), 0, 0.6, 0);
-      const fireStyles = ['firearrows', 'airstrike', 'orbital', 'quake'];
-      u.flash.material.color.setHex(fireStyles.includes(style) ? 0xffa726 : style === 'wave' || style === 'whirlpool' ? 0xb3e5fc : style === 'roots' || style === 'jaws' ? 0xc5e1a5 : 0xfff3e0);
+      const fireStyles = ['firearrows', 'airstrike', 'orbital', 'quake', 'nova'];
+      u.flash.material.color.setHex(fireStyles.includes(style) ? 0xffa726 : style === 'wave' || style === 'whirlpool' || style === 'constellation' ? 0xb3e5fc : style === 'roots' || style === 'jaws' ? 0xc5e1a5 : 0xfff3e0);
       // Mise en scène commune, aussi riche que les mats ninjas : l'attaquant se charge dans une colonne de lumière
       // aux couleurs du thème, le ciel s'assombrit, puis l'impact projette une onde au sol, des éclats et une lumière,
       // et laisse une trace sur la case du roi.
@@ -212,6 +232,23 @@
       } else if (style === 'airstrike') {
         for (const j of u.jets) { const k = clamp((e - 0.5) / 1.6), s = j.userData.s; j.visible = k > 0 && k < 1; j.position.set(P.x + s * 0.8, 5, P.z + (k - 0.5) * 22); j.rotation.set(0, 0, s * 0.2); }
         for (const m of u.mateParts) if (m.userData.missile) { const d = m.userData, k = clamp((e - d.delay) / (hit - d.delay)); m.visible = k > 0 && k < 1; m.position.set(P.x + d.x * (1 - k * 0.6), 5 - k * 4.8, P.z + d.z * (1 - k * 0.6)); m.rotation.set(Math.PI, 0, 0); }
+      } else if (style === 'constellation') {
+        this.skyDim = Math.max(this.skyDim || 0, smooth(e / 1.2) * 0.85 * (after > 0 ? Math.max(0, 1 - after / 1.5) : 1));
+        for (const s of u.stars) { s.material.opacity = smooth((e - s.userData.delay) / 0.3) * (after > 0 ? Math.max(0, 1 - after) : 1); s.rotation.y = t * 2; s.children[0].material.opacity = s.material.opacity * 0.4; }
+        for (const l of u.links) l.material.opacity = smooth((e - l.userData.delay) / 0.3) * 0.8 * (after > 0 ? Math.max(0, 1 - after) : 1);
+        for (const s of u.mateParts) { const d = s.userData, k = clamp((e - d.delay) / 0.5); s.visible = k > 0 && k < 1; s.position.set(P.x + d.x + (d.tx - d.x) * k, 6.2 - k * 6.1, P.z + d.z + (d.tz - d.z) * k); s.rotation.set(0, 0, Math.atan2(d.tx - d.x, 6.1)); }
+      } else if (style === 'nova') {
+        const size = 0.12 + smooth((e - 0.5) / 1.9) * 1.7, down = smooth((e - 2.1) / 0.9), burst = after > 0 ? smooth(after / 0.5) : 0;
+        u.nova.position.set(u.novaFrom.x + (P.x - u.novaFrom.x) * down, 3 + down * 0.6 - down * down * 3 + Math.sin(down * Math.PI) * 0.8, u.novaFrom.z + (P.z - u.novaFrom.z) * down);
+        u.nova.scale.setScalar(size * (1 + burst * 1.6));
+        u.nova.material.opacity = 0.92 * (1 - burst); u.novaCore.material.transparent = true; u.novaCore.material.opacity = 1 - burst; u.novaHalo.material.opacity = 0.35 * (1 - burst);
+        u.nova.visible = after < 0.5;
+        this.skyDim = Math.max(this.skyDim || 0, smooth(e / 2.4) * 0.8 * (after > 0 ? Math.max(0, 1 - after / 1.5) : 1)); // le plateau s'éteint
+        for (const p of u.mateParts) {
+          if (p.userData.crack) { p.scale.z = Math.max(0.01, smooth(after / 0.4)); p.visible = after > 0; continue; }
+          const d = p.userData, k = smooth(e / 1.6), a = d.a + t * 2;
+          p.visible = e < 1.7; p.position.set(u.novaFrom.x + Math.cos(a) * d.r * (1 - k), 3 + Math.sin(a * 2) * 0.5 * (1 - k), u.novaFrom.z + Math.sin(a) * d.r * (1 - k));
+        }
       } else if (style === 'orbital') {
         const lock = smooth((e - 0.4) / 1.2);
         u.target3.scale.setScalar(2.5 - lock * 1.5); u.target3.rotation.z = t * 3; u.target3.visible = after < 0.6;

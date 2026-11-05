@@ -6,7 +6,7 @@
    - chaque attaque de mat doit se terminer proprement et rendre les rois debout. */
 (function () {
   'use strict';
-  const THEMES = ['ninja', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern'];
+  const THEMES = ['ninja', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern', 'auras'];
   const results = [];
   window.__tests3d = { done: false, ok: false, results };
   const b = new window.Board3D(document.getElementById('stage'), () => {});

@@ -99,6 +99,11 @@
             // Saga des Auras : les pièces volent au ras du plateau en laissant une traînée de lumière
             const flyer = root.themeOf(c.piece) === 'auras';
             if (flyer && u > 0 && u < 1) this.auraTrail(c, t);
+            // Sorën : pas instantané, elle disparaît et réapparaît sur la case visée
+            if (flyer && c.piece === 'Q' && dist > 1.2) {
+              const gone = u > 0.2 && u < 0.8;
+              if (gone !== !!c.auraGone) { c.auraGone = gone; c.parts.root.visible = !gone; this.auraBurst('blink', c.holder.position, t); }
+            }
             const arc = flyer ? Math.sin(Math.PI * u) * (leap ? Math.max(a.high || 0.9, 1.3) : 0.45) : bird ? Math.min(1, Math.sin(Math.PI * u) * 1.6) * Math.min(2.2, 0.7 + dist * 0.28) : Math.sin(Math.PI * u) * (leap ? a.high || 0.9 : 0.12);
             c.parts.root.position.y = arc;
             c.shadow.scale.setScalar(Math.max(0.35, 1 - arc * 0.4));
@@ -219,7 +224,8 @@
           continue;
         }
         if (c.selected) state = 'select';
-        this.tickAura(c, t);
+        this.tickAura(c, t); this.tickAuraCheck(c, t);
+        if (c.auraGone) { c.auraGone = false; c.parts.root.visible = true; }
         // Les personnages ne suivent plus la caméra : ils fixent l'adversaire le plus proche (ou le plus fort à égalité)
         const at = c.holder.position;
         const look = c.faceTarget || c.watch;
@@ -324,6 +330,7 @@
       this.tickDayNight(t, dt);
       this.tickCaptureScars(t);
       this.tickAuraTrails(t);
+      this.tickAuraEvents(t);
       this.tickCaptureCamera(t);
       this.tickAttackCamera(t);
       this.tickMateCamera(t);

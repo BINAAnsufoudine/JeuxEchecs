@@ -56,7 +56,8 @@
       };
       const glowBall = (r, c1, c2) => { g.add(new T.Mesh(new T.SphereGeometry(r, 12, 8), this.glow(c1, 1)), new T.Mesh(new T.SphereGeometry(r * 1.8, 12, 8), this.glow(c2, 0.5))); };
       const weapon = (WAR_PROJ[theme] && WAR_PROJ[theme][kind] && WAR_PROJ[theme][kind][white ? 'w' : 'b']) || (theme === 'modern' ? 'bullet' : theme === 'ancient' ? 'spear' : 'orb');
-      if (weapon === 'spear' || weapon === 'spears') shaft(0.75, 0.018, '#8d6e63', '#cfd8dc');
+      if (AURA_PROJ.has(weapon)) g.add(this.auraProjMesh(weapon, white, pal));
+      else if (weapon === 'spear' || weapon === 'spears') shaft(0.75, 0.018, '#8d6e63', '#cfd8dc');
       else if (weapon === 'bolt') shaft(0.95, 0.028, '#6d4c41', '#90a4ae');
       else if (weapon === 'arrows') shaft(0.5, 0.011, '#8d6e63', '#9e9e9e');
       else if (weapon === 'boulder') { g.add(new T.Mesh(new T.DodecahedronGeometry(0.2, 0), std(0x8d8478, { flatShading: true, roughness: 0.95 }))); g.userData.spin = true; }

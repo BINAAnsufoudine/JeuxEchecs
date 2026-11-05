@@ -788,7 +788,7 @@
       }
       if (terrain.kind === 'arena') {
         // Arène de pierre posée sur les nuages : dalle octogonale à gradins, bornes aux angles, nuages tout autour
-        const slab = mat(0x7d7895), rim = mat(0x5d5978), cloud = mat(0xdfe8f8, { roughness: 1 }), glowStone = mat(0x4cc3ff, { emissive: 0x2a8fd8, emissiveIntensity: 0.9 });
+        const slab = mat(0x6a6584), rim = mat(0x4d4968), cloud = mat(0xcfdcf4, { roughness: 1 }), glowStone = mat(0x4cc3ff, { emissive: 0x2a8fd8, emissiveIntensity: 0.9 });
         const top = add(new T.CylinderGeometry(7.4, 7.7, 0.18, 8), slab, 0, -0.59, 0, 1, 1, 1, false); top.rotation.y = Math.PI / 8;
         const step = add(new T.CylinderGeometry(8.2, 8.6, 0.3, 8), rim, 0, -0.665, 0, 1, 1, 1, false); step.rotation.y = Math.PI / 8;
         const pillar = new T.CylinderGeometry(0.2, 0.28, 1.5, 8), gem = new T.OctahedronGeometry(0.2, 0);

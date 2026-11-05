@@ -16,7 +16,7 @@
     mud: { name: 'Terrain boueux', sky: 0x9ca19a, ground: 0x514b3d, wood: 0x49352b, frame: ['#786451', '#514237', '#342b27'], squares: ['#c7b79d', '#796451'], kind: 'mud' },
     rock: { name: 'Terrain rocheux', sky: 0xa9afb4, ground: 0x62686b, wood: 0x55483c, frame: ['#8a8175', '#5b544d', '#393735'], squares: ['#d0d0c9', '#777c7e'], kind: 'rock' },
     water: { name: 'Terrain avec flaques', sky: 0x9bbbc1, ground: 0x526f66, wood: 0x59432f, frame: ['#806b50', '#5a4734', '#3d3027'], squares: ['#d0dfd8', '#63827a'], kind: 'water' },
-    arena: { name: 'Arène du Ciel', sky: 0x6fa8e6, ground: 0xb4c6e4, wood: 0x6a6684, frame: ['#a7a3b8', '#7a7690', '#4e4b62'], squares: ['#d8d2e4', '#6d6596'], kind: 'arena' },
+    arena: { name: 'Arène du Ciel', sky: 0x4f8fdc, ground: 0x8ea3cc, wood: 0x6a6684, frame: ['#a7a3b8', '#7a7690', '#4e4b62'], squares: ['#c9c2da', '#5a5284'], kind: 'arena' },
     beach: { name: 'Plage tropicale', sky: 0x6cc5e8, ground: 0xa88a54, wood: 0x8a6a42, frame: ['#b98d57', '#8a6238', '#5f4226'], squares: ['#ead6a0', '#b98a4c'], kind: 'beach' },
   };
   // overcast : part de gris dans le ciel ; wind : force du vent (pluie penchée, rafales) ; snow : flocons
@@ -47,16 +47,19 @@
     birds: { w: 'eagle', b: 'crows' },
     ancient: { w: 'firearrows', b: 'boulder' },
     modern: { w: 'airstrike', b: 'orbital' },
+    auras: { w: 'constellation', b: 'nova' },
   };
   // Couleurs de la mise en scène des mats de thème : [lumière, trace au sol]
   const THEME_MATE_COLORS = {
     wave: [0x4fc3f7, 0x0d47a1], whirlpool: [0x7c4dff, 0x1a237e], roots: [0x9ccc65, 0x3e2723], jaws: [0xd81b60, 0x33691e],
     stampede: [0xffcc80, 0x6d4c41], quake: [0xff7043, 0x3e2723], eagle: [0xfff8e1, 0x8d6e63], crows: [0x9575cd, 0x212121],
     firearrows: [0xffa726, 0x3e2723], boulder: [0xbcaaa4, 0x4e342e], airstrike: [0xffab40, 0x263238], orbital: [0xff1744, 0x1a0000],
+    constellation: [0x9fe3ff, 0x16306e], nova: [0xff3d3d, 0x1a0712],
   };
   // Armes propres aux thèmes guerriers, par pièce (w = Blancs, b = Noirs) ; sinon jet ou salve aux couleurs du thème
   const WAR_PROJ = {
     ancient: { n: { w: 'spear', b: 'spear' }, b: { w: 'bolt', b: 'boulder' }, r: { w: 'arrows', b: 'firepot' }, q: { w: 'spears', b: 'arrows' } },
+    auras: { p: { w: 'disc', b: 'darkfire' }, n: { w: 'burst', b: 'hook' }, b: { w: 'slash', b: 'crosslaser' }, r: { w: 'shield', b: 'magma' }, q: { w: 'wave', b: 'mirror' }, k: { w: 'breath', b: 'gravity' } },
     modern: { n: { w: 'missiles', b: 'missiles' }, b: { w: 'missiles', b: 'missiles' }, r: { w: 'shell', b: 'shell' }, q: { w: 'bombs', b: 'bombs' } },
   };
   const THEME_FX = {
@@ -76,6 +79,8 @@
     modern: { w: { jet: 0xffd54f, foam: 0xffffff, bub: 0x8d8d7a, charge: 0xfff59d, boom: [0xfff1a8, 0xff6d00, 0xffc34d], debris: [0x5d5d5d, 0xffb74d], burst: [0xfff1a8, 0xff9100, 0xbdbdbd], bits: [0x616161, 0xffcc80] },
               b: { jet: 0x37474f, foam: 0xb0bec5, bub: 0x37474f, charge: 0x78909c, boom: [0xffab40, 0x263238, 0x546e7a], debris: [0x263238, 0xff6d00], burst: [0xffab40, 0x37474f, 0x546e7a], bits: [0x263238, 0xff9100] } },
   }; // à distance : la cible tire d'abord sa propre technique sur l'attaquant
+const AURA_PROJ = new Set(['disc', 'darkfire', 'burst', 'hook', 'slash', 'crosslaser', 'shield', 'magma', 'wave', 'mirror', 'breath', 'gravity']);
+const AURA_BEAMS = { wave: { r: 0.08, off: [0] }, mirror: { r: 0.03, off: [-0.5, 0.5] }, crosslaser: { r: 0.018, off: [-0.16, 0.16] } }; // off : écart de chaque rayon au départ
 const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
@@ -869,7 +874,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
       if (terrain.kind === 'arena') {
         // Arène de pierre posée sur les nuages : dalle octogonale à gradins, bornes aux angles, nuages tout autour
-        const slab = mat(0x7d7895), rim = mat(0x5d5978), cloud = mat(0xdfe8f8, { roughness: 1 }), glowStone = mat(0x4cc3ff, { emissive: 0x2a8fd8, emissiveIntensity: 0.9 });
+        const slab = mat(0x6a6584), rim = mat(0x4d4968), cloud = mat(0xcfdcf4, { roughness: 1 }), glowStone = mat(0x4cc3ff, { emissive: 0x2a8fd8, emissiveIntensity: 0.9 });
         const top = add(new T.CylinderGeometry(7.4, 7.7, 0.18, 8), slab, 0, -0.59, 0, 1, 1, 1, false); top.rotation.y = Math.PI / 8;
         const step = add(new T.CylinderGeometry(8.2, 8.6, 0.3, 8), rim, 0, -0.665, 0, 1, 1, 1, false); step.rotation.y = Math.PI / 8;
         const pillar = new T.CylinderGeometry(0.2, 0.28, 1.5, 8), gem = new T.OctahedronGeometry(0.2, 0);
@@ -1234,9 +1239,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           capture = { from: a, to: b, victim: v };
           const len = Math.hypot(b.x - a.x, b.z - a.z) || 1;
           const ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
-          const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); } };
+          const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); this.auraOnFall(v, b, o.t0, m.piece); } };
           const theme = root.themeOf(white ? 'K' : 'k'), themeFx = THEME_FX[theme], ocean = !!themeFx;
-          if (theme === 'auras') this.createCrater(b, this.lastT || 0, true); // la dalle garde un cratère fumant
           if (ocean && far && m.flag !== 'ep') {
             // Thèmes de créatures : jet (tour, dame) ou salve (cavalier, fou), aux couleurs du thème :
             // eau et encre (océan), liane et épines (plantes), sable et cailloux (animaux), plumes (oiseaux)
@@ -1244,7 +1248,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             const proj = WAR_PROJ[theme] && WAR_PROJ[theme][kind] && WAR_PROJ[theme][kind][white ? 'w' : 'b'];
             shot = { tech: proj ? 'proj' : jet ? 'water' : 'bubble', proj, white, pal: themeFx[white ? 'w' : 'b'], victim: v, target: b, fire: proj ? 0.55 : 0.7 };
             shot.flight = jet ? 0.45 + len * 0.09 : 0.3 + len * 0.07;
-            if (proj) shot.flight = { shell: 0.12 + len * 0.025, laser: 0.55, missiles: 0.35 + len * 0.06, bombs: 0.9, boulder: 0.6 + len * 0.08, firepot: 0.55 + len * 0.08 }[proj] || 0.35 + len * 0.07;
+            if (proj) shot.flight = { shell: 0.12 + len * 0.025, laser: 0.55, missiles: 0.35 + len * 0.06, bombs: 0.9, boulder: 0.6 + len * 0.08, firepot: 0.55 + len * 0.08, wave: 0.55, mirror: 0.55, crosslaser: 0.5, magma: 0.6 + len * 0.08 }[proj] || 0.35 + len * 0.07;
             shot.impact = shot.fire + shot.flight;
             shot.runStart = shot.impact + 0.9;
             die({ t0: now + EXR + shot.impact, hit: true, swept: true, counter: { start: now, end: now + EXR, at: a } });
@@ -1474,6 +1478,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.dying = [];
       (this.auraPuffs || []).forEach((p) => { this.scene.remove(p.m); p.m.material.dispose(); });
       this.auraPuffs = [];
+      this.auraEvents = [];
       for (const scar of this.captureScars) {
         this.scene.remove(scar.object);
         scar.object.traverse((x) => { if (x.geometry) x.geometry.dispose(); if (x.material) x.material.dispose(); });
@@ -2701,6 +2706,26 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         u.jets = [];
         for (const s of [-1, 1]) { const jet = new T.Group(); const b = new T.Mesh(new T.ConeGeometry(0.15, 1, 8), std(0x9e9e9e, { metalness: 0.5 })); b.rotation.x = Math.PI / 2; jet.add(b); const w = new T.Mesh(new T.BoxGeometry(1.1, 0.03, 0.35), std(0x757575)); jet.add(w); g.add(jet); u.jets.push(keep(jet, { s })); }
         for (let i = 0; i < 6; i++) { const m = new T.Group(); const c = new T.Mesh(new T.CylinderGeometry(0.04, 0.04, 0.4, 6), std(0xeceff1)); m.add(c); const f = new T.Mesh(new T.SphereGeometry(0.06, 6, 4), new T.MeshBasicMaterial({ color: 0xff9100 })); f.position.y = 0.22; m.add(f); g.add(m); keep(m, { missile: true, x: (Math.random() - 0.5) * 1.2, z: (Math.random() - 0.5) * 1.2, delay: 1.5 + i * 0.18 }); }
+      } else if (style === 'constellation') {
+        // Sorën trace une constellation au-dessus du roi noir ; les étoiles se relient puis s'abattent sur lui
+        const pts = [[-1.7, 6.1], [-0.9, 6.9], [-0.1, 6.2], [0.7, 7.1], [1.6, 6.3], [0.5, 5.4], [-0.6, 5.3]];
+        const starMat = () => new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false });
+        u.stars = pts.map(([x, y], i) => { const s = at(new T.Mesh(new T.OctahedronGeometry(0.3, 0), starMat()), x, y, 0); s.add(new T.Mesh(new T.SphereGeometry(0.34, 10, 8), this.glow(0x4cc3ff, 0.4))); s.userData.delay = 0.3 + i * 0.22; return s; });
+        u.links = pts.map(([x, y], i) => {
+          const [x2, y2] = pts[(i + 1) % pts.length], len = Math.hypot(x2 - x, y2 - y);
+          const l = at(new T.Mesh(new T.CylinderGeometry(0.04, 0.04, len, 6), new T.MeshBasicMaterial({ color: 0x7fd8ff, transparent: true, opacity: 0, depthWrite: false })), (x + x2) / 2, (y + y2) / 2, 0);
+          l.rotation.z = Math.atan2(x - x2, y2 - y); l.userData.delay = 0.5 + i * 0.22; return l;
+        });
+        for (let i = 0; i < 26; i++) { const s = new T.Mesh(new T.CylinderGeometry(0.05, 0.02, 1.1, 6), new T.MeshBasicMaterial({ color: i % 3 ? 0x7fd8ff : 0xffffff, transparent: true, opacity: 0.95, depthWrite: false })); g.add(s); keep(s, { x: (Math.random() - 0.5) * 3.4, z: (Math.random() - 0.5) * 1.6, tx: (Math.random() - 0.5) * 1.1, tz: (Math.random() - 0.5) * 1.1, delay: 2.2 + Math.random() * 0.8 }); }
+      } else if (style === 'nova') {
+        // Vorax lève son sceptre : ses éclats se rassemblent en une boule rouge qui grossit, puis descend sur le roi blanc
+        const k = [...this.chars.values()].find((c) => c.piece === 'k'), src = k ? k.holder.position.clone() : new T.Vector3(u.fromPos.x, 0, u.fromPos.z);
+        u.novaFrom = new T.Vector3(src.x, 3, src.z);
+        u.nova = new T.Mesh(new T.SphereGeometry(1, 28, 18), new T.MeshBasicMaterial({ color: 0xff3d3d, transparent: true, opacity: 0.92 })); g.add(u.nova);
+        u.novaCore = new T.Mesh(new T.SphereGeometry(0.72, 20, 14), new T.MeshBasicMaterial({ color: 0xffd0a0 })); u.nova.add(u.novaCore);
+        u.novaHalo = new T.Mesh(new T.SphereGeometry(1.25, 24, 16), new T.MeshBasicMaterial({ color: 0xff3d6e, transparent: true, opacity: 0.35, depthWrite: false, side: T.BackSide })); u.nova.add(u.novaHalo);
+        for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, s = new T.Mesh(new T.OctahedronGeometry(0.1, 0), new T.MeshBasicMaterial({ color: 0xc04bff })); g.add(s); keep(s, { shard: true, a, r: 2.2 + (i % 3) * 0.6 }); }
+        for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2 + Math.random() * 0.3, crack = at(new T.Mesh(new T.BoxGeometry(0.06, 0.02, 1.4 + Math.random() * 1.4), basic(0xff3d6e, 0.95)), Math.cos(a) * 1, 0.02, Math.sin(a) * 1); crack.rotation.y = -a + Math.PI / 2; keep(crack, { crack: true }); }
       } else if (style === 'orbital') {
         u.target3 = at(new T.Mesh(new T.RingGeometry(0.5, 0.62, 32), basic(0xff1744, 0.9)), 0, 0.04, 0); u.target3.rotation.x = -Math.PI / 2;
         u.beam = at(new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 30, 20, 1, true), new T.MeshBasicMaterial({ color: 0xff1744, transparent: true, opacity: 0.8, blending: T.AdditiveBlending, depthWrite: false })), 0, 15, 0);
@@ -2709,8 +2734,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
       // éclair d'impact commun
       u.flash = at(new T.Mesh(new T.SphereGeometry(1, 18, 12), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false })), 0, 0.6, 0);
-      const fireStyles = ['firearrows', 'airstrike', 'orbital', 'quake'];
-      u.flash.material.color.setHex(fireStyles.includes(style) ? 0xffa726 : style === 'wave' || style === 'whirlpool' ? 0xb3e5fc : style === 'roots' || style === 'jaws' ? 0xc5e1a5 : 0xfff3e0);
+      const fireStyles = ['firearrows', 'airstrike', 'orbital', 'quake', 'nova'];
+      u.flash.material.color.setHex(fireStyles.includes(style) ? 0xffa726 : style === 'wave' || style === 'whirlpool' || style === 'constellation' ? 0xb3e5fc : style === 'roots' || style === 'jaws' ? 0xc5e1a5 : 0xfff3e0);
       // Mise en scène commune, aussi riche que les mats ninjas : l'attaquant se charge dans une colonne de lumière
       // aux couleurs du thème, le ciel s'assombrit, puis l'impact projette une onde au sol, des éclats et une lumière,
       // et laisse une trace sur la case du roi.
@@ -2836,6 +2861,23 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       } else if (style === 'airstrike') {
         for (const j of u.jets) { const k = clamp((e - 0.5) / 1.6), s = j.userData.s; j.visible = k > 0 && k < 1; j.position.set(P.x + s * 0.8, 5, P.z + (k - 0.5) * 22); j.rotation.set(0, 0, s * 0.2); }
         for (const m of u.mateParts) if (m.userData.missile) { const d = m.userData, k = clamp((e - d.delay) / (hit - d.delay)); m.visible = k > 0 && k < 1; m.position.set(P.x + d.x * (1 - k * 0.6), 5 - k * 4.8, P.z + d.z * (1 - k * 0.6)); m.rotation.set(Math.PI, 0, 0); }
+      } else if (style === 'constellation') {
+        this.skyDim = Math.max(this.skyDim || 0, smooth(e / 1.2) * 0.85 * (after > 0 ? Math.max(0, 1 - after / 1.5) : 1));
+        for (const s of u.stars) { s.material.opacity = smooth((e - s.userData.delay) / 0.3) * (after > 0 ? Math.max(0, 1 - after) : 1); s.rotation.y = t * 2; s.children[0].material.opacity = s.material.opacity * 0.4; }
+        for (const l of u.links) l.material.opacity = smooth((e - l.userData.delay) / 0.3) * 0.8 * (after > 0 ? Math.max(0, 1 - after) : 1);
+        for (const s of u.mateParts) { const d = s.userData, k = clamp((e - d.delay) / 0.5); s.visible = k > 0 && k < 1; s.position.set(P.x + d.x + (d.tx - d.x) * k, 6.2 - k * 6.1, P.z + d.z + (d.tz - d.z) * k); s.rotation.set(0, 0, Math.atan2(d.tx - d.x, 6.1)); }
+      } else if (style === 'nova') {
+        const size = 0.12 + smooth((e - 0.5) / 1.9) * 1.7, down = smooth((e - 2.1) / 0.9), burst = after > 0 ? smooth(after / 0.5) : 0;
+        u.nova.position.set(u.novaFrom.x + (P.x - u.novaFrom.x) * down, 3 + down * 0.6 - down * down * 3 + Math.sin(down * Math.PI) * 0.8, u.novaFrom.z + (P.z - u.novaFrom.z) * down);
+        u.nova.scale.setScalar(size * (1 + burst * 1.6));
+        u.nova.material.opacity = 0.92 * (1 - burst); u.novaCore.material.transparent = true; u.novaCore.material.opacity = 1 - burst; u.novaHalo.material.opacity = 0.35 * (1 - burst);
+        u.nova.visible = after < 0.5;
+        this.skyDim = Math.max(this.skyDim || 0, smooth(e / 2.4) * 0.8 * (after > 0 ? Math.max(0, 1 - after / 1.5) : 1)); // le plateau s'éteint
+        for (const p of u.mateParts) {
+          if (p.userData.crack) { p.scale.z = Math.max(0.01, smooth(after / 0.4)); p.visible = after > 0; continue; }
+          const d = p.userData, k = smooth(e / 1.6), a = d.a + t * 2;
+          p.visible = e < 1.7; p.position.set(u.novaFrom.x + Math.cos(a) * d.r * (1 - k), 3 + Math.sin(a * 2) * 0.5 * (1 - k), u.novaFrom.z + Math.sin(a) * d.r * (1 - k));
+        }
       } else if (style === 'orbital') {
         const lock = smooth((e - 0.4) / 1.2);
         u.target3.scale.setScalar(2.5 - lock * 1.5); u.target3.rotation.z = t * 3; u.target3.visible = after < 0.6;
@@ -3544,6 +3586,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             // Saga des Auras : les pièces volent au ras du plateau en laissant une traînée de lumière
             const flyer = root.themeOf(c.piece) === 'auras';
             if (flyer && u > 0 && u < 1) this.auraTrail(c, t);
+            // Sorën : pas instantané, elle disparaît et réapparaît sur la case visée
+            if (flyer && c.piece === 'Q' && dist > 1.2) {
+              const gone = u > 0.2 && u < 0.8;
+              if (gone !== !!c.auraGone) { c.auraGone = gone; c.parts.root.visible = !gone; this.auraBurst('blink', c.holder.position, t); }
+            }
             const arc = flyer ? Math.sin(Math.PI * u) * (leap ? Math.max(a.high || 0.9, 1.3) : 0.45) : bird ? Math.min(1, Math.sin(Math.PI * u) * 1.6) * Math.min(2.2, 0.7 + dist * 0.28) : Math.sin(Math.PI * u) * (leap ? a.high || 0.9 : 0.12);
             c.parts.root.position.y = arc;
             c.shadow.scale.setScalar(Math.max(0.35, 1 - arc * 0.4));
@@ -3664,7 +3711,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           continue;
         }
         if (c.selected) state = 'select';
-        this.tickAura(c, t);
+        this.tickAura(c, t); this.tickAuraCheck(c, t);
+        if (c.auraGone) { c.auraGone = false; c.parts.root.visible = true; }
         // Les personnages ne suivent plus la caméra : ils fixent l'adversaire le plus proche (ou le plus fort à égalité)
         const at = c.holder.position;
         const look = c.faceTarget || c.watch;
@@ -3769,6 +3817,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.tickDayNight(t, dt);
       this.tickCaptureScars(t);
       this.tickAuraTrails(t);
+      this.tickAuraEvents(t);
       this.tickCaptureCamera(t);
       this.tickAttackCamera(t);
       this.tickMateCamera(t);
@@ -5140,14 +5189,14 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const T = this.THREE, key = white ? 'w' : 'b';
       this.auraKits = this.auraKits || {};
       if (!this.auraKits[key]) this.auraKits[key] = {
-        mat: new T.MeshBasicMaterial({ color: white ? 0x4cc3ff : 0xc04bff, transparent: true, opacity: 0.32, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }),
-        tip: new T.MeshBasicMaterial({ color: white ? 0xbfeaff : 0xff3d6e, transparent: true, opacity: 0.5, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }),
+        mat: new T.MeshBasicMaterial({ color: white ? 0x2f8fe0 : 0xc04bff, transparent: true, opacity: 0.22, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }),
+        tip: new T.MeshBasicMaterial({ color: white ? 0x7fd8ff : 0xff3d6e, transparent: true, opacity: 0.32, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }),
         shell: new T.CylinderGeometry(0.2, 0.42, 1.5, 16, 1, true), flame: new T.ConeGeometry(0.11, 0.8, 6), ring: new T.RingGeometry(0.3, 0.46, 28),
       };
       return this.auraKits[key];
     }
     tickAura(c, t) {
-      const on = c.selected && root.themeOf(c.piece) === 'auras';
+      const on = (c.selected || t < (c.auraFlare || 0)) && root.themeOf(c.piece) === 'auras'; // Nilo : l'aura explose quand un allié tombe
       if (!on) { if (c.auraFx) c.auraFx.visible = false; return; }
       const T = this.THREE;
       if (!c.auraFx) {
@@ -5307,6 +5356,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     flyProj(c, s, el, t) {
       const T = this.THREE, kind = s.proj;
       const end = new T.Vector3(s.target.x, 0.5, s.target.z);
+      if (AURA_PROJ.has(kind)) this.auraCharge(c, s, el);
       if (!s.start && el >= s.fire) {
         // départ : bout du canon, des lance-roquettes ou de l'arme, sinon les mains
         if (c.parts.muzzle) { c.holder.updateMatrixWorld(true); s.start = c.parts.muzzle.getWorldPosition(new T.Vector3()); } else s.start = this.handsOf(c);
@@ -5341,10 +5391,13 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           const core = new T.Mesh(new T.CylinderGeometry(0.007, 0.007, 1, 6), this.glow(0xffffff, 1)); beam.add(core);
           s.beam = this.fx(s, beam); s.beam.visible = false;
         }
+        else if (AURA_BEAMS[kind]) this.startAuraBeams(s, kind);
+        else if (AURA_PROJ.has(kind)) this.auraMissiles(kind, s, add);
       }
       if (s.muzzleFlash) { const k = Math.max(0, 1 - (el - s.fire) / 0.3); s.muzzleFlash.visible = k > 0; s.muzzleFlash.scale.setScalar(0.5 + k); }
       if (s.start && el < s.impact + 0.05) {
         const u0 = (el - s.fire) / s.flight;
+        if (s.auraBeams) this.tickAuraBeams(s, end, el);
         if (s.beam) {
           // le rayon relie l'arme à la cible et grésille
           const a = s.start, d = end.clone().sub(a), L = d.length();
@@ -5379,8 +5432,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         s.exploded = true; // une seule explosion, même si l'effet est encore appelé après son nettoyage
         for (const it of s.items || []) it.o.visible = false;
         if (s.beam) s.beam.visible = false;
+        (s.auraBeams || []).forEach((b) => { b.visible = false; });
         const fire = kind === 'shell' || kind === 'missiles' || kind === 'bombs' || kind === 'firepot' || kind === 'laser';
-        if (fire) this.explode(s, end, el, t, [0xfff1a8, 0xff6a1a, 0xffc34d], [0x3b2a1a, 0xff8a2a]);
+        if (AURA_PROJ.has(kind)) this.explode(s, end, el, t, s.pal.boom, s.pal.debris, true);
+        else if (fire) this.explode(s, end, el, t, [0xfff1a8, 0xff6a1a, 0xffc34d], [0x3b2a1a, 0xff8a2a]);
         else this.explode(s, end, el, t, [0xf5e6c4, 0xc9a66b, 0xe0c895], [0x8d6e63, 0x9e9e9e], true);
         if (kind === 'bombs' || kind === 'shell') { this.shakeUntil = t + 0.6; this.shakeAmp = 0.14; }
       }
@@ -5542,7 +5597,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       };
       const glowBall = (r, c1, c2) => { g.add(new T.Mesh(new T.SphereGeometry(r, 12, 8), this.glow(c1, 1)), new T.Mesh(new T.SphereGeometry(r * 1.8, 12, 8), this.glow(c2, 0.5))); };
       const weapon = (WAR_PROJ[theme] && WAR_PROJ[theme][kind] && WAR_PROJ[theme][kind][white ? 'w' : 'b']) || (theme === 'modern' ? 'bullet' : theme === 'ancient' ? 'spear' : 'orb');
-      if (weapon === 'spear' || weapon === 'spears') shaft(0.75, 0.018, '#8d6e63', '#cfd8dc');
+      if (AURA_PROJ.has(weapon)) g.add(this.auraProjMesh(weapon, white, pal));
+      else if (weapon === 'spear' || weapon === 'spears') shaft(0.75, 0.018, '#8d6e63', '#cfd8dc');
       else if (weapon === 'bolt') shaft(0.95, 0.028, '#6d4c41', '#90a4ae');
       else if (weapon === 'arrows') shaft(0.5, 0.011, '#8d6e63', '#9e9e9e');
       else if (weapon === 'boulder') { g.add(new T.Mesh(new T.DodecahedronGeometry(0.2, 0), std(0x8d8478, { flatShading: true, roughness: 0.95 }))); g.userData.spin = true; }
@@ -5715,6 +5771,125 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.spark.scale.setScalar(s);
       this.spark.rotation.set(Math.random() * 3, Math.random() * 3, 0);
       this.sparkUntil = this.now() + 0.05;
+    }
+
+    /* Saga des Auras : armes à distance, pouvoirs spéciaux et événements différés.
+       Les pouvoirs sont de courts effets sur la case (addEffect) : ils ne changent rien aux règles. */
+    auraAt(at, fn) { (this.auraEvents = this.auraEvents || []).push({ at, fn }); }
+    tickAuraEvents(t) {
+      if (!this.auraEvents || !this.auraEvents.length) return;
+      const due = this.auraEvents.filter((e) => t >= e.at);
+      this.auraEvents = this.auraEvents.filter((e) => t < e.at);
+      due.forEach((e) => e.fn());
+    }
+    // Une pièce tombe : cratère sur la dalle, pouvoir de la victime, colère de Nilo, filet de Krax
+    auraOnFall(victim, at, t0, attacker) {
+      const fighter = (p) => root.themeOf(p) === 'auras';
+      if (!fighter(attacker) && !fighter(victim.piece)) return;
+      this.auraAt(t0, () => {
+        const t = this.lastT || 0;
+        this.createCrater(at, t, true);
+        if (attacker === 'n' && fighter(attacker)) this.auraBurst('net', at, t);
+        if (!fighter(victim.piece)) return;
+        const style = { P: 'blind', p: 'smoke', B: 'parry', b: 'field', R: 'wall', r: 'rock', q: 'double' }[victim.piece];
+        if (style) this.auraBurst(style, at, t);
+        if (victim.piece === victim.piece.toUpperCase()) for (const c of this.chars.values()) if (c.piece === 'N') c.auraFlare = t + 1.6;
+      });
+    }
+    auraBurst(style, at, t) {
+      const T = this.THREE, g = new T.Group(); g.position.set(at.x, 0, at.z); this.scene.add(g);
+      const glow = (c, o = 0.8) => { const m = this.glow(c, o); m.side = T.DoubleSide; return m; };
+      const add = (geo, mat, y = 0.5) => { const m = new T.Mesh(geo, mat); m.position.y = y; g.add(m); return m; };
+      const dur = { blind: 0.5, smoke: 0.9, parry: 0.6, field: 0.8, wall: 0.9, rock: 1.0, double: 0.8, net: 0.8, blink: 0.35 }[style];
+      let step = () => {};
+      if (style === 'blind') { const m = add(new T.SphereGeometry(0.5, 16, 12), glow(0xffffff, 1)); step = (k) => { m.scale.setScalar(0.3 + k * 2.2); m.material.opacity = 1 - k; }; }
+      else if (style === 'smoke' || style === 'blink') {
+        const color = style === 'smoke' ? 0x7a2bff : 0xbfeaff, balls = [];
+        for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2, m = add(new T.SphereGeometry(0.13, 10, 8), glow(color, 0.75)); m.userData = { x: Math.cos(a), z: Math.sin(a) }; balls.push(m); }
+        step = (k) => balls.forEach((m) => { m.position.set(m.userData.x * (0.1 + k * 0.5), 0.3 + k * 0.5, m.userData.z * (0.1 + k * 0.5)); m.scale.setScalar(0.6 + k * 1.3); m.material.opacity = 0.75 * (1 - k); });
+      } else if (style === 'parry') { const m = add(new T.TorusGeometry(0.38, 0.025, 8, 28), glow(0xffd27a, 0.95), 0.6); step = (k) => { m.rotation.y = k * 7; m.scale.setScalar(0.8 + k * 0.7); m.material.opacity = 0.95 * (1 - k); }; }
+      else if (style === 'field') { const m = add(new T.IcosahedronGeometry(0.52, 1), Object.assign(glow(0x9ef7ff, 0.5), { wireframe: true })); step = (k) => { m.rotation.y = k * 3; m.material.opacity = 0.5 * (1 - k * k); }; }
+      else if (style === 'wall') {
+        const plates = [];
+        for (let i = 0; i < 3; i++) { const a = -0.7 + i * 0.7, m = add(new T.CylinderGeometry(0.22, 0.26, 0.03, 6), glow(0x7fd8ff, 0.8)); m.rotation.x = Math.PI / 2; m.rotation.y = 0; m.position.set(Math.sin(a) * 0.5, 0, Math.cos(a) * 0.5); plates.push(m); }
+        step = (k) => plates.forEach((m) => { m.position.y = Math.min(0.55, k * 2); m.material.opacity = 0.8 * (1 - Math.max(0, k - 0.6) / 0.4); });
+      } else if (style === 'rock') {
+        const m = add(new T.DodecahedronGeometry(0.42, 0), new T.MeshStandardMaterial({ color: 0x3f3437, flatShading: true, transparent: true })), c = add(new T.SphereGeometry(0.46, 10, 8), glow(0xff7a1a, 0));
+        step = (k) => { m.scale.setScalar(Math.min(1, k * 3)); c.material.opacity = k > 0.55 ? 0.8 * (1 - k) * 2 : 0; m.material.opacity = k > 0.6 ? 1 - (k - 0.6) / 0.4 : 1; };
+      } else if (style === 'double') {
+        const m = add(new T.CylinderGeometry(0.13, 0.19, 0.85, 12), glow(0xc04bff, 0.55), 0.55);
+        step = (k) => { m.position.x = 0.15 + k * 0.45; m.material.opacity = 0.55 * (1 - k); };
+      } else if (style === 'net') {
+        const m = add(new T.SphereGeometry(0.46, 10, 7, 0, Math.PI * 2, 0, Math.PI / 2), Object.assign(glow(0xdfe2ea, 0.9), { wireframe: true, blending: T.NormalBlending }), 0);
+        step = (k) => { m.scale.setScalar(Math.min(1, 0.3 + k * 3)); m.material.opacity = k > 0.7 ? 0.9 * (1 - k) / 0.3 : 0.9; };
+      }
+      step(0);
+      this.addEffect({ start: t, dur, tick: (e) => step(Math.min(1, e / dur)), end: () => this.disposeGroup(g) });
+    }
+    // En échec : dôme de lumière pour Oro, pesanteur (les cases s'enfoncent) pour Vorax
+    tickAuraCheck(c, t) {
+      const T = this.THREE, on = c.inCheck && (c.piece === 'K' || c.piece === 'k') && root.themeOf(c.piece) === 'auras';
+      if (!on) { if (c.auraDome) c.auraDome.visible = false; return; }
+      if (!c.auraDome) {
+        const white = c.piece === 'K';
+        const m = new T.Mesh(white ? new T.SphereGeometry(0.58, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2) : new T.RingGeometry(0.42, 1.0, 32), this.glow(white ? 0xbfeaff : 0x7a2bff, 0.35));
+        m.material.side = T.DoubleSide; if (!white) { m.rotation.x = -Math.PI / 2; m.position.y = 0.03; }
+        c.auraDome = m; c.holder.add(m);
+      }
+      c.auraDome.visible = true;
+      c.auraDome.scale.setScalar(1 + Math.sin(t * 5) * 0.05);
+    }
+
+    // Armes à distance, orientées le long de +z
+    auraProjMesh(kind, white, pal) {
+      const T = this.THREE, g = new T.Group();
+      const std = (color, o = {}) => new T.MeshStandardMaterial(Object.assign({ color, roughness: 0.4, metalness: 0.5 }, o));
+      const ball = (r, c1, c2) => g.add(new T.Mesh(new T.SphereGeometry(r, 12, 8), this.glow(c1, 1)), new T.Mesh(new T.SphereGeometry(r * 1.8, 12, 8), this.glow(c2, 0.5)));
+      const bolt = (r, len) => { const m = new T.Mesh(new T.CylinderGeometry(r, r, len, 10), this.glow(pal.jet, 0.95)); m.rotation.x = Math.PI / 2; g.add(m); };
+      if (kind === 'burst') ball(0.075, 0xffffff, pal.jet);
+      else if (kind === 'darkfire') { g.add(new T.Mesh(new T.SphereGeometry(0.1, 12, 8), new T.MeshBasicMaterial({ color: 0x12081f }))); g.add(new T.Mesh(new T.SphereGeometry(0.19, 12, 8), this.glow(0xc04bff, 0.6))); }
+      else if (kind === 'disc') { const m = new T.Mesh(new T.TorusGeometry(0.15, 0.03, 6, 22), this.glow(pal.jet, 1)); m.rotation.x = Math.PI / 2; g.add(m); }
+      else if (kind === 'breath') { for (let i = 0; i < 3; i++) { const m = new T.Mesh(new T.TorusGeometry(0.12 + i * 0.06, 0.016, 6, 22), this.glow(0xffffff, 0.8)); m.position.z = -i * 0.14; g.add(m); } }
+      else if (kind === 'gravity') { for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2, m = new T.Mesh(new T.OctahedronGeometry(0.075, 0), std(0xc04bff, { emissive: 0x7a2bff })); m.position.set(Math.cos(a) * 0.12, Math.sin(a) * 0.12, 0); g.add(m); } }
+      else if (kind === 'hook') { const m = new T.Mesh(new T.TorusGeometry(0.1, 0.022, 6, 14, 4.4), std(0xdfe2ea)); g.add(m); const c = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.5, 6), std(0xb9bcc7)); c.rotation.x = Math.PI / 2; c.position.z = -0.32; g.add(c); }
+      else if (kind === 'slash') { const m = new T.Mesh(new T.TorusGeometry(0.34, 0.035, 6, 20, 2.2), this.glow(0xfff2b8, 1)); m.rotation.set(Math.PI / 2, 0, Math.PI / 2 - 1.1); g.add(m); }
+      else if (kind === 'shield') { const m = new T.Mesh(new T.CylinderGeometry(0.17, 0.2, 0.03, 6), std(0xc9d2e4)); g.add(m); g.add(new T.Mesh(new T.SphereGeometry(0.05, 8, 6), this.glow(0x4cc3ff, 1))); }
+      else if (kind === 'magma') { g.add(new T.Mesh(new T.DodecahedronGeometry(0.15, 0), std(0x2b2326, { flatShading: true, emissive: 0xff5a1a, emissiveIntensity: 0.5 }))); g.add(new T.Mesh(new T.SphereGeometry(0.22, 10, 8), this.glow(0xff7a1a, 0.55))); }
+      else bolt(0.04, 0.7); // rayons : un trait de lumière quand ils servent de riposte
+      return g;
+    }
+    auraMissiles(kind, s, add) {
+      const T = this.THREE, pal = s.pal, make = () => this.auraProjMesh(kind, s.white, pal), none = new T.Vector3();
+      s.trail = kind === 'magma' ? [0xff7a1a, 0x3f3437] : kind === 'hook' ? [0xb9bcc7, 0x8d8d99] : [pal.charge, pal.jet];
+      if (kind === 'burst') for (let i = 0; i < 6; i++) add(make(), i * 0.06, new T.Vector3((Math.random() - 0.5) * 0.4, 0, (Math.random() - 0.5) * 0.4), 0.3);
+      else if (kind === 'magma') add(make(), 0, none, 1.9, 6);
+      else if (kind === 'shield') add(make(), 0, none, 0.35, 12);
+      else add(make(), 0, none, 0.08);
+    }
+    startAuraBeams(s, kind) {
+      const T = this.THREE, spec = AURA_BEAMS[kind];
+      s.auraBeams = spec.off.map((off) => {
+        const b = new T.Mesh(new T.CylinderGeometry(spec.r, spec.r, 1, 12), this.glow(s.pal.jet, 0.85));
+        b.add(new T.Mesh(new T.CylinderGeometry(spec.r * 0.45, spec.r * 0.45, 1, 10), this.glow(0xffffff, 1)));
+        b.userData.off = off; b.visible = false; return this.fx(s, b);
+      });
+    }
+    tickAuraBeams(s, end, el) {
+      const T = this.THREE, u = Math.min(1, (el - s.fire) / s.flight * 1.3), dir = end.clone().sub(s.start), side = new T.Vector3(-dir.z, 0, dir.x).normalize();
+      for (const b of s.auraBeams) {
+        const a = s.start.clone().addScaledVector(side, b.userData.off), d = a.clone().lerp(end, u).sub(a), L = Math.max(0.01, d.length());
+        b.visible = u > 0; b.position.copy(a).addScaledVector(d, 0.5);
+        b.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize());
+        const w = 0.8 + Math.random() * 0.35; b.scale.set(w, L, w);
+      }
+    }
+    // Charge de l'énergie dans les mains (ou le sceptre) avant le tir
+    auraCharge(c, s, el) {
+      const T = this.THREE;
+      if (el >= s.fire) { if (s.auraGlow) s.auraGlow.visible = false; return; }
+      if (!s.auraGlow) s.auraGlow = this.fx(s, new T.Mesh(new T.SphereGeometry(0.1, 12, 8), this.glow(s.pal.charge, 0.8)));
+      if (c.parts.muzzle) { c.holder.updateMatrixWorld(true); c.parts.muzzle.getWorldPosition(s.auraGlow.position); } else s.auraGlow.position.copy(this.handsOf(c));
+      s.auraGlow.scale.setScalar(0.3 + (el / s.fire) * 1.5);
     }
 
     bindInput() {

@@ -120,11 +120,46 @@ Les constantes sont dans `src/board3d/00-constantes.js`, les mats dans `src/boar
 - **Roque** : c'est le roi qui saute par-dessus la tour.
 - **Mats** : Blancs, *frappe aérienne* ; Noirs, *frappe orbitale*.
 
+## Saga des Auras
+
+Arts martiaux cosmiques (création originale). Blancs : l'Ordre du Ciel Azur (ivoire, azur, argent). Noirs : l'Empire de l'Ombre (violet, noir cristal, rouge). Plateau : l'Arène du Ciel, dalles de pierre au-dessus des nuages et rochers flottants. Sans sons propres.
+
+| Pièce | Blancs | Noirs |
+|---|---|---|
+| Pion | Apprentis du Temple Azur | Feux follets d'ombre |
+| Cavalier | Nilo, le jeune prodige | Krax, le chasseur de primes |
+| Fou | Zaïren, le duelliste de l'aube | les Sentinelles (drones) |
+| Tour | Vaskar, le golem-gardien | Golmar, le titan de magma |
+| Dame | Sorën, l'Éveillée | Mélyx, la reine d'obsidienne |
+| Roi | Maître Oro, le sage des nuages | Vorax, le roi-comète |
+
+| Personnage | Corps à corps | À distance (`WAR_PROJ.auras`) | Spécial |
+|---|---|---|---|
+| Apprentis | enchaînement de poings | disque d'énergie (riposte) | éclair aveuglant quand ils tombent |
+| Feux follets | brûlure | boule de feu noir (riposte) | se dispersent en fumée |
+| Nilo | coup de pied sauté | rafale d'énergie | l'aura explose quand un allié tombe |
+| Krax | crochet | grappin lancé | filet sur la pièce prise |
+| Zaïren | deux coups de lame | onde tranchante | parade (anneau doré) |
+| Sentinelles | décharge | deux lasers croisés | champ de force |
+| Vaskar | coup de bouclier | bouclier en boomerang | mur de boucliers |
+| Golmar | bond et poings de lave | jet de magma en arc | se refroidit en roche puis se fissure |
+| Sorën | rafale de poings | Vague Céleste, rayon chargé | pas instantané sur les longs déplacements |
+| Mélyx | griffes et lames | rayons croisés des miroirs | reflet, un double prend le coup |
+| Oro | coup de bâton | Souffle ancestral (riposte) | dôme de lumière quand il est en échec |
+| Vorax | coup de sceptre | éclats gravitationnels (riposte) | pesanteur autour de lui quand il est en échec |
+
+- **Déplacement** : vol au ras du plateau avec traînée de lumière ; le cavalier passe par-dessus les autres.
+- **Aura** : la pièce sélectionnée s'entoure de son aura, bleue ou pourpre.
+- **Cratères** : une prise laisse un cratère fumant pendant 6 demi-coups (`AURA_CRATER_PLIES`).
+- **Mats** : Blancs, *Constellation d'Azur* ; Noirs, *Nova Noire*.
+- **Code** : modèles dans `auras3d.js`, armes et pouvoirs dans `src/board3d/12b-auras.js`. Les pouvoirs sont des effets visuels courts, sans effet sur les règles.
+- **Échiquier 2D** : il garde les ninjas, comme pour tous les thèmes.
+
 ---
 
 ## Ajouter ou modifier un thème
 
-1. Pièces : un fichier qui remplit `window.ThemeModels[id].build(THREE, piece)` (voir `themes3d.js`, `ocean3d.js`, `warriors3d.js`).
+1. Pièces : un fichier qui remplit `window.ThemeModels[id].build(THREE, piece)` (voir `themes3d.js`, `ocean3d.js`, `warriors3d.js`, `auras3d.js`).
 2. Couleurs des tirs : une entrée dans `THEME_FX` ; armes particulières dans `WAR_PROJ`.
 3. Mats : une entrée dans `THEME_MATE` (un style pour les Blancs, un pour les Noirs), ses couleurs dans `THEME_MATE_COLORS`, puis le décor dans `makeThemeMate` et l'animation dans `tickThemeMateFx`.
 4. Ajouter le thème à la liste de `tests3d.js` et vérifier que `tests3d.html` passe.

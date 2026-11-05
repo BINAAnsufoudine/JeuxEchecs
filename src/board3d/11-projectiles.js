@@ -37,14 +37,14 @@
       const T = this.THREE, key = white ? 'w' : 'b';
       this.auraKits = this.auraKits || {};
       if (!this.auraKits[key]) this.auraKits[key] = {
-        mat: new T.MeshBasicMaterial({ color: white ? 0x4cc3ff : 0xc04bff, transparent: true, opacity: 0.32, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }),
-        tip: new T.MeshBasicMaterial({ color: white ? 0xbfeaff : 0xff3d6e, transparent: true, opacity: 0.5, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }),
+        mat: new T.MeshBasicMaterial({ color: white ? 0x2f8fe0 : 0xc04bff, transparent: true, opacity: 0.22, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }),
+        tip: new T.MeshBasicMaterial({ color: white ? 0x7fd8ff : 0xff3d6e, transparent: true, opacity: 0.32, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }),
         shell: new T.CylinderGeometry(0.2, 0.42, 1.5, 16, 1, true), flame: new T.ConeGeometry(0.11, 0.8, 6), ring: new T.RingGeometry(0.3, 0.46, 28),
       };
       return this.auraKits[key];
     }
     tickAura(c, t) {
-      const on = c.selected && root.themeOf(c.piece) === 'auras';
+      const on = (c.selected || t < (c.auraFlare || 0)) && root.themeOf(c.piece) === 'auras'; // Nilo : l'aura explose quand un allié tombe
       if (!on) { if (c.auraFx) c.auraFx.visible = false; return; }
       const T = this.THREE;
       if (!c.auraFx) {
@@ -204,6 +204,7 @@
     flyProj(c, s, el, t) {
       const T = this.THREE, kind = s.proj;
       const end = new T.Vector3(s.target.x, 0.5, s.target.z);
+      if (AURA_PROJ.has(kind)) this.auraCharge(c, s, el);
       if (!s.start && el >= s.fire) {
         // départ : bout du canon, des lance-roquettes ou de l'arme, sinon les mains
         if (c.parts.muzzle) { c.holder.updateMatrixWorld(true); s.start = c.parts.muzzle.getWorldPosition(new T.Vector3()); } else s.start = this.handsOf(c);
@@ -238,10 +239,13 @@
           const core = new T.Mesh(new T.CylinderGeometry(0.007, 0.007, 1, 6), this.glow(0xffffff, 1)); beam.add(core);
           s.beam = this.fx(s, beam); s.beam.visible = false;
         }
+        else if (AURA_BEAMS[kind]) this.startAuraBeams(s, kind);
+        else if (AURA_PROJ.has(kind)) this.auraMissiles(kind, s, add);
       }
       if (s.muzzleFlash) { const k = Math.max(0, 1 - (el - s.fire) / 0.3); s.muzzleFlash.visible = k > 0; s.muzzleFlash.scale.setScalar(0.5 + k); }
       if (s.start && el < s.impact + 0.05) {
         const u0 = (el - s.fire) / s.flight;
+        if (s.auraBeams) this.tickAuraBeams(s, end, el);
         if (s.beam) {
           // le rayon relie l'arme à la cible et grésille
           const a = s.start, d = end.clone().sub(a), L = d.length();
@@ -276,8 +280,10 @@
         s.exploded = true; // une seule explosion, même si l'effet est encore appelé après son nettoyage
         for (const it of s.items || []) it.o.visible = false;
         if (s.beam) s.beam.visible = false;
+        (s.auraBeams || []).forEach((b) => { b.visible = false; });
         const fire = kind === 'shell' || kind === 'missiles' || kind === 'bombs' || kind === 'firepot' || kind === 'laser';
-        if (fire) this.explode(s, end, el, t, [0xfff1a8, 0xff6a1a, 0xffc34d], [0x3b2a1a, 0xff8a2a]);
+        if (AURA_PROJ.has(kind)) this.explode(s, end, el, t, s.pal.boom, s.pal.debris, true);
+        else if (fire) this.explode(s, end, el, t, [0xfff1a8, 0xff6a1a, 0xffc34d], [0x3b2a1a, 0xff8a2a]);
         else this.explode(s, end, el, t, [0xf5e6c4, 0xc9a66b, 0xe0c895], [0x8d6e63, 0x9e9e9e], true);
         if (kind === 'bombs' || kind === 'shell') { this.shakeUntil = t + 0.6; this.shakeAmp = 0.14; }
       }

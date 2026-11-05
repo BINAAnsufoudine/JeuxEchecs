@@ -16,7 +16,7 @@
     mud: { name: 'Terrain boueux', sky: 0x9ca19a, ground: 0x514b3d, wood: 0x49352b, frame: ['#786451', '#514237', '#342b27'], squares: ['#c7b79d', '#796451'], kind: 'mud' },
     rock: { name: 'Terrain rocheux', sky: 0xa9afb4, ground: 0x62686b, wood: 0x55483c, frame: ['#8a8175', '#5b544d', '#393735'], squares: ['#d0d0c9', '#777c7e'], kind: 'rock' },
     water: { name: 'Terrain avec flaques', sky: 0x9bbbc1, ground: 0x526f66, wood: 0x59432f, frame: ['#806b50', '#5a4734', '#3d3027'], squares: ['#d0dfd8', '#63827a'], kind: 'water' },
-    arena: { name: 'Arène du Ciel', sky: 0x6fa8e6, ground: 0xb4c6e4, wood: 0x6a6684, frame: ['#a7a3b8', '#7a7690', '#4e4b62'], squares: ['#d8d2e4', '#6d6596'], kind: 'arena' },
+    arena: { name: 'Arène du Ciel', sky: 0x4f8fdc, ground: 0x8ea3cc, wood: 0x6a6684, frame: ['#a7a3b8', '#7a7690', '#4e4b62'], squares: ['#c9c2da', '#5a5284'], kind: 'arena' },
     beach: { name: 'Plage tropicale', sky: 0x6cc5e8, ground: 0xa88a54, wood: 0x8a6a42, frame: ['#b98d57', '#8a6238', '#5f4226'], squares: ['#ead6a0', '#b98a4c'], kind: 'beach' },
   };
   // overcast : part de gris dans le ciel ; wind : force du vent (pluie penchée, rafales) ; snow : flocons
@@ -47,16 +47,19 @@
     birds: { w: 'eagle', b: 'crows' },
     ancient: { w: 'firearrows', b: 'boulder' },
     modern: { w: 'airstrike', b: 'orbital' },
+    auras: { w: 'constellation', b: 'nova' },
   };
   // Couleurs de la mise en scène des mats de thème : [lumière, trace au sol]
   const THEME_MATE_COLORS = {
     wave: [0x4fc3f7, 0x0d47a1], whirlpool: [0x7c4dff, 0x1a237e], roots: [0x9ccc65, 0x3e2723], jaws: [0xd81b60, 0x33691e],
     stampede: [0xffcc80, 0x6d4c41], quake: [0xff7043, 0x3e2723], eagle: [0xfff8e1, 0x8d6e63], crows: [0x9575cd, 0x212121],
     firearrows: [0xffa726, 0x3e2723], boulder: [0xbcaaa4, 0x4e342e], airstrike: [0xffab40, 0x263238], orbital: [0xff1744, 0x1a0000],
+    constellation: [0x9fe3ff, 0x16306e], nova: [0xff3d3d, 0x1a0712],
   };
   // Armes propres aux thèmes guerriers, par pièce (w = Blancs, b = Noirs) ; sinon jet ou salve aux couleurs du thème
   const WAR_PROJ = {
     ancient: { n: { w: 'spear', b: 'spear' }, b: { w: 'bolt', b: 'boulder' }, r: { w: 'arrows', b: 'firepot' }, q: { w: 'spears', b: 'arrows' } },
+    auras: { p: { w: 'disc', b: 'darkfire' }, n: { w: 'burst', b: 'hook' }, b: { w: 'slash', b: 'crosslaser' }, r: { w: 'shield', b: 'magma' }, q: { w: 'wave', b: 'mirror' }, k: { w: 'breath', b: 'gravity' } },
     modern: { n: { w: 'missiles', b: 'missiles' }, b: { w: 'missiles', b: 'missiles' }, r: { w: 'shell', b: 'shell' }, q: { w: 'bombs', b: 'bombs' } },
   };
   const THEME_FX = {
@@ -76,6 +79,8 @@
     modern: { w: { jet: 0xffd54f, foam: 0xffffff, bub: 0x8d8d7a, charge: 0xfff59d, boom: [0xfff1a8, 0xff6d00, 0xffc34d], debris: [0x5d5d5d, 0xffb74d], burst: [0xfff1a8, 0xff9100, 0xbdbdbd], bits: [0x616161, 0xffcc80] },
               b: { jet: 0x37474f, foam: 0xb0bec5, bub: 0x37474f, charge: 0x78909c, boom: [0xffab40, 0x263238, 0x546e7a], debris: [0x263238, 0xff6d00], burst: [0xffab40, 0x37474f, 0x546e7a], bits: [0x263238, 0xff9100] } },
   }; // à distance : la cible tire d'abord sa propre technique sur l'attaquant
+const AURA_PROJ = new Set(['disc', 'darkfire', 'burst', 'hook', 'slash', 'crosslaser', 'shield', 'magma', 'wave', 'mirror', 'breath', 'gravity']);
+const AURA_BEAMS = { wave: { r: 0.08, off: [0] }, mirror: { r: 0.03, off: [-0.5, 0.5] }, crosslaser: { r: 0.018, off: [-0.16, 0.16] } }; // off : écart de chaque rayon au départ
 const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 

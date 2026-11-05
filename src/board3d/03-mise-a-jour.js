@@ -131,9 +131,8 @@
           capture = { from: a, to: b, victim: v };
           const len = Math.hypot(b.x - a.x, b.z - a.z) || 1;
           const ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
-          const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); } };
+          const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); this.auraOnFall(v, b, o.t0, m.piece); } };
           const theme = root.themeOf(white ? 'K' : 'k'), themeFx = THEME_FX[theme], ocean = !!themeFx;
-          if (theme === 'auras') this.createCrater(b, this.lastT || 0, true); // la dalle garde un cratère fumant
           if (ocean && far && m.flag !== 'ep') {
             // Thèmes de créatures : jet (tour, dame) ou salve (cavalier, fou), aux couleurs du thème :
             // eau et encre (océan), liane et épines (plantes), sable et cailloux (animaux), plumes (oiseaux)
@@ -141,7 +140,7 @@
             const proj = WAR_PROJ[theme] && WAR_PROJ[theme][kind] && WAR_PROJ[theme][kind][white ? 'w' : 'b'];
             shot = { tech: proj ? 'proj' : jet ? 'water' : 'bubble', proj, white, pal: themeFx[white ? 'w' : 'b'], victim: v, target: b, fire: proj ? 0.55 : 0.7 };
             shot.flight = jet ? 0.45 + len * 0.09 : 0.3 + len * 0.07;
-            if (proj) shot.flight = { shell: 0.12 + len * 0.025, laser: 0.55, missiles: 0.35 + len * 0.06, bombs: 0.9, boulder: 0.6 + len * 0.08, firepot: 0.55 + len * 0.08 }[proj] || 0.35 + len * 0.07;
+            if (proj) shot.flight = { shell: 0.12 + len * 0.025, laser: 0.55, missiles: 0.35 + len * 0.06, bombs: 0.9, boulder: 0.6 + len * 0.08, firepot: 0.55 + len * 0.08, wave: 0.55, mirror: 0.55, crosslaser: 0.5, magma: 0.6 + len * 0.08 }[proj] || 0.35 + len * 0.07;
             shot.impact = shot.fire + shot.flight;
             shot.runStart = shot.impact + 0.9;
             die({ t0: now + EXR + shot.impact, hit: true, swept: true, counter: { start: now, end: now + EXR, at: a } });
@@ -371,6 +370,7 @@
       this.dying = [];
       (this.auraPuffs || []).forEach((p) => { this.scene.remove(p.m); p.m.material.dispose(); });
       this.auraPuffs = [];
+      this.auraEvents = [];
       for (const scar of this.captureScars) {
         this.scene.remove(scar.object);
         scar.object.traverse((x) => { if (x.geometry) x.geometry.dispose(); if (x.material) x.material.dispose(); });

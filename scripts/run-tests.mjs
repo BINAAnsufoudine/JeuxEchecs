@@ -1,6 +1,6 @@
 // Tests automatiques lancés par GitHub Actions à chaque envoi :
 // 1. tests.html (moteur d'échecs, analyse, stress de l'échiquier 3D) ;
-// 2. tests3d.html (plateau 3D dans les 7 thèmes : pièces fantômes, restes d'animation, caméra, mats) ;
+// 2. tests3d.html (plateau 3D dans les 8 thèmes : pièces fantômes, restes d'animation, caméra, mats) ;
 // 3. démarrage de l'appli (index.html) sans aucune erreur JavaScript.
 import { chromium } from 'playwright';
 
