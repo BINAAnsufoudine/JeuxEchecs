@@ -18,6 +18,7 @@
     water: { name: 'Terrain avec flaques', sky: 0x9bbbc1, ground: 0x526f66, wood: 0x59432f, frame: ['#806b50', '#5a4734', '#3d3027'], squares: ['#d0dfd8', '#63827a'], kind: 'water' },
     arena: { name: 'Arène du Ciel', sky: 0x4f8fdc, ground: 0x8ea3cc, wood: 0x6a6684, frame: ['#a7a3b8', '#7a7690', '#4e4b62'], squares: ['#c9c2da', '#5a5284'], kind: 'arena' },
     castle: { name: 'Cour du château de Hakuro', sky: 0x6a4a6e, ground: 0x6b5f58, wood: 0x4a3324, frame: ['#7a5234', '#553622', '#38241a'], squares: ['#d9b98a', '#5c3a24'], kind: 'castle' },
+    banco: { name: 'Cour royale de Zalimba', sky: 0xb0522e, ground: 0xa87a5a, wood: 0x5a2e14, frame: ['#b8683a', '#7a3a1e', '#4a2412'], squares: ['#e2b07a', '#7a3a1e'], kind: 'banco' },
     beach: { name: 'Plage tropicale', sky: 0x6cc5e8, ground: 0xa88a54, wood: 0x8a6a42, frame: ['#b98d57', '#8a6238', '#5f4226'], squares: ['#ead6a0', '#b98a4c'], kind: 'beach' },
   };
   // overcast : part de gris dans le ciel ; wind : force du vent (pluie penchée, rafales) ; snow : flocons
@@ -50,6 +51,7 @@
     modern: { w: 'airstrike', b: 'orbital' },
     auras: { w: 'constellation', b: 'nova' },
     sabres: { w: 'sakura', b: 'lunepourpre' },
+    baobabs: { w: 'ancetres', b: 'harmattan' },
   };
   // Couleurs de la mise en scène des mats de thème : [lumière, trace au sol]
   const THEME_MATE_COLORS = {
@@ -59,6 +61,7 @@
     constellation: [0x9fe3ff, 0x16306e], nova: [0xff3d3d, 0x1a0712],
     temple: [0xffffff, 0x16306e], nilocomet: [0x4cc3ff, 0x16306e], dawncross: [0xffd27a, 0x5a4210], fortress: [0x7fd8ff, 0x343a4e], cloudbreath: [0xdff4ff, 0x4a6a9e],
     shadeswarm: [0xc04bff, 0x1a0a2e], bounty: [0xff3d6e, 0x2d2219], lasernet: [0x9ef7ff, 0x2a1636], eruption: [0xff7a1a, 0x2b2326], crystalcomet: [0xc04bff, 0x14101f],
+    ancetres: [0xffc247, 0x5a2e14], harmattan: [0xd9b25a, 0x3a2414],
     sakura: [0xf9d2dc, 0x4a3324], lunepourpre: [0xff3b3b, 0x050305], dragonw: [0xffe066, 0x3a2410], dragonb: [0xb45cff, 0x1a0a2e],
     fracasw: [0xff8a26, 0x1a100a], fracasb: [0xb45cff, 0x120a1c], arcw: [0xffd27a, 0x3a2410], arcb: [0xc98cff, 0x1a0a2e],
     ridew: [0xff8a26, 0x3a2410], rideb: [0xb45cff, 0x1a0a2e], lamew: [0xff8a26, 0x3a2410], lameb: [0xb45cff, 0x1a0a2e],
@@ -83,6 +86,8 @@
                b: { jet: 0x6d2a12, foam: 0x3e2723, bub: 0x5d4037, charge: 0x8d6e63, boom: [0xff8a65, 0x4e342e, 0x6d4c41], debris: [0x3e2723, 0x757575], burst: [0xff8a65, 0x5d4037, 0x6d4c41], bits: [0x3e2723, 0x757575] } },
     auras: { w: { jet: 0x4cc3ff, foam: 0xffffff, bub: 0x9fe3ff, charge: 0xbfeaff, boom: [0xffffff, 0x4cc3ff, 0xbfeaff], debris: [0x8d94a6, 0xbfeaff], burst: [0xffffff, 0x4cc3ff, 0xbfeaff], bits: [0xbfeaff, 0xffffff] },
              b: { jet: 0xc04bff, foam: 0xff3d6e, bub: 0x7a2bff, charge: 0xe58bff, boom: [0xff3d6e, 0xc04bff, 0x2a1636], debris: [0x2a1636, 0xc04bff], burst: [0xe58bff, 0xc04bff, 0xff3d6e], bits: [0xc04bff, 0xff3d6e] } },
+    baobabs: { w: { jet: 0xffc247, foam: 0xfff1a8, bub: 0xe3aa2c, charge: 0xfff1a8, boom: [0xfff1a8, 0xffc247, 0xb8322a], debris: [0x7a3a1e, 0xe2b07a], burst: [0xfff1a8, 0xffc247, 0xb8322a], bits: [0x7a3a1e, 0xffc247] },
+               b: { jet: 0xb5793a, foam: 0xe6d7b4, bub: 0x2b3a7a, charge: 0xe6d7b4, boom: [0xe6d7b4, 0xb5793a, 0x2b3a7a], debris: [0x3a2414, 0xb5793a], burst: [0xe6d7b4, 0xb5793a, 0x2b3a7a], bits: [0x3a2414, 0xb5793a] } },
     // L'Âge des Sabres : le feu orange et or des Blancs, le feu violet des Noirs (pour les ripostes dans les mélanges de thèmes)
     sabres: { w: { jet: 0xffb13b, foam: 0xfff1a8, bub: 0xff6a1a, charge: 0xfff1a8, boom: [0xfff1a8, 0xffb13b, 0xff6a1a], debris: [0x5c3a24, 0xd9b98a], burst: [0xfff1a8, 0xffb13b, 0xff6a1a], bits: [0x5c3a24, 0xffb13b] },
               b: { jet: 0xb45cff, foam: 0xead0ff, bub: 0x6a1fd0, charge: 0xead0ff, boom: [0xead0ff, 0xb45cff, 0x6a1fd0], debris: [0x2a2630, 0x8a46a8], burst: [0xead0ff, 0xb45cff, 0x6a1fd0], bits: [0x2a2630, 0xb45cff] } },
@@ -97,6 +102,26 @@ const AURA_BEAMS = { wave: { r: 0.08, off: [0] }, mirror: { r: 0.03, off: [-0.5,
 const SABRE_MATE = { P: 'lamew', N: 'ridew', B: 'arcw', R: 'fracasw', Q: 'dragonw', K: 'sakura', p: 'lameb', n: 'rideb', b: 'arcb', r: 'fracasb', q: 'dragonb', k: 'lunepourpre' };
 const SABRE_STYLES = new Set(Object.values(SABRE_MATE));
 const SABRE_MATE_TIME = { sakura: [3, 5.2], lunepourpre: [3, 5.4], dragonw: [4.6, 8.2], dragonb: [4.6, 8.2], fracasw: [4.2, 6.2], fracasb: [4.2, 6.2], arcw: [3, 5.6], arcb: [3, 5.6], ridew: [4.6, 6.6], rideb: [4.6, 6.6], lamew: [2.9, 5], lameb: [2.9, 5] };
+// Thèmes à fiches (12d-kit-attaques.js) : couleurs [principale, seconde, sombre, cœur] et une fiche d'attaque par pièce
+const KIT_PAL = {
+  baobabs: { w: [0xffc247, 0xfff1a8, 0xb8322a, 0xffffff], b: [0xb5793a, 0xe6d7b4, 0x2b3a7a, 0xffffff] },
+};
+const KIT_ATTACKS = {
+  baobabs: {
+    K: { shot: 'ray', wind: 0.6, fly: [0.12, 0], end: 'fall', recover: 0.8, big: 1.1 },
+    k: { gap: 0.7, wind: 0.6, impact: 'claws', end: 'fall', recover: 0.85 },
+    Q: { shot: 'volley', wind: 0.55, fly: [0.25, 0.06], end: 'fall', recover: 0.8, big: 1.1 },
+    q: { shot: 'shadow', wind: 0.55, fly: [0.15, 0.05], end: 'fall', recover: 0.8 },
+    R: { gap: 0.8, wind: 0.5, end: 'crush', impact: 'cracks', big: 1.3, shake: 0.2, recover: 0.8 },
+    r: { gap: 0.85, wind: 0.6, pose: 'trunk', end: 'fling', recover: 1 },
+    B: { shot: 'wave', wind: 0.5, fly: [0.25, 0.08], end: 'bounce', recover: 0.8 },
+    b: { shot: 'spirit', wind: 0.6, fly: [0.3, 0.07], carry: true, end: 'carry', recover: 0.8 },
+    N: { gap: 0.8, leap: 0.9, wind: 0.5, during: 'roar', end: 'fall', recover: 0.8 },
+    n: { gap: 0.72, leap: 0.9, wind: 0.45, end: 'crush', impact: 'slash', recover: 0.8 },
+    P: { gap: 0.62, wind: 0.55, end: 'fall', recover: 0.7 }, p: { gap: 0.62, wind: 0.55, end: 'fall', recover: 0.7 },
+  },
+};
+const KIT_STYLES = new Set(['ancetres', 'harmattan']);
 const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 

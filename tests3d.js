@@ -6,7 +6,7 @@
    - chaque attaque de mat doit se terminer proprement et rendre les rois debout. */
 (function () {
   'use strict';
-  const THEMES = ['ninja', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern', 'auras', 'sabres'];
+  const THEMES = ['ninja', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern', 'auras', 'sabres', 'baobabs'];
   const results = [];
   window.__tests3d = { done: false, ok: false, results };
   const b = new window.Board3D(document.getElementById('stage'), () => {});
@@ -113,6 +113,26 @@
     assert(back.holder.visible && Math.abs(back.holder.position.x - p.x) < 0.01 && Math.abs(back.holder.position.z - p.z) < 0.01, 'pion emporté pas revenu sur sa case');
   }
 
+  // Thèmes à fiches : chaque pièce prend une cible proche puis lointaine, sans laisser de reste
+  function kitCapture(theme, pc) {
+    window.PieceTheme = theme; b.rebuildPieces();
+    const white = pc === pc.toUpperCase(), foe = white ? 'p' : 'P';
+    for (const [from, to] of [[35, pc.toLowerCase() === 'n' ? 18 : 36], [35, pc.toLowerCase() === 'n' ? 20 : 3]]) {
+      const e = Array(64).fill(null); e[white ? 56 : 7] = white ? 'K' : 'k'; e[white ? 7 : 56] = white ? 'k' : 'K'; if (pc.toLowerCase() === 'k') e[white ? 56 : 7] = null;
+      e[from] = pc; e[to] = foe;
+      setClock(); b.update({ ...base, board: e, last: null, animate: false, ply: 0 }); step(0.5);
+      const before = snapshot(), e2 = e.slice(); e2[to] = pc; e2[from] = null;
+      b.update({ ...base, board: e2, last: { from, to, piece: pc, captured: foe }, animate: true, ply: 1 });
+      step(0.5); assert(b.dying.length === 1, 'la pièce prise n\'est pas animée');
+      step(9);
+      assert(b.dying.length === 0, 'pièce prise encore à l\'écran');
+      const c = b.chars.get(to), p = b.sqToPos(to);
+      assert(c && Math.abs(c.holder.position.x - p.x) < 0.01 && Math.abs(c.holder.position.z - p.z) < 0.01, 'attaquant pas arrivé sur sa case');
+      const left = leftovers(before);
+      assert(!left.length, `${left.length} reste(s) d'animation (${[...new Set(left)].join(', ')})`);
+    }
+  }
+
   // Bouton « Passer » : au milieu d'une attaque spéciale, tout se pose aussitôt, sans reste à l'écran
   function skip(theme) {
     window.PieceTheme = theme; b.rebuildPieces();
@@ -147,6 +167,10 @@
   b.setTerrain('castle');
   for (const pc of 'PNBRKpnbrk') test(`3D sabres : mat de la pièce ${pc}`, () => mate('sabres', pc === pc.toUpperCase(), pc));
   test('3D sabres : l\'Arc géant emporte les pièces sur son chemin, puis elles reviennent', () => giantArc());
+  b.setTerrain('banco');
+  for (const pc of 'KQRBNPkqrbnp') test(`3D baobabs : prise par la pièce ${pc}`, () => kitCapture('baobabs', pc));
+  test('3D baobabs : mat des Blancs dans la cour royale', () => mate('baobabs', true));
+  test('3D baobabs : mat des Noirs dans la cour royale', () => mate('baobabs', false));
   b.setTerrain('steppe');
   window.PieceThemeBlack = 'sabres';
   test('3D mélange ninja / sabres : partie pleine de prises', () => play('ninja', 41, 40, 0.3));

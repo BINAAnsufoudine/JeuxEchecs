@@ -406,6 +406,36 @@
       if (night > 0) { this.sun.intensity *= 1 - 0.7 * night; this.hemi.intensity *= 1 - 0.45 * night; }
     }
 
+    // Cour royale de Zalimba : palais en banco hérissé de poutres (toujours à l'arrière-plan), cases rondes, baobabs
+    buildRoyalCourt(add, mat, moundGeo) {
+      const T = this.THREE, banco = mat(0xb8683a), bancoDark = mat(0xa35a30), beam = mat(0x4a2412), thatch = mat(0xc9a24a, { flatShading: true }), bark = mat(0x5a4030), leaf = mat(0x3c5a2e, { flatShading: true }), door = mat(0x2e160a);
+      const box = new T.BoxGeometry(1, 1, 1), stick = new T.CylinderGeometry(0.05, 0.05, 1, 6);
+      const pivot = new T.Group(), palace = new T.Group(); pivot.add(palace); palace.position.set(0, -0.35, -8.9); palace.scale.setScalar(0.82); this.terrainGroup.add(pivot);
+      const part = (...o) => { const m = add(...o); palace.add(m); return m; };
+      part(box, banco, 0, 1.3, 0, 13, 2.6, 2.6);
+      part(box, bancoDark, 0, 2.9, 0, 6.5, 2.2, 2.2);
+      for (const x of [-4.8, -1.8, 1.8, 4.8]) { const t = part(new T.CylinderGeometry(0.5, 0.75, 4.6, 10), banco, x, 2.3, 0.4); part(new T.ConeGeometry(0.5, 0.8, 10), bancoDark, x, 5, 0.4); void t; }
+      part(new T.CylinderGeometry(0.8, 0.8, 2, 14), door, 0, 0.9, 1.2, 1, 1, 0.1, false);
+      for (let i = 0; i < 16; i++) { const x = -6 + i * 0.8; for (const y of [1.2, 2.2]) { const b = part(stick, beam, x, y, 1.4, 1, 0.55, 1); b.rotation.x = Math.PI / 2; } }
+      for (let i = 0; i < 8; i++) { const b = part(stick, beam, -2.6 + i * 0.75, 3.4, 1.2, 1, 0.5, 1); b.rotation.x = Math.PI / 2; }
+      this.castleKeep = pivot;
+      // cases rondes à toit de paille
+      const wall = new T.CylinderGeometry(0.8, 0.85, 1, 14), roof = new T.ConeGeometry(1.15, 0.95, 14);
+      for (const [x, z, s] of [[-7, -7.6, 1.2], [-9.4, -3.6, 1], [7.4, -7.4, 1.15], [9.6, -3.4, 1], [-9.4, 3.8, 0.95], [9.6, 3.6, 1]]) {
+        add(wall, banco, x, 0, z, s, s, s); add(roof, thatch, x, 0.95 * s, z, s, s, s);
+        add(box, door, x + (x < 0 ? 0.78 : -0.78) * s, -0.1, z, 0.06, 0.65 * s, 0.4 * s, false);
+      }
+      // baobabs : tronc énorme, branches courtes, feuillage plat
+      const trunk = new T.CylinderGeometry(0.55, 0.95, 1, 12), limb = new T.CylinderGeometry(0.06, 0.14, 1, 6);
+      for (const [x, z, s] of [[-11, -8.6, 1.6], [11, -8.2, 1.5], [-11.4, 8, 1.3], [11.6, 8.2, 1.25]]) {
+        add(trunk, bark, x, 0.9 * s, z, s, 2.8 * s, s);
+        for (let i = 0; i < 7; i++) {
+          const a = i / 7 * Math.PI * 2, b = add(limb, bark, x + Math.cos(a) * 0.55 * s, 2.5 * s, z + Math.sin(a) * 0.55 * s, s, 1.1 * s, s); b.rotation.set(Math.sin(a) * 0.8, 0, -Math.cos(a) * 0.8);
+          add(moundGeo, leaf, x + Math.cos(a) * 1.05 * s, 2.95 * s, z + Math.sin(a) * 1.05 * s, 1.5 * s, 0.5 * s, 1.5 * s);
+        }
+      }
+    }
+
     // Cour du château de Hakuro : donjon à toits superposés au fond, murs d'enceinte, lanternes de pierre, cerisiers en fleur.
     // Le donjon reste à l'arrière-plan quel que soit le côté d'où l'on regarde.
     buildCastleCourt(add, mat, moundGeo) {
@@ -466,8 +496,8 @@
     }
 
     // Cour du château : pétales de cerisier emportés par le vent
-    buildPetals() {
-      const T = this.THREE, geo = new T.PlaneGeometry(0.11, 0.075), tints = [0xf4b6c6, 0xeaa0b6, 0xfbe0e7].map((color) => new T.MeshBasicMaterial({ color, side: T.DoubleSide, transparent: true, opacity: 0.92 }));
+    buildPetals(colors = [0xf4b6c6, 0xeaa0b6, 0xfbe0e7]) {
+      const T = this.THREE, geo = new T.PlaneGeometry(0.11, 0.075), tints = colors.map((color) => new T.MeshBasicMaterial({ color, side: T.DoubleSide, transparent: true, opacity: 0.92 }));
       for (let i = 0; i < 70; i++) {
         const g = new T.Mesh(geo, tints[i % 3]); this.animalGroup.add(g);
         this.animals.push({ g, behave: 'petal', x: (i * 37 % 100) / 100 * 28, y: (i * 53 % 100) / 100 * 7, z: (i * 71 % 100) / 100 * 22 - 11, sp: 0.5 + (i % 5) * 0.16, phase: i * 1.3 });
@@ -481,6 +511,7 @@
       this.animalGroup.clear();
       this.animals = [];
       if (terrain.kind === 'castle') { this.buildPetals(); return; } // pétales de cerisier dans le vent du soir
+      if (terrain.kind === 'banco') { this.buildPetals([0xe2b07a, 0xb8683a, 0xf3d9a0]); return; } // poussière de terre dans le vent
       if (terrain.kind === 'arena') { this.buildSkyRocks(); return; } // pas d'animaux dans le ciel : des rochers flottants
       const mat = (color) => new T.MeshStandardMaterial({ color, roughness: 0.85 });
       const mesh = (geo, m, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => { const o = new T.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.castShadow = true; return o; };
@@ -684,7 +715,10 @@
       g.fillStyle = col(0); g.fillRect(0, 0, 512, 512);
       // grain de fond
       for (let i = 0; i < 2600; i++) { g.fillStyle = col((rnd() - 0.5) * 0.12, 0.5); g.fillRect(rnd() * 512, rnd() * 512, 2 + rnd() * 4, 2 + rnd() * 4); }
-      if (k === 'castle') { // cour de terre battue, gravier ratissé et dalles de pierre
+      if (k === 'banco') { // terre rouge battue, craquelée, traces de pas
+        for (let i = 0; i < 2600; i++) { g.fillStyle = col((rnd() - 0.5) * 0.14, 0.7); g.fillRect(rnd() * 512, rnd() * 512, 1 + rnd() * 3, 1 + rnd() * 3); }
+        g.strokeStyle = 'rgba(60,24,10,0.25)'; g.lineWidth = 1.2; for (let i = 0; i < 90; i++) { let x = rnd() * 512, y = rnd() * 512; g.beginPath(); g.moveTo(x, y); for (let j = 0; j < 4; j++) { x += (rnd() - 0.5) * 34; y += (rnd() - 0.5) * 34; g.lineTo(x, y); } g.stroke(); }
+      } else if (k === 'castle') { // cour de terre battue, gravier ratissé et dalles de pierre
         for (let i = 0; i < 2200; i++) { g.fillStyle = col((rnd() - 0.5) * 0.16, 0.7); g.fillRect(rnd() * 512, rnd() * 512, 1 + rnd() * 2.4, 1 + rnd() * 2.4); }
         g.lineWidth = 1; for (let y = 6; y < 512; y += 13) { g.strokeStyle = 'rgba(40,26,20,0.14)'; g.beginPath(); for (let x = 0; x <= 512; x += 16) g.lineTo(x, y + Math.sin(x * 0.03 + y) * 2); g.stroke(); }
         for (let i = 0; i < 26; i++) { const x = rnd() * 512, y = rnd() * 512, w = 26 + rnd() * 34, h = 18 + rnd() * 22; g.fillStyle = 'rgba(120,108,104,0.42)'; g.fillRect(x, y, w, h); g.strokeStyle = 'rgba(30,20,18,0.35)'; g.strokeRect(x, y, w, h); }
@@ -729,7 +763,10 @@
         g.lineTo(2048, 512); g.fill();
       };
       const ground = new T.Color(terrain.ground), shade = (dl, h = 0) => hex(ground.clone().offsetHSL(h, 0, dl).lerp(sky, 0.35 - dl));
-      if (k === 'castle') { // collines au crépuscule, pins sombres et murailles lointaines
+      if (k === 'banco') { // savane au soleil couchant, acacias lointains
+        ridge('#c9713a', 400, 40, 0.004, 0.7); ridge('#a85a30', 440, 30, 0.008, 2.1);
+        for (let x = 30; x < 2048; x += 150) { const y = 432 - Math.sin(x * 0.01) * 10, h = 40 + (x * 13 % 22); g.fillStyle = '#3a2418'; g.fillRect(x - 3, y - h, 6, h); g.beginPath(); g.ellipse(x, y - h, 50, 12, 0, 0, 7); g.fill(); }
+      } else if (k === 'castle') { // collines au crépuscule, pins sombres et murailles lointaines
         ridge('#6a4560', 350, 90, 0.004, 0.7); ridge('#4e3350', 400, 70, 0.007, 2.1);
         for (let x = 0; x < 2048; x += 34) { const h = 34 + (x * 13 % 26), y = 430 - Math.sin(x * 0.01) * 16; g.fillStyle = '#2f2238'; g.beginPath(); g.moveTo(x - 18, y); g.lineTo(x, y - h); g.lineTo(x + 18, y); g.fill(); }
         ridge('#3a2838', 462, 28, 0.012, 0.4);
@@ -821,7 +858,7 @@
       for (let i = 0; i < points.length; i++) {
         // devant et derrière le plateau, le décor est reculé pour ne pas cacher les pièces (le sol est au ras du plateau)
         const x = points[i][0], z = points[i][1] * (Math.abs(points[i][1]) > 5 ? 1.35 : 1), jitter = (i % 3) * 0.16;
-        if (terrain.kind === 'arena' || terrain.kind === 'castle') {
+        if (terrain.kind === 'arena' || terrain.kind === 'castle' || terrain.kind === 'banco') {
           // rien sur la mer de nuages ; la cour du château est bâtie plus bas : les dalles et bornes sont posées plus bas
         } else if (terrain.kind === 'beach') {
           add(moundGeo, sand, x, -0.32, z, 1.7, 0.3, 1);
@@ -878,6 +915,7 @@
         }
       }
       if (terrain.kind === 'castle') this.buildCastleCourt(add, mat, moundGeo);
+      if (terrain.kind === 'banco') this.buildRoyalCourt(add, mat, moundGeo);
       if (terrain.id === 'dojo') {
         const vermilion = mat(0x9e352c), darkWood = mat(0x38251f);
         const post = new T.BoxGeometry(0.2, 1.45, 0.2), crossbar = new T.BoxGeometry(3.1, 0.2, 0.3), lintel = new T.BoxGeometry(3.45, 0.22, 0.38);

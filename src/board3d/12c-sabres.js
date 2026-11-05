@@ -12,7 +12,8 @@
     }
     // Faisceau de flammes (cônes qui dansent) ; sabreFlicker les anime
     sabreFlames(white, r = 0.3, h = 0.8, n = 9, opacity = 0.88) {
-      const T = this.THREE, g = new T.Group(), pal = this.sabrePal(white), geo = new T.ConeGeometry(1, 1, 7);
+      const T = this.THREE, g = new T.Group(), geo = new T.ConeGeometry(1, 1, 7);
+      const pal = Array.isArray(white) ? { mid: white[0], deep: white[2], hot: white[1] } : this.sabrePal(white); // ou les couleurs d'un thème à fiches
       g.userData.flames = [];
       for (let i = 0; i < n; i++) {
         const a = i * 2.4, rr = r * (0.2 + (i % 3) * 0.36), m = new T.Mesh(geo, this.sabreFire([pal.mid, pal.deep, pal.hot][i % 3], opacity));

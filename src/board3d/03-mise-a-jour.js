@@ -133,7 +133,12 @@
           const ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
           const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); this.auraOnFall(v, b, o.t0, m.piece); } };
           const theme = root.themeOf(white ? 'K' : 'k'), themeFx = THEME_FX[theme], ocean = !!themeFx;
-          if (root.themeOf(m.piece) === 'sabres') {
+          if (KIT_ATTACKS[root.themeOf(m.piece)]) {
+            // Empire des Baobabs, Âge des Géants : une fiche d'attaque par pièce, de près comme de loin
+            const spec = KIT_ATTACKS[root.themeOf(m.piece)][m.piece];
+            knightAttack = this.kitAttack(Object.assign({ pal: root.themeOf(m.piece) }, spec), white, a, b, this.sqToPos(m.to), v, now, len, { x: ux, z: uz });
+            die({ t0: now + knightAttack.duration, knightAttack });
+          } else if (root.themeOf(m.piece) === 'sabres') {
             // L'Âge des Sabres : chaque pièce a son attaque, de près comme de loin
             knightAttack = this.sabreAttack(kind, white, a, b, this.sqToPos(m.to), v, now, len, { x: ux, z: uz });
             die({ t0: now + knightAttack.duration, knightAttack });

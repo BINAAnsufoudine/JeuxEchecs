@@ -18,6 +18,7 @@
     water: { name: 'Terrain avec flaques', sky: 0x9bbbc1, ground: 0x526f66, wood: 0x59432f, frame: ['#806b50', '#5a4734', '#3d3027'], squares: ['#d0dfd8', '#63827a'], kind: 'water' },
     arena: { name: 'Arène du Ciel', sky: 0x4f8fdc, ground: 0x8ea3cc, wood: 0x6a6684, frame: ['#a7a3b8', '#7a7690', '#4e4b62'], squares: ['#c9c2da', '#5a5284'], kind: 'arena' },
     castle: { name: 'Cour du château de Hakuro', sky: 0x6a4a6e, ground: 0x6b5f58, wood: 0x4a3324, frame: ['#7a5234', '#553622', '#38241a'], squares: ['#d9b98a', '#5c3a24'], kind: 'castle' },
+    banco: { name: 'Cour royale de Zalimba', sky: 0xb0522e, ground: 0xa87a5a, wood: 0x5a2e14, frame: ['#b8683a', '#7a3a1e', '#4a2412'], squares: ['#e2b07a', '#7a3a1e'], kind: 'banco' },
     beach: { name: 'Plage tropicale', sky: 0x6cc5e8, ground: 0xa88a54, wood: 0x8a6a42, frame: ['#b98d57', '#8a6238', '#5f4226'], squares: ['#ead6a0', '#b98a4c'], kind: 'beach' },
   };
   // overcast : part de gris dans le ciel ; wind : force du vent (pluie penchée, rafales) ; snow : flocons
@@ -50,6 +51,7 @@
     modern: { w: 'airstrike', b: 'orbital' },
     auras: { w: 'constellation', b: 'nova' },
     sabres: { w: 'sakura', b: 'lunepourpre' },
+    baobabs: { w: 'ancetres', b: 'harmattan' },
   };
   // Couleurs de la mise en scène des mats de thème : [lumière, trace au sol]
   const THEME_MATE_COLORS = {
@@ -59,6 +61,7 @@
     constellation: [0x9fe3ff, 0x16306e], nova: [0xff3d3d, 0x1a0712],
     temple: [0xffffff, 0x16306e], nilocomet: [0x4cc3ff, 0x16306e], dawncross: [0xffd27a, 0x5a4210], fortress: [0x7fd8ff, 0x343a4e], cloudbreath: [0xdff4ff, 0x4a6a9e],
     shadeswarm: [0xc04bff, 0x1a0a2e], bounty: [0xff3d6e, 0x2d2219], lasernet: [0x9ef7ff, 0x2a1636], eruption: [0xff7a1a, 0x2b2326], crystalcomet: [0xc04bff, 0x14101f],
+    ancetres: [0xffc247, 0x5a2e14], harmattan: [0xd9b25a, 0x3a2414],
     sakura: [0xf9d2dc, 0x4a3324], lunepourpre: [0xff3b3b, 0x050305], dragonw: [0xffe066, 0x3a2410], dragonb: [0xb45cff, 0x1a0a2e],
     fracasw: [0xff8a26, 0x1a100a], fracasb: [0xb45cff, 0x120a1c], arcw: [0xffd27a, 0x3a2410], arcb: [0xc98cff, 0x1a0a2e],
     ridew: [0xff8a26, 0x3a2410], rideb: [0xb45cff, 0x1a0a2e], lamew: [0xff8a26, 0x3a2410], lameb: [0xb45cff, 0x1a0a2e],
@@ -83,6 +86,8 @@
                b: { jet: 0x6d2a12, foam: 0x3e2723, bub: 0x5d4037, charge: 0x8d6e63, boom: [0xff8a65, 0x4e342e, 0x6d4c41], debris: [0x3e2723, 0x757575], burst: [0xff8a65, 0x5d4037, 0x6d4c41], bits: [0x3e2723, 0x757575] } },
     auras: { w: { jet: 0x4cc3ff, foam: 0xffffff, bub: 0x9fe3ff, charge: 0xbfeaff, boom: [0xffffff, 0x4cc3ff, 0xbfeaff], debris: [0x8d94a6, 0xbfeaff], burst: [0xffffff, 0x4cc3ff, 0xbfeaff], bits: [0xbfeaff, 0xffffff] },
              b: { jet: 0xc04bff, foam: 0xff3d6e, bub: 0x7a2bff, charge: 0xe58bff, boom: [0xff3d6e, 0xc04bff, 0x2a1636], debris: [0x2a1636, 0xc04bff], burst: [0xe58bff, 0xc04bff, 0xff3d6e], bits: [0xc04bff, 0xff3d6e] } },
+    baobabs: { w: { jet: 0xffc247, foam: 0xfff1a8, bub: 0xe3aa2c, charge: 0xfff1a8, boom: [0xfff1a8, 0xffc247, 0xb8322a], debris: [0x7a3a1e, 0xe2b07a], burst: [0xfff1a8, 0xffc247, 0xb8322a], bits: [0x7a3a1e, 0xffc247] },
+               b: { jet: 0xb5793a, foam: 0xe6d7b4, bub: 0x2b3a7a, charge: 0xe6d7b4, boom: [0xe6d7b4, 0xb5793a, 0x2b3a7a], debris: [0x3a2414, 0xb5793a], burst: [0xe6d7b4, 0xb5793a, 0x2b3a7a], bits: [0x3a2414, 0xb5793a] } },
     // L'Âge des Sabres : le feu orange et or des Blancs, le feu violet des Noirs (pour les ripostes dans les mélanges de thèmes)
     sabres: { w: { jet: 0xffb13b, foam: 0xfff1a8, bub: 0xff6a1a, charge: 0xfff1a8, boom: [0xfff1a8, 0xffb13b, 0xff6a1a], debris: [0x5c3a24, 0xd9b98a], burst: [0xfff1a8, 0xffb13b, 0xff6a1a], bits: [0x5c3a24, 0xffb13b] },
               b: { jet: 0xb45cff, foam: 0xead0ff, bub: 0x6a1fd0, charge: 0xead0ff, boom: [0xead0ff, 0xb45cff, 0x6a1fd0], debris: [0x2a2630, 0x8a46a8], burst: [0xead0ff, 0xb45cff, 0x6a1fd0], bits: [0x2a2630, 0xb45cff] } },
@@ -97,6 +102,26 @@ const AURA_BEAMS = { wave: { r: 0.08, off: [0] }, mirror: { r: 0.03, off: [-0.5,
 const SABRE_MATE = { P: 'lamew', N: 'ridew', B: 'arcw', R: 'fracasw', Q: 'dragonw', K: 'sakura', p: 'lameb', n: 'rideb', b: 'arcb', r: 'fracasb', q: 'dragonb', k: 'lunepourpre' };
 const SABRE_STYLES = new Set(Object.values(SABRE_MATE));
 const SABRE_MATE_TIME = { sakura: [3, 5.2], lunepourpre: [3, 5.4], dragonw: [4.6, 8.2], dragonb: [4.6, 8.2], fracasw: [4.2, 6.2], fracasb: [4.2, 6.2], arcw: [3, 5.6], arcb: [3, 5.6], ridew: [4.6, 6.6], rideb: [4.6, 6.6], lamew: [2.9, 5], lameb: [2.9, 5] };
+// Thèmes à fiches (12d-kit-attaques.js) : couleurs [principale, seconde, sombre, cœur] et une fiche d'attaque par pièce
+const KIT_PAL = {
+  baobabs: { w: [0xffc247, 0xfff1a8, 0xb8322a, 0xffffff], b: [0xb5793a, 0xe6d7b4, 0x2b3a7a, 0xffffff] },
+};
+const KIT_ATTACKS = {
+  baobabs: {
+    K: { shot: 'ray', wind: 0.6, fly: [0.12, 0], end: 'fall', recover: 0.8, big: 1.1 },
+    k: { gap: 0.7, wind: 0.6, impact: 'claws', end: 'fall', recover: 0.85 },
+    Q: { shot: 'volley', wind: 0.55, fly: [0.25, 0.06], end: 'fall', recover: 0.8, big: 1.1 },
+    q: { shot: 'shadow', wind: 0.55, fly: [0.15, 0.05], end: 'fall', recover: 0.8 },
+    R: { gap: 0.8, wind: 0.5, end: 'crush', impact: 'cracks', big: 1.3, shake: 0.2, recover: 0.8 },
+    r: { gap: 0.85, wind: 0.6, pose: 'trunk', end: 'fling', recover: 1 },
+    B: { shot: 'wave', wind: 0.5, fly: [0.25, 0.08], end: 'bounce', recover: 0.8 },
+    b: { shot: 'spirit', wind: 0.6, fly: [0.3, 0.07], carry: true, end: 'carry', recover: 0.8 },
+    N: { gap: 0.8, leap: 0.9, wind: 0.5, during: 'roar', end: 'fall', recover: 0.8 },
+    n: { gap: 0.72, leap: 0.9, wind: 0.45, end: 'crush', impact: 'slash', recover: 0.8 },
+    P: { gap: 0.62, wind: 0.55, end: 'fall', recover: 0.7 }, p: { gap: 0.62, wind: 0.55, end: 'fall', recover: 0.7 },
+  },
+};
+const KIT_STYLES = new Set(['ancetres', 'harmattan']);
 const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
@@ -508,6 +533,36 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (night > 0) { this.sun.intensity *= 1 - 0.7 * night; this.hemi.intensity *= 1 - 0.45 * night; }
     }
 
+    // Cour royale de Zalimba : palais en banco hérissé de poutres (toujours à l'arrière-plan), cases rondes, baobabs
+    buildRoyalCourt(add, mat, moundGeo) {
+      const T = this.THREE, banco = mat(0xb8683a), bancoDark = mat(0xa35a30), beam = mat(0x4a2412), thatch = mat(0xc9a24a, { flatShading: true }), bark = mat(0x5a4030), leaf = mat(0x3c5a2e, { flatShading: true }), door = mat(0x2e160a);
+      const box = new T.BoxGeometry(1, 1, 1), stick = new T.CylinderGeometry(0.05, 0.05, 1, 6);
+      const pivot = new T.Group(), palace = new T.Group(); pivot.add(palace); palace.position.set(0, -0.35, -8.9); palace.scale.setScalar(0.82); this.terrainGroup.add(pivot);
+      const part = (...o) => { const m = add(...o); palace.add(m); return m; };
+      part(box, banco, 0, 1.3, 0, 13, 2.6, 2.6);
+      part(box, bancoDark, 0, 2.9, 0, 6.5, 2.2, 2.2);
+      for (const x of [-4.8, -1.8, 1.8, 4.8]) { const t = part(new T.CylinderGeometry(0.5, 0.75, 4.6, 10), banco, x, 2.3, 0.4); part(new T.ConeGeometry(0.5, 0.8, 10), bancoDark, x, 5, 0.4); void t; }
+      part(new T.CylinderGeometry(0.8, 0.8, 2, 14), door, 0, 0.9, 1.2, 1, 1, 0.1, false);
+      for (let i = 0; i < 16; i++) { const x = -6 + i * 0.8; for (const y of [1.2, 2.2]) { const b = part(stick, beam, x, y, 1.4, 1, 0.55, 1); b.rotation.x = Math.PI / 2; } }
+      for (let i = 0; i < 8; i++) { const b = part(stick, beam, -2.6 + i * 0.75, 3.4, 1.2, 1, 0.5, 1); b.rotation.x = Math.PI / 2; }
+      this.castleKeep = pivot;
+      // cases rondes à toit de paille
+      const wall = new T.CylinderGeometry(0.8, 0.85, 1, 14), roof = new T.ConeGeometry(1.15, 0.95, 14);
+      for (const [x, z, s] of [[-7, -7.6, 1.2], [-9.4, -3.6, 1], [7.4, -7.4, 1.15], [9.6, -3.4, 1], [-9.4, 3.8, 0.95], [9.6, 3.6, 1]]) {
+        add(wall, banco, x, 0, z, s, s, s); add(roof, thatch, x, 0.95 * s, z, s, s, s);
+        add(box, door, x + (x < 0 ? 0.78 : -0.78) * s, -0.1, z, 0.06, 0.65 * s, 0.4 * s, false);
+      }
+      // baobabs : tronc énorme, branches courtes, feuillage plat
+      const trunk = new T.CylinderGeometry(0.55, 0.95, 1, 12), limb = new T.CylinderGeometry(0.06, 0.14, 1, 6);
+      for (const [x, z, s] of [[-11, -8.6, 1.6], [11, -8.2, 1.5], [-11.4, 8, 1.3], [11.6, 8.2, 1.25]]) {
+        add(trunk, bark, x, 0.9 * s, z, s, 2.8 * s, s);
+        for (let i = 0; i < 7; i++) {
+          const a = i / 7 * Math.PI * 2, b = add(limb, bark, x + Math.cos(a) * 0.55 * s, 2.5 * s, z + Math.sin(a) * 0.55 * s, s, 1.1 * s, s); b.rotation.set(Math.sin(a) * 0.8, 0, -Math.cos(a) * 0.8);
+          add(moundGeo, leaf, x + Math.cos(a) * 1.05 * s, 2.95 * s, z + Math.sin(a) * 1.05 * s, 1.5 * s, 0.5 * s, 1.5 * s);
+        }
+      }
+    }
+
     // Cour du château de Hakuro : donjon à toits superposés au fond, murs d'enceinte, lanternes de pierre, cerisiers en fleur.
     // Le donjon reste à l'arrière-plan quel que soit le côté d'où l'on regarde.
     buildCastleCourt(add, mat, moundGeo) {
@@ -568,8 +623,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
 
     // Cour du château : pétales de cerisier emportés par le vent
-    buildPetals() {
-      const T = this.THREE, geo = new T.PlaneGeometry(0.11, 0.075), tints = [0xf4b6c6, 0xeaa0b6, 0xfbe0e7].map((color) => new T.MeshBasicMaterial({ color, side: T.DoubleSide, transparent: true, opacity: 0.92 }));
+    buildPetals(colors = [0xf4b6c6, 0xeaa0b6, 0xfbe0e7]) {
+      const T = this.THREE, geo = new T.PlaneGeometry(0.11, 0.075), tints = colors.map((color) => new T.MeshBasicMaterial({ color, side: T.DoubleSide, transparent: true, opacity: 0.92 }));
       for (let i = 0; i < 70; i++) {
         const g = new T.Mesh(geo, tints[i % 3]); this.animalGroup.add(g);
         this.animals.push({ g, behave: 'petal', x: (i * 37 % 100) / 100 * 28, y: (i * 53 % 100) / 100 * 7, z: (i * 71 % 100) / 100 * 22 - 11, sp: 0.5 + (i % 5) * 0.16, phase: i * 1.3 });
@@ -583,6 +638,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.animalGroup.clear();
       this.animals = [];
       if (terrain.kind === 'castle') { this.buildPetals(); return; } // pétales de cerisier dans le vent du soir
+      if (terrain.kind === 'banco') { this.buildPetals([0xe2b07a, 0xb8683a, 0xf3d9a0]); return; } // poussière de terre dans le vent
       if (terrain.kind === 'arena') { this.buildSkyRocks(); return; } // pas d'animaux dans le ciel : des rochers flottants
       const mat = (color) => new T.MeshStandardMaterial({ color, roughness: 0.85 });
       const mesh = (geo, m, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => { const o = new T.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.castShadow = true; return o; };
@@ -786,7 +842,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       g.fillStyle = col(0); g.fillRect(0, 0, 512, 512);
       // grain de fond
       for (let i = 0; i < 2600; i++) { g.fillStyle = col((rnd() - 0.5) * 0.12, 0.5); g.fillRect(rnd() * 512, rnd() * 512, 2 + rnd() * 4, 2 + rnd() * 4); }
-      if (k === 'castle') { // cour de terre battue, gravier ratissé et dalles de pierre
+      if (k === 'banco') { // terre rouge battue, craquelée, traces de pas
+        for (let i = 0; i < 2600; i++) { g.fillStyle = col((rnd() - 0.5) * 0.14, 0.7); g.fillRect(rnd() * 512, rnd() * 512, 1 + rnd() * 3, 1 + rnd() * 3); }
+        g.strokeStyle = 'rgba(60,24,10,0.25)'; g.lineWidth = 1.2; for (let i = 0; i < 90; i++) { let x = rnd() * 512, y = rnd() * 512; g.beginPath(); g.moveTo(x, y); for (let j = 0; j < 4; j++) { x += (rnd() - 0.5) * 34; y += (rnd() - 0.5) * 34; g.lineTo(x, y); } g.stroke(); }
+      } else if (k === 'castle') { // cour de terre battue, gravier ratissé et dalles de pierre
         for (let i = 0; i < 2200; i++) { g.fillStyle = col((rnd() - 0.5) * 0.16, 0.7); g.fillRect(rnd() * 512, rnd() * 512, 1 + rnd() * 2.4, 1 + rnd() * 2.4); }
         g.lineWidth = 1; for (let y = 6; y < 512; y += 13) { g.strokeStyle = 'rgba(40,26,20,0.14)'; g.beginPath(); for (let x = 0; x <= 512; x += 16) g.lineTo(x, y + Math.sin(x * 0.03 + y) * 2); g.stroke(); }
         for (let i = 0; i < 26; i++) { const x = rnd() * 512, y = rnd() * 512, w = 26 + rnd() * 34, h = 18 + rnd() * 22; g.fillStyle = 'rgba(120,108,104,0.42)'; g.fillRect(x, y, w, h); g.strokeStyle = 'rgba(30,20,18,0.35)'; g.strokeRect(x, y, w, h); }
@@ -831,7 +890,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         g.lineTo(2048, 512); g.fill();
       };
       const ground = new T.Color(terrain.ground), shade = (dl, h = 0) => hex(ground.clone().offsetHSL(h, 0, dl).lerp(sky, 0.35 - dl));
-      if (k === 'castle') { // collines au crépuscule, pins sombres et murailles lointaines
+      if (k === 'banco') { // savane au soleil couchant, acacias lointains
+        ridge('#c9713a', 400, 40, 0.004, 0.7); ridge('#a85a30', 440, 30, 0.008, 2.1);
+        for (let x = 30; x < 2048; x += 150) { const y = 432 - Math.sin(x * 0.01) * 10, h = 40 + (x * 13 % 22); g.fillStyle = '#3a2418'; g.fillRect(x - 3, y - h, 6, h); g.beginPath(); g.ellipse(x, y - h, 50, 12, 0, 0, 7); g.fill(); }
+      } else if (k === 'castle') { // collines au crépuscule, pins sombres et murailles lointaines
         ridge('#6a4560', 350, 90, 0.004, 0.7); ridge('#4e3350', 400, 70, 0.007, 2.1);
         for (let x = 0; x < 2048; x += 34) { const h = 34 + (x * 13 % 26), y = 430 - Math.sin(x * 0.01) * 16; g.fillStyle = '#2f2238'; g.beginPath(); g.moveTo(x - 18, y); g.lineTo(x, y - h); g.lineTo(x + 18, y); g.fill(); }
         ridge('#3a2838', 462, 28, 0.012, 0.4);
@@ -923,7 +985,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       for (let i = 0; i < points.length; i++) {
         // devant et derrière le plateau, le décor est reculé pour ne pas cacher les pièces (le sol est au ras du plateau)
         const x = points[i][0], z = points[i][1] * (Math.abs(points[i][1]) > 5 ? 1.35 : 1), jitter = (i % 3) * 0.16;
-        if (terrain.kind === 'arena' || terrain.kind === 'castle') {
+        if (terrain.kind === 'arena' || terrain.kind === 'castle' || terrain.kind === 'banco') {
           // rien sur la mer de nuages ; la cour du château est bâtie plus bas : les dalles et bornes sont posées plus bas
         } else if (terrain.kind === 'beach') {
           add(moundGeo, sand, x, -0.32, z, 1.7, 0.3, 1);
@@ -980,6 +1042,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         }
       }
       if (terrain.kind === 'castle') this.buildCastleCourt(add, mat, moundGeo);
+      if (terrain.kind === 'banco') this.buildRoyalCourt(add, mat, moundGeo);
       if (terrain.id === 'dojo') {
         const vermilion = mat(0x9e352c), darkWood = mat(0x38251f);
         const post = new T.BoxGeometry(0.2, 1.45, 0.2), crossbar = new T.BoxGeometry(3.1, 0.2, 0.3), lintel = new T.BoxGeometry(3.45, 0.22, 0.38);
@@ -1334,7 +1397,12 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           const ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
           const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); this.auraOnFall(v, b, o.t0, m.piece); } };
           const theme = root.themeOf(white ? 'K' : 'k'), themeFx = THEME_FX[theme], ocean = !!themeFx;
-          if (root.themeOf(m.piece) === 'sabres') {
+          if (KIT_ATTACKS[root.themeOf(m.piece)]) {
+            // Empire des Baobabs, Âge des Géants : une fiche d'attaque par pièce, de près comme de loin
+            const spec = KIT_ATTACKS[root.themeOf(m.piece)][m.piece];
+            knightAttack = this.kitAttack(Object.assign({ pal: root.themeOf(m.piece) }, spec), white, a, b, this.sqToPos(m.to), v, now, len, { x: ux, z: uz });
+            die({ t0: now + knightAttack.duration, knightAttack });
+          } else if (root.themeOf(m.piece) === 'sabres') {
             // L'Âge des Sabres : chaque pièce a son attaque, de près comme de loin
             knightAttack = this.sabreAttack(kind, white, a, b, this.sqToPos(m.to), v, now, len, { x: ux, z: uz });
             die({ t0: now + knightAttack.duration, knightAttack });
@@ -2841,6 +2909,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         this.makeAuraMate(u, at, keep, basic, std);
       } else if (SABRE_STYLES.has(style)) {
         this.makeSabreMate(u, at, keep, basic, std);
+      } else if (KIT_STYLES.has(style)) {
+        this.makeKitMate(u, at, keep, basic, std);
       } else if (style === 'orbital') {
         u.target3 = at(new T.Mesh(new T.RingGeometry(0.5, 0.62, 32), basic(0xff1744, 0.9)), 0, 0.04, 0); u.target3.rotation.x = -Math.PI / 2;
         u.beam = at(new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 30, 20, 1, true), new T.MeshBasicMaterial({ color: 0xff1744, transparent: true, opacity: 0.8, blending: T.AdditiveBlending, depthWrite: false })), 0, 15, 0);
@@ -2856,7 +2926,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       // et laisse une trace sur la case du roi.
       const tint = THEME_MATE_COLORS[style] || [0xffffff, 0x888888];
       u.tint = tint;
-      if ((Object.values(AURA_MATE).includes(style) && style !== 'constellation') || SABRE_STYLES.has(style)) u.flash.material.color.setHex(tint[0]);
+      if ((Object.values(AURA_MATE).includes(style) && style !== 'constellation') || SABRE_STYLES.has(style) || KIT_STYLES.has(style)) u.flash.material.color.setHex(tint[0]);
       const A = this.sqToPos(u.attackerTo);
       u.pillar = new T.Mesh(new T.CylinderGeometry(0.42, 0.55, 6, 24, 1, true), new T.MeshBasicMaterial({ color: tint[0], transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
       u.pillar.position.set(A.x, 3, A.z); g.add(u.pillar);
@@ -2898,6 +2968,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         else if (style === 'crows') { root.position.y = Math.min(4, after * 2.2); root.rotation.y = after * 10; c.holder.visible = after < 1.5; }
         else if (style === 'jaws') { c.holder.visible = after < 0.15; }
         else if (style === 'boulder' || style === 'crystalcomet' || style === 'nilocomet') { root.scale.y = u.kingBase.scale.y * Math.max(0.2, 1 - after * 4); }
+        else if (style === 'ancetres') { const L = u.kitMate.pull; if (L) c.holder.position.copy(L); c.holder.visible = after < 1.9; } // emporté vers le soleil couchant
+        else if (style === 'harmattan') { root.position.y = Math.min(3, after * 1.8); root.rotation.y = after * 11; c.holder.visible = after < 0.9; } // happé par le tourbillon
         else if (style === 'cloudbreath') { root.position.y = Math.min(4, after * 2.6); root.rotation.y = after * 9; c.holder.visible = after < 1.6; } // soulevé par le vent
         else if (style === 'eruption' || style === 'fortress' || style === 'shadeswarm') { c.holder.visible = after < 0.25; } // englouti
         else { root.rotation.z = Math.PI / 2 * smooth(after / 0.4); root.position.y = 0.05; } // tombe sur le côté
@@ -3002,6 +3074,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         this.tickAuraMate(u, t, e, clamp, smooth, hit, after);
       } else if (SABRE_STYLES.has(style)) {
         this.tickSabreMateFx(u, t, e, clamp, smooth, hit, after);
+      } else if (KIT_STYLES.has(style)) {
+        this.tickKitMate(u, t, e, clamp, smooth, hit, after);
       } else if (style === 'orbital') {
         const lock = smooth((e - 0.4) / 1.2);
         u.target3.scale.setScalar(2.5 - lock * 1.5); u.target3.rotation.z = t * 3; u.target3.visible = after < 0.6;
@@ -3275,6 +3349,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (u.apocalypse) this.restoreFoxWorld(u);
       if (u.themed) this.skyDim = 0; // le ciel assombri par un mat de thème revient
       if (u.sabre) this.endSabreMate(u);
+      if (u.kitMate) this.endKitMate(u);
       if (u.hiddenEnemies) u.hiddenEnemies.forEach(([piece, visible]) => { piece.holder.visible = visible; });
       if (u.flameVictims) u.flameVictims.forEach((victim) => {
         victim.character.holder.visible = victim.visible;
@@ -4076,6 +4151,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
     tickKnightAttack(c, a, el, t, M) {
       if (a.sabre) { this.tickSabreAttack(c, a, el, t, M); return; }
+      if (a.customTick) { a.customTick(c, a, el, t, M); return; }
       if (a.style === 'chidori') { this.tickChidori(c, a, el, t, M); return; }
       if (a.style === 'orb') { this.tickOrb(c, a, el, t, M); return; }
       if (a.style === 'fireroll') { this.tickFireroll(c, a, el, t, M); return; }
@@ -5238,6 +5314,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     tickKnightVictim(d, t, M) {
       const a = d.knightAttack, c = d.c, el = t - a.start;
       if (a.sabre) return this.tickSabreVictim(d, a, c, el, t, M);
+      if (a.customVictim) return a.customVictim(d, a, c, el, t, M);
       if (a.style === 'chidori') return this.tickChidoriVictim(d, a, c, el, t, M);
       if (a.style === 'orb') return this.tickOrbVictim(d, a, c, el, t, M);
       if (a.style === 'fireroll') return this.tickFirerollVictim(d, a, c, el, t, M);
@@ -6162,7 +6239,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
     // Faisceau de flammes (cônes qui dansent) ; sabreFlicker les anime
     sabreFlames(white, r = 0.3, h = 0.8, n = 9, opacity = 0.88) {
-      const T = this.THREE, g = new T.Group(), pal = this.sabrePal(white), geo = new T.ConeGeometry(1, 1, 7);
+      const T = this.THREE, g = new T.Group(), geo = new T.ConeGeometry(1, 1, 7);
+      const pal = Array.isArray(white) ? { mid: white[0], deep: white[2], hot: white[1] } : this.sabrePal(white); // ou les couleurs d'un thème à fiches
       g.userData.flames = [];
       for (let i = 0; i < n; i++) {
         const a = i * 2.4, rr = r * (0.2 + (i % 3) * 0.36), m = new T.Mesh(geo, this.sabreFire([pal.mid, pal.deep, pal.hot][i % 3], opacity));
@@ -6812,6 +6890,255 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (s.weatherShown != null && this.weatherGroup) this.weatherGroup.visible = s.weatherShown;
       if (s.swept) for (const [c, d] of s.swept) { c.holder.position.copy(d.position); c.holder.visible = d.visible; c.parts.root.rotation.copy(d.rotation); c.parts.root.position.set(0, 0, 0); if (c.shadow) c.shadow.visible = true; }
       if (u.actor) { const p = u.actor.parts; p.rear = 0; if (p.naginata) p.naginata.rotation.x = 0; if (p.ball) p.ball.visible = true; if (p.lance) p.lance.rotation.x = 0; if (p.rider) p.rider.rotation.x = 0; }
+    }
+
+    /* Attaques décrites par une fiche (KIT_ATTACKS, dans 00-constantes.js) : thèmes L'Empire des Baobabs et L'Âge des Géants.
+       Une fiche dit comment la pièce va frapper : au contact (gap) ou à distance (fly), avec ou sans bond (leap), ce qui part
+       de sa main (shot), ce qui se passe à l'impact (impact) et comment finit la pièce prise (end). Tout est visuel. */
+    kitAttack(spec, white, from, target, to, victim, now, len, dir) {
+      const a = { style: 'kit', kit: spec, white, start: now, from, target, to, victim, dir, len, fx: [], pal: KIT_PAL[spec.pal || 'baobabs'][white ? 'w' : 'b'] };
+      a.customTick = (c, x, el, t, M) => this.tickKitAttack(c, x, el, t, M);
+      a.customVictim = (d, x, c, el, t, M) => this.tickKitVictim(d, x, c, el, t, M);
+      const wind = spec.wind || 0.5;
+      if (spec.gap != null) {
+        const gap = Math.min(spec.gap, len);
+        a.stop = { x: target.x - dir.x * gap, z: target.z - dir.z * gap };
+        a.approach = spec.leap ? 0.7 : 0.3 + Math.max(0, len - gap) * 0.09;
+        a.hit = a.approach + wind;
+        a.moveFrom = a.stop;
+      } else {
+        a.stop = from; a.approach = 0; a.wind = wind;
+        a.fly = spec.fly ? spec.fly[0] + len * spec.fly[1] : 0;
+        a.hit = wind + a.fly;
+        a.moveFrom = from;
+      }
+      a.moveAt = a.hit + (spec.recover || 0.85);
+      a.duration = a.moveAt + 0.3 + Math.hypot(to.x - a.moveFrom.x, to.z - a.moveFrom.z) * 0.09;
+      return a;
+    }
+    tickKitAttack(c, a, el, t, M) {
+      const T = this.THREE, p = c.parts, s = a.kit, clamp = (x) => Math.max(0, Math.min(1, x)), smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+      if (!a.sabreRestore) a.sabreRestore = () => { p.trunkUp = null; };
+      if (el >= a.moveAt) {
+        const u = clamp((el - a.moveAt) / (a.duration - a.moveAt));
+        this.sabreFace(c, a.to.x, a.to.z);
+        c.holder.position.set(a.moveFrom.x + (a.to.x - a.moveFrom.x) * u, 0, a.moveFrom.z + (a.to.z - a.moveFrom.z) * u);
+        M.animate(p, t, 'run'); p.root.position.y = 0; p.trunkUp = null;
+      } else if (el < a.approach) {
+        const k = clamp(el / a.approach), e = k * k * (3 - 2 * k);
+        c.holder.position.set(a.from.x + (a.stop.x - a.from.x) * e, 0, a.from.z + (a.stop.z - a.from.z) * e);
+        this.sabreFace(c, a.target.x, a.target.z);
+        M.animate(p, t, 'run');
+        if (s.leap) p.root.position.y = Math.sin(k * Math.PI) * s.leap;
+      } else {
+        c.holder.position.set(a.stop.x, 0, a.stop.z);
+        this.sabreFace(c, a.target.x, a.target.z);
+        const k = (el - a.approach) / Math.max(0.01, a.hit - a.approach);
+        if (s.spin && el < a.hit) { M.animate(p, t, 'idle'); c.holder.rotation.y += 0.55; }
+        else if (s.pose === 'trunk') { M.animate(p, t, 'idle'); p.trunkUp = el < a.hit ? 0.1 + clamp(k) * 1.2 : 1.3 * (1 - clamp((el - a.hit) / 0.5)); }
+        else if (s.gap != null) { M.animate(p, t, 'punch', el < a.hit ? clamp(k) * 0.5 + Math.floor(k * (s.blows || 1)) : 0.9); p.root.position.z = Math.sin(clamp(k) * Math.PI) * 0.08; }
+        else M.animate(p, t, 'cast', clamp(el / a.wind));
+      }
+      if (!a.launched && s.shot && el >= (a.approach + (a.wind || 0))) {
+        a.launched = true; a.startPos = p.muzzle ? p.muzzle.getWorldPosition(new T.Vector3()) : this.handsOf(c);
+        a.shotObj = this.fx(a, this.kitShot(a, s.shot));
+      }
+      if (a.shotObj && !a.ended) this.tickKitShot(a, a.shotObj, el, t);
+      if (s.during && !a.ended) this.tickKitDuring(a, s.during, el, t, c);
+      if (el >= a.hit && !a.struck) {
+        a.struck = true;
+        this.sabreBurst(a.target, t, [a.pal[0], a.pal[1], a.pal[2]], 16, s.big || 1);
+        this.shakeUntil = t + 0.3; this.shakeAmp = s.shake || 0.1;
+        if (s.impact) this.kitImpact(a, s.impact, t);
+      }
+      if (a.impactObj && !a.ended) this.tickKitImpact(a, a.impactObj, el, t);
+    }
+    // Ce qui part de la main : un groupe orienté vers la cible (axe +z)
+    kitShot(a, kind) {
+      const T = this.THREE, g = new T.Group(), P = a.pal, fire = (c, o) => this.sabreFire(c, o), dirY = Math.atan2(a.dir.x, a.dir.z);
+      g.rotation.y = dirY; g.userData.kind = kind;
+      const spearMesh = (c, core) => { const m = new T.Group(), sh = new T.Mesh(new T.CylinderGeometry(0.018, 0.018, 0.85, 7), fire(c, 1)); sh.rotation.x = Math.PI / 2; m.add(sh); const tip = new T.Mesh(new T.ConeGeometry(0.05, 0.2, 6), fire(core, 1)); tip.rotation.x = Math.PI / 2; tip.position.z = 0.5; m.add(tip); return m; };
+      if (kind === 'ray' || kind === 'flame') {
+        const m = new T.Mesh(new T.CylinderGeometry(0.1, 0.1, 1, 12), fire(P[0], 0.92)), core = new T.Mesh(new T.CylinderGeometry(0.05, 0.05, 1, 10), fire(P[3] || 0xffffff, 1));
+        m.rotation.x = core.rotation.x = Math.PI / 2; g.add(m, core); g.userData.beam = [m, core];
+      } else if (kind === 'volley' || kind === 'embers') {
+        g.userData.items = [];
+        for (let i = 0; i < 7; i++) {
+          const m = kind === 'volley' ? spearMesh(P[0], P[1]) : new T.Mesh(new T.SphereGeometry(0.09, 10, 8), fire(P[i % 3], 1));
+          m.userData.off = [(i - 3) * 0.13, (i % 3 - 1) * 0.1, -Math.abs(i - 3) * 0.16]; g.add(m); g.userData.items.push(m);
+        }
+      } else if (kind === 'shadow') g.add(spearMesh(P[1], P[0]));
+      else if (kind === 'wave') {
+        g.userData.items = [];
+        for (let i = 0; i < 4; i++) { const m = new T.Mesh(new T.TorusGeometry(0.34 + i * 0.1, 0.03, 6, 28), fire(P[i % 3], 0.9)); m.position.z = -i * 0.34; g.add(m); g.userData.items.push(m); }
+      } else if (kind === 'spirit') {
+        const m = new T.Mesh(new T.SphereGeometry(0.26, 14, 10), fire(0xf4f4f8, 0.8)); m.position.y = 0.2; g.add(m);
+        const tail = new T.Mesh(new T.ConeGeometry(0.24, 0.7, 12), fire(0xf4f4f8, 0.55)); tail.rotation.x = Math.PI; tail.position.y = -0.25; g.add(tail);
+        for (const s of [-1, 1]) { const e = new T.Mesh(new T.SphereGeometry(0.05, 8, 6), new T.MeshBasicMaterial({ color: 0x111111 })); e.position.set(s * 0.1, 0.25, 0.22); g.add(e); }
+        g.rotation.y = 0;
+      }
+      return g;
+    }
+    tickKitShot(a, g, el, t) {
+      const T = this.THREE, kind = g.userData.kind, s = a.kit, launch = a.approach + (a.wind || 0), end = new T.Vector3(a.target.x, 0.8, a.target.z);
+      const k = a.fly ? (el - launch) / a.fly : 1, after = el - a.hit;
+      if (kind === 'ray' || kind === 'flame') {
+        const mid = a.startPos.clone().lerp(end, 0.5), L = a.startPos.distanceTo(end), w = (el < a.hit + 0.35 ? 1 : Math.max(0, 1 - (el - a.hit - 0.35) * 5)) * (0.8 + Math.sin(t * 40) * 0.2);
+        g.position.copy(mid); g.lookAt(end);
+        for (const m of g.userData.beam) m.scale.set(Math.max(0.01, w), L * Math.min(1, Math.max(0.05, k)), Math.max(0.01, w));
+        g.visible = w > 0.02;
+        return;
+      }
+      const pos = a.startPos.clone().lerp(end, Math.min(1, k));
+      if (after > 0) pos.set(end.x + a.dir.x * after * 13, 0.8, end.z + a.dir.z * after * 13);
+      g.position.copy(pos);
+      a.shotAt = pos;
+      g.visible = after < (s.carry ? 1 : 0.02) || (kind === 'shadow' && after < 0.35);
+      if (g.userData.items) for (const [i, m] of g.userData.items.entries()) {
+        if (m.userData.off) { const o = m.userData.off; m.position.set(o[0], o[1], o[2]); } else m.scale.setScalar(1 + Math.sin(t * 12 + i) * 0.1);
+      }
+    }
+    // Pendant le coup : griffures, onde au sol, feu sur l'arme…
+    tickKitDuring(a, kind, el, t, c) {
+      const T = this.THREE;
+      if (kind === 'roar' && el >= a.approach && !a.roared) {
+        a.roared = true;
+        const ring = this.fx(a, new T.Mesh(new T.TorusGeometry(0.4, 0.035, 6, 30), this.sabreFire(a.pal[0], 0.9)));
+        ring.position.copy(c.parts.head.getWorldPosition(new T.Vector3())); ring.rotation.y = Math.atan2(a.dir.x, a.dir.z); a.roar = ring;
+      }
+      if (a.roar) { const k = Math.min(1, (el - a.approach) / 0.45); a.roar.scale.setScalar(0.5 + k * 2.2); a.roar.material.opacity = 0.9 * (1 - k); a.roar.visible = k < 1; }
+      if (kind === 'fire' && c.parts.tip) {
+        if (!a.weaponFire) a.weaponFire = this.fx(a, this.sabreFlames(a.pal, 0.13, 0.5, 8));
+        c.parts.tip.getWorldPosition(a.weaponFire.position);
+        this.sabreFlicker(a.weaponFire, t, el < a.hit + 0.4 ? 1 : 0);
+      }
+    }
+    kitImpact(a, kind, t) {
+      const T = this.THREE, P = a.target, g = this.fx(a, new T.Group()); g.position.set(P.x, 0, P.z); g.userData.kind = kind; g.userData.t0 = a.hit; a.impactObj = g;
+      if (kind === 'claws') {
+        for (let i = 0; i < 3; i++) { const m = this.sabreSail(0.22, 1.5, a.pal[i % 2], 0.95); m.position.set((i - 1) * 0.34, 0.85, 0.3); m.rotation.set(0, this.viewYaw(), 0.32); g.add(m); }
+      } else if (kind === 'cracks' || kind === 'quake') {
+        const n = kind === 'quake' ? 9 : 6;
+        for (let i = 0; i < n; i++) {
+          const ang = i * 1.05, r = new T.Mesh(new T.BoxGeometry(0.035, 0.014, 0.46), new T.MeshBasicMaterial({ color: a.pal[3] != null && kind === 'quake' ? a.pal[1] : 0x1a100a }));
+          r.position.set(Math.cos(ang) * 0.26, 0.05, Math.sin(ang) * 0.26); r.rotation.y = -ang + Math.PI / 2; g.add(r);
+        }
+        if (kind === 'quake') { // le sol se fend sur toute la ligne de la charge
+          const line = new T.Mesh(new T.BoxGeometry(0.07, 0.016, a.len), new T.MeshBasicMaterial({ color: a.pal[1] })); line.position.set(-a.dir.x * a.len / 2, 0.05, -a.dir.z * a.len / 2); line.rotation.y = Math.atan2(a.dir.x, a.dir.z); g.add(line);
+          this.shakeUntil = t + 0.7; this.shakeAmp = 0.2;
+        }
+      } else if (kind === 'slash') {
+        const m = this.sabreSail(0.3, 1.5, a.pal[0], 0.95); m.position.set(0, 0.85, 0.2); m.rotation.set(0, this.viewYaw(), -0.5); g.add(m);
+      }
+    }
+    tickKitImpact(a, g, el) {
+      const k = Math.min(1, (el - g.userData.t0) / 0.75);
+      if (g.userData.kind === 'claws' || g.userData.kind === 'slash') { g.children.forEach((m) => { m.material.opacity = 0.95 * (1 - k); }); g.visible = k < 1; }
+    }
+
+    /* ---------- La pièce prise ---------- */
+    tickKitVictim(d, a, c, el, t, M) {
+      if (el >= a.duration || a.ended) return false;
+      const p = c.parts, r = p.root, B = a.target, dir = a.dir, after = el - a.hit, clamp = (x) => Math.max(0, Math.min(1, x)), smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); }, s = a.kit;
+      if (after < 0) {
+        this.sabreFace(c, a.stop.x, a.stop.z);
+        if (s.gap != null && s.blows > 1 && el > a.approach) { M.animate(p, t, 'punch', (el - a.approach) * 3 + 0.5); r.position.z = 0; } else M.animate(p, t, 'guard', 1);
+        return true;
+      }
+      if (c.shadow) c.shadow.visible = false;
+      M.animate(p, t, 'ko', 1);
+      r.position.y = 0;
+      const end = s.end || 'fall';
+      if (s.burn) {
+        if (!a.victimFire) a.victimFire = this.fx(a, this.sabreFlames(a.pal, 0.3, 0.9, 9));
+        a.victimFire.position.set(c.holder.position.x, Math.max(0, c.holder.position.y) + r.position.y, c.holder.position.z);
+      }
+      if (end === 'fling') {
+        const u = clamp(after / 1.25), far = u * (2 - u) * 13;
+        c.holder.position.set(B.x + dir.x * far, 0, B.z + dir.z * far);
+        r.position.y = Math.sin(u * Math.PI) * 2.8 + 0.05; r.rotation.set(u * 9, u * 3, u * 5);
+        c.holder.visible = u < 1;
+        if (a.victimFire) { a.victimFire.position.set(c.holder.position.x, r.position.y, c.holder.position.z); this.sabreFlicker(a.victimFire, t, u < 1 ? 1 : 0); }
+        return true;
+      }
+      if (end === 'carry') {
+        const at = a.shotAt || new this.THREE.Vector3(B.x, 0.8, B.z);
+        c.holder.position.set(at.x, 0, at.z); r.position.y = 0.3; r.rotation.set(after * 5, after * 9, 0);
+        c.holder.visible = after < 1;
+        return true;
+      }
+      if (end === 'skyward') { // emportée dans les airs
+        const u = clamp(after / 1.1);
+        c.holder.position.set(B.x + dir.x * u * 7, 0, B.z + dir.z * u * 7);
+        r.position.y = u * u * 7; r.rotation.set(1.2, u * 6, 0);
+        c.holder.visible = u < 1;
+        return true;
+      }
+      if (end === 'crush') {
+        const f = smooth(after / 0.25);
+        r.rotation.set(1.5 * f, 0, 0); r.scale.y = d.base * (1 - f * 0.6);
+      } else if (end === 'bounce') {
+        const up = clamp(after / 0.5), f = smooth((after - 0.45) / 0.3);
+        r.position.y = Math.sin(up * Math.PI) * 0.75; r.rotation.set(up * 2 + f, 0, 0);
+      } else r.rotation.set(-1.5 * smooth((after - 0.2) / 0.35), 0, 0); // elle tombe à la renverse
+      if (a.victimFire) this.sabreFlicker(a.victimFire, t, 1 - clamp((after - 0.5) / 0.4));
+      c.holder.visible = el < a.moveAt;
+      return true;
+    }
+
+    /* ---------- Mats à fiche : un par camp ---------- */
+    makeKitMate(u, at, keep, basic, std) {
+      const T = this.THREE, P = u.target, g = u.fx, style = u.themed, A = this.sqToPos(u.attackerTo), yaw = this.viewYaw();
+      const s = u.kitMate = { A, dir: new T.Vector3(P.x - A.x, 0, P.z - A.z), yaw }; s.len = Math.max(0.01, s.dir.length()); s.dir.normalize();
+      g.visible = false;
+      if (style === 'ancetres') {
+        // tambours, puis des silhouettes dorées sortent de terre et emportent le roi vers le soleil couchant
+        const gold = this.sabreFire(0xffc247, 0.82);
+        s.drums = [];
+        for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, d = new T.Group(), body = new T.Mesh(new T.CylinderGeometry(0.3, 0.18, 0.6, 12), std(0x8a5a2c)), top = new T.Mesh(new T.CylinderGeometry(0.31, 0.31, 0.03, 12), std(0xf3ead8)); body.position.y = 0.3; top.position.y = 0.61; d.add(body, top); d.position.set(P.x + Math.cos(a) * 2.2, 0, P.z + Math.sin(a) * 2.2); d.userData.top = top; g.add(d); s.drums.push(d); }
+        s.anc = [];
+        for (let i = 0; i < 9; i++) {
+          const a = i / 9 * Math.PI * 2, f = new T.Group(), body = new T.Mesh(new T.ConeGeometry(0.28, 1.1, 10), gold), head = new T.Mesh(new T.SphereGeometry(0.15, 10, 8), gold);
+          body.position.y = 0.55; head.position.y = 1.2; f.add(body, head);
+          for (const k of [-1, 1]) { const arm = new T.Mesh(new T.CylinderGeometry(0.04, 0.05, 0.6, 6), gold); arm.position.set(k * 0.2, 1.0, 0.08); arm.rotation.z = -k * 0.5; arm.rotation.x = -0.8; f.add(arm); }
+          f.userData.a = a; g.add(f); s.anc.push(f);
+        }
+      } else if (style === 'harmattan') {
+        // ciel jaune, tempête de sable, yeux de léopard dans la poussière
+        u.camera.widePosition.set(Math.sin(yaw) * 14.5, 4.4, Math.cos(yaw) * 14.5); u.camera.wideTarget.set(0, 2.6, 0); // la caméra descend pour montrer le ciel
+        if (this.weatherGroup) { s.weatherShown = this.weatherGroup.visible; this.weatherGroup.visible = false; }
+        s.skyMat = new T.MeshBasicMaterial({ color: 0xc9992f, transparent: true, opacity: 0, side: T.BackSide, fog: false, depthWrite: false, toneMapped: false });
+        g.add(new T.Mesh(new T.SphereGeometry(30, 20, 10), s.skyMat));
+        s.sand = [];
+        const sand = this.sabreFire(0xd9b25a, 0.7), sandDark = this.sabreFire(0xa8772e, 0.7), grain = new T.SphereGeometry(0.16, 8, 6);
+        for (let i = 0; i < 90; i++) { const m = new T.Mesh(grain, i % 3 ? sand : sandDark); m.userData = { a: i * 0.7, h: (i % 13) / 13, r: 0.5 + (i % 7) * 0.3, sp: 3 + (i % 4) }; m.scale.y = 0.6; g.add(m); s.sand.push(m); }
+        s.eyes = [];
+        const eye = new T.MeshBasicMaterial({ color: 0xffe14d, toneMapped: false });
+        for (let i = 0; i < 4; i++) { const pair = new T.Group(); for (const k of [-1, 1]) { const e = new T.Mesh(new T.SphereGeometry(0.11, 10, 8), eye); e.scale.y = 0.55; e.position.x = k * 0.28; pair.add(e); } pair.position.set(P.x + Math.sin(yaw + i * 1.6) * 2.2, 1.4 + (i % 2) * 1.1, P.z + Math.cos(yaw + i * 1.6) * 2.2); pair.rotation.y = yaw; g.add(pair); s.eyes.push(pair); }
+      }
+    }
+    endKitMate(u) {
+      if (this.checkGroup) this.checkGroup.visible = true;
+      if (u.kitMate.weatherShown != null && this.weatherGroup) this.weatherGroup.visible = u.kitMate.weatherShown;
+    }
+    tickKitMate(u, t, e, clamp, smooth, hit, after) {
+      const T = this.THREE, s = u.kitMate, P = u.target, style = u.themed, fade = (d) => (after > 0 ? Math.max(0, 1 - after / d) : 1);
+      u.fx.visible = true;
+      if (this.checkGroup) this.checkGroup.visible = false; // le trait d'échec ne suit pas le roi emporté
+      if (style === 'ancetres') {
+        for (const [i, d] of s.drums.entries()) { const beat = Math.abs(Math.sin(t * 9 + i)); d.scale.y = Math.max(0.01, smooth(e / 0.4) * (1 - clamp((after - 1) / 0.4))); d.userData.top.position.y = 0.61 + beat * 0.04; d.visible = after < 1.4; }
+        for (const m of s.anc) {
+          const d = m.userData, rise = smooth((e - 1.1) / 1.2), close = smooth((e - 2.1) / 0.9), r = 2.5 - close * 1.5, up = after > 0 ? after * after * 2.4 : 0;
+          m.position.set(P.x + Math.cos(d.a) * r - Math.sin(s.yaw) * up * 1.5, up + (rise - 1) * 1.7, P.z + Math.sin(d.a) * r - Math.cos(s.yaw) * up * 1.5);
+          m.rotation.y = Math.atan2(P.x - m.position.x, P.z - m.position.z); m.visible = e > 1.1 && after < 1.9;
+        }
+        s.pull = after > 0 ? new T.Vector3(P.x - Math.sin(s.yaw) * after * after * 3.6, after * after * 2.4, P.z - Math.cos(s.yaw) * after * after * 3.6) : null;
+      } else if (style === 'harmattan') {
+        s.skyMat.opacity = smooth((e - 0.2) / 1);
+        const k = smooth((e - 0.5) / 2.2);
+        for (const m of s.sand) { const d = m.userData, a = d.a + t * d.sp, r = (3.6 - k * 2.5) * (0.4 + d.r * 0.4), y = 0.1 + ((d.h + t * 0.28) % 1) * 3.6; m.position.set(P.x + Math.cos(a) * r, y, P.z + Math.sin(a) * r); m.visible = e > 0.5 && after < 1.4; m.material.opacity = 0.75 * fade(1.4); }
+        for (const [i, p] of s.eyes.entries()) { const on = e > 1.1 + i * 0.25 && after < 0.8; p.visible = on && Math.sin(t * 2.3 + i * 2) > -0.75; }
+      }
     }
 
     bindInput() {

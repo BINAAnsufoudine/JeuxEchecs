@@ -205,6 +205,22 @@ Feu orange et or côté blanc, violet côté noir. Mats : un par pièce (`SABRE_
 - **Échiquier 2D** : il garde les ninjas, comme pour tous les thèmes.
 - **Images d'accueil** : rendues depuis le plateau 3D, aux tailles des autres thèmes.
 
+## L'Empire des Baobabs
+
+Deux royaumes d'Afrique inventés. Blancs : Zalimba, le Soleil d'or (or, crème, zigzags vert et rouge, blason soleil à huit rayons). Noirs : Kôrodu, le Bronze de la nuit (indigo, bronze, perles rouges, peintures blanches, blason tête de léopard). Plateau : la cour royale de Zalimba (terrain `banco`, météo `sunset` imposée), échiquier en terre claire et terre brûlée, palais en banco hérissé de poutres toujours à l'arrière-plan, cases rondes à toit de paille, baobabs. Sans sons propres.
+
+| Pièce | Blancs | Noirs | Attaque (de près comme de loin, sans riposte) |
+|---|---|---|---|
+| Pion | guerrier au bandeau rouge | guerrier aux peintures blanches | coup de sagaie derrière le bouclier tacheté |
+| Cavalier | Tamba, lion à crinière rousse | Dôro, lion à crinière noire | bond en L ; rugissement et lance / coup de patte qui plaque la cible |
+| Fou | Griot Sanou, djembé et bâton au disque d'or | Sorcier Ogo, grand masque à plumes rouges | onde sonore dorée / esprit blanc qui emporte la cible |
+| Tour | éléphant à tour de bois et archer | éléphant sombre à plaque de bronze | charge et piétine / coup de trompe qui projette |
+| Dame | Reine Nalé, gélé et collier d'or | Reine Sika, foulard indigo | volée de lances dorées / lance d'ombre qui traverse |
+| Roi | Mansa Kélo, haute couronne perlée | Roi Obadé, couronne de bronze | rayon d'or / trois griffures de bronze |
+
+- **Mats** (`THEME_MATE`) : Blancs, *Chant des Ancêtres* : tambours, ancêtres dorés qui sortent de terre et emportent le roi vers le soleil couchant. Noirs, *Tempête d'Harmattan* : ciel jaune, tempête de sable, yeux de léopard, le roi disparaît dans le tourbillon.
+- **Code** : modèles dans `baobabs3d.js`, fiches d'attaque dans `KIT_ATTACKS` (`00-constantes.js`), moteur des fiches et mats dans `src/board3d/12d-kit-attaques.js`, décor dans `buildRoyalCourt` (`01-scene-terrain.js`).
+
 ---
 
 ## Ajouter ou modifier un thème

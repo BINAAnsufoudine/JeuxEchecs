@@ -106,6 +106,8 @@
         this.makeAuraMate(u, at, keep, basic, std);
       } else if (SABRE_STYLES.has(style)) {
         this.makeSabreMate(u, at, keep, basic, std);
+      } else if (KIT_STYLES.has(style)) {
+        this.makeKitMate(u, at, keep, basic, std);
       } else if (style === 'orbital') {
         u.target3 = at(new T.Mesh(new T.RingGeometry(0.5, 0.62, 32), basic(0xff1744, 0.9)), 0, 0.04, 0); u.target3.rotation.x = -Math.PI / 2;
         u.beam = at(new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 30, 20, 1, true), new T.MeshBasicMaterial({ color: 0xff1744, transparent: true, opacity: 0.8, blending: T.AdditiveBlending, depthWrite: false })), 0, 15, 0);
@@ -121,7 +123,7 @@
       // et laisse une trace sur la case du roi.
       const tint = THEME_MATE_COLORS[style] || [0xffffff, 0x888888];
       u.tint = tint;
-      if ((Object.values(AURA_MATE).includes(style) && style !== 'constellation') || SABRE_STYLES.has(style)) u.flash.material.color.setHex(tint[0]);
+      if ((Object.values(AURA_MATE).includes(style) && style !== 'constellation') || SABRE_STYLES.has(style) || KIT_STYLES.has(style)) u.flash.material.color.setHex(tint[0]);
       const A = this.sqToPos(u.attackerTo);
       u.pillar = new T.Mesh(new T.CylinderGeometry(0.42, 0.55, 6, 24, 1, true), new T.MeshBasicMaterial({ color: tint[0], transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
       u.pillar.position.set(A.x, 3, A.z); g.add(u.pillar);
@@ -163,6 +165,8 @@
         else if (style === 'crows') { root.position.y = Math.min(4, after * 2.2); root.rotation.y = after * 10; c.holder.visible = after < 1.5; }
         else if (style === 'jaws') { c.holder.visible = after < 0.15; }
         else if (style === 'boulder' || style === 'crystalcomet' || style === 'nilocomet') { root.scale.y = u.kingBase.scale.y * Math.max(0.2, 1 - after * 4); }
+        else if (style === 'ancetres') { const L = u.kitMate.pull; if (L) c.holder.position.copy(L); c.holder.visible = after < 1.9; } // emporté vers le soleil couchant
+        else if (style === 'harmattan') { root.position.y = Math.min(3, after * 1.8); root.rotation.y = after * 11; c.holder.visible = after < 0.9; } // happé par le tourbillon
         else if (style === 'cloudbreath') { root.position.y = Math.min(4, after * 2.6); root.rotation.y = after * 9; c.holder.visible = after < 1.6; } // soulevé par le vent
         else if (style === 'eruption' || style === 'fortress' || style === 'shadeswarm') { c.holder.visible = after < 0.25; } // englouti
         else { root.rotation.z = Math.PI / 2 * smooth(after / 0.4); root.position.y = 0.05; } // tombe sur le côté
@@ -267,6 +271,8 @@
         this.tickAuraMate(u, t, e, clamp, smooth, hit, after);
       } else if (SABRE_STYLES.has(style)) {
         this.tickSabreMateFx(u, t, e, clamp, smooth, hit, after);
+      } else if (KIT_STYLES.has(style)) {
+        this.tickKitMate(u, t, e, clamp, smooth, hit, after);
       } else if (style === 'orbital') {
         const lock = smooth((e - 0.4) / 1.2);
         u.target3.scale.setScalar(2.5 - lock * 1.5); u.target3.rotation.z = t * 3; u.target3.visible = after < 0.6;

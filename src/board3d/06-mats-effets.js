@@ -263,6 +263,7 @@
       if (u.apocalypse) this.restoreFoxWorld(u);
       if (u.themed) this.skyDim = 0; // le ciel assombri par un mat de thème revient
       if (u.sabre) this.endSabreMate(u);
+      if (u.kitMate) this.endKitMate(u);
       if (u.hiddenEnemies) u.hiddenEnemies.forEach(([piece, visible]) => { piece.holder.visible = visible; });
       if (u.flameVictims) u.flameVictims.forEach((victim) => {
         victim.character.holder.visible = victim.visible;

@@ -831,6 +831,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .home-welcome[data-theme-bg="modern"] { background-image: linear-gradient(100deg, rgba(14,16,22,.88) 0%, rgba(14,16,22,.58) 48%, rgba(14,16,22,.08) 85%), url(fond_ecran/modern.webp); }
 .home-welcome[data-theme-bg="auras"] { background-image: linear-gradient(100deg, rgba(14,12,34,.86) 0%, rgba(14,12,34,.55) 48%, rgba(14,12,34,.05) 85%), url(fond_ecran/auras.webp); }
 .home-welcome[data-theme-bg="sabres"] { background-image: linear-gradient(100deg, rgba(24,14,24,.86) 0%, rgba(24,14,24,.55) 48%, rgba(24,14,24,.05) 85%), url(fond_ecran/sabres.webp); }
+.home-welcome[data-theme-bg="baobabs"] { background-image: linear-gradient(100deg, rgba(40,16,8,.86) 0%, rgba(40,16,8,.55) 48%, rgba(40,16,8,.05) 85%), url(fond_ecran/baobabs.webp); }
 .home-welcome[data-theme-bg="land"] { background-image: linear-gradient(100deg, rgba(12,26,10,.86) 0%, rgba(12,26,10,.55) 48%, rgba(12,26,10,.05) 85%), url(fond_ecran/land.webp); background-position: center top; }
 .home-welcome[data-theme-bg="birds"] { background-image: linear-gradient(100deg, rgba(8,24,36,.86) 0%, rgba(8,24,36,.55) 48%, rgba(8,24,36,.05) 85%), url(fond_ecran/birds.webp); background-position: center top; }
 .home-welcome[data-theme-bg="ninjas"] { background-image: linear-gradient(100deg, rgba(10,8,22,.78) 0%, rgba(10,8,22,.45) 48%, rgba(10,8,22,0) 85%), url(fond_ecran/ninjas.webp); background-position: center top; }
@@ -1113,6 +1114,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .shop-title-art.modern { --title-ground:#5d6b4a; background: linear-gradient(#a9b8c2 0%,#c9c6a5 62%,#7d8a5f 100%); }
 .shop-title-art.auras { --title-ground:#36316e; background: radial-gradient(ellipse at 75% 20%,#bfeaff 0%,transparent 40%),linear-gradient(#1b3f8a 0%,#5fa8e8 62%,#c04bff 100%); }
 .shop-title-art.sabres { --title-ground:#3a2838; background: radial-gradient(ellipse at 75% 22%,#f6dcb0 0%,transparent 34%),linear-gradient(#2a2140 0%,#8a4a5a 58%,#e3a46b 100%); }
+.shop-title-art.baobabs { --title-ground:#7a3a1e; background: radial-gradient(ellipse at 72% 26%,#ffe9a8 0%,transparent 34%),linear-gradient(#3a1f4a 0%,#d0603a 58%,#f3b45a 100%); }
 .shop-title-art.ninjas { --title-ground:#473a61; background: radial-gradient(ellipse at 75% 20%,#8765a4 0%,transparent 37%),linear-gradient(#202341 0%,#484067 65%,#252a3e 100%); }
 .shop-title-art.ninjas::after { width: 54px; height: 54px; background: rgba(242,187,76,.5); }
 .shop-frame { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; background: var(--surface-2); font-size: 1.4rem; }
@@ -1340,6 +1342,7 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
 .home-welcome[data-theme-bg="ancient"] { background-position: center 45%; }
 .home-welcome[data-theme-bg="auras"] { background-position: center 40%; }
 .home-welcome[data-theme-bg="sabres"] { background-position: center 40%; }
+.home-welcome[data-theme-bg="baobabs"] { background-position: center 40%; }
 .home-welcome[data-theme-bg="modern"] { background-position: center 40%; }
 /* Bannières panoramiques (format 3:1, sujet à droite, zone calme à gauche pour le texte) */
 .home-welcome[data-theme-bg="ninjas"] { background-image: linear-gradient(100deg, rgba(10,8,22,.7) 0%, rgba(10,8,22,.35) 42%, rgba(10,8,22,0) 70%), url(fond_ecran/banniere/ninjas.webp); background-position: 62% center; }
@@ -1351,6 +1354,7 @@ textarea.otb-input { resize: vertical; line-height: 1.5; }
 .home-welcome[data-theme-bg="modern"] { background-image: linear-gradient(100deg, rgba(20,10,6,.72) 0%, rgba(20,10,6,.38) 42%, rgba(20,10,6,0) 70%), url(fond_ecran/banniere/modern.webp); }
 .home-welcome[data-theme-bg="auras"] { background-image: linear-gradient(100deg, rgba(14,12,34,.72) 0%, rgba(14,12,34,.38) 42%, rgba(14,12,34,0) 70%), url(fond_ecran/banniere/auras.webp); }
 .home-welcome[data-theme-bg="sabres"] { background-image: linear-gradient(100deg, rgba(24,14,24,.72) 0%, rgba(24,14,24,.38) 42%, rgba(24,14,24,0) 70%), url(fond_ecran/banniere/sabres.webp); }
+.home-welcome[data-theme-bg="baobabs"] { background-image: linear-gradient(100deg, rgba(40,16,8,.72) 0%, rgba(40,16,8,.38) 42%, rgba(40,16,8,0) 70%), url(fond_ecran/banniere/baobabs.webp); }
 /* Maître Sissa n'est plus dans la bannière : sur un écran étroit, on montre surtout la droite de l'image, où se trouve le sujet */
 .home-welcome[data-theme-bg] { background-position: 72% center; }
 /* Sur PC : la bannière prend les proportions des images (3:1), qui se voient donc en entier */
