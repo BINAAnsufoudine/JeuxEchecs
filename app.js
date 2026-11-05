@@ -5335,7 +5335,7 @@
     }
     $('home-collection-tabs').innerHTML = AVAILABLE_NATURE_COLLECTIONS.map((item) => {
       const available = grade >= item.unlockGrade, selected = collection.id === item.id;
-      const themeImage = HOME_BACKGROUND_IMAGES[item.id] || `fond_ecran/mini/${item.id}.webp?v=2`;
+      const themeImage = HOME_BACKGROUND_IMAGES[item.id] || `fond_ecran/mini/${item.id}.webp?v=3`;
       return `<button type="button" class="home-collection-tab${selected ? ' selected' : ''}${available ? '' : ' locked'}" data-nature-collection="${item.id}" ${available ? '' : `aria-label="${escHtml(L(`${item.name}, se débloque au grade ${item.unlockGrade}`, `${item.name}, unlocks at rank ${item.unlockGrade}`))}"`} aria-pressed="${selected}" title="${escHtml(available ? item.name : L(`Débloqué au grade ${item.unlockGrade}`, `Unlocks at rank ${item.unlockGrade}`))}"${HOME_BACKGROUNDS.includes(item.id) ? ` style="background-image:url('${themeImage}')"` : ''}><span>${item.id === seasonTheme() ? '🏆 ' : ''}${item.icon} ${escHtml(item.name)}${available ? '' : ` · 🔒 ${item.unlockGrade}`}</span></button>`;
     }).join('');
     // carrousel : le thème choisi reste visible au centre
