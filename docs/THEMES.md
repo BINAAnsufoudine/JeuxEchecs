@@ -164,11 +164,52 @@ Arts martiaux cosmiques (création originale). Blancs : l'Ordre du Ciel Azur (iv
 - **Code** : modèles dans `auras3d.js`, armes, pouvoirs et mats dans `src/board3d/12b-auras.js` (Constellation et Nova dans `05-mats-themes.js`). Les pouvoirs sont des effets visuels courts, sans effet sur les règles.
 - **Échiquier 2D** : il garde les ninjas, comme pour tous les thèmes.
 
+## L'Âge des Sabres
+
+Samouraïs des temps anciens (création originale, noms et blasons inventés). Blancs : le clan Hakuro, le Héron blanc (ivoire, vermillon, or, blason fleur de cerisier à cinq pétales). Noirs : le clan Kurokane, le Fer noir (laque noire, violet, bronze, masques à crocs, blason croissant de lune barré de trois traits). Plateau : la cour du château de Hakuro au crépuscule (terrain `castle`, météo `sunset` imposée), échiquier en planches de cèdre, lanternes de pierre, cerisiers, pétales qui volent, donjon à toits superposés qui reste à l'arrière-plan quelle que soit la vue. Sans sons propres.
+
+À ne pas confondre avec les ninjas : ici armures lourdes laquées, casques à cimier, bannières dans le dos et vrais chevaux.
+
+| Pièce | Blancs | Noirs |
+|---|---|---|
+| Pion | Ashigaru de Hakuro | Ashigaru de Kurokane |
+| Cavalier | Cavalier Hayate, cheval gris clair | Cavalier Kurogiri, cheval noir caparaçonné |
+| Fou | Bretteur Ren, aux deux sabres | Bretteur Gōki, aux deux sabres |
+| Tour | Colosse Daigorō | Colosse Tesshin |
+| Dame | Dame Sakuya, naginata | Dame Kagerō, naginata à chaîne |
+| Roi | Daimyō Takemori, sabre et éventail | Shōgun Gendai, nodachi |
+
+| Pièce | Attaque (de près comme de loin, sans riposte de la cible) |
+|---|---|
+| Pion | échange de coups de sabre, puis il transperce |
+| Cavalier | charge à la lance : la cible reste accrochée une seconde, puis tombe |
+| Fou | deux arcs d'énergie croisés en X, qui l'emportent hors du plateau |
+| Tour | boule de fer lancée, enflammée en vol ; la cible brûle et part loin dans le décor ; la chaîne ramène la boule |
+| Dame | naginata lancée, tourbillon de feu horizontal ; la cible brûle et part loin dans le décor ; la naginata revient |
+| Roi blanc | iaï éclair : un trait blanc, un instant de silence, la cible s'effondre |
+| Roi noir | le nodachi frappe le sol, la case tremble et se fend |
+
+Feu orange et or côté blanc, violet côté noir. Mats : un par pièce (`SABRE_MATE`), celui de la pièce qui donne le mat, comme pour la Saga des Auras (mat double : la plus forte ; mat joué par le roi : mat du camp). Ils durent plus longtemps que les 4,8 s habituelles (`SABRE_MATE_TIME`).
+
+| Pièce | Mat |
+|---|---|
+| Pion | *Lame ardente* : le sabre s'enflamme, trois coups, le roi brûle puis tombe |
+| Cavalier | *Cavalier de feu* : saut sur le roi accroché à la lance, le cheval cabré le frappe de ses sabots |
+| Fou | *L'Arc géant* : haut comme deux tours, feu sur les cases traversées, il emporte le roi et les pièces adverses de son couloir |
+| Tour | *Fracas de fer* : trois coups de boule enflammée, puis le dernier écrase le roi et brise tout le plateau |
+| Dame | *Dragon de feu* (jaune ou violet) : il descend des nuages, fait le tour du plateau, mord le roi et l'emporte en faisant un deuxième tour |
+| Roi blanc | *Pluie de Sakura* : trait blanc, tempête de pétales, le cimier du roi noir se brise |
+| Roi noir | *Lune Pourpre* : nuit noire, lune rouge, vague d'encre, cendres, le croissant du roi blanc se fend |
+
+- **Code** : modèles dans `sabres3d.js`, attaques et mats dans `src/board3d/12c-sabres.js`, décor dans `buildCastleCourt` (`01-scene-terrain.js`).
+- **Échiquier 2D** : il garde les ninjas, comme pour tous les thèmes.
+- **Images d'accueil** : rendues depuis le plateau 3D, aux tailles des autres thèmes.
+
 ---
 
 ## Ajouter ou modifier un thème
 
-1. Pièces : un fichier qui remplit `window.ThemeModels[id].build(THREE, piece)` (voir `themes3d.js`, `ocean3d.js`, `warriors3d.js`, `auras3d.js`).
+1. Pièces : un fichier qui remplit `window.ThemeModels[id].build(THREE, piece)` (voir `themes3d.js`, `ocean3d.js`, `warriors3d.js`, `auras3d.js`, `sabres3d.js`).
 2. Couleurs des tirs : une entrée dans `THEME_FX` ; armes particulières dans `WAR_PROJ`.
 3. Mats : une entrée dans `THEME_MATE` (un style pour les Blancs, un pour les Noirs), ses couleurs dans `THEME_MATE_COLORS`, puis le décor dans `makeThemeMate` et l'animation dans `tickThemeMateFx`.
 4. Ajouter le thème à la liste de `tests3d.js` et vérifier que `tests3d.html` passe.

@@ -117,6 +117,7 @@
     }
 
     tickKnightAttack(c, a, el, t, M) {
+      if (a.sabre) { this.tickSabreAttack(c, a, el, t, M); return; }
       if (a.style === 'chidori') { this.tickChidori(c, a, el, t, M); return; }
       if (a.style === 'orb') { this.tickOrb(c, a, el, t, M); return; }
       if (a.style === 'fireroll') { this.tickFireroll(c, a, el, t, M); return; }

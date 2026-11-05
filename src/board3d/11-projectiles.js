@@ -378,6 +378,7 @@
       if (!s) return;
       if (s.sky && s.style === 'flameline') { this.renderer.toneMappingExposure = s.sky.exposure; s.sky = null; }
       if (s.expo != null) { this.renderer.toneMappingExposure = s.expo; s.expo = null; }
+      if (s.sabreRestore) { s.sabreRestore(); s.sabreRestore = null; }
       if (s.sky) this.restoreSky(s);
       for (const o of s.fx || []) {
         this.scene.remove(o);

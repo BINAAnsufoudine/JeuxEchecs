@@ -95,7 +95,7 @@
   let coachHintLevel = 0;
   let coachArrows = [];        // flèches du dernier coup commenté (partie coachée)
   let judging = false, judgeSeq = 0, judgeWorker = null;
-  const TERRAIN_NAMES = L({ forest: 'Forêt', desert: 'Désert', prairie: 'Prairie verte', grass: 'Jardin tropical', steppe: 'Plaine sèche', mud: 'Forêt humide', rock: 'Récif rocheux', water: 'Lagon tropical', beach: 'Plage tropicale', dojo: 'Jardin du dojo' }, { forest: 'Forest', desert: 'Desert', prairie: 'Green meadow', grass: 'Tropical garden', steppe: 'Dry plain', mud: 'Rainforest', rock: 'Rocky reef', water: 'Tropical lagoon', beach: 'Tropical beach', dojo: 'Dojo garden' });
+  const TERRAIN_NAMES = L({ arena: 'Arène du Ciel', castle: 'Cour du château de Hakuro', forest: 'Forêt', desert: 'Désert', prairie: 'Prairie verte', grass: 'Jardin tropical', steppe: 'Plaine sèche', mud: 'Forêt humide', rock: 'Récif rocheux', water: 'Lagon tropical', beach: 'Plage tropicale', dojo: 'Jardin du dojo' }, { arena: 'Sky Arena', castle: 'Hakuro castle courtyard', forest: 'Forest', desert: 'Desert', prairie: 'Green meadow', grass: 'Tropical garden', steppe: 'Dry plain', mud: 'Rainforest', rock: 'Rocky reef', water: 'Tropical lagoon', beach: 'Tropical beach', dojo: 'Dojo garden' });
   const WEATHER_NAMES = L({ sun: 'Soleil', drizzle: 'Pluie fine', heavy: 'Grosse pluie', heavystorm: 'Grosse pluie orageuse', windstorm: 'Orage et grand vent', sunwind: 'Soleil et vent', snow: 'Neige fine', sunset: 'Coucher de soleil' },
     { sun: 'Sunny', drizzle: 'Light rain', heavy: 'Heavy rain', heavystorm: 'Heavy thunderstorm', windstorm: 'Windy thunderstorm', sunwind: 'Sunny and windy', snow: 'Light snow', sunset: 'Sunset' });
   // Le paysage et la météo suivent la collection nature et le grade dans tous les modes de jeu.
@@ -1003,9 +1003,9 @@
         // C'est la pièce qui donne échec (celle qui mate) qui fait l'attaque de mat, même sur un échec à la découverte
         const checkers = window.Chess.pseudoMoves({ ...s, turn: s.turn === 'w' ? 'b' : 'w', ep: -1, castling: '' }).filter((m) => m.to === kingSq).map((m) => m.from);
         let mater = last && checkers.includes(last.to) ? last.to : checkers[0];
-        // Saga des Auras : un mat par pièce. Mat double : la pièce la plus forte. Le roi ne donne jamais échec lui-même :
+        // Saga des Auras, L'Âge des Sabres : un mat par pièce. Mat double : la pièce la plus forte. Le roi ne donne jamais échec lui-même :
         // son mat se joue quand c'est lui qui vient de jouer (mat à la découverte, roque).
-        const aurasMate = window.themeOf && window.themeOf(s.turn === 'w' ? 'k' : 'K') === 'auras';
+        const aurasMate = window.themeOf && ['auras', 'sabres'].includes(window.themeOf(s.turn === 'w' ? 'k' : 'K'));
         const aurasKing = aurasMate && last && s.board[last.to] && s.board[last.to].toLowerCase() === 'k';
         if (aurasMate && checkers.length > 1) mater = [...checkers].sort((a, b) => 'pnbrq'.indexOf(s.board[b].toLowerCase()) - 'pnbrq'.indexOf(s.board[a].toLowerCase()))[0];
         if (aurasKing) mater = last.to;
@@ -4797,6 +4797,7 @@
     ocean: [['Moussaillon', 'Cabin boy'], ['Poisson-clown', 'Clownfish'], ['Tortue marine', 'Sea turtle'], ['Dauphin', 'Dolphin'], ['Requin', 'Shark'], ['Baleine', 'Whale'], ['Légende des mers', 'Legend of the seas']],
     ancient: [['Recrue', 'Recruit'], ['Légionnaire', 'Legionary'], ['Centurion', 'Centurion'], ['Tribun', 'Tribune'], ['Général', 'General'], ['Consul', 'Consul'], ['Empereur', 'Emperor']],
     modern: [['Recrue', 'Recruit'], ['Soldat', 'Soldier'], ['Sergent', 'Sergeant'], ['Lieutenant', 'Lieutenant'], ['Capitaine', 'Captain'], ['Colonel', 'Colonel'], ['Général', 'General']],
+    sabres: [['Ashigaru', 'Ashigaru'], ['Samouraï', 'Samurai'], ['Bretteur', 'Swordsman'], ['Cavalier', 'Horseman'], ['Capitaine', 'Captain'], ['Daimyō', 'Daimyo'], ['Shōgun', 'Shogun']],
     auras: [['Novice', 'Novice'], ['Disciple', 'Disciple'], ['Combattant', 'Fighter'], ['Éveillé', 'Awakened'], ['Maître', 'Master'], ['Grand maître', 'Grand master'], ['Légende céleste', 'Celestial legend']],
   };
   const gradeTable = () => {
@@ -4921,6 +4922,9 @@
     modern: [
       ['Recrue', 'Recruit', '🪖'], ['Soldat', 'Soldier', '🎒'], ['Caporal', 'Corporal', '🎖️'], ['Sergent', 'Sergeant', '📡'], ['Pilote de drone', 'Drone pilot', '🛸'], ['Tankiste', 'Tank commander', '🛡️'], ['Pilote d’hélicoptère', 'Helicopter pilot', '🚁'], ['Pilote de chasse', 'Fighter pilot', '✈️'], ['Colonel', 'Colonel', '⭐'], ['Général', 'General', '👑'],
     ],
+    sabres: [
+      ['Ashigaru', 'Ashigaru', '🌾'], ['Porte-fanion', 'Banner bearer', '🎏'], ['Samouraï', 'Samurai', '⚔️'], ['Bretteur aux deux sabres', 'Two-sword duelist', '🗡️'], ['Cavalier', 'Horseman', '🐎'], ['Colosse', 'Colossus', '🛡️'], ['Onna-musha', 'Onna-musha', '🌸'], ['Capitaine du château', 'Castle captain', '🏯'], ['Daimyō', 'Daimyo', '🌙'], ['Shōgun', 'Shogun', '👑'],
+    ],
     auras: [
       ['Novice du Temple', 'Temple novice', '🙏'], ['Disciple', 'Disciple', '🥋'], ['Aura naissante', 'Budding aura', '✨'], ['Combattant du ciel', 'Sky fighter', '☁️'], ['Vol maîtrisé', 'Mastered flight', '🌠'], ['Rayon chargé', 'Charged beam', '⚡'], ['Éveillé', 'Awakened', '🔥'], ['Gardien de l’Arène', 'Arena guardian', '🏟️'], ['Maître des auras', 'Aura master', '💫'], ['Légende céleste', 'Celestial legend', '🌌'],
     ],
@@ -4943,7 +4947,7 @@
     { name: L('Palmier tropical', 'Tropical palm'), icon: '🌴' }, { name: L('Grand baobab', 'Great baobab'), icon: '🌳' },
   ];
   const NATURE_PREVIEW_ALL_UNLOCKED = true;
-  const HOME_BACKGROUNDS = ['ninjas', 'ocean', 'plants', 'land', 'birds', 'ancient', 'modern', 'auras', 'kingdom', 'wood']; // images dans fond_ecran/
+  const HOME_BACKGROUNDS = ['ninjas', 'ocean', 'plants', 'land', 'birds', 'ancient', 'modern', 'auras', 'sabres', 'kingdom', 'wood']; // images dans fond_ecran/
   const HOME_BACKGROUND_IMAGES = { kingdom: 'fond_ecran/kingdom.png', wood: 'fond_ecran/wood.png' };
   const NATURE_COLLECTIONS = [
     { id: 'plants', name: L('Plantes', 'Plants'), icon: '🌱', unlockGrade: 1, items: GARDEN_PLANTS },
@@ -4965,6 +4969,9 @@
     { id: 'auras', name: L('Saga des Auras', 'Saga of Auras'), icon: '💫', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 9, items: [
       ['Temple Azur', 'Azure Temple', '🛕'], ['Première aura', 'First aura', '✨'], ['Premier vol', 'First flight', '☁️'], ['Onde d’énergie', 'Energy wave', '🌊'], ['Rochers flottants', 'Floating rocks', '🪨'], ['Rayon chargé', 'Charged beam', '⚡'], ['Éveil', 'Awakening', '🔥'], ['Arène du Ciel', 'Sky Arena', '🏟️'], ['Empire de l’Ombre', 'Shadow Empire', '🌑'], ['Ordre du Ciel Azur', 'Azure Sky Order', '🌌'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
+    { id: 'sabres', name: L('L’Âge des Sabres', 'Age of Sabres'), icon: '⚔️', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 9, items: [
+      ['Cour du château', 'Castle courtyard', '🏯'], ['Ashigaru', 'Ashigaru', '🌾'], ['Fanion du clan', 'Clan banner', '🎏'], ['Katana', 'Katana', '🗡️'], ['Cheval de guerre', 'War horse', '🐎'], ['Armure laquée', 'Lacquered armor', '🛡️'], ['Cerisier en fleur', 'Cherry blossom', '🌸'], ['Lune Pourpre', 'Crimson Moon', '🌙'], ['Clan Kurokane', 'Kurokane clan', '🌑'], ['Clan Hakuro', 'Hakuro clan', '🕊️'],
+    ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
     { id: 'ninjas', name: L('Ninjas', 'Ninjas'), icon: '🥷', unlockGrade: 1, items: [
       ['Étudiant de l’Académie', 'Academy student', '📜'], ['Genin', 'Genin', '🥷'], ['Genin confirmé', 'Senior Genin', '🌀'], ['Chûnin', 'Chunin', '🎯'], ['Chûnin d’élite', 'Elite Chunin', '⚔️'], ['Jônin', 'Jonin', '🛡️'], ['Jônin spécial', 'Special Jonin', '🥷'], ['ANBU', 'ANBU', '🎭'], ['Kage', 'Kage', '🏯'], ['Hokage', 'Hokage', '👑'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
@@ -4977,13 +4984,13 @@
   ];
   // Progression visuelle : du déplacement le plus sobre aux animations de combat les plus spectaculaires.
   // Le monde Ninjas reste sélectionné par défaut, même s’il arrive en dernier dans ce parcours.
-  const NATURE_COLLECTION_ORDER = ['wood', 'kingdom', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern', 'auras', 'ninjas'];
+  const NATURE_COLLECTION_ORDER = ['wood', 'kingdom', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern', 'auras', 'sabres', 'ninjas'];
   NATURE_COLLECTIONS.sort((a, b) => NATURE_COLLECTION_ORDER.indexOf(a.id) - NATURE_COLLECTION_ORDER.indexOf(b.id));
   // Saison mensuelle : chaque mois, un thème est à l'honneur (récompenses ×1,5 quand on joue avec lui)
   const SEASON_BONUS = 1.5;
   const seasonTheme = (d = new Date()) => NATURE_COLLECTION_ORDER[(d.getFullYear() * 12 + d.getMonth()) % NATURE_COLLECTION_ORDER.length];
   const seasonMonth = (d = new Date()) => d.toLocaleDateString(LOCALE, { month: 'long' });
-  const BUILT_NATURE_COLLECTION_IDS = new Set(['plants', 'land', 'birds', 'ocean', 'ninjas', 'ancient', 'modern', 'auras', 'kingdom', 'wood']);
+  const BUILT_NATURE_COLLECTION_IDS = new Set(['plants', 'land', 'birds', 'ocean', 'ninjas', 'ancient', 'modern', 'auras', 'sabres', 'kingdom', 'wood']);
   const AVAILABLE_NATURE_COLLECTIONS = NATURE_COLLECTIONS.filter((item) => BUILT_NATURE_COLLECTION_IDS.has(item.id));
   if (!store.get('natureNinjaDefaultMigrated', false)) {
     const previousCollection = store.get('natureCollection', null);
@@ -5006,6 +5013,7 @@
     ancient: ['steppe', 'steppe', 'desert', 'desert', 'steppe', 'rock', 'rock', 'desert', 'desert', 'steppe'],
     modern: ['steppe', 'mud', 'mud', 'rock', 'rock', 'desert', 'desert', 'mud', 'rock', 'steppe'],
     auras: Array(10).fill('arena'),
+    sabres: Array(10).fill('castle'),
   };
   const NATURE_WEATHER_PATH = ['sun', 'sunwind', 'cloudy', 'sun', 'drizzle', 'sunwind', 'cloudy', 'sunset', 'sunwind', 'sun'];
   function natureTerrainForGrade() {
@@ -5014,6 +5022,7 @@
     return path[Math.max(0, Math.min(path.length - 1, rank - 1))];
   }
   function natureWeatherForGrade() {
+    if (activeNatureCollection === 'sabres') return 'sunset'; // la cour du château est toujours au crépuscule
     const rank = adventureGrade(levelOf(walletState().xp).level);
     return NATURE_WEATHER_PATH[Math.max(0, Math.min(NATURE_WEATHER_PATH.length - 1, rank - 1))];
   }
@@ -5025,6 +5034,7 @@
     if (activeNatureCollection === 'ninjas') return { key: 'wheat', icon: '🪙', name: L('Pièces d’or', 'Gold coins'), unit: L('pièces d’or', 'gold coins') };
     if (activeNatureCollection === 'ancient') return { key: 'wheat', icon: '🏺', name: L('Sesterces', 'Sesterces'), unit: L('sesterces', 'sesterces') };
     if (activeNatureCollection === 'modern') return { key: 'wheat', icon: '🎖️', name: L('Médailles', 'Medals'), unit: L('médailles', 'medals') };
+    if (activeNatureCollection === 'sabres') return { key: 'wheat', icon: '🪙', name: L('Koku de riz', 'Koku of rice'), unit: L('koku de riz', 'koku of rice') };
     if (activeNatureCollection === 'auras') return { key: 'wheat', icon: '💠', name: L('Éclats d’aura', 'Aura shards'), unit: L('éclats d’aura', 'aura shards') };
     if (activeNatureCollection === 'land') {
       const item = NATURE_COLLECTIONS.find((entry) => entry.id === 'land').items[Math.max(0, Math.min(9, grade - 1))];
@@ -5159,6 +5169,7 @@
     ocean: [['ocean-1', L('Explorateur du rivage', 'Shore explorer')], ['ocean-2', L('Gardien du récif', 'Reef guardian')], ['ocean-3', L('Protecteur du lagon', 'Lagoon protector')], ['ocean-4', L('Maître des mers', 'Master of the seas')], ['ocean-5', L('Gardien de la baleine', 'Whale guardian')]],
     ancient: [['ancient-1', L('Légionnaire', 'Legionary')], ['ancient-2', L('Centurion', 'Centurion')], ['ancient-3', L('Maître des machines', 'Siege master')], ['ancient-4', L('Général', 'General')], ['ancient-5', L('Empereur', 'Emperor')]],
     modern: [['modern-1', L('Soldat', 'Soldier')], ['modern-2', L('Sergent', 'Sergeant')], ['modern-3', L('Tankiste', 'Tank commander')], ['modern-4', L('Pilote de chasse', 'Fighter pilot')], ['modern-5', L('Général', 'General')]],
+    sabres: [['sabres-1', L('Samouraï', 'Samurai')], ['sabres-2', L('Bretteur', 'Swordsman')], ['sabres-3', L('Capitaine', 'Captain')], ['sabres-4', L('Daimyō', 'Daimyo')], ['sabres-5', L('Shōgun', 'Shogun')]],
     auras: [['auras-1', L('Disciple', 'Disciple')], ['auras-2', L('Combattant du ciel', 'Sky fighter')], ['auras-3', L('Éveillé', 'Awakened')], ['auras-4', L('Maître des auras', 'Aura master')], ['auras-5', L('Légende céleste', 'Celestial legend')]],
     ninjas: [['ecuyer', L('Genin', 'Genin')], ['chevalier', L('Chûnin', 'Chunin')], ['seigneur', L('Jônin', 'Jonin')], ['vizir', L('Kage', 'Kage')], ['roi', L('Hokage', 'Hokage')]],
     kingdom: [['kingdom-1', L('Petit poussin', 'Little chick')], ['kingdom-2', L('Jeune singe', 'Young monkey')], ['kingdom-3', L('Gardien de la savane', 'Savanna guardian')], ['kingdom-4', L('Protecteur du royaume', 'Kingdom protector')], ['kingdom-5', L('Roi des animaux', 'King of the animals')]],
@@ -5173,6 +5184,7 @@
     ancient: ['🛡️', '⚔️', '🏹', '🦅', '👑'],
     modern: ['🪖', '📡', '🛡️', '✈️', '⭐'],
     auras: ['🥋', '☁️', '🔥', '💫', '🌌'],
+    sabres: ['🗡️', '⚔️', '🛡️', '🌙', '🏯'],
     kingdom: ['🐥', '🐒', '🦒', '🐘', '🦁'],
     wood: ['♟️', '♙', '♝', '♜', '👑'],
   };
@@ -5276,6 +5288,7 @@
       ocean: [L('Ton lagon s’éveille', 'Your lagoon awakens'), L('Prêt à plonger dans l’océan Indien ?', 'Ready to dive into the Indian Ocean?')],
       ancient: [L('Ta légion se rassemble', 'Your legion gathers'), L('Prêt à conquérir l’Antiquité ?', 'Ready to conquer the ancient world?')],
       modern: [L('Ton bataillon se prépare', 'Your battalion gets ready'), L('Prêt pour la mission ?', 'Ready for the mission?')],
+      sabres: [L('Ton clan se rassemble', 'Your clan gathers'), L('Prêt à défendre le château de Hakuro ?', 'Ready to defend Hakuro castle?')],
       auras: [L('Ton aura s’éveille', 'Your aura awakens'), L('Prêt à monter dans l’Arène du Ciel ?', 'Ready to enter the Sky Arena?')],
     }[collection.id] || [L('Ton aventure continue', 'Your adventure continues'), L('Prêt pour un nouveau défi ?', 'Ready for a new challenge?')];
     $('home-hero-kicker').textContent = HERO[0]; $('home-hero-title').textContent = HERO[1];

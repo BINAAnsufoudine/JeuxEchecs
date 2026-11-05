@@ -334,9 +334,9 @@
         // C'est la pièce qui donne échec (celle qui mate) qui fait l'attaque de mat, même sur un échec à la découverte
         const checkers = window.Chess.pseudoMoves({ ...s, turn: s.turn === 'w' ? 'b' : 'w', ep: -1, castling: '' }).filter((m) => m.to === kingSq).map((m) => m.from);
         let mater = last && checkers.includes(last.to) ? last.to : checkers[0];
-        // Saga des Auras : un mat par pièce. Mat double : la pièce la plus forte. Le roi ne donne jamais échec lui-même :
+        // Saga des Auras, L'Âge des Sabres : un mat par pièce. Mat double : la pièce la plus forte. Le roi ne donne jamais échec lui-même :
         // son mat se joue quand c'est lui qui vient de jouer (mat à la découverte, roque).
-        const aurasMate = window.themeOf && window.themeOf(s.turn === 'w' ? 'k' : 'K') === 'auras';
+        const aurasMate = window.themeOf && ['auras', 'sabres'].includes(window.themeOf(s.turn === 'w' ? 'k' : 'K'));
         const aurasKing = aurasMate && last && s.board[last.to] && s.board[last.to].toLowerCase() === 'k';
         if (aurasMate && checkers.length > 1) mater = [...checkers].sort((a, b) => 'pnbrq'.indexOf(s.board[b].toLowerCase()) - 'pnbrq'.indexOf(s.board[a].toLowerCase()))[0];
         if (aurasKing) mater = last.to;

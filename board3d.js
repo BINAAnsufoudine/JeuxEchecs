@@ -17,6 +17,7 @@
     rock: { name: 'Terrain rocheux', sky: 0xa9afb4, ground: 0x62686b, wood: 0x55483c, frame: ['#8a8175', '#5b544d', '#393735'], squares: ['#d0d0c9', '#777c7e'], kind: 'rock' },
     water: { name: 'Terrain avec flaques', sky: 0x9bbbc1, ground: 0x526f66, wood: 0x59432f, frame: ['#806b50', '#5a4734', '#3d3027'], squares: ['#d0dfd8', '#63827a'], kind: 'water' },
     arena: { name: 'Arène du Ciel', sky: 0x4f8fdc, ground: 0x8ea3cc, wood: 0x6a6684, frame: ['#a7a3b8', '#7a7690', '#4e4b62'], squares: ['#c9c2da', '#5a5284'], kind: 'arena' },
+    castle: { name: 'Cour du château de Hakuro', sky: 0x6a4a6e, ground: 0x6b5f58, wood: 0x4a3324, frame: ['#7a5234', '#553622', '#38241a'], squares: ['#d9b98a', '#5c3a24'], kind: 'castle' },
     beach: { name: 'Plage tropicale', sky: 0x6cc5e8, ground: 0xa88a54, wood: 0x8a6a42, frame: ['#b98d57', '#8a6238', '#5f4226'], squares: ['#ead6a0', '#b98a4c'], kind: 'beach' },
   };
   // overcast : part de gris dans le ciel ; wind : force du vent (pluie penchée, rafales) ; snow : flocons
@@ -48,6 +49,7 @@
     ancient: { w: 'firearrows', b: 'boulder' },
     modern: { w: 'airstrike', b: 'orbital' },
     auras: { w: 'constellation', b: 'nova' },
+    sabres: { w: 'sakura', b: 'lunepourpre' },
   };
   // Couleurs de la mise en scène des mats de thème : [lumière, trace au sol]
   const THEME_MATE_COLORS = {
@@ -57,6 +59,9 @@
     constellation: [0x9fe3ff, 0x16306e], nova: [0xff3d3d, 0x1a0712],
     temple: [0xffffff, 0x16306e], nilocomet: [0x4cc3ff, 0x16306e], dawncross: [0xffd27a, 0x5a4210], fortress: [0x7fd8ff, 0x343a4e], cloudbreath: [0xdff4ff, 0x4a6a9e],
     shadeswarm: [0xc04bff, 0x1a0a2e], bounty: [0xff3d6e, 0x2d2219], lasernet: [0x9ef7ff, 0x2a1636], eruption: [0xff7a1a, 0x2b2326], crystalcomet: [0xc04bff, 0x14101f],
+    sakura: [0xf9d2dc, 0x4a3324], lunepourpre: [0xff3b3b, 0x050305], dragonw: [0xffe066, 0x3a2410], dragonb: [0xb45cff, 0x1a0a2e],
+    fracasw: [0xff8a26, 0x1a100a], fracasb: [0xb45cff, 0x120a1c], arcw: [0xffd27a, 0x3a2410], arcb: [0xc98cff, 0x1a0a2e],
+    ridew: [0xff8a26, 0x3a2410], rideb: [0xb45cff, 0x1a0a2e], lamew: [0xff8a26, 0x3a2410], lameb: [0xb45cff, 0x1a0a2e],
   };
   // Armes propres aux thèmes guerriers, par pièce (w = Blancs, b = Noirs) ; sinon jet ou salve aux couleurs du thème
   const WAR_PROJ = {
@@ -78,6 +83,9 @@
                b: { jet: 0x6d2a12, foam: 0x3e2723, bub: 0x5d4037, charge: 0x8d6e63, boom: [0xff8a65, 0x4e342e, 0x6d4c41], debris: [0x3e2723, 0x757575], burst: [0xff8a65, 0x5d4037, 0x6d4c41], bits: [0x3e2723, 0x757575] } },
     auras: { w: { jet: 0x4cc3ff, foam: 0xffffff, bub: 0x9fe3ff, charge: 0xbfeaff, boom: [0xffffff, 0x4cc3ff, 0xbfeaff], debris: [0x8d94a6, 0xbfeaff], burst: [0xffffff, 0x4cc3ff, 0xbfeaff], bits: [0xbfeaff, 0xffffff] },
              b: { jet: 0xc04bff, foam: 0xff3d6e, bub: 0x7a2bff, charge: 0xe58bff, boom: [0xff3d6e, 0xc04bff, 0x2a1636], debris: [0x2a1636, 0xc04bff], burst: [0xe58bff, 0xc04bff, 0xff3d6e], bits: [0xc04bff, 0xff3d6e] } },
+    // L'Âge des Sabres : le feu orange et or des Blancs, le feu violet des Noirs (pour les ripostes dans les mélanges de thèmes)
+    sabres: { w: { jet: 0xffb13b, foam: 0xfff1a8, bub: 0xff6a1a, charge: 0xfff1a8, boom: [0xfff1a8, 0xffb13b, 0xff6a1a], debris: [0x5c3a24, 0xd9b98a], burst: [0xfff1a8, 0xffb13b, 0xff6a1a], bits: [0x5c3a24, 0xffb13b] },
+              b: { jet: 0xb45cff, foam: 0xead0ff, bub: 0x6a1fd0, charge: 0xead0ff, boom: [0xead0ff, 0xb45cff, 0x6a1fd0], debris: [0x2a2630, 0x8a46a8], burst: [0xead0ff, 0xb45cff, 0x6a1fd0], bits: [0x2a2630, 0xb45cff] } },
     modern: { w: { jet: 0xffd54f, foam: 0xffffff, bub: 0x8d8d7a, charge: 0xfff59d, boom: [0xfff1a8, 0xff6d00, 0xffc34d], debris: [0x5d5d5d, 0xffb74d], burst: [0xfff1a8, 0xff9100, 0xbdbdbd], bits: [0x616161, 0xffcc80] },
               b: { jet: 0x37474f, foam: 0xb0bec5, bub: 0x37474f, charge: 0x78909c, boom: [0xffab40, 0x263238, 0x546e7a], debris: [0x263238, 0xff6d00], burst: [0xffab40, 0x37474f, 0x546e7a], bits: [0x263238, 0xff9100] } },
   }; // à distance : la cible tire d'abord sa propre technique sur l'attaquant
@@ -85,6 +93,10 @@
 const AURA_MATE = { P: 'temple', N: 'nilocomet', B: 'dawncross', R: 'fortress', Q: 'constellation', K: 'cloudbreath', p: 'shadeswarm', n: 'bounty', b: 'lasernet', r: 'eruption', q: 'nova', k: 'crystalcomet' };
 const AURA_PROJ = new Set(['disc', 'darkfire', 'burst', 'hook', 'slash', 'crosslaser', 'shield', 'magma', 'wave', 'mirror', 'breath', 'gravity']);
 const AURA_BEAMS = { wave: { r: 0.08, off: [0] }, mirror: { r: 0.03, off: [-0.5, 0.5] }, crosslaser: { r: 0.018, off: [-0.16, 0.16] } }; // off : écart de chaque rayon au départ
+// L'Âge des Sabres : un mat par pièce (celle qui donne le mat) ; le roi a le mat de son camp. [instant du coup, durée]
+const SABRE_MATE = { P: 'lamew', N: 'ridew', B: 'arcw', R: 'fracasw', Q: 'dragonw', K: 'sakura', p: 'lameb', n: 'rideb', b: 'arcb', r: 'fracasb', q: 'dragonb', k: 'lunepourpre' };
+const SABRE_STYLES = new Set(Object.values(SABRE_MATE));
+const SABRE_MATE_TIME = { sakura: [3, 5.2], lunepourpre: [3, 5.4], dragonw: [4, 7.6], dragonb: [4, 7.6], fracasw: [4.2, 6.2], fracasb: [4.2, 6.2], arcw: [3, 5.6], arcb: [3, 5.6], ridew: [4.6, 6.6], rideb: [4.6, 6.6], lamew: [2.9, 5], lameb: [2.9, 5] };
 const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
@@ -258,6 +270,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         c.fillStyle = polish; c.fillRect(x, y, cell, cell);
         c.strokeStyle = 'rgba(35,24,15,0.12)'; c.lineWidth = 2;
         c.strokeRect(x + 1, y + 1, cell - 2, cell - 2);
+        if (terrain && terrain.kind === 'castle') { // planches de cèdre
+          c.strokeStyle = 'rgba(30,16,8,0.32)'; c.lineWidth = 1.2;
+          for (let i = 1; i < 4; i++) { c.beginPath(); c.moveTo(x + 2, y + i * cell / 4); c.lineTo(x + cell - 2, y + i * cell / 4); c.stroke(); }
+          c.strokeStyle = 'rgba(255,230,190,0.08)'; for (let i = 0; i < 7; i++) { const yy = y + ((i * 37 + r * 11 + f * 7) % 100) / 100 * cell; c.beginPath(); c.moveTo(x + 3, yy); c.bezierCurveTo(x + cell * 0.3, yy + 2, x + cell * 0.6, yy - 2, x + cell - 3, yy + 1); c.stroke(); }
+        }
         const piece = board[r * 8 + f];
         if (piece) {
           const white = piece === piece.toUpperCase();
@@ -491,6 +508,51 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (night > 0) { this.sun.intensity *= 1 - 0.7 * night; this.hemi.intensity *= 1 - 0.45 * night; }
     }
 
+    // Cour du château de Hakuro : donjon à toits superposés au fond, murs d'enceinte, lanternes de pierre, cerisiers en fleur.
+    // Le donjon reste à l'arrière-plan quel que soit le côté d'où l'on regarde.
+    buildCastleCourt(add, mat, moundGeo) {
+      const T = this.THREE, stone = mat(0x6d6a68), stoneDark = mat(0x57524f), plaster = mat(0xece6da), roof = mat(0x2b2a33, { roughness: 0.6, flatShading: true }), gold = mat(0xc9a24a, { metalness: 0.6, roughness: 0.35 }), timber = mat(0x3a2620);
+      const box = new T.BoxGeometry(1, 1, 1), trunk = new T.CylinderGeometry(0.12, 0.22, 1, 7);
+      // soubassement de pierre et cinq étages, chacun coiffé d'un toit à quatre pans
+      const pivot = new T.Group(), keep = new T.Group(); pivot.add(keep); keep.position.set(0, -0.25, -10.1); keep.scale.setScalar(0.6); this.terrainGroup.add(pivot);
+      const part = (...o) => { const m = add(...o); keep.add(m); return m; };
+      const base = part(new T.CylinderGeometry(4.6, 6, 2.6, 4), stone, 0, 1.3, 0); base.rotation.y = Math.PI / 4;
+      const floors = [[6.2, 1.9], [5, 1.7], [3.9, 1.5], [2.8, 1.4], [1.9, 1.2]];
+      let y = 2.6;
+      floors.forEach(([w, h], i) => {
+        part(box, plaster, 0, y + h / 2, 0, w, h, w);
+        const windows = i > 2 ? 3 : 4;
+        for (let n = 0; n < windows; n++) part(box, timber, -w / 2 + (n + 0.5) * w / windows, y + h * 0.55, w / 2 + 0.01, 0.34, 0.5, 0.04, false);
+        const eave = part(new T.CylinderGeometry(w * 0.36, w * 0.95, 0.9, 4), roof, 0, y + h + 0.4, 0); eave.rotation.y = Math.PI / 4;
+        part(box, gold, 0, y + h + 0.0, w * 0.68, w * 0.98, 0.06, 0.06, false);
+        y += h + 0.68;
+      });
+      for (const s of [-1, 1]) { const f = part(new T.ConeGeometry(0.16, 0.7, 6), gold, s * 0.55, y + 0.05, 0); f.rotation.z = s * 0.5; }
+      this.castleKeep = pivot; // il tourne avec la vue : toujours au fond, jamais entre la caméra et les pièces
+      // murs d'enceinte, blancs à chaperon sombre
+      for (const [x, z, w, d] of [[-8.5, -11.5, 8, 0.45], [8.5, -11.5, 8, 0.45], [-12.5, 0, 0.45, 23], [12.5, 0, 0.45, 23], [-8.5, 11.5, 8, 0.45], [8.5, 11.5, 8, 0.45]]) {
+        add(box, stoneDark, x, -0.25, z, w + 0.1, 0.5, d + 0.1, false);
+        add(box, plaster, x, 0.45, z, w, 1, d);
+        add(box, roof, x, 1.05, z, w + 0.34, 0.2, d + 0.34);
+      }
+      // lanternes de pierre : pied, foyer allumé, toit
+      const flame = new T.MeshBasicMaterial({ color: 0xffcf7a }), halo = this.glow(0xffb45e, 0.09);
+      for (const [x, z] of [[-6.6, -5.2], [6.6, -5.2], [-6.6, 5.2], [6.6, 5.2]]) {
+        add(trunk, stone, x, -0.05, z);
+        add(box, stone, x, 0.5, z, 0.62, 0.1, 0.62);
+        add(box, flame, x, 0.75, z, 0.3, 0.38, 0.3, false);
+        add(new T.CylinderGeometry(0.08, 0.56, 0.3, 6), stoneDark, x, 1.1, z);
+        add(new T.SphereGeometry(0.75, 12, 8), halo, x, 0.8, z, 1, 1, 1, false);
+      }
+      // cerisiers en fleur
+      const bark = mat(0x3a2620), blossom = [mat(0xf4b6c6, { roughness: 1 }), mat(0xeaa0b6, { roughness: 1 }), mat(0xf9d2dc, { roughness: 1 })];
+      for (const [x, z, s] of [[-8.6, -7.2, 1.35], [8.8, -6.4, 1.15], [-9.2, 7, 1], [9.4, 6.8, 0.9]]) {
+        add(trunk, bark, x, 0.55, z, s * 1.3, s * 2.2, s * 1.3);
+        for (const k of [-1, 1]) { const b = add(trunk, bark, x + k * 0.5 * s, 1.7 * s, z, s * 0.6, s * 1.5, s * 0.6); b.rotation.z = -k * 0.8; }
+        for (let i = 0; i < 16; i++) { const a = i * 2.4, r = (0.4 + (i % 4) * 0.42) * s; add(moundGeo, blossom[i % 3], x + Math.cos(a) * r, (1.9 + (i % 5) * 0.34) * s, z + Math.sin(a) * r, 1.5 * s, 1.1 * s, 1.5 * s); }
+      }
+    }
+
     // Animaux du décor : ceux qui représentent le mieux chaque paysage se promènent, sautent, volent ou nagent autour du plateau
     // Arène du Ciel : rochers qui flottent lentement autour de l'arène
     buildSkyRocks() {
@@ -505,12 +567,22 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
     }
 
+    // Cour du château : pétales de cerisier emportés par le vent
+    buildPetals() {
+      const T = this.THREE, geo = new T.PlaneGeometry(0.11, 0.075), tints = [0xf4b6c6, 0xeaa0b6, 0xfbe0e7].map((color) => new T.MeshBasicMaterial({ color, side: T.DoubleSide, transparent: true, opacity: 0.92 }));
+      for (let i = 0; i < 70; i++) {
+        const g = new T.Mesh(geo, tints[i % 3]); this.animalGroup.add(g);
+        this.animals.push({ g, behave: 'petal', x: (i * 37 % 100) / 100 * 28, y: (i * 53 % 100) / 100 * 7, z: (i * 71 % 100) / 100 * 22 - 11, sp: 0.5 + (i % 5) * 0.16, phase: i * 1.3 });
+      }
+    }
+
     buildAnimals(terrain) {
       const T = this.THREE;
       if (!this.animalGroup) { this.animalGroup = new T.Group(); this.animalGroup.position.y = GROUND + 0.535; this.scene.add(this.animalGroup); }
       this.animalGroup.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
       this.animalGroup.clear();
       this.animals = [];
+      if (terrain.kind === 'castle') { this.buildPetals(); return; } // pétales de cerisier dans le vent du soir
       if (terrain.kind === 'arena') { this.buildSkyRocks(); return; } // pas d'animaux dans le ciel : des rochers flottants
       const mat = (color) => new T.MeshStandardMaterial({ color, roughness: 0.85 });
       const mesh = (geo, m, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => { const o = new T.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.castShadow = true; return o; };
@@ -660,8 +732,15 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     tickAnimals(t, dt) {
       if (!this.animals || !this.animals.length || !this.animalGroup.visible) return;
       const groundY = -0.535;
+      if (this.castleKeep) this.castleKeep.rotation.y = this.viewYaw();
       for (const a of this.animals) {
         const g = a.g;
+        if (a.behave === 'petal') {
+          a.x = (a.x + dt * a.sp * 1.1) % 28; a.y -= dt * a.sp * 0.28; if (a.y < 0.05) a.y = 7;
+          g.position.set(a.x - 14, a.y + Math.sin(t * 1.3 + a.phase) * 0.14, a.z + Math.sin(t * 0.6 + a.phase) * 0.6);
+          g.rotation.set(t * 1.7 + a.phase, t * 1.1 + a.phase, 0);
+          continue;
+        }
         if (a.behave === 'float') {
           a.ang += dt * 0.012;
           g.position.set(Math.cos(a.ang) * a.r, a.y + Math.sin(t * 0.5 + a.phase) * 0.28, Math.sin(a.ang) * a.r);
@@ -707,7 +786,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       g.fillStyle = col(0); g.fillRect(0, 0, 512, 512);
       // grain de fond
       for (let i = 0; i < 2600; i++) { g.fillStyle = col((rnd() - 0.5) * 0.12, 0.5); g.fillRect(rnd() * 512, rnd() * 512, 2 + rnd() * 4, 2 + rnd() * 4); }
-      if (k === 'arena') { // mer de nuages sous l'arène
+      if (k === 'castle') { // cour de terre battue, gravier ratissé et dalles de pierre
+        for (let i = 0; i < 2200; i++) { g.fillStyle = col((rnd() - 0.5) * 0.16, 0.7); g.fillRect(rnd() * 512, rnd() * 512, 1 + rnd() * 2.4, 1 + rnd() * 2.4); }
+        g.lineWidth = 1; for (let y = 6; y < 512; y += 13) { g.strokeStyle = 'rgba(40,26,20,0.14)'; g.beginPath(); for (let x = 0; x <= 512; x += 16) g.lineTo(x, y + Math.sin(x * 0.03 + y) * 2); g.stroke(); }
+        for (let i = 0; i < 26; i++) { const x = rnd() * 512, y = rnd() * 512, w = 26 + rnd() * 34, h = 18 + rnd() * 22; g.fillStyle = 'rgba(120,108,104,0.42)'; g.fillRect(x, y, w, h); g.strokeStyle = 'rgba(30,20,18,0.35)'; g.strokeRect(x, y, w, h); }
+      } else if (k === 'arena') { // mer de nuages sous l'arène
         for (let i = 0; i < 150; i++) { const x = rnd() * 512, y = rnd() * 512, r = 18 + rnd() * 48, a = g.createRadialGradient(x, y, 1, x, y, r); a.addColorStop(0, rnd() < 0.7 ? 'rgba(235,242,252,0.6)' : 'rgba(150,178,220,0.6)'); a.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = a; g.fillRect(x - r, y - r, r * 2, r * 2); }
       } else if (k === 'forest' || k === 'grass') {
         for (let i = 0; i < 1800; i++) { const x = rnd() * 512, y = rnd() * 512; g.strokeStyle = col(0.04 + rnd() * 0.12, 0.8); g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 4, y - 5 - rnd() * 6); g.stroke(); }
@@ -748,7 +831,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         g.lineTo(2048, 512); g.fill();
       };
       const ground = new T.Color(terrain.ground), shade = (dl, h = 0) => hex(ground.clone().offsetHSL(h, 0, dl).lerp(sky, 0.35 - dl));
-      if (k === 'arena') { // horizon de nuages et rochers flottants au loin
+      if (k === 'castle') { // collines au crépuscule, pins sombres et murailles lointaines
+        ridge('#6a4560', 350, 90, 0.004, 0.7); ridge('#4e3350', 400, 70, 0.007, 2.1);
+        for (let x = 0; x < 2048; x += 34) { const h = 34 + (x * 13 % 26), y = 430 - Math.sin(x * 0.01) * 16; g.fillStyle = '#2f2238'; g.beginPath(); g.moveTo(x - 18, y); g.lineTo(x, y - h); g.lineTo(x + 18, y); g.fill(); }
+        ridge('#3a2838', 462, 28, 0.012, 0.4);
+      } else if (k === 'arena') { // horizon de nuages et rochers flottants au loin
         for (let i = 0; i < 26; i++) { const x = rnd() * 2048, y = 90 + rnd() * 170, s = 16 + rnd() * 34; g.fillStyle = '#7f8db0'; g.beginPath(); g.moveTo(x - s, y); g.lineTo(x + s, y); g.lineTo(x + s * 0.3, y + s * 1.2); g.lineTo(x - s * 0.4, y + s * 0.8); g.fill(); g.fillStyle = '#dfe7f4'; g.fillRect(x - s, y - 3, s * 2, 4); }
         for (let i = 0; i < 70; i++) { const x = rnd() * 2048, y = 370 + rnd() * 130, r = 30 + rnd() * 70; g.fillStyle = i % 3 ? 'rgba(255,255,255,0.82)' : 'rgba(205,222,245,0.8)'; g.beginPath(); g.ellipse(x, y, r * 1.8, r * 0.6, 0, 0, 7); g.fill(); }
       } else if (k === 'rock') { ridge('#8d939a', 360, 180, 0.006, 1.3); ridge('#6c7277', 410, 120, 0.011, 2.1); ridge(shade(0), 460, 50, 0.02, 0.4); }
@@ -782,6 +869,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => oldMat.add(m));
       });
       this.terrainGroup.clear();
+      this.castleKeep = null;
       oldGeo.forEach((g) => g.dispose()); oldMat.forEach((m) => m.dispose());
 
       const mat = (color, extra = {}) => new T.MeshStandardMaterial({ color, roughness: 0.94, ...extra });
@@ -835,8 +923,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       for (let i = 0; i < points.length; i++) {
         // devant et derrière le plateau, le décor est reculé pour ne pas cacher les pièces (le sol est au ras du plateau)
         const x = points[i][0], z = points[i][1] * (Math.abs(points[i][1]) > 5 ? 1.35 : 1), jitter = (i % 3) * 0.16;
-        if (terrain.kind === 'arena') {
-          // rien sur la mer de nuages : les dalles et bornes sont posées plus bas
+        if (terrain.kind === 'arena' || terrain.kind === 'castle') {
+          // rien sur la mer de nuages ; la cour du château est bâtie plus bas : les dalles et bornes sont posées plus bas
         } else if (terrain.kind === 'beach') {
           add(moundGeo, sand, x, -0.32, z, 1.7, 0.3, 1);
           if (i % 4 === 0) palm(x, z, (i % 8 === 0 ? 1 : -1) * 0.12);
@@ -891,6 +979,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           add(moundGeo, cloud, Math.cos(a) * r, -0.5, Math.sin(a) * r, 3.4 + i % 3, 1 + (i % 2) * 0.5, 2.4 + i % 2, false);
         }
       }
+      if (terrain.kind === 'castle') this.buildCastleCourt(add, mat, moundGeo);
       if (terrain.id === 'dojo') {
         const vermilion = mat(0x9e352c), darkWood = mat(0x38251f);
         const post = new T.BoxGeometry(0.2, 1.45, 0.2), crossbar = new T.BoxGeometry(3.1, 0.2, 0.3), lintel = new T.BoxGeometry(3.45, 0.22, 0.38);
@@ -1245,7 +1334,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           const ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
           const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); this.auraOnFall(v, b, o.t0, m.piece); } };
           const theme = root.themeOf(white ? 'K' : 'k'), themeFx = THEME_FX[theme], ocean = !!themeFx;
-          if (ocean && far && m.flag !== 'ep') {
+          if (root.themeOf(m.piece) === 'sabres') {
+            // L'Âge des Sabres : chaque pièce a son attaque, de près comme de loin
+            knightAttack = this.sabreAttack(kind, white, a, b, this.sqToPos(m.to), v, now, len, { x: ux, z: uz });
+            die({ t0: now + knightAttack.duration, knightAttack });
+          } else if (ocean && far && m.flag !== 'ep') {
             // Thèmes de créatures : jet (tour, dame) ou salve (cavalier, fou), aux couleurs du thème :
             // eau et encre (océan), liane et épines (plantes), sable et cailloux (animaux), plumes (oiseaux)
             const jet = kind === 'q' || kind === 'r';
@@ -1426,8 +1519,9 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         if (this.mateUltimate && THEME_MATE[root.themeOf(o.mateUltimate.piece)]) {
           const white = o.mateUltimate.piece === o.mateUltimate.piece.toUpperCase();
           const mateTheme = root.themeOf(o.mateUltimate.piece);
-          this.mateUltimate.themed = mateTheme === 'auras' ? AURA_MATE[o.mateUltimate.piece] : THEME_MATE[mateTheme][white ? 'w' : 'b'];
+          this.mateUltimate.themed = mateTheme === 'auras' ? AURA_MATE[o.mateUltimate.piece] : mateTheme === 'sabres' ? SABRE_MATE[o.mateUltimate.piece] : THEME_MATE[mateTheme][white ? 'w' : 'b'];
           this.mateUltimate.duration = 4.8;
+          if (mateTheme === 'sabres') [this.mateUltimate.hitAt, this.mateUltimate.duration] = SABRE_MATE_TIME[this.mateUltimate.themed];
         }
         if (this.mateUltimate) {
           this.makeMateUltimateFx(this.mateUltimate);
@@ -2194,6 +2288,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     tickMateUltimate(c, t, M) {
       const T = this.THREE;
       const u = this.mateUltimate;
+      if (u && t >= u.start && u.sabre && u.sabre.swept && u.sabre.swept.has(c)) return this.tickSabreSwept(c, t, M, u);
       if (!u || t < u.start || (c !== u.actor && c !== u.king)) return false;
       if (u.themed) return this.tickThemeMate(c, t, M, u);
       const kind = u.piece.toLowerCase(), e = t - u.start, target = u.target;
@@ -2738,6 +2833,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2 + Math.random() * 0.3, crack = at(new T.Mesh(new T.BoxGeometry(0.06, 0.02, 1.4 + Math.random() * 1.4), basic(0xff3d6e, 0.95)), Math.cos(a) * 1, 0.02, Math.sin(a) * 1); crack.rotation.y = -a + Math.PI / 2; keep(crack, { crack: true }); }
       } else if (Object.values(AURA_MATE).includes(style) && style !== 'constellation' && style !== 'nova') {
         this.makeAuraMate(u, at, keep, basic, std);
+      } else if (SABRE_STYLES.has(style)) {
+        this.makeSabreMate(u, at, keep, basic, std);
       } else if (style === 'orbital') {
         u.target3 = at(new T.Mesh(new T.RingGeometry(0.5, 0.62, 32), basic(0xff1744, 0.9)), 0, 0.04, 0); u.target3.rotation.x = -Math.PI / 2;
         u.beam = at(new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 30, 20, 1, true), new T.MeshBasicMaterial({ color: 0xff1744, transparent: true, opacity: 0.8, blending: T.AdditiveBlending, depthWrite: false })), 0, 15, 0);
@@ -2753,7 +2850,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       // et laisse une trace sur la case du roi.
       const tint = THEME_MATE_COLORS[style] || [0xffffff, 0x888888];
       u.tint = tint;
-      if (Object.values(AURA_MATE).includes(style) && style !== 'constellation') u.flash.material.color.setHex(tint[0]);
+      if ((Object.values(AURA_MATE).includes(style) && style !== 'constellation') || SABRE_STYLES.has(style)) u.flash.material.color.setHex(tint[0]);
       const A = this.sqToPos(u.attackerTo);
       u.pillar = new T.Mesh(new T.CylinderGeometry(0.42, 0.55, 6, 24, 1, true), new T.MeshBasicMaterial({ color: tint[0], transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
       u.pillar.position.set(A.x, 3, A.z); g.add(u.pillar);
@@ -2775,7 +2872,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const T = this.THREE, e = t - u.start, P = u.target, style = u.themed;
       const clamp = (x) => Math.max(0, Math.min(1, x));
       const smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
-      const hit = 3.0, after = e - hit;
+      const hit = u.hitAt || 3.0, after = e - hit;
+      if (SABRE_STYLES.has(style)) return this.tickSabreMate(c, t, M, u, hit);
       if (c === u.actor) {
         c.anim = null; c.holder.position.set(u.fromPos.x, 0, u.fromPos.z);
         M.animate(c.parts, t, e < hit ? 'cast' : 'victory', e < hit ? clamp(e / 0.6) : 1);
@@ -2896,6 +2994,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         }
       } else if (Object.values(AURA_MATE).includes(style) && style !== 'constellation' && style !== 'nova') {
         this.tickAuraMate(u, t, e, clamp, smooth, hit, after);
+      } else if (SABRE_STYLES.has(style)) {
+        this.tickSabreMateFx(u, t, e, clamp, smooth, hit, after);
       } else if (style === 'orbital') {
         const lock = smooth((e - 0.4) / 1.2);
         u.target3.scale.setScalar(2.5 - lock * 1.5); u.target3.rotation.z = t * 3; u.target3.visible = after < 0.6;
@@ -3168,6 +3268,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (!u) return;
       if (u.apocalypse) this.restoreFoxWorld(u);
       if (u.themed) this.skyDim = 0; // le ciel assombri par un mat de thème revient
+      if (u.sabre) this.endSabreMate(u);
       if (u.hiddenEnemies) u.hiddenEnemies.forEach(([piece, visible]) => { piece.holder.visible = visible; });
       if (u.flameVictims) u.flameVictims.forEach((victim) => {
         victim.character.holder.visible = victim.visible;
@@ -3968,6 +4069,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
 
     tickKnightAttack(c, a, el, t, M) {
+      if (a.sabre) { this.tickSabreAttack(c, a, el, t, M); return; }
       if (a.style === 'chidori') { this.tickChidori(c, a, el, t, M); return; }
       if (a.style === 'orb') { this.tickOrb(c, a, el, t, M); return; }
       if (a.style === 'fireroll') { this.tickFireroll(c, a, el, t, M); return; }
@@ -5129,6 +5231,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
     tickKnightVictim(d, t, M) {
       const a = d.knightAttack, c = d.c, el = t - a.start;
+      if (a.sabre) return this.tickSabreVictim(d, a, c, el, t, M);
       if (a.style === 'chidori') return this.tickChidoriVictim(d, a, c, el, t, M);
       if (a.style === 'orb') return this.tickOrbVictim(d, a, c, el, t, M);
       if (a.style === 'fireroll') return this.tickFirerollVictim(d, a, c, el, t, M);
@@ -5548,6 +5651,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (!s) return;
       if (s.sky && s.style === 'flameline') { this.renderer.toneMappingExposure = s.sky.exposure; s.sky = null; }
       if (s.expo != null) { this.renderer.toneMappingExposure = s.expo; s.expo = null; }
+      if (s.sabreRestore) { s.sabreRestore(); s.sabreRestore = null; }
       if (s.sky) this.restoreSky(s);
       for (const o of s.fx || []) {
         this.scene.remove(o);
@@ -6036,6 +6140,647 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (!s.auraGlow) s.auraGlow = this.fx(s, new T.Mesh(new T.SphereGeometry(0.1, 12, 8), this.glow(s.pal.charge, 0.8)));
       if (c.parts.muzzle) { c.holder.updateMatrixWorld(true); c.parts.muzzle.getWorldPosition(s.auraGlow.position); } else s.auraGlow.position.copy(this.handsOf(c));
       s.auraGlow.scale.setScalar(0.3 + (el / s.fire) * 1.5);
+    }
+
+    /* L'Âge des Sabres : attaques (une par pièce, à toute distance) et mats (un par pièce, celui de la pièce qui mate).
+       Les attaques passent par le mécanisme des attaques spéciales (knightAttack) : a.sabre donne la pièce qui attaque,
+       a.hit l'instant du coup, a.moveAt l'instant où l'attaquant rejoint sa case. Tout est visuel, rien ne touche aux règles.
+       Feu : orange et or côté blanc, violet côté noir. Modèles dans sabres3d.js. */
+    sabrePal(white) {
+      return white ? { hot: 0xfff1a8, mid: 0xffb13b, deep: 0xff6a1a, arc: 0xffffff, dragon: 0xffe066, ash: 0x8d8590 }
+        : { hot: 0xead0ff, mid: 0xb45cff, deep: 0x6a1fd0, arc: 0xc98cff, dragon: 0xb45cff, ash: 0x6d6478 };
+    }
+    // Feu et énergie : couleur franche, sans mélange additif (sur le ciel clair du crépuscule, tout virerait au blanc)
+    sabreFire(color, opacity = 0.9) {
+      return new this.THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, toneMapped: false });
+    }
+    // Faisceau de flammes (cônes qui dansent) ; sabreFlicker les anime
+    sabreFlames(white, r = 0.3, h = 0.8, n = 9, opacity = 0.88) {
+      const T = this.THREE, g = new T.Group(), pal = this.sabrePal(white), geo = new T.ConeGeometry(1, 1, 7);
+      g.userData.flames = [];
+      for (let i = 0; i < n; i++) {
+        const a = i * 2.4, rr = r * (0.2 + (i % 3) * 0.36), m = new T.Mesh(geo, this.sabreFire([pal.mid, pal.deep, pal.hot][i % 3], opacity));
+        m.position.set(Math.cos(a) * rr, 0, Math.sin(a) * rr);
+        m.userData.h = h * (0.55 + (i % 4) * 0.24); m.userData.w = r * (n > 12 ? 0.2 : 0.34 + (i % 2) * 0.16); m.userData.ph = i * 1.7;
+        g.add(m); g.userData.flames.push(m);
+      }
+      return g;
+    }
+    sabreFlicker(g, t, k = 1) {
+      g.visible = k > 0.01;
+      for (const m of g.userData.flames) {
+        const h = m.userData.h * k * (0.78 + 0.4 * Math.abs(Math.sin(t * 15 + m.userData.ph)));
+        m.scale.set(m.userData.w * k, Math.max(0.01, h), m.userData.w * k); m.position.y = h / 2;
+      }
+    }
+    // Lame d'énergie : croissant en voile courbe, visible sous tous les angles (axe +z = sens de la marche)
+    sabreSail(w, h, color, opacity = 0.92) {
+      const T = this.THREE, geo = new T.PlaneGeometry(1, 1, 22, 10), pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const u = pos.getX(i), v = pos.getY(i), a = u * 2.3, R = w / 2, thin = Math.pow(Math.max(0, Math.cos(v * Math.PI)), 0.55);
+        pos.setXYZ(i, Math.sin(a) * R * thin, v * h, (Math.cos(a) - 1) * R * thin);
+      }
+      geo.computeVertexNormals();
+      const m = this.sabreFire(color, opacity); m.side = T.DoubleSide;
+      return new T.Mesh(geo, m);
+    }
+    sabreFace(c, x, z) {
+      const p = c.holder.position; if (Math.hypot(x - p.x, z - p.z) < 0.02) return;
+      const d = Math.atan2(x - p.x, z - p.z) - c.holder.rotation.y;
+      c.holder.rotation.y += Math.atan2(Math.sin(d), Math.cos(d)) * 0.3;
+    }
+    sabreLink(m, a, b) {
+      const T = this.THREE, d = b.clone().sub(a), L = Math.max(0.01, d.length());
+      m.position.copy(a).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize()); m.scale.set(1, L, 1);
+    }
+    // Copie d'une arme du modèle, avec ses propres matériaux : l'effet peut les libérer sans toucher aux pièces
+    sabreProp(o) { o.traverse((x) => { if (x.isMesh) { x.geometry = x.geometry.clone(); x.material = x.material.clone(); } }); return o; }
+    // Impact : anneau au sol, boule de lumière, éclats
+    sabreBurst(at, t, colors, n = 16, big = 1, y = 0.75) {
+      const T = this.THREE, g = new T.Group(), dur = 0.75, bits = [];
+      g.position.set(at.x, 0, at.z); this.scene.add(g);
+      const ringMat = this.sabreFire(colors[0], 0.9); ringMat.side = T.DoubleSide;
+      const ring = new T.Mesh(new T.RingGeometry(0.3, 0.46, 30), ringMat); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; g.add(ring);
+      const ball = new T.Mesh(new T.SphereGeometry(0.34 * big, 14, 10), this.sabreFire(colors[1] == null ? colors[0] : colors[1], 0.8)); ball.position.y = y; g.add(ball);
+      for (let i = 0; i < n; i++) {
+        const m = new T.Mesh(new T.TetrahedronGeometry(0.06, 0), this.sabreFire(colors[i % colors.length], 1)), a = Math.random() * 6.3, s = (1 + Math.random() * 2.2) * big;
+        m.userData.v = [Math.cos(a) * s, 1.4 + Math.random() * 2.6, Math.sin(a) * s]; g.add(m); bits.push(m);
+      }
+      this.addEffect({ start: t, dur, tick: (e) => {
+        const k = Math.min(1, e / dur);
+        ring.scale.setScalar((1 + k * 4) * big); ringMat.opacity = 0.9 * (1 - k);
+        ball.scale.setScalar(1 + k * 1.5); ball.material.opacity = 0.85 * (1 - k);
+        for (const m of bits) { const v = m.userData.v; m.position.set(v[0] * e, Math.max(0.05, y + v[1] * e - 4.9 * e * e), v[2] * e); m.rotation.set(e * 9, e * 6, 0); m.material.opacity = 1 - k; }
+      }, end: () => this.disposeGroup(g) });
+    }
+
+    /* ---------- Préparation d'une attaque ---------- */
+    sabreAttack(kind, white, from, target, to, victim, now, len, dir) {
+      const a = { style: 'sabre', sabre: kind === 'k' && white ? 'K' : kind, white, start: now, from, target, to, victim, dir, len, fx: [], pal: this.sabrePal(white) };
+      a.fireHex = [a.pal.hot, a.pal.mid, a.pal.deep];
+      const near = (gap) => ({ x: target.x - dir.x * gap, z: target.z - dir.z * gap });
+      a.moveFrom = from;
+      if (a.sabre === 'p') { const gap = Math.min(0.62, len); a.stop = near(gap); a.approach = 0.3 + Math.max(0, len - gap) * 0.09; a.clash = a.approach + 1.05; a.hit = a.clash + 0.25; a.moveAt = a.hit + 0.75; a.moveFrom = a.stop; }
+      else if (a.sabre === 'n') { a.stop = near(Math.min(1, len)); a.approach = 0.75; a.hit = 0.75; a.moveAt = a.hit + 1.55; a.moveFrom = a.stop; }
+      else if (a.sabre === 'q') { a.wind = 0.5; a.fly = 0.35 + len * 0.08; a.hit = a.wind + a.fly; a.back = 0.35 + len * 0.06; a.moveAt = a.hit + a.back + 0.15; }
+      else if (a.sabre === 'r') { a.wind = 0.6; a.fly = 0.3 + len * 0.07; a.hit = a.wind + a.fly; a.back = 0.4 + len * 0.07; a.moveAt = a.hit + a.back + 0.15; }
+      else if (a.sabre === 'b') { a.wind = 0.55; a.fly = 0.22 + len * 0.05; a.hit = a.wind + a.fly; a.moveAt = a.hit + 0.55; }
+      else if (a.sabre === 'K') { a.wind = 0.5; a.hit = 0.62; a.stop = { x: target.x + dir.x * 0.72, z: target.z + dir.z * 0.72 }; a.moveAt = 1.6; a.moveFrom = a.stop; }
+      else { const gap = Math.min(0.72, len); a.stop = near(gap); a.approach = 0.3 + Math.max(0, len - gap) * 0.09; a.hit = a.approach + 0.75; a.moveAt = a.hit + 0.95; a.moveFrom = a.stop; } // shōgun
+      a.duration = a.moveAt + 0.3 + Math.hypot(to.x - a.moveFrom.x, to.z - a.moveFrom.z) * 0.09;
+      return a;
+    }
+    // Boule enflammée ou naginata : le projectile, son feu et son lien avec la main
+    sabreProjectile(a) {
+      const T = this.THREE, g = new T.Group(), models = root.ThemeModels.sabres, rook = a.sabre === 'r';
+      if (rook) { const ball = this.sabreProp(models.ball(T, a.white)); g.add(ball); g.userData.spin = ball; }
+      else { const spin = new T.Group(), n = this.sabreProp(models.naginata(T, a.white)); n.rotation.x = Math.PI / 2; n.position.y = -0.14; spin.add(n); g.add(spin); g.userData.spin = spin; }
+      const fire = new T.Group(); g.add(fire); g.userData.fire = fire; fire.userData.parts = [];
+      // tourbillon de feu horizontal, ou traînée de la boule : cônes couchés tournant autour de l'axe de marche
+      const cone = new T.ConeGeometry(1, 1, 7), ring = [a.pal.hot, a.pal.mid, a.pal.deep];
+      for (let i = 0; i < (rook ? 10 : 16); i++) {
+        const m = new T.Mesh(cone, this.sabreFire(ring[(i + 1) % 3], 0.88)), ang = i * 2.4;
+        m.userData = { ang, r: rook ? 0.1 : 0.14 + (i % 4) * 0.09, z: rook ? -0.05 - (i % 5) * 0.08 : 0.25 - i * 0.07, s: 0.1 + (i % 3) * 0.05, l: rook ? 0.45 + (i % 4) * 0.13 : 0.34 + (i % 3) * 0.1 };
+        m.rotation.x = -Math.PI / 2; fire.add(m); fire.userData.parts.push(m);
+      }
+      if (!rook) for (let i = 0; i < 3; i++) { const o = new T.Mesh(new T.TorusGeometry(0.3 + i * 0.12, 0.03, 6, 28), this.sabreFire(ring[(i + 1) % 3], 0.85)); o.position.z = 0.15 - i * 0.28; fire.add(o); }
+      return g;
+    }
+    tickSabreProjectile(g, t, k) {
+      const fire = g.userData.fire;
+      fire.visible = k > 0.02;
+      fire.rotation.z = t * 13;
+      for (const m of fire.userData.parts) {
+        const d = m.userData, w = Math.sin(t * 18 + d.ang) * 0.015;
+        m.position.set(Math.cos(d.ang) * (d.r + w), Math.sin(d.ang) * (d.r + w), d.z * k);
+        m.scale.set(d.s * k, d.l * k * (0.8 + Math.abs(Math.sin(t * 16 + d.ang)) * 0.45), d.s * k);
+      }
+    }
+
+    /* ---------- L'attaquant ---------- */
+    tickSabreAttack(c, a, el, t, M) {
+      const T = this.THREE, p = c.parts, clamp = (x) => Math.max(0, Math.min(1, x)), smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+      if (!a.sabreRestore) a.sabreRestore = () => { if (p.naginata) p.naginata.visible = true; if (p.ball) p.ball.visible = true; if (p.lance) p.lance.rotation.x = 0; };
+      const hand = () => (p.muzzle ? p.muzzle.getWorldPosition(new T.Vector3()) : this.handsOf(c));
+      const struck = (colors, big = 1, shake = 0.08) => { if (a.struck) return; a.struck = true; this.sabreBurst(a.target, t, colors, 16, big); this.shakeUntil = t + 0.3; this.shakeAmp = shake; };
+      const going = el >= a.moveAt, kind = a.sabre;
+      if (going) {
+        const u = clamp((el - a.moveAt) / (a.duration - a.moveAt));
+        this.sabreFace(c, a.to.x, a.to.z);
+        c.holder.position.set(a.moveFrom.x + (a.to.x - a.moveFrom.x) * u, 0, a.moveFrom.z + (a.to.z - a.moveFrom.z) * u);
+        M.animate(p, t, 'run'); p.root.position.y = 0;
+      }
+      if (kind === 'q' || kind === 'r') {
+        if (!going) {
+          c.holder.position.set(a.from.x, 0, a.from.z); this.sabreFace(c, a.target.x, a.target.z);
+          M.animate(p, t, 'idle');
+          const w = clamp(el / a.wind), throwing = el < a.wind + 0.25;
+          if (throwing) { const s = w < 1 ? -2.9 * w : -2.9 + (el - a.wind) * 7; p.armR.rotation.set(s, 0, 0.25); p.torso.rotation.y = 0.5 * w * (1 - clamp((el - a.wind) * 4)); }
+          else p.armR.rotation.set(-1.3, 0, 0.3);
+        }
+        const hold = el < a.wind || el >= a.hit + a.back;
+        if (p.naginata) p.naginata.visible = hold; if (p.ball) p.ball.visible = hold;
+        if (el >= a.wind && el < a.hit + a.back && !a.ended) {
+          if (!a.proj) {
+            a.proj = this.fx(a, this.sabreProjectile(a)); a.proj.rotation.y = Math.atan2(a.dir.x, a.dir.z);
+            a.launch = hand();
+            a.lineMat = new T.MeshStandardMaterial({ color: 0x9aa0a8, metalness: 0.8, roughness: 0.3 });
+            if (kind === 'r' || !a.white) a.line = this.fx(a, new T.Mesh(new T.CylinderGeometry(0.018, 0.018, 1, 6), a.lineMat));
+          }
+          const end = new T.Vector3(a.target.x, 0.85, a.target.z), now = hand();
+          let k, pos;
+          if (el < a.hit) { k = (el - a.wind) / a.fly; pos = a.launch.clone().lerp(end, k); pos.y += Math.sin(k * Math.PI) * (kind === 'r' ? 0.55 : 0.12); }
+          else { k = (el - a.hit) / a.back; pos = end.clone().lerp(now, k * k); pos.y += Math.sin(k * Math.PI) * 0.3; }
+          a.proj.position.copy(pos);
+          a.proj.userData.spin.rotation[kind === 'r' ? 'x' : 'z'] = t * 22;
+          this.tickSabreProjectile(a.proj, t, el < a.hit ? (kind === 'r' ? 0.45 + clamp(k) * 0.75 : 0.6 + clamp(k * 3) * 0.6) : Math.max(0, 1 - (el - a.hit) / 0.25));
+          if (a.line) this.sabreLink(a.line, now, pos);
+          if (el >= a.hit) struck(a.fireHex, 1.15, 0.12);
+        } else if (a.proj) { a.proj.visible = false; if (a.line) a.line.visible = false; }
+      } else if (kind === 'b') {
+        if (!going) {
+          c.holder.position.set(a.from.x, 0, a.from.z); this.sabreFace(c, a.target.x, a.target.z);
+          M.animate(p, t, 'idle');
+          const w = smooth(el / a.wind), cut = smooth((el - a.wind) / 0.12);
+          p.armR.rotation.set(-2.8 * w + cut * 1.9, 0, 0.9 * (1 - cut) - 0.5 * cut);
+          p.armL.rotation.set(-2.8 * w + cut * 1.9, 0, -0.9 * (1 - cut) + 0.5 * cut);
+        }
+        if (el >= a.wind && !a.arcs) {
+          a.arcs = new T.Group(); a.arcs.rotation.y = this.viewYaw(); this.fx(a, a.arcs);
+          for (const s of [-1, 1]) { const tilt = new T.Group(); tilt.rotation.z = s * Math.PI / 4; const m = this.sabreSail(0.46, 2, a.pal.arc), core = this.sabreSail(0.2, 1.7, a.white ? 0xffe9b0 : 0xffffff, 0.9); core.position.z = 0.03; tilt.add(m, core); a.arcs.add(tilt); }
+          a.launch = hand(); a.launch.y = 0.85;
+          a.arcAt = a.launch.clone();
+        }
+        if (a.arcs && !a.ended) {
+          const end = new T.Vector3(a.target.x, 0.85, a.target.z), after = el - a.hit;
+          if (after < 0) a.arcAt.copy(a.launch).lerp(end, (el - a.wind) / a.fly);
+          else a.arcAt.set(end.x + a.dir.x * after * 13, 0.85, end.z + a.dir.z * after * 13);
+          a.arcs.position.copy(a.arcAt); a.arcs.visible = after < 0.95;
+          if (el >= a.hit) struck([a.pal.arc, a.pal.mid], 0.9, 0.08);
+        }
+      } else if (kind === 'K') {
+        if (!going) {
+          const dash = clamp((el - a.wind) / 0.12);
+          c.holder.position.set(a.from.x + (a.stop.x - a.from.x) * dash, 0, a.from.z + (a.stop.z - a.from.z) * dash);
+          if (el < a.wind) this.sabreFace(c, a.target.x, a.target.z);
+          M.animate(p, t, 'idle');
+          if (el < a.wind) { p.armR.rotation.set(-0.5, 0, -0.6); p.torso.rotation.y = 0.6; p.root.position.y = -0.05 * smooth(el / a.wind); } // main sur la poignée, ramassé
+          else { const follow = clamp((el - a.wind) / 0.3); p.armR.rotation.set(-1.6 + follow * 0.2, 0, 0.5 + follow); p.torso.rotation.y = -0.5; }
+        }
+        if (el >= a.wind && !a.stroke) {
+          // le trait blanc reste un instant dans l'air
+          const d = new T.Vector3(a.stop.x - a.from.x, 0, a.stop.z - a.from.z), L = d.length() + 0.8;
+          a.stroke = this.fx(a, new T.Mesh(new T.BoxGeometry(0.05, 0.05, L), this.glow(0xffffff, 1)));
+          a.stroke.add(new T.Mesh(new T.BoxGeometry(0.16, 0.16, L), this.glow(0xdfeaff, 0.4)));
+          a.stroke.position.set((a.from.x + a.stop.x) / 2, 0.82, (a.from.z + a.stop.z) / 2); a.stroke.rotation.y = Math.atan2(d.x, d.z);
+        }
+        if (a.stroke) { const k = clamp((el - a.hit) / 0.75); a.stroke.visible = k < 1; a.stroke.scale.set(1 - k, 1 - k, 1); }
+        if (el >= a.hit) struck([0xffffff, 0xdfeaff], 0.7, 0.05);
+      } else if (kind === 'k') {
+        if (!going) {
+          const w = clamp(el / a.approach);
+          if (el < a.approach) { c.holder.position.set(a.from.x + (a.stop.x - a.from.x) * w, 0, a.from.z + (a.stop.z - a.from.z) * w); M.animate(p, t, 'run'); }
+          else {
+            c.holder.position.set(a.stop.x, 0, a.stop.z);
+            const k = (el - a.approach) / 0.75, up = k < 0.75 ? smooth(k / 0.6) : 1 - smooth((k - 0.75) / 0.22), s = -2.9 * up - 0.5 * (1 - up);
+            M.animate(p, t, 'idle'); p.armR.rotation.set(s, 0, -0.45); p.armL.rotation.set(s, 0, 0.45); p.torso.rotation.x = 0.45 * (k >= 0.75 ? clamp((k - 0.75) * 5) : 0);
+          }
+          this.sabreFace(c, a.target.x, a.target.z);
+        }
+        if (el >= a.hit && !a.struck) {
+          // le nodachi frappe le sol : la case tremble et se fend
+          const P = a.target, sq = this.terrain && this.terrain.squares, plate = this.fx(a, new T.Mesh(new T.BoxGeometry(0.98, 0.05, 0.98), new T.MeshStandardMaterial({ color: sq ? sq[1] : '#5c3a24', roughness: 0.85 })));
+          plate.position.set(P.x, 0.03, P.z); a.plate = plate;
+          for (let i = 0; i < 6; i++) { const r = this.fx(a, new T.Mesh(new T.BoxGeometry(0.03, 0.012, 0.42), new T.MeshBasicMaterial({ color: 0x120d12 }))), ang = i * 1.05; r.position.set(P.x + Math.cos(ang) * 0.24, 0.062, P.z + Math.sin(ang) * 0.24); r.rotation.y = -ang + Math.PI / 2; }
+          struck([0xbfb4c4, a.pal.mid], 1.25, 0.2);
+        }
+        if (a.plate) { const u = clamp((el - a.hit) / 0.7); a.plate.position.y = 0.03 + (u < 1 ? Math.abs(Math.sin(el * 42)) * 0.1 * (1 - u) : 0); a.plate.rotation.set((1 - u) * Math.sin(el * 37) * 0.09, 0, (1 - u) * Math.cos(el * 31) * 0.09); }
+      } else if (kind === 'n') {
+        if (!going) {
+          const k = clamp(el / a.approach), e = k * k * (3 - 2 * k), lift = smooth((el - a.hit) / 0.3);
+          c.holder.position.set(a.from.x + (a.stop.x - a.from.x) * e, 0, a.from.z + (a.stop.z - a.from.z) * e);
+          this.sabreFace(c, a.target.x, a.target.z);
+          M.animate(p, t, el < a.approach ? 'run' : 'idle');
+          p.root.position.y = Math.sin(k * Math.PI) * 0.75;
+          if (p.lance) p.lance.rotation.x = -0.32 * lift * (1 - smooth((el - a.hit - 1) / 0.25));
+          a.tipPos = p.lanceTip ? p.lanceTip.getWorldPosition(new T.Vector3()) : new T.Vector3(a.stop.x, 0.9, a.stop.z);
+          if (el >= a.hit) struck([0xffffff, a.pal.mid], 0.55, 0.06);
+        }
+      } else if (!going) { // ashigaru : duel au sabre, puis il transperce
+        const k = clamp(el / a.approach);
+        if (el < a.approach) { c.holder.position.set(a.from.x + (a.stop.x - a.from.x) * k, 0, a.from.z + (a.stop.z - a.from.z) * k); M.animate(p, t, 'run'); }
+        else {
+          c.holder.position.set(a.stop.x, 0, a.stop.z);
+          if (el < a.clash) {
+            const hits = (el - a.approach) * 3.4; M.animate(p, t, 'punch', hits);
+            p.root.position.z = Math.sin(hits * Math.PI * 2) * 0.05;
+            this.flash(a.stop, a.target, hits, a.white ? 0xffe6a0 : 0xd8b4ff);
+          } else {
+            const u = smooth((el - a.clash) / 0.25);
+            M.animate(p, t, 'idle'); p.armR.rotation.set(-1.6, 0, 0); p.torso.rotation.x = 0.3 * u; p.root.position.z = 0.28 * u;
+          }
+        }
+        this.sabreFace(c, a.target.x, a.target.z);
+        if (el >= a.hit) struck([0xffffff, a.pal.mid], 0.5, 0.05);
+      }
+    }
+
+    /* ---------- La pièce prise ---------- */
+    tickSabreVictim(d, a, c, el, t, M) {
+      if (el >= a.duration || a.ended) return false; // attaque finie, ou interrompue par le coup suivant
+      const p = c.parts, r = p.root, B = a.target, dir = a.dir, after = el - a.hit, clamp = (x) => Math.max(0, Math.min(1, x)), smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+      const kind = a.sabre;
+      if (after < 0) {
+        const from = a.stop && kind !== 'K' ? a.stop : a.from;
+        this.sabreFace(c, from.x, from.z);
+        if (kind === 'p' && el > a.approach) { M.animate(p, t, 'punch', (el - a.approach) * 3.4 + 0.5); r.position.z = 0; }
+        else if (kind === 'p' || kind === 'K') M.animate(p, t, 'idle');
+        else M.animate(p, t, 'guard', 1);
+        return true;
+      }
+      if (c.shadow) c.shadow.visible = false;
+      if (kind === 'q' || kind === 'r') {
+        // enflammée et éjectée loin dans le décor
+        if (!a.victimFire) a.victimFire = this.fx(a, this.sabreFlames(a.white, 0.34, 1.1, 11));
+        const u = clamp(after / 1.3), far = u * (2 - u) * 14;
+        c.holder.position.set(B.x + dir.x * far, 0, B.z + dir.z * far);
+        M.animate(p, t, 'ko'); r.position.y = Math.sin(u * Math.PI) * 3 + 0.05; r.rotation.set(u * 9, u * 3, u * 5);
+        c.holder.visible = u < 1;
+        a.victimFire.position.set(c.holder.position.x, r.position.y + 0.1, c.holder.position.z);
+        this.sabreFlicker(a.victimFire, t, u < 1 ? 1 : 0);
+      } else if (kind === 'b') {
+        // emportée par les deux arcs hors du plateau
+        const at = a.arcAt || new this.THREE.Vector3(B.x, 0.85, B.z);
+        c.holder.position.set(at.x, 0, at.z);
+        M.animate(p, t, 'ko'); r.position.y = 0.3; r.rotation.set(after * 5, after * 9, 0);
+        c.holder.visible = after < 0.95;
+      } else if (kind === 'n') {
+        // accrochée à la lance une seconde, puis elle tombe
+        const tip = a.tipPos || new this.THREE.Vector3(B.x, 0.9, B.z), fall = smooth((after - 1) / 0.5);
+        M.animate(p, t, 'ko');
+        c.holder.position.set(tip.x + (B.x - tip.x) * fall, Math.max(0, (tip.y - 0.42) * (1 - fall)), tip.z + (B.z - tip.z) * fall);
+        r.position.y = 0; r.rotation.set(0.35 + fall * 1.1, 0, Math.sin(el * 9) * 0.05 * (1 - fall));
+        c.holder.visible = el < a.moveAt;
+      } else if (kind === 'p') {
+        M.animate(p, t, 'ko', 1);
+        const fall = smooth((after - 0.35) / 0.35);
+        r.position.y = 0; r.rotation.set(-1.5 * fall, 0, 0);
+        c.holder.visible = el < a.moveAt;
+      } else if (kind === 'K') {
+        // un instant immobile, puis elle s'effondre : le coup est déjà passé
+        const fall = smooth((after - 0.55) / 0.35);
+        M.animate(p, t, fall > 0 ? 'ko' : 'idle');
+        r.rotation.set(1.5 * fall, 0, 0); r.position.y = 0;
+        c.holder.visible = el < a.moveAt;
+      } else {
+        const up = clamp(after / 0.5), fall = smooth((after - 0.45) / 0.3);
+        M.animate(p, t, 'ko');
+        r.position.y = Math.sin(up * Math.PI) * 0.75; r.rotation.set(up * 2 + fall, 0, 0);
+        c.holder.visible = el < a.moveAt;
+      }
+      return true;
+    }
+
+    /* ---------- Mats ---------- */
+    makeSabreMate(u, at, keep, basic, std) {
+      const T = this.THREE, P = u.target, g = u.fx, style = u.themed, A = this.sqToPos(u.attackerTo), white = u.piece === u.piece.toUpperCase(), pal = this.sabrePal(white);
+      const s = u.sabre = { white, pal, A, dir: new T.Vector3(P.x - A.x, 0, P.z - A.z), flames: [] };
+      s.len = Math.max(0.01, s.dir.length()); s.dir.normalize();
+      const yaw = this.viewYaw();
+      const crestBits = (color) => {
+        s.bits = [];
+        for (const k of [-1, 1]) { const m = new T.Mesh(new T.TorusGeometry(0.22, 0.03, 6, 12, 2), std(color, { metalness: 0.7, roughness: 0.3 })); m.visible = false; m.userData.k = k; g.add(m); s.bits.push(m); }
+      };
+      if (style === 'sakura') {
+        s.stroke = new T.Group(); s.stroke.position.set(P.x, 2.4, P.z); s.stroke.rotation.set(0, yaw, 0.42);
+        s.stroke.add(new T.Mesh(new T.BoxGeometry(26, 0.11, 0.11), new T.MeshBasicMaterial({ color: 0xffffff, toneMapped: false })), new T.Mesh(new T.BoxGeometry(26, 0.34, 0.34), basic(0xdfeaff, 0.4)));
+        g.add(s.stroke);
+        const leaf = new T.PlaneGeometry(0.16, 0.11), tints = [basic(0xf4b6c6, 0.95), basic(0xeaa0b6, 0.95), basic(0xfbe0e7, 0.95)];
+        s.petals = [];
+        for (let i = 0; i < 240; i++) { const m = new T.Mesh(leaf, tints[i % 3]); m.userData = { a: Math.random() * 6.3, r: 0.3 + Math.random() * 2.6, y: Math.random() * 4.5, sp: 0.5 + Math.random() * 1.1, fall: 1.5 + Math.random() * 1.6, spin: Math.random() * 6 }; m.visible = false; g.add(m); s.petals.push(m); }
+        crestBits(0xb07a3c);
+      } else if (style === 'lunepourpre') {
+        s.moon = new T.Group(); s.moon.position.set(-Math.sin(yaw) * 20 + Math.cos(yaw) * 6, 9, -Math.cos(yaw) * 20 - Math.sin(yaw) * 6);
+        u.camera.widePosition.set(Math.sin(yaw) * 14.5, 4.4, Math.cos(yaw) * 14.5); u.camera.wideTarget.set(0, 3, 0);
+        s.nightMat = new T.MeshBasicMaterial({ color: 0x0e090e, transparent: true, opacity: 0, side: T.BackSide, fog: false, depthWrite: false, toneMapped: false });
+        if (this.weatherGroup) { s.weatherShown = this.weatherGroup.visible; this.weatherGroup.visible = false; } // le soleil couchant s'efface devant la lune rouge
+        s.night = new T.Mesh(new T.SphereGeometry(32, 24, 12), s.nightMat); g.add(s.night);
+        const lunar = new T.MeshBasicMaterial({ color: 0xc41e2e, transparent: true, opacity: 0, fog: false, toneMapped: false }), halo = new T.MeshBasicMaterial({ color: 0x8a1020, transparent: true, opacity: 0, fog: false, depthWrite: false, side: T.BackSide, toneMapped: false });
+        s.moon.add(new T.Mesh(new T.SphereGeometry(3, 28, 18), lunar), new T.Mesh(new T.SphereGeometry(3.9, 24, 16), halo)); g.add(s.moon); s.moonMats = [lunar, halo];
+        s.ink = [];
+        const inkMat = new T.MeshBasicMaterial({ color: 0x050305, transparent: true, opacity: 0.95, depthWrite: false }), blob = new T.SphereGeometry(1, 12, 8);
+        for (let i = 0; i < 26; i++) { const m = new T.Mesh(blob, inkMat), l = (i % 5 - 2) * 0.32; m.userData = { k: Math.floor(i / 5) * 0.06, l, h: 0.5 + (i % 4) * 0.32, w: 0.38 + (i % 3) * 0.14 }; m.visible = false; g.add(m); s.ink.push(m); }
+        s.ash = [];
+        const ashMat = basic(0x8d8590, 0.9), bit = new T.BoxGeometry(0.05, 0.05, 0.05);
+        for (let i = 0; i < 80; i++) { const m = new T.Mesh(bit, ashMat); m.userData = { x: (Math.random() - 0.5) * 11, z: (Math.random() - 0.5) * 11, y: Math.random() * 7, sp: 0.4 + Math.random() * 0.8 }; m.visible = false; g.add(m); s.ash.push(m); }
+        crestBits(0xc9a24a);
+      } else if (style === 'dragonw' || style === 'dragonb') {
+        // nuages sombres d'où descend le dragon
+        const cloud = new T.SphereGeometry(1, 12, 8), cloudMat = new T.MeshBasicMaterial({ color: white ? 0x2a2433 : 0x161020, transparent: true, opacity: 0, depthWrite: false });
+        s.cloudMat = cloudMat;
+        for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, r = 12.5 + (i % 4) * 1.2, c = new T.Mesh(cloud, cloudMat); c.position.set(Math.cos(a) * r, 5.5 + (i % 3) * 0.8, Math.sin(a) * r); c.scale.set(3.4, 1, 2.6); c.rotation.y = -a; g.add(c); }
+        s.segs = [];
+        const n = 48, mid = this.sabreFire(pal.dragon, 0.97), deep = this.sabreFire(pal.deep, 0.45), hot = this.sabreFire(pal.hot, 0.95), scale = new T.SphereGeometry(1, 12, 8), spine = new T.ConeGeometry(0.5, 1.5, 5);
+        for (let i = 0; i < n; i++) {
+          const m = new T.Group(), r = 0.44 * Math.pow(1 - i / n, 0.6) + 0.05;
+          const body = new T.Mesh(scale, mid), halo = new T.Mesh(scale, deep); body.scale.setScalar(r); halo.scale.setScalar(r * 1.45); m.add(body, halo);
+          if (i % 3 === 0) { const c = new T.Mesh(spine, hot); c.position.y = r * 1.25; c.scale.setScalar(r * 0.8); m.add(c); }
+          m.visible = false; g.add(m); s.segs.push(m);
+        }
+        const head = new T.Group(); s.head = head; g.add(head);
+        const skull = new T.Mesh(new T.SphereGeometry(0.5, 14, 10), mid); skull.scale.set(0.95, 0.75, 1.3); head.add(skull);
+        const snout = new T.Mesh(new T.BoxGeometry(0.46, 0.2, 0.62), hot); snout.position.set(0, 0.04, 0.66); head.add(snout);
+        s.jaw = new T.Mesh(new T.BoxGeometry(0.4, 0.09, 0.62), mid); s.jaw.position.set(0, -0.2, 0.55); head.add(s.jaw);
+        for (const k of [-1, 1]) {
+          const horn = new T.Mesh(new T.ConeGeometry(0.08, 0.8, 6), hot); horn.position.set(k * 0.25, 0.35, -0.4); horn.rotation.set(-1.1, 0, k * -0.3); head.add(horn);
+          const eye = new T.Mesh(new T.SphereGeometry(0.075, 8, 6), new T.MeshBasicMaterial({ color: 0xffffff })); eye.position.set(k * 0.27, 0.2, 0.3); head.add(eye);
+          for (let i = 0; i < 3; i++) { const fang = new T.Mesh(new T.ConeGeometry(0.04, 0.16, 4), new T.MeshBasicMaterial({ color: 0xffffff })); fang.rotation.x = Math.PI; fang.position.set(k * 0.17, -0.1, 0.5 + i * 0.17); head.add(fang); }
+        }
+        head.visible = false;
+        s.embers = [];
+        const spark = new T.SphereGeometry(0.05, 6, 4);
+        for (let i = 0; i < 60; i++) { const m = new T.Mesh(spark, hot); m.visible = false; g.add(m); s.embers.push(m); }
+      } else if (style === 'fracasw' || style === 'fracasb') {
+        const models = root.ThemeModels.sabres;
+        s.ball = new T.Group(); s.ball.add(this.sabreProp(models.ball(T, white)));
+        s.ball.scale.setScalar(1.6); g.add(s.ball);
+        s.ballFire = this.sabreFlames(white, 0.4, 1.4, 14); g.add(s.ballFire);
+        s.chain = new T.Mesh(new T.CylinderGeometry(0.03, 0.03, 1, 6), new T.MeshStandardMaterial({ color: 0x9aa0a8, metalness: 0.8, roughness: 0.3 })); g.add(s.chain);
+        // sous les cases : le trou sombre, puis les 64 cases qui volent en éclats depuis le point d'impact
+        const squares = (this.terrain && this.terrain.squares) || ['#d9b98a', '#5c3a24'];
+        const lightMat = new T.MeshStandardMaterial({ color: squares[0], roughness: 0.8 }), darkMat = new T.MeshStandardMaterial({ color: squares[1], roughness: 0.8 }), tile = new T.BoxGeometry(0.98, 0.09, 0.98);
+        s.pit = new T.Mesh(new T.PlaneGeometry(8.02, 8.02), new T.MeshBasicMaterial({ color: 0x0a0708 })); s.pit.rotation.x = -Math.PI / 2; s.pit.position.y = 0.018; s.pit.visible = false; g.add(s.pit);
+        s.tiles = [];
+        for (let i = 0; i < 64; i++) {
+          const f = i & 7, r = i >> 3, m = new T.Mesh(tile, (f + r) % 2 ? darkMat : lightMat), x = f - 3.5, z = r - 3.5, d = Math.hypot(x - P.x, z - P.z), ang = Math.atan2(z - P.z, x - P.x);
+          m.position.set(x, 0.05, z); m.visible = false;
+          m.userData = { x, z, delay: d * 0.035, vx: Math.cos(ang) * (2.4 + Math.random() * 2.6) + (Math.random() - 0.5), vz: Math.sin(ang) * (2.4 + Math.random() * 2.6) + (Math.random() - 0.5), vy: 8.5 - Math.min(5, d * 0.7) + Math.random() * 3, rx: (Math.random() - 0.5) * 14, rz: (Math.random() - 0.5) * 14 };
+          g.add(m); s.tiles.push(m);
+        }
+        s.cracks = [];
+        for (let i = 0; i < 11; i++) { const a = i / 11 * Math.PI * 2 + Math.random() * 0.2, L = 3 + Math.random() * 4, m = at(new T.Mesh(new T.BoxGeometry(0.06, 0.02, L), basic(pal.mid, 0.95)), Math.cos(a) * L / 2, 0.03, Math.sin(a) * L / 2); m.rotation.y = -a + Math.PI / 2; m.visible = false; s.cracks.push(m); }
+      } else if (style === 'arcw' || style === 'arcb') {
+        s.sail = new T.Group(); s.sail.rotation.y = yaw; g.add(s.sail);
+        const big = this.sabreSail(1.25, 3.6, pal.arc, 0.92); big.position.y = 1.8; big.rotation.z = -0.28; s.sail.add(big);
+        const core = this.sabreSail(0.6, 3.1, white ? 0xffe9b0 : 0xffffff, 0.9); core.position.set(0, 1.8, 0.05); core.rotation.z = -0.28; s.sail.add(core);
+        s.sail.visible = false;
+        // feu sur chaque case traversée
+        s.trail = [];
+        for (let k = 1; k < 12; k++) {
+          const x = A.x + s.dir.x * k, z = A.z + s.dir.z * k;
+          if (Math.abs(x) > 4 || Math.abs(z) > 4) break;
+          const f = this.sabreFlames(white, 0.4, 0.95, 8); f.position.set(x, 0.02, z); f.userData.s = k; f.visible = false; g.add(f); s.trail.push(f);
+        }
+        // pièces adverses dans le couloir de l'arc
+        const enemyWhite = !white; s.swept = new Map();
+        for (const c of this.chars.values()) {
+          if (c === u.king || (c.piece === c.piece.toUpperCase()) !== enemyWhite) continue;
+          const dx = c.holder.position.x - A.x, dz = c.holder.position.z - A.z, along = dx * s.dir.x + dz * s.dir.z, side = Math.abs(dx * s.dir.z - dz * s.dir.x);
+          if (along > 0.3 && side < 1.05) s.swept.set(c, { along, off: (dx * s.dir.z - dz * s.dir.x) * -1, spin: 1 + Math.random() * 2, position: c.holder.position.clone(), visible: c.holder.visible, rotation: c.parts.root.rotation.clone() });
+        }
+      } else if (style === 'ridew' || style === 'rideb') {
+        s.riderFire = this.sabreFlames(white, 0.36, 0.8, 14, 0.55); g.add(s.riderFire);
+        s.horseFire = this.sabreFlames(white, 0.5, 0.5, 16, 0.55); g.add(s.horseFire);
+        s.kingFire = this.sabreFlames(white, 0.3, 0.9, 9); g.add(s.kingFire);
+        const dist = Math.min(1.05, s.len);
+        s.stop = { x: P.x - s.dir.x * dist, z: P.z - s.dir.z * dist };
+      } else if (style === 'lamew' || style === 'lameb') {
+        s.blade = this.sabreFlames(white, 0.11, 0.42, 7); g.add(s.blade);
+        s.kingFire = this.sabreFlames(white, 0.36, 1.25, 13); g.add(s.kingFire);
+        s.slashes = [];
+        for (let i = 0; i < 3; i++) {
+          const m = this.sabreSail(0.4, 1.5, pal.mid, 0.95); m.position.set(P.x, 0.8, P.z); m.rotation.set(0, yaw, [-0.8, 0.8, 0][i]); m.visible = false; g.add(m); s.slashes.push(m);
+        }
+        const dist = Math.min(0.62, s.len);
+        s.stop = { x: P.x - s.dir.x * dist, z: P.z - s.dir.z * dist };
+      }
+    }
+    // Trajet du dragon : descente, premier tour du plateau, morsure, deuxième tour en montant vers les nuages
+    sabreDragonPos(s, P, q) {
+      const T = this.THREE, ring = (k, y, r = 5.5) => { const a = -2.2 + k * Math.PI * 2; return new T.Vector3(Math.cos(a) * r, y, Math.sin(a) * r); };
+      if (q < 0) return new T.Vector3(-9 + q, 11, -9);
+      if (q < 0.9) return new T.Vector3(-9, 11, -9).lerp(ring(0, 2.6), q / 0.9);
+      if (q < 2.9) return ring((q - 0.9) / 2, 2.6 + Math.sin((q - 0.9) * Math.PI) * 0.5);
+      if (q < 3.5) { const k = (q - 2.9) / 0.6; return ring(1, 2.6).lerp(new T.Vector3(P.x, 0.95, P.z), k * k); }
+      if (q < 3.95) return new T.Vector3(P.x, 0.95, P.z).lerp(ring(1.25, 3, 5.5), (q - 3.5) / 0.45);
+      return ring(1.25 + (q - 3.95) / 2.6, 3 + (q - 3.95) * 2.6, 5.5);
+    }
+    tickSabreMateFx(u, t, e, clamp, smooth, hit, after) {
+      const T = this.THREE, s = u.sabre, P = u.target, style = u.themed, fade = (d) => (after > 0 ? Math.max(0, 1 - after / d) : 1), A = s.A;
+      if (this.checkGroup) this.checkGroup.visible = false;
+      if (s.stop && e > 0.8) { u.pillar.material.opacity = 0; u.aura.material.opacity = 0; }
+      const breakCrest = () => {
+        if (after < 0 || s.broken) return;
+        s.broken = true;
+        const crest = u.king && u.king.parts.crest;
+        if (crest) { crest.visible = false; (u.hiddenParts = u.hiddenParts || []).push(crest); }
+        for (const m of s.bits) m.visible = true;
+      };
+      const dropBits = () => { if (!s.bits) return; for (const m of s.bits) { const k = clamp(after / 0.8), d = m.userData.k; m.visible = after >= 0; m.position.set(P.x + d * (0.16 + k * 0.42), Math.max(0.06, 1.35 - k * k * 1.3), P.z + d * k * 0.2); m.rotation.set(k * 5, d * k * 3, d * 0.8); } };
+      if (style === 'sakura') {
+        this.skyDim = Math.max(this.skyDim || 0, smooth(e / 1.6) * 0.7 * fade(2));
+        s.stroke.visible = e > 2.15 && e < 2.75; s.stroke.scale.set(smooth((e - 2.15) / 0.1), 1 - clamp((e - 2.3) / 0.45), 1 - clamp((e - 2.3) / 0.45));
+        for (const m of s.petals) {
+          const d = m.userData, a = d.a + (after + 3) * d.sp, h = ((d.y - Math.max(0, after) * d.fall) % 4.5 + 4.5) % 4.5, r = d.r * (0.35 + 0.65 * (1 - clamp(after / 1.4)) ) + 0.2;
+          m.visible = after > -0.15 && after < 2.2; m.position.set(P.x + Math.cos(a) * r, 0.05 + h, P.z + Math.sin(a) * r); m.rotation.set(d.spin + t * 3, d.spin + t * 2, 0);
+        }
+        breakCrest(); dropBits();
+      } else if (style === 'lunepourpre') {
+        this.skyDim = Math.max(this.skyDim || 0, smooth(e / 1.3) * 0.92 * fade(2.2));
+        const rise = smooth((e - 0.3) / 1.4), f = fade(2.2);
+        s.moonMats[0].opacity = rise; s.moonMats[1].opacity = rise * 0.6; s.nightMat.opacity = smooth(e / 1.3);
+        const k = clamp((e - 2.3) / (hit - 2.3)), dir = s.dir, side = new T.Vector3(-dir.z, 0, dir.x);
+        for (const m of s.ink) {
+          const d = m.userData, w = clamp(k * 1.25 - d.k);
+          m.visible = e > 2.3 && after < 1.5;
+          m.position.set(A.x + dir.x * s.len * w + side.x * d.l, d.h * 0.5, A.z + dir.z * s.len * w + side.z * d.l);
+          const sc = (d.w + (after > 0 ? after * 0.7 : 0)) * (1 - clamp((after - 0.7) / 0.8));
+          m.scale.set(Math.max(0.01, sc), Math.max(0.01, sc * (1.5 + Math.sin(t * 9 + d.l) * 0.3)), Math.max(0.01, sc));
+        }
+        for (const m of s.ash) { const d = m.userData; m.visible = after > -0.2 && after < 2.2; m.position.set(d.x, ((d.y - after * d.sp) % 7 + 7) % 7, d.z); m.rotation.set(t * 2, t, 0); }
+        breakCrest(); dropBits();
+      } else if (style === 'dragonw' || style === 'dragonb') {
+        this.skyDim = Math.max(this.skyDim || 0, smooth(e / 1) * 0.88 * fade(2.8));
+        s.cloudMat.opacity = smooth(e / 0.9) * 0.9 * fade(3);
+        const q = e - 0.5, end = hit + 2.9;
+        s.segs.forEach((m, i) => { const q2 = q - i * 0.02; m.visible = q2 > 0 && e < end; if (m.visible) { m.position.copy(this.sabreDragonPos(s, P, q2)); m.lookAt(this.sabreDragonPos(s, P, q2 + 0.03)); m.scale.setScalar(1 - smooth((e - end + 0.7) / 0.7) * 0.9); } });
+        s.head.visible = q > 0 && e < end;
+        if (s.head.visible) {
+          const pos = this.sabreDragonPos(s, P, q); s.head.position.copy(pos); s.head.lookAt(this.sabreDragonPos(s, P, q + 0.03));
+          s.head.scale.setScalar(1.25 * (1 - smooth((e - end + 0.7) / 0.7) * 0.9));
+          s.mouth = pos.clone();
+          s.jaw.rotation.x = (after > 0 ? 0.08 : 0.5 * Math.abs(Math.sin(t * 6)));
+        }
+        s.embers.forEach((m, i) => { const ph = (t * 0.7 + i * 0.137) % 1, q2 = q - i * 0.07; m.visible = q2 > 0 && e < end; if (m.visible) { m.position.copy(this.sabreDragonPos(s, P, q2)); m.position.x += Math.sin(i * 7) * 0.5; m.position.z += Math.cos(i * 5) * 0.5; m.position.y += Math.sin(i * 3) * 0.3 - ph * 1.2; m.scale.setScalar(1 - ph * 0.8); } });
+      } else if (style === 'fracasw' || style === 'fracasb') {
+        const hand = u.actor.parts.muzzle ? u.actor.parts.muzzle.getWorldPosition(new T.Vector3()) : new T.Vector3(A.x, 1.2, A.z), king = new T.Vector3(P.x, 0.85, P.z);
+        const whirl = hand.clone().add(new T.Vector3(Math.cos(t * 9) * 0.65, 0.55, Math.sin(t * 9) * 0.65));
+        let pos = whirl, power = 0.55;
+        for (const T0 of [1.1, 2.0, 2.9]) {
+          if (e > T0 - 0.32 && e <= T0) { const k = (e - (T0 - 0.32)) / 0.32; pos = whirl.clone().lerp(king, k * k); power = 1; }
+          else if (e > T0 && e <= T0 + 0.38) pos = king.clone().lerp(whirl, (e - T0) / 0.38);
+          if (e >= T0 && !s['hit' + T0]) { s['hit' + T0] = true; this.sabreBurst(P, t, [s.pal.mid, s.pal.hot, 0xffffff], 12, 0.9); this.shakeUntil = t + 0.22; this.shakeAmp = 0.1; }
+        }
+        if (e > 3.3) {
+          const top = new T.Vector3(P.x, 6.5, P.z), ground = new T.Vector3(P.x, 0.35, P.z);
+          if (e < 3.95) pos = whirl.clone().lerp(top, smooth((e - 3.3) / 0.65));
+          else if (after < 0) { const k = (e - 3.95) / (hit - 3.95); pos = top.clone().lerp(ground, k * k * k); }
+          else pos = ground.clone().setY(0.2);
+          power = 1.15;
+        }
+        s.ball.position.copy(pos); s.ball.rotation.set(t * 8, t * 5, 0);
+        s.ballFire.position.copy(pos).setY(pos.y - 0.12); this.sabreFlicker(s.ballFire, t, power * fade(1.4));
+        this.sabreLink(s.chain, hand, pos);
+        // le plateau se brise
+        if (after >= 0) {
+          if (!s.shattered) { s.shattered = true; s.pit.visible = true; for (const m of s.cracks) m.visible = true; for (const m of s.tiles) m.visible = true; this.shakeUntil = t + 1.1; this.shakeAmp = 0.34; this.sabreBurst(P, t, [s.pal.mid, s.pal.hot, 0xffffff], 34, 2.1); }
+          for (const m of s.tiles) {
+            const d = m.userData, a = Math.max(0, after - d.delay), y = 0.05 + d.vy * a - 6 * a * a;
+            m.position.set(d.x + d.vx * a, y, d.z + d.vz * a); m.rotation.set(d.rx * a, 0, d.rz * a); m.visible = y > -1.2;
+          }
+          for (const m of s.cracks) m.material.opacity = 0.95 * Math.max(0.35, 1 - after / 3);
+        }
+      } else if (style === 'arcw' || style === 'arcb') {
+        const launch = 1.4, gone = after > 1.6;
+        const travelled = e < launch ? 0 : after < 0 ? s.len * (e - launch) / (hit - launch) : s.len + after * 9;
+        s.arcS = travelled;
+        s.sail.visible = e >= launch && !gone;
+        s.sail.position.set(A.x + s.dir.x * travelled, Math.sin(t * 8) * 0.04, A.z + s.dir.z * travelled);
+        s.sail.scale.setScalar(smooth((e - launch) / 0.25));
+        for (const f of s.trail) { const k = travelled >= f.userData.s ? clamp(1 - (after - 2.1) / 0.9) : 0; this.sabreFlicker(f, t, k); }
+        if (e >= hit && !s.arcBurst) { s.arcBurst = true; this.sabreBurst(P, t, [s.pal.mid, s.pal.hot, 0xffffff], 20, 1.5); this.shakeUntil = t + 0.4; this.shakeAmp = 0.18; }
+      } else if (style === 'ridew' || style === 'rideb') {
+        const on = smooth((e - 0.2) / 0.7);
+        if (!s.tinted) {
+          s.tinted = true; const hotColor = s.white ? 0xff8a26 : 0x9440ff;
+          this.tintCharacter(u, u.actor, hotColor, 0.72).forEach((m) => { if (m.emissive) { m.emissive.setHex(hotColor); m.emissiveIntensity = 0.75; } });
+        }
+        const h = u.actor.holder.position, y = u.actor.parts.root.position.y;
+        s.riderFire.position.set(h.x, y + 0.55, h.z); this.sabreFlicker(s.riderFire, t, on);
+        s.horseFire.position.set(h.x, y + 0.05, h.z); this.sabreFlicker(s.horseFire, t, on);
+        if (u.king) { const k = u.king.holder.position; s.kingFire.position.set(k.x, k.y + 0.05, k.z); this.sabreFlicker(s.kingFire, t, smooth((e - 2.2) / 0.5) * fade(1.6)); }
+        for (const T0 of [2.7, 3.15, 3.6, 4.05]) if (e >= T0 && !s['hit' + T0]) { s['hit' + T0] = true; this.sabreBurst(u.king ? u.king.holder.position : P, t, [s.pal.mid, s.pal.hot], 10, 0.7, 0.4); this.shakeUntil = t + 0.15; this.shakeAmp = 0.1; }
+      } else if (style === 'lamew' || style === 'lameb') {
+        const tip = u.actor.parts.tip ? u.actor.parts.tip.getWorldPosition(new T.Vector3()) : new T.Vector3(A.x, 1, A.z);
+        s.blade.position.copy(tip).setY(tip.y - 0.25); this.sabreFlicker(s.blade, t, smooth((e - 0.15) / 0.4));
+        s.slashes.forEach((m, i) => { const T0 = 1.0 + i * 0.6, k = clamp((e - T0) / 0.32); m.visible = e >= T0 && k < 1; m.material.opacity = 0.95 * (1 - k); m.scale.setScalar(0.6 + k * 0.7); if (e >= T0 && !s['hit' + i]) { s['hit' + i] = true; this.sabreBurst(P, t, [s.pal.mid, s.pal.hot], 12, 0.8); this.shakeUntil = t + 0.14; this.shakeAmp = 0.08; } });
+        if (u.king) { const k = u.king.holder.position; s.kingFire.position.set(k.x, 0.03, k.z); this.sabreFlicker(s.kingFire, t, smooth((e - 2.2) / 0.5) * fade(1.8)); }
+      }
+    }
+    tickSabreMate(c, t, M, u, hit) {
+      const T = this.THREE, e = t - u.start, after = e - hit, P = u.target, s = u.sabre, style = u.themed, p = c.parts, r = p.root;
+      const clamp = (x) => Math.max(0, Math.min(1, x)), smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
+      if (c === u.actor) {
+        c.anim = null;
+        const F = u.fromPos, face = () => this.sabreFace(c, P.x, P.z);
+        c.holder.position.set(F.x, 0, F.z);
+        if (style === 'ridew' || style === 'rideb') {
+          const jump = clamp((e - 1) / 0.8), k = jump * jump * (3 - 2 * jump);
+          c.holder.position.set(F.x + (s.stop.x - F.x) * k, 0, F.z + (s.stop.z - F.z) * k); face();
+          M.animate(p, t, e > 1 && e < 1.8 ? 'run' : 'idle');
+          r.position.y += Math.sin(jump * Math.PI) * 1.7;
+          p.rear = smooth((e - 2.15) / 0.4) * (1 - smooth(after / 0.5));
+          if (p.lance) p.lance.rotation.x = 0.2 * (p.rear || 0);
+          p.rider.rotation.x = 0.7 * p.rear;
+          if (p.lanceTip) s.tip = p.lanceTip.getWorldPosition(new T.Vector3());
+        } else if (style === 'lamew' || style === 'lameb') {
+          const w = clamp((e - 0.3) / 0.45);
+          c.holder.position.set(F.x + (s.stop.x - F.x) * w, 0, F.z + (s.stop.z - F.z) * w); face();
+          if (e < 0.75) M.animate(p, t, e > 0.3 ? 'run' : 'idle');
+          else if (e < 2.6) M.animate(p, t, 'punch', (e - 0.75) / 0.6 + 0.0);
+          else M.animate(p, t, 'victory', 1);
+        } else if (style === 'fracasw' || style === 'fracasb') {
+          face(); M.animate(p, t, e < hit ? 'punch' : 'victory', e < hit ? e * 1.2 : 1); if (p.ball) p.ball.visible = false;
+        } else if (style === 'arcw' || style === 'arcb') {
+          face();
+          if (e < 1.5) { M.animate(p, t, 'idle'); const w = smooth((e - 0.2) / 1), cut = smooth((e - 1.3) / 0.14); p.armR.rotation.set(-2.9 * w + cut * 2, 0, 0.3 - cut * 0.7); p.armL.rotation.set(-2.9 * w + cut * 2, 0, -0.3 + cut * 0.7); }
+          else M.animate(p, t, e < hit + 0.5 ? 'idle' : 'victory', 1);
+        } else if (style === 'sakura') {
+          face();
+          if (e < 2.1) { M.animate(p, t, 'idle'); p.armR.rotation.set(-0.5, 0, -0.6); p.torso.rotation.y = 0.6; p.root.position.y = -0.05; }
+          else if (e < hit) { M.animate(p, t, 'idle'); const k = clamp((e - 2.1) / 0.15); p.armR.rotation.set(-1.7, 0, -0.6 + k * 2); p.torso.rotation.y = 0.6 - k * 1.1; }
+          else M.animate(p, t, 'victory', 1);
+        } else if (style === 'lunepourpre') {
+          face();
+          if (e < hit - 0.55) { M.animate(p, t, 'idle'); const up = smooth(e / 1.5); p.armR.rotation.set(-2.9 * up - 0.9 * (1 - up), 0, -0.45); p.armL.rotation.set(-2.9 * up - 0.9 * (1 - up), 0, 0.45); }
+          else if (e < hit) { M.animate(p, t, 'idle'); const k = smooth((e - hit + 0.55) / 0.2); p.armR.rotation.set(-2.9 + k * 2.2, 0, -0.45); p.armL.rotation.set(-2.9 + k * 2.2, 0, 0.45); p.torso.rotation.x = 0.4 * k; }
+          else M.animate(p, t, 'victory', 1);
+        } else { face(); M.animate(p, t, e < hit ? 'cast' : 'victory', e < hit ? clamp(e / 0.6) : 1); }
+        this.tickThemeMateFx(u, t, e, clamp, smooth, hit, after);
+        return true;
+      }
+      // le roi
+      c.anim = null; c.holder.position.set(P.x, 0, P.z);
+      if (style === 'dragonw' || style === 'dragonb') {
+        if (after < 0) { M.animate(p, t, 'panic', 1); return true; }
+        M.animate(p, t, 'ko', 1);
+        if (s.head.visible && s.mouth) { c.holder.position.set(s.mouth.x, Math.max(0, s.mouth.y - 0.55), s.mouth.z); r.position.y = 0; r.rotation.set(1.1, after * 2, 0.4); c.holder.visible = e < hit + 2.4; }
+        else c.holder.visible = false;
+        return true;
+      }
+      if (style === 'fracasw' || style === 'fracasb') {
+        if (after < 0) {
+          let jolt = 0; for (const T0 of [1.1, 2, 2.9]) if (e > T0 && e < T0 + 0.4) jolt = Math.sin((e - T0) / 0.4 * Math.PI);
+          M.animate(p, t, jolt > 0 ? 'ko' : 'panic', jolt > 0 ? jolt * 0.35 : 1); if (jolt > 0) { r.position.y = 0; r.rotation.x = -0.4 * jolt; } else r.rotation.x = 0;
+        } else { M.animate(p, t, 'ko', 1); r.rotation.set(0, 0, 0); r.position.y = 0; r.scale.set(u.kingBase.scale.x * 1.3, u.kingBase.scale.y * Math.max(0.12, 1 - after * 6), u.kingBase.scale.z * 1.3); }
+        return true;
+      }
+      if (style === 'arcw' || style === 'arcb') {
+        if (after < 0) { M.animate(p, t, 'panic', 1); return true; }
+        const pos = s.sail.position;
+        M.animate(p, t, 'ko', 1);
+        c.holder.position.set(pos.x, 0, pos.z); r.position.y = 0.7; r.rotation.set(after * 5, after * 8, 0);
+        c.holder.visible = after < 1.5;
+        return true;
+      }
+      if (style === 'ridew' || style === 'rideb') {
+        if (e < 1.8) { M.animate(p, t, 'panic', 1); return true; }
+        M.animate(p, t, 'ko', 1);
+        if (after < 0 && s.tip) {
+          // accroché à la lance, devant le samouraï ; les sabots le frappent
+          c.holder.position.set(s.tip.x, Math.max(0, s.tip.y - 0.5), s.tip.z); r.position.y = 0;
+          r.rotation.set(0.3 + Math.sin(e * 15) * 0.14, 0, Math.sin(e * 11) * 0.1);
+          s.lastTip = s.tip.clone();
+        } else {
+          const L = s.lastTip || new T.Vector3(P.x, 1, P.z), f = smooth(after / 0.55);
+          c.holder.position.set(L.x + (P.x - L.x) * f, Math.max(0, L.y - 0.5) * (1 - f), L.z + (P.z - L.z) * f); r.position.y = 0;
+          r.rotation.set(0.3 + f * 1.25, 0, 0);
+        }
+        return true;
+      }
+      if (style === 'lamew' || style === 'lameb') {
+        if (after < 0) {
+          let jolt = 0; for (const T0 of [1, 1.6, 2.2]) if (e > T0 && e < T0 + 0.3) jolt = Math.sin((e - T0) / 0.3 * Math.PI);
+          M.animate(p, t, jolt > 0 ? 'ko' : 'panic', 1); if (jolt > 0) { r.position.y = 0; r.rotation.x = -0.35 * jolt; } else r.rotation.x = 0;
+        } else { M.animate(p, t, 'ko', 1); r.rotation.set(1.5 * smooth(after / 0.5), 0, 0); r.position.y = 0; }
+        return true;
+      }
+      if (after < 0) { M.animate(p, t, 'panic', 1); return true; }
+      // Pluie de Sakura, Lune Pourpre : le cimier se brise, puis le roi tombe
+      const fall = smooth((after - 0.6) / 0.4);
+      M.animate(p, t, fall > 0 ? 'ko' : 'idle', 1); r.rotation.set(1.5 * fall, 0, 0); r.position.y = 0;
+      return true;
+    }
+    // Arc géant : les pièces sur le chemin sont emportées quand l'arc les atteint
+    tickSabreSwept(c, t, M, u) {
+      const s = u.sabre, d = s.swept.get(c);
+      if (s.arcS == null || s.arcS < d.along) return false;
+      const k = s.arcS - d.along, pos = s.sail.position, side = { x: -s.dir.z, z: s.dir.x };
+      c.anim = null;
+      M.animate(c.parts, t, 'ko', 1);
+      c.holder.position.set(pos.x + side.x * d.off, 0, pos.z + side.z * d.off);
+      c.parts.root.position.y = 0.4 + Math.min(1.6, k * 0.4);
+      c.parts.root.rotation.set(k * 2 * d.spin, k * 3, 0);
+      c.holder.visible = s.sail.visible;
+      if (c.shadow) c.shadow.visible = false;
+      return true;
+    }
+    endSabreMate(u) {
+      const s = u.sabre;
+      if (this.checkGroup) this.checkGroup.visible = true;
+      if (s.weatherShown != null && this.weatherGroup) this.weatherGroup.visible = s.weatherShown;
+      if (s.swept) for (const [c, d] of s.swept) { c.holder.position.copy(d.position); c.holder.visible = d.visible; c.parts.root.rotation.copy(d.rotation); c.parts.root.position.set(0, 0, 0); if (c.shadow) c.shadow.visible = true; }
+      if (u.actor) { const p = u.actor.parts; p.rear = 0; if (p.ball) p.ball.visible = true; if (p.lance) p.lance.rotation.x = 0; if (p.rider) p.rider.rotation.x = 0; }
     }
 
     bindInput() {

@@ -660,6 +660,7 @@
     tickMateUltimate(c, t, M) {
       const T = this.THREE;
       const u = this.mateUltimate;
+      if (u && t >= u.start && u.sabre && u.sabre.swept && u.sabre.swept.has(c)) return this.tickSabreSwept(c, t, M, u);
       if (!u || t < u.start || (c !== u.actor && c !== u.king)) return false;
       if (u.themed) return this.tickThemeMate(c, t, M, u);
       const kind = u.piece.toLowerCase(), e = t - u.start, target = u.target;

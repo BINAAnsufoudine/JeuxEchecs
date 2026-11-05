@@ -168,6 +168,11 @@
         c.fillStyle = polish; c.fillRect(x, y, cell, cell);
         c.strokeStyle = 'rgba(35,24,15,0.12)'; c.lineWidth = 2;
         c.strokeRect(x + 1, y + 1, cell - 2, cell - 2);
+        if (terrain && terrain.kind === 'castle') { // planches de cèdre
+          c.strokeStyle = 'rgba(30,16,8,0.32)'; c.lineWidth = 1.2;
+          for (let i = 1; i < 4; i++) { c.beginPath(); c.moveTo(x + 2, y + i * cell / 4); c.lineTo(x + cell - 2, y + i * cell / 4); c.stroke(); }
+          c.strokeStyle = 'rgba(255,230,190,0.08)'; for (let i = 0; i < 7; i++) { const yy = y + ((i * 37 + r * 11 + f * 7) % 100) / 100 * cell; c.beginPath(); c.moveTo(x + 3, yy); c.bezierCurveTo(x + cell * 0.3, yy + 2, x + cell * 0.6, yy - 2, x + cell - 3, yy + 1); c.stroke(); }
+        }
         const piece = board[r * 8 + f];
         if (piece) {
           const white = piece === piece.toUpperCase();
@@ -401,6 +406,51 @@
       if (night > 0) { this.sun.intensity *= 1 - 0.7 * night; this.hemi.intensity *= 1 - 0.45 * night; }
     }
 
+    // Cour du château de Hakuro : donjon à toits superposés au fond, murs d'enceinte, lanternes de pierre, cerisiers en fleur.
+    // Le donjon reste à l'arrière-plan quel que soit le côté d'où l'on regarde.
+    buildCastleCourt(add, mat, moundGeo) {
+      const T = this.THREE, stone = mat(0x6d6a68), stoneDark = mat(0x57524f), plaster = mat(0xece6da), roof = mat(0x2b2a33, { roughness: 0.6, flatShading: true }), gold = mat(0xc9a24a, { metalness: 0.6, roughness: 0.35 }), timber = mat(0x3a2620);
+      const box = new T.BoxGeometry(1, 1, 1), trunk = new T.CylinderGeometry(0.12, 0.22, 1, 7);
+      // soubassement de pierre et cinq étages, chacun coiffé d'un toit à quatre pans
+      const pivot = new T.Group(), keep = new T.Group(); pivot.add(keep); keep.position.set(0, -0.25, -10.1); keep.scale.setScalar(0.6); this.terrainGroup.add(pivot);
+      const part = (...o) => { const m = add(...o); keep.add(m); return m; };
+      const base = part(new T.CylinderGeometry(4.6, 6, 2.6, 4), stone, 0, 1.3, 0); base.rotation.y = Math.PI / 4;
+      const floors = [[6.2, 1.9], [5, 1.7], [3.9, 1.5], [2.8, 1.4], [1.9, 1.2]];
+      let y = 2.6;
+      floors.forEach(([w, h], i) => {
+        part(box, plaster, 0, y + h / 2, 0, w, h, w);
+        const windows = i > 2 ? 3 : 4;
+        for (let n = 0; n < windows; n++) part(box, timber, -w / 2 + (n + 0.5) * w / windows, y + h * 0.55, w / 2 + 0.01, 0.34, 0.5, 0.04, false);
+        const eave = part(new T.CylinderGeometry(w * 0.36, w * 0.95, 0.9, 4), roof, 0, y + h + 0.4, 0); eave.rotation.y = Math.PI / 4;
+        part(box, gold, 0, y + h + 0.0, w * 0.68, w * 0.98, 0.06, 0.06, false);
+        y += h + 0.68;
+      });
+      for (const s of [-1, 1]) { const f = part(new T.ConeGeometry(0.16, 0.7, 6), gold, s * 0.55, y + 0.05, 0); f.rotation.z = s * 0.5; }
+      this.castleKeep = pivot; // il tourne avec la vue : toujours au fond, jamais entre la caméra et les pièces
+      // murs d'enceinte, blancs à chaperon sombre
+      for (const [x, z, w, d] of [[-8.5, -11.5, 8, 0.45], [8.5, -11.5, 8, 0.45], [-12.5, 0, 0.45, 23], [12.5, 0, 0.45, 23], [-8.5, 11.5, 8, 0.45], [8.5, 11.5, 8, 0.45]]) {
+        add(box, stoneDark, x, -0.25, z, w + 0.1, 0.5, d + 0.1, false);
+        add(box, plaster, x, 0.45, z, w, 1, d);
+        add(box, roof, x, 1.05, z, w + 0.34, 0.2, d + 0.34);
+      }
+      // lanternes de pierre : pied, foyer allumé, toit
+      const flame = new T.MeshBasicMaterial({ color: 0xffcf7a }), halo = this.glow(0xffb45e, 0.09);
+      for (const [x, z] of [[-6.6, -5.2], [6.6, -5.2], [-6.6, 5.2], [6.6, 5.2]]) {
+        add(trunk, stone, x, -0.05, z);
+        add(box, stone, x, 0.5, z, 0.62, 0.1, 0.62);
+        add(box, flame, x, 0.75, z, 0.3, 0.38, 0.3, false);
+        add(new T.CylinderGeometry(0.08, 0.56, 0.3, 6), stoneDark, x, 1.1, z);
+        add(new T.SphereGeometry(0.75, 12, 8), halo, x, 0.8, z, 1, 1, 1, false);
+      }
+      // cerisiers en fleur
+      const bark = mat(0x3a2620), blossom = [mat(0xf4b6c6, { roughness: 1 }), mat(0xeaa0b6, { roughness: 1 }), mat(0xf9d2dc, { roughness: 1 })];
+      for (const [x, z, s] of [[-8.6, -7.2, 1.35], [8.8, -6.4, 1.15], [-9.2, 7, 1], [9.4, 6.8, 0.9]]) {
+        add(trunk, bark, x, 0.55, z, s * 1.3, s * 2.2, s * 1.3);
+        for (const k of [-1, 1]) { const b = add(trunk, bark, x + k * 0.5 * s, 1.7 * s, z, s * 0.6, s * 1.5, s * 0.6); b.rotation.z = -k * 0.8; }
+        for (let i = 0; i < 16; i++) { const a = i * 2.4, r = (0.4 + (i % 4) * 0.42) * s; add(moundGeo, blossom[i % 3], x + Math.cos(a) * r, (1.9 + (i % 5) * 0.34) * s, z + Math.sin(a) * r, 1.5 * s, 1.1 * s, 1.5 * s); }
+      }
+    }
+
     // Animaux du décor : ceux qui représentent le mieux chaque paysage se promènent, sautent, volent ou nagent autour du plateau
     // Arène du Ciel : rochers qui flottent lentement autour de l'arène
     buildSkyRocks() {
@@ -415,12 +465,22 @@
       }
     }
 
+    // Cour du château : pétales de cerisier emportés par le vent
+    buildPetals() {
+      const T = this.THREE, geo = new T.PlaneGeometry(0.11, 0.075), tints = [0xf4b6c6, 0xeaa0b6, 0xfbe0e7].map((color) => new T.MeshBasicMaterial({ color, side: T.DoubleSide, transparent: true, opacity: 0.92 }));
+      for (let i = 0; i < 70; i++) {
+        const g = new T.Mesh(geo, tints[i % 3]); this.animalGroup.add(g);
+        this.animals.push({ g, behave: 'petal', x: (i * 37 % 100) / 100 * 28, y: (i * 53 % 100) / 100 * 7, z: (i * 71 % 100) / 100 * 22 - 11, sp: 0.5 + (i % 5) * 0.16, phase: i * 1.3 });
+      }
+    }
+
     buildAnimals(terrain) {
       const T = this.THREE;
       if (!this.animalGroup) { this.animalGroup = new T.Group(); this.animalGroup.position.y = GROUND + 0.535; this.scene.add(this.animalGroup); }
       this.animalGroup.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
       this.animalGroup.clear();
       this.animals = [];
+      if (terrain.kind === 'castle') { this.buildPetals(); return; } // pétales de cerisier dans le vent du soir
       if (terrain.kind === 'arena') { this.buildSkyRocks(); return; } // pas d'animaux dans le ciel : des rochers flottants
       const mat = (color) => new T.MeshStandardMaterial({ color, roughness: 0.85 });
       const mesh = (geo, m, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => { const o = new T.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.castShadow = true; return o; };
@@ -570,8 +630,15 @@
     tickAnimals(t, dt) {
       if (!this.animals || !this.animals.length || !this.animalGroup.visible) return;
       const groundY = -0.535;
+      if (this.castleKeep) this.castleKeep.rotation.y = this.viewYaw();
       for (const a of this.animals) {
         const g = a.g;
+        if (a.behave === 'petal') {
+          a.x = (a.x + dt * a.sp * 1.1) % 28; a.y -= dt * a.sp * 0.28; if (a.y < 0.05) a.y = 7;
+          g.position.set(a.x - 14, a.y + Math.sin(t * 1.3 + a.phase) * 0.14, a.z + Math.sin(t * 0.6 + a.phase) * 0.6);
+          g.rotation.set(t * 1.7 + a.phase, t * 1.1 + a.phase, 0);
+          continue;
+        }
         if (a.behave === 'float') {
           a.ang += dt * 0.012;
           g.position.set(Math.cos(a.ang) * a.r, a.y + Math.sin(t * 0.5 + a.phase) * 0.28, Math.sin(a.ang) * a.r);
@@ -617,7 +684,11 @@
       g.fillStyle = col(0); g.fillRect(0, 0, 512, 512);
       // grain de fond
       for (let i = 0; i < 2600; i++) { g.fillStyle = col((rnd() - 0.5) * 0.12, 0.5); g.fillRect(rnd() * 512, rnd() * 512, 2 + rnd() * 4, 2 + rnd() * 4); }
-      if (k === 'arena') { // mer de nuages sous l'arène
+      if (k === 'castle') { // cour de terre battue, gravier ratissé et dalles de pierre
+        for (let i = 0; i < 2200; i++) { g.fillStyle = col((rnd() - 0.5) * 0.16, 0.7); g.fillRect(rnd() * 512, rnd() * 512, 1 + rnd() * 2.4, 1 + rnd() * 2.4); }
+        g.lineWidth = 1; for (let y = 6; y < 512; y += 13) { g.strokeStyle = 'rgba(40,26,20,0.14)'; g.beginPath(); for (let x = 0; x <= 512; x += 16) g.lineTo(x, y + Math.sin(x * 0.03 + y) * 2); g.stroke(); }
+        for (let i = 0; i < 26; i++) { const x = rnd() * 512, y = rnd() * 512, w = 26 + rnd() * 34, h = 18 + rnd() * 22; g.fillStyle = 'rgba(120,108,104,0.42)'; g.fillRect(x, y, w, h); g.strokeStyle = 'rgba(30,20,18,0.35)'; g.strokeRect(x, y, w, h); }
+      } else if (k === 'arena') { // mer de nuages sous l'arène
         for (let i = 0; i < 150; i++) { const x = rnd() * 512, y = rnd() * 512, r = 18 + rnd() * 48, a = g.createRadialGradient(x, y, 1, x, y, r); a.addColorStop(0, rnd() < 0.7 ? 'rgba(235,242,252,0.6)' : 'rgba(150,178,220,0.6)'); a.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = a; g.fillRect(x - r, y - r, r * 2, r * 2); }
       } else if (k === 'forest' || k === 'grass') {
         for (let i = 0; i < 1800; i++) { const x = rnd() * 512, y = rnd() * 512; g.strokeStyle = col(0.04 + rnd() * 0.12, 0.8); g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 4, y - 5 - rnd() * 6); g.stroke(); }
@@ -658,7 +729,11 @@
         g.lineTo(2048, 512); g.fill();
       };
       const ground = new T.Color(terrain.ground), shade = (dl, h = 0) => hex(ground.clone().offsetHSL(h, 0, dl).lerp(sky, 0.35 - dl));
-      if (k === 'arena') { // horizon de nuages et rochers flottants au loin
+      if (k === 'castle') { // collines au crépuscule, pins sombres et murailles lointaines
+        ridge('#6a4560', 350, 90, 0.004, 0.7); ridge('#4e3350', 400, 70, 0.007, 2.1);
+        for (let x = 0; x < 2048; x += 34) { const h = 34 + (x * 13 % 26), y = 430 - Math.sin(x * 0.01) * 16; g.fillStyle = '#2f2238'; g.beginPath(); g.moveTo(x - 18, y); g.lineTo(x, y - h); g.lineTo(x + 18, y); g.fill(); }
+        ridge('#3a2838', 462, 28, 0.012, 0.4);
+      } else if (k === 'arena') { // horizon de nuages et rochers flottants au loin
         for (let i = 0; i < 26; i++) { const x = rnd() * 2048, y = 90 + rnd() * 170, s = 16 + rnd() * 34; g.fillStyle = '#7f8db0'; g.beginPath(); g.moveTo(x - s, y); g.lineTo(x + s, y); g.lineTo(x + s * 0.3, y + s * 1.2); g.lineTo(x - s * 0.4, y + s * 0.8); g.fill(); g.fillStyle = '#dfe7f4'; g.fillRect(x - s, y - 3, s * 2, 4); }
         for (let i = 0; i < 70; i++) { const x = rnd() * 2048, y = 370 + rnd() * 130, r = 30 + rnd() * 70; g.fillStyle = i % 3 ? 'rgba(255,255,255,0.82)' : 'rgba(205,222,245,0.8)'; g.beginPath(); g.ellipse(x, y, r * 1.8, r * 0.6, 0, 0, 7); g.fill(); }
       } else if (k === 'rock') { ridge('#8d939a', 360, 180, 0.006, 1.3); ridge('#6c7277', 410, 120, 0.011, 2.1); ridge(shade(0), 460, 50, 0.02, 0.4); }
@@ -692,6 +767,7 @@
         if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => oldMat.add(m));
       });
       this.terrainGroup.clear();
+      this.castleKeep = null;
       oldGeo.forEach((g) => g.dispose()); oldMat.forEach((m) => m.dispose());
 
       const mat = (color, extra = {}) => new T.MeshStandardMaterial({ color, roughness: 0.94, ...extra });
@@ -745,8 +821,8 @@
       for (let i = 0; i < points.length; i++) {
         // devant et derrière le plateau, le décor est reculé pour ne pas cacher les pièces (le sol est au ras du plateau)
         const x = points[i][0], z = points[i][1] * (Math.abs(points[i][1]) > 5 ? 1.35 : 1), jitter = (i % 3) * 0.16;
-        if (terrain.kind === 'arena') {
-          // rien sur la mer de nuages : les dalles et bornes sont posées plus bas
+        if (terrain.kind === 'arena' || terrain.kind === 'castle') {
+          // rien sur la mer de nuages ; la cour du château est bâtie plus bas : les dalles et bornes sont posées plus bas
         } else if (terrain.kind === 'beach') {
           add(moundGeo, sand, x, -0.32, z, 1.7, 0.3, 1);
           if (i % 4 === 0) palm(x, z, (i % 8 === 0 ? 1 : -1) * 0.12);
@@ -801,6 +877,7 @@
           add(moundGeo, cloud, Math.cos(a) * r, -0.5, Math.sin(a) * r, 3.4 + i % 3, 1 + (i % 2) * 0.5, 2.4 + i % 2, false);
         }
       }
+      if (terrain.kind === 'castle') this.buildCastleCourt(add, mat, moundGeo);
       if (terrain.id === 'dojo') {
         const vermilion = mat(0x9e352c), darkWood = mat(0x38251f);
         const post = new T.BoxGeometry(0.2, 1.45, 0.2), crossbar = new T.BoxGeometry(3.1, 0.2, 0.3), lintel = new T.BoxGeometry(3.45, 0.22, 0.38);

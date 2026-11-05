@@ -104,6 +104,8 @@
         for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2 + Math.random() * 0.3, crack = at(new T.Mesh(new T.BoxGeometry(0.06, 0.02, 1.4 + Math.random() * 1.4), basic(0xff3d6e, 0.95)), Math.cos(a) * 1, 0.02, Math.sin(a) * 1); crack.rotation.y = -a + Math.PI / 2; keep(crack, { crack: true }); }
       } else if (Object.values(AURA_MATE).includes(style) && style !== 'constellation' && style !== 'nova') {
         this.makeAuraMate(u, at, keep, basic, std);
+      } else if (SABRE_STYLES.has(style)) {
+        this.makeSabreMate(u, at, keep, basic, std);
       } else if (style === 'orbital') {
         u.target3 = at(new T.Mesh(new T.RingGeometry(0.5, 0.62, 32), basic(0xff1744, 0.9)), 0, 0.04, 0); u.target3.rotation.x = -Math.PI / 2;
         u.beam = at(new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 30, 20, 1, true), new T.MeshBasicMaterial({ color: 0xff1744, transparent: true, opacity: 0.8, blending: T.AdditiveBlending, depthWrite: false })), 0, 15, 0);
@@ -119,7 +121,7 @@
       // et laisse une trace sur la case du roi.
       const tint = THEME_MATE_COLORS[style] || [0xffffff, 0x888888];
       u.tint = tint;
-      if (Object.values(AURA_MATE).includes(style) && style !== 'constellation') u.flash.material.color.setHex(tint[0]);
+      if ((Object.values(AURA_MATE).includes(style) && style !== 'constellation') || SABRE_STYLES.has(style)) u.flash.material.color.setHex(tint[0]);
       const A = this.sqToPos(u.attackerTo);
       u.pillar = new T.Mesh(new T.CylinderGeometry(0.42, 0.55, 6, 24, 1, true), new T.MeshBasicMaterial({ color: tint[0], transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
       u.pillar.position.set(A.x, 3, A.z); g.add(u.pillar);
@@ -141,7 +143,8 @@
       const T = this.THREE, e = t - u.start, P = u.target, style = u.themed;
       const clamp = (x) => Math.max(0, Math.min(1, x));
       const smooth = (x) => { x = clamp(x); return x * x * (3 - 2 * x); };
-      const hit = 3.0, after = e - hit;
+      const hit = u.hitAt || 3.0, after = e - hit;
+      if (SABRE_STYLES.has(style)) return this.tickSabreMate(c, t, M, u, hit);
       if (c === u.actor) {
         c.anim = null; c.holder.position.set(u.fromPos.x, 0, u.fromPos.z);
         M.animate(c.parts, t, e < hit ? 'cast' : 'victory', e < hit ? clamp(e / 0.6) : 1);
@@ -262,6 +265,8 @@
         }
       } else if (Object.values(AURA_MATE).includes(style) && style !== 'constellation' && style !== 'nova') {
         this.tickAuraMate(u, t, e, clamp, smooth, hit, after);
+      } else if (SABRE_STYLES.has(style)) {
+        this.tickSabreMateFx(u, t, e, clamp, smooth, hit, after);
       } else if (style === 'orbital') {
         const lock = smooth((e - 0.4) / 1.2);
         u.target3.scale.setScalar(2.5 - lock * 1.5); u.target3.rotation.z = t * 3; u.target3.visible = after < 0.6;

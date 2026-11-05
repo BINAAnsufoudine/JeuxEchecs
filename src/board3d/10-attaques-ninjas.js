@@ -880,6 +880,7 @@
 
     tickKnightVictim(d, t, M) {
       const a = d.knightAttack, c = d.c, el = t - a.start;
+      if (a.sabre) return this.tickSabreVictim(d, a, c, el, t, M);
       if (a.style === 'chidori') return this.tickChidoriVictim(d, a, c, el, t, M);
       if (a.style === 'orb') return this.tickOrbVictim(d, a, c, el, t, M);
       if (a.style === 'fireroll') return this.tickFirerollVictim(d, a, c, el, t, M);

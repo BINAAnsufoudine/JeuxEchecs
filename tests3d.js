@@ -6,7 +6,7 @@
    - chaque attaque de mat doit se terminer proprement et rendre les rois debout. */
 (function () {
   'use strict';
-  const THEMES = ['ninja', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern', 'auras'];
+  const THEMES = ['ninja', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern', 'auras', 'sabres'];
   const results = [];
   window.__tests3d = { done: false, ok: false, results };
   const b = new window.Board3D(document.getElementById('stage'), () => {});
@@ -97,6 +97,21 @@
     }
   }
 
+  // Arc géant : le pion noir dans le couloir est balayé pendant le mat et retrouve sa case à la partie suivante ; celui qui est hors du chemin ne bouge pas
+  function giantArc() {
+    window.PieceTheme = 'sabres'; b.rebuildPieces();
+    const e = Array(64).fill(null); e[60] = 'K'; e[4] = 'k'; e[46] = 'B'; e[3] = 'p'; e[13] = 'p'; e[54] = 'P';
+    setClock(); b.update({ ...base, board: e, last: null, animate: false, ply: 0 }); step(0.5);
+    const e2 = e.slice(); e2[46] = null; e2[25] = 'B';
+    b.update({ ...base, board: e2, check: 4, last: { from: 46, to: 25, piece: 'B' }, animate: true, ply: 1, mateUltimate: { id: 'marc', piece: 'B', attackerTo: 25, to: 4 }, outcome: '1-0' });
+    step(10);
+    const pawn = b.chars.get(13);
+    assert(pawn && !pawn.holder.visible, 'pion noir non emporté par l\'Arc géant');
+    b.update({ ...base, board: e, last: null, animate: false, ply: 0 }); step(1);
+    const back = b.chars.get(3), p = b.sqToPos(3);
+    assert(back.holder.visible && Math.abs(back.holder.position.x - p.x) < 0.01 && Math.abs(back.holder.position.z - p.z) < 0.01, 'pion emporté pas revenu sur sa case');
+  }
+
   // Bouton « Passer » : au milieu d'une attaque spéciale, tout se pose aussitôt, sans reste à l'écran
   function skip(theme) {
     window.PieceTheme = theme; b.rebuildPieces();
@@ -127,6 +142,15 @@
   }
   // Saga des Auras : chaque pièce a son mat
   for (const pc of 'PNBRKpnbrk') test(`3D auras : mat de la pièce ${pc}`, () => mate('auras', pc === pc.toUpperCase(), pc));
+  // L'Âge des Sabres : chaque pièce a son mat, joué aussi dans la cour du château
+  b.setTerrain('castle');
+  for (const pc of 'PNBRKpnbrk') test(`3D sabres : mat de la pièce ${pc}`, () => mate('sabres', pc === pc.toUpperCase(), pc));
+  test('3D sabres : l\'Arc géant emporte les pièces sur son chemin, puis elles reviennent', () => giantArc());
+  b.setTerrain('steppe');
+  window.PieceThemeBlack = 'sabres';
+  test('3D mélange ninja / sabres : partie pleine de prises', () => play('ninja', 41, 40, 0.3));
+  test('3D mélange ninja / sabres : mat des Noirs', () => mate('ninja', false));
+  window.PieceThemeBlack = null;
   // Mélange de thèmes : les Noirs avec les pièces d'un autre thème
   for (const [w, k] of [['ninja', 'modern'], ['ocean', 'ancient'], ['birds', 'plants']]) {
     window.PieceThemeBlack = k;

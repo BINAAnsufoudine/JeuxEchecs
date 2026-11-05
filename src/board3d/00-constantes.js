@@ -17,6 +17,7 @@
     rock: { name: 'Terrain rocheux', sky: 0xa9afb4, ground: 0x62686b, wood: 0x55483c, frame: ['#8a8175', '#5b544d', '#393735'], squares: ['#d0d0c9', '#777c7e'], kind: 'rock' },
     water: { name: 'Terrain avec flaques', sky: 0x9bbbc1, ground: 0x526f66, wood: 0x59432f, frame: ['#806b50', '#5a4734', '#3d3027'], squares: ['#d0dfd8', '#63827a'], kind: 'water' },
     arena: { name: 'Arène du Ciel', sky: 0x4f8fdc, ground: 0x8ea3cc, wood: 0x6a6684, frame: ['#a7a3b8', '#7a7690', '#4e4b62'], squares: ['#c9c2da', '#5a5284'], kind: 'arena' },
+    castle: { name: 'Cour du château de Hakuro', sky: 0x6a4a6e, ground: 0x6b5f58, wood: 0x4a3324, frame: ['#7a5234', '#553622', '#38241a'], squares: ['#d9b98a', '#5c3a24'], kind: 'castle' },
     beach: { name: 'Plage tropicale', sky: 0x6cc5e8, ground: 0xa88a54, wood: 0x8a6a42, frame: ['#b98d57', '#8a6238', '#5f4226'], squares: ['#ead6a0', '#b98a4c'], kind: 'beach' },
   };
   // overcast : part de gris dans le ciel ; wind : force du vent (pluie penchée, rafales) ; snow : flocons
@@ -48,6 +49,7 @@
     ancient: { w: 'firearrows', b: 'boulder' },
     modern: { w: 'airstrike', b: 'orbital' },
     auras: { w: 'constellation', b: 'nova' },
+    sabres: { w: 'sakura', b: 'lunepourpre' },
   };
   // Couleurs de la mise en scène des mats de thème : [lumière, trace au sol]
   const THEME_MATE_COLORS = {
@@ -57,6 +59,9 @@
     constellation: [0x9fe3ff, 0x16306e], nova: [0xff3d3d, 0x1a0712],
     temple: [0xffffff, 0x16306e], nilocomet: [0x4cc3ff, 0x16306e], dawncross: [0xffd27a, 0x5a4210], fortress: [0x7fd8ff, 0x343a4e], cloudbreath: [0xdff4ff, 0x4a6a9e],
     shadeswarm: [0xc04bff, 0x1a0a2e], bounty: [0xff3d6e, 0x2d2219], lasernet: [0x9ef7ff, 0x2a1636], eruption: [0xff7a1a, 0x2b2326], crystalcomet: [0xc04bff, 0x14101f],
+    sakura: [0xf9d2dc, 0x4a3324], lunepourpre: [0xff3b3b, 0x050305], dragonw: [0xffe066, 0x3a2410], dragonb: [0xb45cff, 0x1a0a2e],
+    fracasw: [0xff8a26, 0x1a100a], fracasb: [0xb45cff, 0x120a1c], arcw: [0xffd27a, 0x3a2410], arcb: [0xc98cff, 0x1a0a2e],
+    ridew: [0xff8a26, 0x3a2410], rideb: [0xb45cff, 0x1a0a2e], lamew: [0xff8a26, 0x3a2410], lameb: [0xb45cff, 0x1a0a2e],
   };
   // Armes propres aux thèmes guerriers, par pièce (w = Blancs, b = Noirs) ; sinon jet ou salve aux couleurs du thème
   const WAR_PROJ = {
@@ -78,6 +83,9 @@
                b: { jet: 0x6d2a12, foam: 0x3e2723, bub: 0x5d4037, charge: 0x8d6e63, boom: [0xff8a65, 0x4e342e, 0x6d4c41], debris: [0x3e2723, 0x757575], burst: [0xff8a65, 0x5d4037, 0x6d4c41], bits: [0x3e2723, 0x757575] } },
     auras: { w: { jet: 0x4cc3ff, foam: 0xffffff, bub: 0x9fe3ff, charge: 0xbfeaff, boom: [0xffffff, 0x4cc3ff, 0xbfeaff], debris: [0x8d94a6, 0xbfeaff], burst: [0xffffff, 0x4cc3ff, 0xbfeaff], bits: [0xbfeaff, 0xffffff] },
              b: { jet: 0xc04bff, foam: 0xff3d6e, bub: 0x7a2bff, charge: 0xe58bff, boom: [0xff3d6e, 0xc04bff, 0x2a1636], debris: [0x2a1636, 0xc04bff], burst: [0xe58bff, 0xc04bff, 0xff3d6e], bits: [0xc04bff, 0xff3d6e] } },
+    // L'Âge des Sabres : le feu orange et or des Blancs, le feu violet des Noirs (pour les ripostes dans les mélanges de thèmes)
+    sabres: { w: { jet: 0xffb13b, foam: 0xfff1a8, bub: 0xff6a1a, charge: 0xfff1a8, boom: [0xfff1a8, 0xffb13b, 0xff6a1a], debris: [0x5c3a24, 0xd9b98a], burst: [0xfff1a8, 0xffb13b, 0xff6a1a], bits: [0x5c3a24, 0xffb13b] },
+              b: { jet: 0xb45cff, foam: 0xead0ff, bub: 0x6a1fd0, charge: 0xead0ff, boom: [0xead0ff, 0xb45cff, 0x6a1fd0], debris: [0x2a2630, 0x8a46a8], burst: [0xead0ff, 0xb45cff, 0x6a1fd0], bits: [0x2a2630, 0xb45cff] } },
     modern: { w: { jet: 0xffd54f, foam: 0xffffff, bub: 0x8d8d7a, charge: 0xfff59d, boom: [0xfff1a8, 0xff6d00, 0xffc34d], debris: [0x5d5d5d, 0xffb74d], burst: [0xfff1a8, 0xff9100, 0xbdbdbd], bits: [0x616161, 0xffcc80] },
               b: { jet: 0x37474f, foam: 0xb0bec5, bub: 0x37474f, charge: 0x78909c, boom: [0xffab40, 0x263238, 0x546e7a], debris: [0x263238, 0xff6d00], burst: [0xffab40, 0x37474f, 0x546e7a], bits: [0x263238, 0xff9100] } },
   }; // à distance : la cible tire d'abord sa propre technique sur l'attaquant
@@ -85,6 +93,10 @@
 const AURA_MATE = { P: 'temple', N: 'nilocomet', B: 'dawncross', R: 'fortress', Q: 'constellation', K: 'cloudbreath', p: 'shadeswarm', n: 'bounty', b: 'lasernet', r: 'eruption', q: 'nova', k: 'crystalcomet' };
 const AURA_PROJ = new Set(['disc', 'darkfire', 'burst', 'hook', 'slash', 'crosslaser', 'shield', 'magma', 'wave', 'mirror', 'breath', 'gravity']);
 const AURA_BEAMS = { wave: { r: 0.08, off: [0] }, mirror: { r: 0.03, off: [-0.5, 0.5] }, crosslaser: { r: 0.018, off: [-0.16, 0.16] } }; // off : écart de chaque rayon au départ
+// L'Âge des Sabres : un mat par pièce (celle qui donne le mat) ; le roi a le mat de son camp. [instant du coup, durée]
+const SABRE_MATE = { P: 'lamew', N: 'ridew', B: 'arcw', R: 'fracasw', Q: 'dragonw', K: 'sakura', p: 'lameb', n: 'rideb', b: 'arcb', r: 'fracasb', q: 'dragonb', k: 'lunepourpre' };
+const SABRE_STYLES = new Set(Object.values(SABRE_MATE));
+const SABRE_MATE_TIME = { sakura: [3, 5.2], lunepourpre: [3, 5.4], dragonw: [4, 7.6], dragonb: [4, 7.6], fracasw: [4.2, 6.2], fracasb: [4.2, 6.2], arcw: [3, 5.6], arcb: [3, 5.6], ridew: [4.6, 6.6], rideb: [4.6, 6.6], lamew: [2.9, 5], lameb: [2.9, 5] };
 const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 

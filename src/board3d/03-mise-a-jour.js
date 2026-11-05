@@ -133,7 +133,11 @@
           const ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
           const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); this.auraOnFall(v, b, o.t0, m.piece); } };
           const theme = root.themeOf(white ? 'K' : 'k'), themeFx = THEME_FX[theme], ocean = !!themeFx;
-          if (ocean && far && m.flag !== 'ep') {
+          if (root.themeOf(m.piece) === 'sabres') {
+            // L'Âge des Sabres : chaque pièce a son attaque, de près comme de loin
+            knightAttack = this.sabreAttack(kind, white, a, b, this.sqToPos(m.to), v, now, len, { x: ux, z: uz });
+            die({ t0: now + knightAttack.duration, knightAttack });
+          } else if (ocean && far && m.flag !== 'ep') {
             // Thèmes de créatures : jet (tour, dame) ou salve (cavalier, fou), aux couleurs du thème :
             // eau et encre (océan), liane et épines (plantes), sable et cailloux (animaux), plumes (oiseaux)
             const jet = kind === 'q' || kind === 'r';
@@ -314,8 +318,9 @@
         if (this.mateUltimate && THEME_MATE[root.themeOf(o.mateUltimate.piece)]) {
           const white = o.mateUltimate.piece === o.mateUltimate.piece.toUpperCase();
           const mateTheme = root.themeOf(o.mateUltimate.piece);
-          this.mateUltimate.themed = mateTheme === 'auras' ? AURA_MATE[o.mateUltimate.piece] : THEME_MATE[mateTheme][white ? 'w' : 'b'];
+          this.mateUltimate.themed = mateTheme === 'auras' ? AURA_MATE[o.mateUltimate.piece] : mateTheme === 'sabres' ? SABRE_MATE[o.mateUltimate.piece] : THEME_MATE[mateTheme][white ? 'w' : 'b'];
           this.mateUltimate.duration = 4.8;
+          if (mateTheme === 'sabres') [this.mateUltimate.hitAt, this.mateUltimate.duration] = SABRE_MATE_TIME[this.mateUltimate.themed];
         }
         if (this.mateUltimate) {
           this.makeMateUltimateFx(this.mateUltimate);
