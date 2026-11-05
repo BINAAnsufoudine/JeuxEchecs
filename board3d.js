@@ -16,6 +16,7 @@
     mud: { name: 'Terrain boueux', sky: 0x9ca19a, ground: 0x514b3d, wood: 0x49352b, frame: ['#786451', '#514237', '#342b27'], squares: ['#c7b79d', '#796451'], kind: 'mud' },
     rock: { name: 'Terrain rocheux', sky: 0xa9afb4, ground: 0x62686b, wood: 0x55483c, frame: ['#8a8175', '#5b544d', '#393735'], squares: ['#d0d0c9', '#777c7e'], kind: 'rock' },
     water: { name: 'Terrain avec flaques', sky: 0x9bbbc1, ground: 0x526f66, wood: 0x59432f, frame: ['#806b50', '#5a4734', '#3d3027'], squares: ['#d0dfd8', '#63827a'], kind: 'water' },
+    arena: { name: 'Arène du Ciel', sky: 0x6fa8e6, ground: 0xb4c6e4, wood: 0x6a6684, frame: ['#a7a3b8', '#7a7690', '#4e4b62'], squares: ['#d8d2e4', '#6d6596'], kind: 'arena' },
     beach: { name: 'Plage tropicale', sky: 0x6cc5e8, ground: 0xa88a54, wood: 0x8a6a42, frame: ['#b98d57', '#8a6238', '#5f4226'], squares: ['#ead6a0', '#b98a4c'], kind: 'beach' },
   };
   // overcast : part de gris dans le ciel ; wind : force du vent (pluie penchée, rafales) ; snow : flocons
@@ -70,9 +71,12 @@
     // Antiquité : traînée de feu des machines et volée de pierres ; moderne : rafale traçante et obus qui explosent
     ancient: { w: { jet: 0xffa726, foam: 0xfff3c4, bub: 0x9e9e9e, charge: 0xffcc80, boom: [0xfff1a8, 0xff8a2a, 0xffc34d], debris: [0x8d6e63, 0x9e9e9e], burst: [0xfff1a8, 0xffb74d, 0xd7ccc8], bits: [0x8d6e63, 0xbdbdbd] },
                b: { jet: 0x6d2a12, foam: 0x3e2723, bub: 0x5d4037, charge: 0x8d6e63, boom: [0xff8a65, 0x4e342e, 0x6d4c41], debris: [0x3e2723, 0x757575], burst: [0xff8a65, 0x5d4037, 0x6d4c41], bits: [0x3e2723, 0x757575] } },
+    auras: { w: { jet: 0x4cc3ff, foam: 0xffffff, bub: 0x9fe3ff, charge: 0xbfeaff, boom: [0xffffff, 0x4cc3ff, 0xbfeaff], debris: [0x8d94a6, 0xbfeaff], burst: [0xffffff, 0x4cc3ff, 0xbfeaff], bits: [0xbfeaff, 0xffffff] },
+             b: { jet: 0xc04bff, foam: 0xff3d6e, bub: 0x7a2bff, charge: 0xe58bff, boom: [0xff3d6e, 0xc04bff, 0x2a1636], debris: [0x2a1636, 0xc04bff], burst: [0xe58bff, 0xc04bff, 0xff3d6e], bits: [0xc04bff, 0xff3d6e] } },
     modern: { w: { jet: 0xffd54f, foam: 0xffffff, bub: 0x8d8d7a, charge: 0xfff59d, boom: [0xfff1a8, 0xff6d00, 0xffc34d], debris: [0x5d5d5d, 0xffb74d], burst: [0xfff1a8, 0xff9100, 0xbdbdbd], bits: [0x616161, 0xffcc80] },
               b: { jet: 0x37474f, foam: 0xb0bec5, bub: 0x37474f, charge: 0x78909c, boom: [0xffab40, 0x263238, 0x546e7a], debris: [0x263238, 0xff6d00], burst: [0xffab40, 0x37474f, 0x546e7a], bits: [0x263238, 0xff9100] } },
   }; // à distance : la cible tire d'abord sa propre technique sur l'attaquant
+const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
   class Board3D {
@@ -479,12 +483,26 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
 
     // Animaux du décor : ceux qui représentent le mieux chaque paysage se promènent, sautent, volent ou nagent autour du plateau
+    // Arène du Ciel : rochers qui flottent lentement autour de l'arène
+    buildSkyRocks() {
+      const T = this.THREE, rock = new T.MeshStandardMaterial({ color: 0x8a8799, roughness: 0.95, flatShading: true }), moss = new T.MeshStandardMaterial({ color: 0xcfd6e6, roughness: 1, flatShading: true });
+      const geo = new T.IcosahedronGeometry(1, 0), topGeo = new T.CylinderGeometry(0.72, 0.9, 0.3, 7);
+      for (let i = 0; i < 9; i++) {
+        const g = new T.Group(), s = 0.55 + (i * 37 % 10) / 10, ang = i / 9 * Math.PI * 2 + 0.3, r = 13 + (i * 53 % 10) * 0.7, y = 0.5 + (i * 71 % 10) * 0.42;
+        const under = new T.Mesh(geo, rock); under.scale.set(s * 1.1, s * 1.25, s); under.position.y = -s * 0.55; under.rotation.y = i; g.add(under);
+        const top = new T.Mesh(topGeo, moss); top.scale.set(s * 1.3, s, s * 1.2); top.position.y = s * 0.3; g.add(top);
+        g.rotation.y = i * 1.7; this.animalGroup.add(g);
+        this.animals.push({ g, behave: 'float', ang, r, y, phase: i * 1.3 });
+      }
+    }
+
     buildAnimals(terrain) {
       const T = this.THREE;
       if (!this.animalGroup) { this.animalGroup = new T.Group(); this.animalGroup.position.y = GROUND + 0.535; this.scene.add(this.animalGroup); }
       this.animalGroup.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
       this.animalGroup.clear();
       this.animals = [];
+      if (terrain.kind === 'arena') { this.buildSkyRocks(); return; } // pas d'animaux dans le ciel : des rochers flottants
       const mat = (color) => new T.MeshStandardMaterial({ color, roughness: 0.85 });
       const mesh = (geo, m, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => { const o = new T.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.castShadow = true; return o; };
       const box = new T.BoxGeometry(1, 1, 1), ball = new T.SphereGeometry(0.5, 12, 9), cone = new T.ConeGeometry(0.5, 1, 7), cyl = new T.CylinderGeometry(0.5, 0.5, 1, 7);
@@ -635,6 +653,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       const groundY = -0.535;
       for (const a of this.animals) {
         const g = a.g;
+        if (a.behave === 'float') {
+          a.ang += dt * 0.012;
+          g.position.set(Math.cos(a.ang) * a.r, a.y + Math.sin(t * 0.5 + a.phase) * 0.28, Math.sin(a.ang) * a.r);
+          continue;
+        }
         if (a.behave === 'fly') {
           a.ang += a.dir * a.speed * dt;
           g.position.set(Math.cos(a.ang) * a.r, a.y + Math.sin(t * 0.7 + a.phase) * 0.4, Math.sin(a.ang) * a.r);
@@ -675,7 +698,9 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       g.fillStyle = col(0); g.fillRect(0, 0, 512, 512);
       // grain de fond
       for (let i = 0; i < 2600; i++) { g.fillStyle = col((rnd() - 0.5) * 0.12, 0.5); g.fillRect(rnd() * 512, rnd() * 512, 2 + rnd() * 4, 2 + rnd() * 4); }
-      if (k === 'forest' || k === 'grass') {
+      if (k === 'arena') { // mer de nuages sous l'arène
+        for (let i = 0; i < 150; i++) { const x = rnd() * 512, y = rnd() * 512, r = 18 + rnd() * 48, a = g.createRadialGradient(x, y, 1, x, y, r); a.addColorStop(0, rnd() < 0.7 ? 'rgba(235,242,252,0.6)' : 'rgba(150,178,220,0.6)'); a.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = a; g.fillRect(x - r, y - r, r * 2, r * 2); }
+      } else if (k === 'forest' || k === 'grass') {
         for (let i = 0; i < 1800; i++) { const x = rnd() * 512, y = rnd() * 512; g.strokeStyle = col(0.04 + rnd() * 0.12, 0.8); g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 4, y - 5 - rnd() * 6); g.stroke(); }
         if (k === 'grass') for (let i = 0; i < 60; i++) { g.fillStyle = ['#f6f2d0', '#f3d34a', '#e98fb0', '#ffffff'][i % 4]; g.beginPath(); g.arc(rnd() * 512, rnd() * 512, 2.2, 0, 7); g.fill(); }
         if (k === 'forest') for (let i = 0; i < 90; i++) { g.fillStyle = ['#6b4a26', '#8a6a2a', '#4d3a1f'][i % 3]; g.save(); g.translate(rnd() * 512, rnd() * 512); g.rotate(rnd() * 6); g.beginPath(); g.ellipse(0, 0, 5, 2.5, 0, 0, 7); g.fill(); g.restore(); }
@@ -714,7 +739,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         g.lineTo(2048, 512); g.fill();
       };
       const ground = new T.Color(terrain.ground), shade = (dl, h = 0) => hex(ground.clone().offsetHSL(h, 0, dl).lerp(sky, 0.35 - dl));
-      if (k === 'rock') { ridge('#8d939a', 360, 180, 0.006, 1.3); ridge('#6c7277', 410, 120, 0.011, 2.1); ridge(shade(0), 460, 50, 0.02, 0.4); }
+      if (k === 'arena') { // horizon de nuages et rochers flottants au loin
+        for (let i = 0; i < 26; i++) { const x = rnd() * 2048, y = 90 + rnd() * 170, s = 16 + rnd() * 34; g.fillStyle = '#7f8db0'; g.beginPath(); g.moveTo(x - s, y); g.lineTo(x + s, y); g.lineTo(x + s * 0.3, y + s * 1.2); g.lineTo(x - s * 0.4, y + s * 0.8); g.fill(); g.fillStyle = '#dfe7f4'; g.fillRect(x - s, y - 3, s * 2, 4); }
+        for (let i = 0; i < 70; i++) { const x = rnd() * 2048, y = 370 + rnd() * 130, r = 30 + rnd() * 70; g.fillStyle = i % 3 ? 'rgba(255,255,255,0.82)' : 'rgba(205,222,245,0.8)'; g.beginPath(); g.ellipse(x, y, r * 1.8, r * 0.6, 0, 0, 7); g.fill(); }
+      } else if (k === 'rock') { ridge('#8d939a', 360, 180, 0.006, 1.3); ridge('#6c7277', 410, 120, 0.011, 2.1); ridge(shade(0), 460, 50, 0.02, 0.4); }
       else if (k === 'desert') { ridge('#c99a63', 400, 60, 0.004, 0.2); ridge('#b98a52', 440, 45, 0.008, 1.7); g.fillStyle = '#9a6f45'; g.fillRect(300, 330, 160, 80); g.fillRect(1500, 345, 120, 70); ridge(shade(0.05), 470, 30, 0.012, 0.9); }
       else if (k === 'beach') {
         g.fillStyle = '#1aa3c4'; g.fillRect(0, 380, 2048, 132); g.fillStyle = 'rgba(255,255,255,0.5)'; for (let i = 0; i < 40; i++) g.fillRect(rnd() * 2048, 390 + rnd() * 100, 30 + rnd() * 40, 2);
@@ -798,7 +826,9 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       for (let i = 0; i < points.length; i++) {
         // devant et derrière le plateau, le décor est reculé pour ne pas cacher les pièces (le sol est au ras du plateau)
         const x = points[i][0], z = points[i][1] * (Math.abs(points[i][1]) > 5 ? 1.35 : 1), jitter = (i % 3) * 0.16;
-        if (terrain.kind === 'beach') {
+        if (terrain.kind === 'arena') {
+          // rien sur la mer de nuages : les dalles et bornes sont posées plus bas
+        } else if (terrain.kind === 'beach') {
           add(moundGeo, sand, x, -0.32, z, 1.7, 0.3, 1);
           if (i % 4 === 0) palm(x, z, (i % 8 === 0 ? 1 : -1) * 0.12);
           else if (i % 4 === 2) { const pool = add(disk, tide, x, -0.512, z, 1.3, 1, 0.8, false); pool.rotation.x = -Math.PI / 2; }
@@ -835,6 +865,21 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             add(stemGeo, green, x, -0.03, z, 0.45, 0.48, 0.45);
             add(stemGeo, paleGreen, x + 0.16, -0.05, z + 0.12, 0.38, 0.43, 0.38);
           }
+        }
+      }
+      if (terrain.kind === 'arena') {
+        // Arène de pierre posée sur les nuages : dalle octogonale à gradins, bornes aux angles, nuages tout autour
+        const slab = mat(0x7d7895), rim = mat(0x5d5978), cloud = mat(0xdfe8f8, { roughness: 1 }), glowStone = mat(0x4cc3ff, { emissive: 0x2a8fd8, emissiveIntensity: 0.9 });
+        const top = add(new T.CylinderGeometry(7.4, 7.7, 0.18, 8), slab, 0, -0.59, 0, 1, 1, 1, false); top.rotation.y = Math.PI / 8;
+        const step = add(new T.CylinderGeometry(8.2, 8.6, 0.3, 8), rim, 0, -0.665, 0, 1, 1, 1, false); step.rotation.y = Math.PI / 8;
+        const pillar = new T.CylinderGeometry(0.2, 0.28, 1.5, 8), gem = new T.OctahedronGeometry(0.2, 0);
+        for (let i = 0; i < 8; i++) {
+          const a = i / 8 * Math.PI * 2, x = Math.cos(a) * 7.05, z = Math.sin(a) * 7.05;
+          add(pillar, rim, x, 0.3, z); add(gem, glowStone, x, 1.25, z, 1, 1.4, 1, false);
+        }
+        for (let i = 0; i < 26; i++) {
+          const a = i / 26 * Math.PI * 2, r = 9 + (i * 7 % 5) * 0.55;
+          add(moundGeo, cloud, Math.cos(a) * r, -0.5, Math.sin(a) * r, 3.4 + i % 3, 1 + (i % 2) * 0.5, 2.4 + i % 2, false);
         }
       }
       if (terrain.id === 'dojo') {
@@ -1191,6 +1236,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           const ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
           const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); } };
           const theme = root.themeOf(white ? 'K' : 'k'), themeFx = THEME_FX[theme], ocean = !!themeFx;
+          if (theme === 'auras') this.createCrater(b, this.lastT || 0, true); // la dalle garde un cratère fumant
           if (ocean && far && m.flag !== 'ep') {
             // Thèmes de créatures : jet (tour, dame) ou salve (cavalier, fou), aux couleurs du thème :
             // eau et encre (océan), liane et épines (plantes), sable et cailloux (animaux), plumes (oiseaux)
@@ -1426,6 +1472,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         }
       }
       this.dying = [];
+      (this.auraPuffs || []).forEach((p) => { this.scene.remove(p.m); p.m.material.dispose(); });
+      this.auraPuffs = [];
       for (const scar of this.captureScars) {
         this.scene.remove(scar.object);
         scar.object.traverse((x) => { if (x.geometry) x.geometry.dispose(); if (x.material) x.material.dispose(); });
@@ -3493,7 +3541,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             M.animate(c.parts, t, a.knightFlight ? 'knight-flight' : 'run');
             // Thème Oiseaux : sur plus d'une case, l'oiseau s'envole, plane puis se pose
             const dist = Math.hypot(p1.x - p0.x, p1.z - p0.z), bird = root.themeOf(c.piece) === 'birds' && dist > 1.2;
-            const arc = bird ? Math.min(1, Math.sin(Math.PI * u) * 1.6) * Math.min(2.2, 0.7 + dist * 0.28) : Math.sin(Math.PI * u) * (leap ? a.high || 0.9 : 0.12);
+            // Saga des Auras : les pièces volent au ras du plateau en laissant une traînée de lumière
+            const flyer = root.themeOf(c.piece) === 'auras';
+            if (flyer && u > 0 && u < 1) this.auraTrail(c, t);
+            const arc = flyer ? Math.sin(Math.PI * u) * (leap ? Math.max(a.high || 0.9, 1.3) : 0.45) : bird ? Math.min(1, Math.sin(Math.PI * u) * 1.6) * Math.min(2.2, 0.7 + dist * 0.28) : Math.sin(Math.PI * u) * (leap ? a.high || 0.9 : 0.12);
             c.parts.root.position.y = arc;
             c.shadow.scale.setScalar(Math.max(0.35, 1 - arc * 0.4));
             if (c.parts.fast && u < 1) this.trail(c, true, t);
@@ -3613,6 +3664,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           continue;
         }
         if (c.selected) state = 'select';
+        this.tickAura(c, t);
         // Les personnages ne suivent plus la caméra : ils fixent l'adversaire le plus proche (ou le plus fort à égalité)
         const at = c.holder.position;
         const look = c.faceTarget || c.watch;
@@ -3716,6 +3768,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.tickEffects(t);
       this.tickDayNight(t, dt);
       this.tickCaptureScars(t);
+      this.tickAuraTrails(t);
       this.tickCaptureCamera(t);
       this.tickAttackCamera(t);
       this.tickMateCamera(t);
@@ -5048,7 +5101,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       return el < a.duration;
     }
 
-    createCrater(at, t) {
+    createCrater(at, t, smoking = false) {
       const T = this.THREE, crater = new T.Group();
       const pit = new T.Mesh(new T.CircleGeometry(0.34, 24), new T.MeshBasicMaterial({ color: 0x21170f, transparent: true, opacity: 0.95, side: T.DoubleSide }));
       pit.rotation.x = -Math.PI / 2; pit.position.y = 0.025; crater.add(pit);
@@ -5059,17 +5112,72 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         const rock = new T.Mesh(new T.DodecahedronGeometry(size, 0), new T.MeshStandardMaterial({ color: i % 2 ? 0x806044 : 0x493426, roughness: 1 }));
         rock.position.set(Math.cos(angle) * 0.31, 0.045, Math.sin(angle) * 0.31); rock.scale.y = 0.55; crater.add(rock);
       }
+      const puffs = [];
+      if (smoking) for (let i = 0; i < 5; i++) { // cratère fumant : la fumée monte tant qu'il reste sur la case
+        const m = new T.Mesh(new T.SphereGeometry(0.1, 8, 6), new T.MeshBasicMaterial({ color: 0x8b8a96, transparent: true, opacity: 0.4, depthWrite: false }));
+        crater.add(m); puffs.push(m);
+      }
       crater.position.set(at.x, 0, at.z); this.scene.add(crater);
-      this.captureScars.push({ object: crater, until: t + 5, start: t });
+      // Saga des Auras : le cratère dure quelques coups ; il disparaît aussi si l'on revient en arrière dans la partie
+      this.captureScars.push({ object: crater, until: t + (smoking ? 40 : 5), start: t, ply: smoking ? this.ply : null, puffs });
     }
 
     tickCaptureScars(t) {
       this.captureScars = this.captureScars.filter((scar) => {
-        if (t >= scar.until) {
+        scar.puffs.forEach((m, i) => { const u = ((t - scar.start) * 0.32 + i / 5) % 1; m.position.set(Math.sin(i * 2.4 + u * 3) * 0.12, 0.08 + u * 0.75, Math.cos(i * 1.7 + u * 3) * 0.12); m.scale.setScalar(0.6 + u * 2); m.material.opacity = 0.42 * (1 - u); });
+        const plyOver = scar.ply != null && this.ply != null && (this.ply >= scar.ply + AURA_CRATER_PLIES || this.ply < scar.ply);
+        if (t >= scar.until || plyOver) {
           this.scene.remove(scar.object);
           scar.object.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
           return false;
         }
+        return true;
+      });
+    }
+
+    // Saga des Auras : aura de la pièce sélectionnée (bleue pour les Blancs, pourpre pour les Noirs)
+    auraKit(white) {
+      const T = this.THREE, key = white ? 'w' : 'b';
+      this.auraKits = this.auraKits || {};
+      if (!this.auraKits[key]) this.auraKits[key] = {
+        mat: new T.MeshBasicMaterial({ color: white ? 0x4cc3ff : 0xc04bff, transparent: true, opacity: 0.32, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }),
+        tip: new T.MeshBasicMaterial({ color: white ? 0xbfeaff : 0xff3d6e, transparent: true, opacity: 0.5, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }),
+        shell: new T.CylinderGeometry(0.2, 0.42, 1.5, 16, 1, true), flame: new T.ConeGeometry(0.11, 0.8, 6), ring: new T.RingGeometry(0.3, 0.46, 28),
+      };
+      return this.auraKits[key];
+    }
+    tickAura(c, t) {
+      const on = c.selected && root.themeOf(c.piece) === 'auras';
+      if (!on) { if (c.auraFx) c.auraFx.visible = false; return; }
+      const T = this.THREE;
+      if (!c.auraFx) {
+        const kit = this.auraKit(c.piece === c.piece.toUpperCase()), g = new T.Group();
+        const shell = new T.Mesh(kit.shell, kit.mat); shell.position.y = 0.72; g.add(shell);
+        const ring = new T.Mesh(kit.ring, kit.tip); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; g.add(ring);
+        g.userData.flames = [];
+        for (let i = 0; i < 7; i++) { const f = new T.Mesh(kit.flame, i % 2 ? kit.tip : kit.mat), a = i / 7 * Math.PI * 2; f.position.set(Math.cos(a) * 0.33, 0.5, Math.sin(a) * 0.33); g.add(f); g.userData.flames.push(f); }
+        c.auraFx = g; c.holder.add(g);
+      }
+      c.auraFx.visible = true;
+      c.auraFx.rotation.y = t * 1.4;
+      c.auraFx.userData.flames.forEach((f, i) => { const u = (t * 1.3 + i * 0.37) % 1; f.position.y = 0.3 + u * 1.1; f.scale.set(1 - u * 0.6, 0.7 + (1 - u) * 0.9, 1 - u * 0.6); });
+    }
+    // Déplacement en vol : traînée de lumière qui s'efface derrière la pièce
+    auraTrail(c, t) {
+      if (t < (c.auraPuffAt || 0)) return;
+      c.auraPuffAt = t + 0.035;
+      const T = this.THREE, kit = this.auraKit(c.piece === c.piece.toUpperCase());
+      this.auraPuffGeo = this.auraPuffGeo || new T.SphereGeometry(0.16, 8, 6);
+      const m = new T.Mesh(this.auraPuffGeo, kit.mat.clone());
+      m.position.copy(c.holder.position); m.position.y = c.parts.root.position.y + 0.55;
+      this.scene.add(m); (this.auraPuffs = this.auraPuffs || []).push({ m, t0: t });
+    }
+    tickAuraTrails(t) {
+      if (!this.auraPuffs || !this.auraPuffs.length) return;
+      this.auraPuffs = this.auraPuffs.filter((p) => {
+        const u = (t - p.t0) / 0.5;
+        if (u >= 1) { this.scene.remove(p.m); p.m.material.dispose(); return false; }
+        p.m.material.opacity = 0.5 * (1 - u); p.m.scale.setScalar(1 - u * 0.7);
         return true;
       });
     }

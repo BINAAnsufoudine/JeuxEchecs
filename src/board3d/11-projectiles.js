@@ -1,4 +1,4 @@
-    createCrater(at, t) {
+    createCrater(at, t, smoking = false) {
       const T = this.THREE, crater = new T.Group();
       const pit = new T.Mesh(new T.CircleGeometry(0.34, 24), new T.MeshBasicMaterial({ color: 0x21170f, transparent: true, opacity: 0.95, side: T.DoubleSide }));
       pit.rotation.x = -Math.PI / 2; pit.position.y = 0.025; crater.add(pit);
@@ -9,17 +9,72 @@
         const rock = new T.Mesh(new T.DodecahedronGeometry(size, 0), new T.MeshStandardMaterial({ color: i % 2 ? 0x806044 : 0x493426, roughness: 1 }));
         rock.position.set(Math.cos(angle) * 0.31, 0.045, Math.sin(angle) * 0.31); rock.scale.y = 0.55; crater.add(rock);
       }
+      const puffs = [];
+      if (smoking) for (let i = 0; i < 5; i++) { // cratère fumant : la fumée monte tant qu'il reste sur la case
+        const m = new T.Mesh(new T.SphereGeometry(0.1, 8, 6), new T.MeshBasicMaterial({ color: 0x8b8a96, transparent: true, opacity: 0.4, depthWrite: false }));
+        crater.add(m); puffs.push(m);
+      }
       crater.position.set(at.x, 0, at.z); this.scene.add(crater);
-      this.captureScars.push({ object: crater, until: t + 5, start: t });
+      // Saga des Auras : le cratère dure quelques coups ; il disparaît aussi si l'on revient en arrière dans la partie
+      this.captureScars.push({ object: crater, until: t + (smoking ? 40 : 5), start: t, ply: smoking ? this.ply : null, puffs });
     }
 
     tickCaptureScars(t) {
       this.captureScars = this.captureScars.filter((scar) => {
-        if (t >= scar.until) {
+        scar.puffs.forEach((m, i) => { const u = ((t - scar.start) * 0.32 + i / 5) % 1; m.position.set(Math.sin(i * 2.4 + u * 3) * 0.12, 0.08 + u * 0.75, Math.cos(i * 1.7 + u * 3) * 0.12); m.scale.setScalar(0.6 + u * 2); m.material.opacity = 0.42 * (1 - u); });
+        const plyOver = scar.ply != null && this.ply != null && (this.ply >= scar.ply + AURA_CRATER_PLIES || this.ply < scar.ply);
+        if (t >= scar.until || plyOver) {
           this.scene.remove(scar.object);
           scar.object.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
           return false;
         }
+        return true;
+      });
+    }
+
+    // Saga des Auras : aura de la pièce sélectionnée (bleue pour les Blancs, pourpre pour les Noirs)
+    auraKit(white) {
+      const T = this.THREE, key = white ? 'w' : 'b';
+      this.auraKits = this.auraKits || {};
+      if (!this.auraKits[key]) this.auraKits[key] = {
+        mat: new T.MeshBasicMaterial({ color: white ? 0x4cc3ff : 0xc04bff, transparent: true, opacity: 0.32, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }),
+        tip: new T.MeshBasicMaterial({ color: white ? 0xbfeaff : 0xff3d6e, transparent: true, opacity: 0.5, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }),
+        shell: new T.CylinderGeometry(0.2, 0.42, 1.5, 16, 1, true), flame: new T.ConeGeometry(0.11, 0.8, 6), ring: new T.RingGeometry(0.3, 0.46, 28),
+      };
+      return this.auraKits[key];
+    }
+    tickAura(c, t) {
+      const on = c.selected && root.themeOf(c.piece) === 'auras';
+      if (!on) { if (c.auraFx) c.auraFx.visible = false; return; }
+      const T = this.THREE;
+      if (!c.auraFx) {
+        const kit = this.auraKit(c.piece === c.piece.toUpperCase()), g = new T.Group();
+        const shell = new T.Mesh(kit.shell, kit.mat); shell.position.y = 0.72; g.add(shell);
+        const ring = new T.Mesh(kit.ring, kit.tip); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; g.add(ring);
+        g.userData.flames = [];
+        for (let i = 0; i < 7; i++) { const f = new T.Mesh(kit.flame, i % 2 ? kit.tip : kit.mat), a = i / 7 * Math.PI * 2; f.position.set(Math.cos(a) * 0.33, 0.5, Math.sin(a) * 0.33); g.add(f); g.userData.flames.push(f); }
+        c.auraFx = g; c.holder.add(g);
+      }
+      c.auraFx.visible = true;
+      c.auraFx.rotation.y = t * 1.4;
+      c.auraFx.userData.flames.forEach((f, i) => { const u = (t * 1.3 + i * 0.37) % 1; f.position.y = 0.3 + u * 1.1; f.scale.set(1 - u * 0.6, 0.7 + (1 - u) * 0.9, 1 - u * 0.6); });
+    }
+    // Déplacement en vol : traînée de lumière qui s'efface derrière la pièce
+    auraTrail(c, t) {
+      if (t < (c.auraPuffAt || 0)) return;
+      c.auraPuffAt = t + 0.035;
+      const T = this.THREE, kit = this.auraKit(c.piece === c.piece.toUpperCase());
+      this.auraPuffGeo = this.auraPuffGeo || new T.SphereGeometry(0.16, 8, 6);
+      const m = new T.Mesh(this.auraPuffGeo, kit.mat.clone());
+      m.position.copy(c.holder.position); m.position.y = c.parts.root.position.y + 0.55;
+      this.scene.add(m); (this.auraPuffs = this.auraPuffs || []).push({ m, t0: t });
+    }
+    tickAuraTrails(t) {
+      if (!this.auraPuffs || !this.auraPuffs.length) return;
+      this.auraPuffs = this.auraPuffs.filter((p) => {
+        const u = (t - p.t0) / 0.5;
+        if (u >= 1) { this.scene.remove(p.m); p.m.material.dispose(); return false; }
+        p.m.material.opacity = 0.5 * (1 - u); p.m.scale.setScalar(1 - u * 0.7);
         return true;
       });
     }

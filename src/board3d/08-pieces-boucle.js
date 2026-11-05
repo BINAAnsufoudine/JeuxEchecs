@@ -96,7 +96,10 @@
             M.animate(c.parts, t, a.knightFlight ? 'knight-flight' : 'run');
             // Thème Oiseaux : sur plus d'une case, l'oiseau s'envole, plane puis se pose
             const dist = Math.hypot(p1.x - p0.x, p1.z - p0.z), bird = root.themeOf(c.piece) === 'birds' && dist > 1.2;
-            const arc = bird ? Math.min(1, Math.sin(Math.PI * u) * 1.6) * Math.min(2.2, 0.7 + dist * 0.28) : Math.sin(Math.PI * u) * (leap ? a.high || 0.9 : 0.12);
+            // Saga des Auras : les pièces volent au ras du plateau en laissant une traînée de lumière
+            const flyer = root.themeOf(c.piece) === 'auras';
+            if (flyer && u > 0 && u < 1) this.auraTrail(c, t);
+            const arc = flyer ? Math.sin(Math.PI * u) * (leap ? Math.max(a.high || 0.9, 1.3) : 0.45) : bird ? Math.min(1, Math.sin(Math.PI * u) * 1.6) * Math.min(2.2, 0.7 + dist * 0.28) : Math.sin(Math.PI * u) * (leap ? a.high || 0.9 : 0.12);
             c.parts.root.position.y = arc;
             c.shadow.scale.setScalar(Math.max(0.35, 1 - arc * 0.4));
             if (c.parts.fast && u < 1) this.trail(c, true, t);
@@ -216,6 +219,7 @@
           continue;
         }
         if (c.selected) state = 'select';
+        this.tickAura(c, t);
         // Les personnages ne suivent plus la caméra : ils fixent l'adversaire le plus proche (ou le plus fort à égalité)
         const at = c.holder.position;
         const look = c.faceTarget || c.watch;
@@ -319,6 +323,7 @@
       this.tickEffects(t);
       this.tickDayNight(t, dt);
       this.tickCaptureScars(t);
+      this.tickAuraTrails(t);
       this.tickCaptureCamera(t);
       this.tickAttackCamera(t);
       this.tickMateCamera(t);

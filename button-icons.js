@@ -11,6 +11,7 @@
     ocean: { '🥷': '🐚', '⛩️': '🏝️', '🏯': '⚓', '🌀': '🌊', '🗡️': '🔱', '🥋': '🐠' },
     ancient: { '🥷': '🛡️', '⛩️': '🏛️', '🏯': '🏰', '🌀': '🏹', '🗡️': '⚔️', '🥋': '🐎' },
     modern: { '🥷': '🪖', '⛩️': '⛺', '🏯': '🏢', '🌀': '🚁', '🗡️': '🎯', '🥋': '🎖️' },
+    auras: { '🥷': '💫', '⛩️': '🛕', '🏯': '🏟️', '🌀': '🌠', '🗡️': '⚡', '🥋': '🥋' },
   };
   let theme = 'ninjas';
   try { theme = JSON.parse(localStorage.getItem('cavalier.natureCollection')) || 'ninjas'; } catch { theme = 'ninjas'; }

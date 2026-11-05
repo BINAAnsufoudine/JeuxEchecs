@@ -402,12 +402,26 @@
     }
 
     // Animaux du décor : ceux qui représentent le mieux chaque paysage se promènent, sautent, volent ou nagent autour du plateau
+    // Arène du Ciel : rochers qui flottent lentement autour de l'arène
+    buildSkyRocks() {
+      const T = this.THREE, rock = new T.MeshStandardMaterial({ color: 0x8a8799, roughness: 0.95, flatShading: true }), moss = new T.MeshStandardMaterial({ color: 0xcfd6e6, roughness: 1, flatShading: true });
+      const geo = new T.IcosahedronGeometry(1, 0), topGeo = new T.CylinderGeometry(0.72, 0.9, 0.3, 7);
+      for (let i = 0; i < 9; i++) {
+        const g = new T.Group(), s = 0.55 + (i * 37 % 10) / 10, ang = i / 9 * Math.PI * 2 + 0.3, r = 13 + (i * 53 % 10) * 0.7, y = 0.5 + (i * 71 % 10) * 0.42;
+        const under = new T.Mesh(geo, rock); under.scale.set(s * 1.1, s * 1.25, s); under.position.y = -s * 0.55; under.rotation.y = i; g.add(under);
+        const top = new T.Mesh(topGeo, moss); top.scale.set(s * 1.3, s, s * 1.2); top.position.y = s * 0.3; g.add(top);
+        g.rotation.y = i * 1.7; this.animalGroup.add(g);
+        this.animals.push({ g, behave: 'float', ang, r, y, phase: i * 1.3 });
+      }
+    }
+
     buildAnimals(terrain) {
       const T = this.THREE;
       if (!this.animalGroup) { this.animalGroup = new T.Group(); this.animalGroup.position.y = GROUND + 0.535; this.scene.add(this.animalGroup); }
       this.animalGroup.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
       this.animalGroup.clear();
       this.animals = [];
+      if (terrain.kind === 'arena') { this.buildSkyRocks(); return; } // pas d'animaux dans le ciel : des rochers flottants
       const mat = (color) => new T.MeshStandardMaterial({ color, roughness: 0.85 });
       const mesh = (geo, m, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => { const o = new T.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.castShadow = true; return o; };
       const box = new T.BoxGeometry(1, 1, 1), ball = new T.SphereGeometry(0.5, 12, 9), cone = new T.ConeGeometry(0.5, 1, 7), cyl = new T.CylinderGeometry(0.5, 0.5, 1, 7);
@@ -558,6 +572,11 @@
       const groundY = -0.535;
       for (const a of this.animals) {
         const g = a.g;
+        if (a.behave === 'float') {
+          a.ang += dt * 0.012;
+          g.position.set(Math.cos(a.ang) * a.r, a.y + Math.sin(t * 0.5 + a.phase) * 0.28, Math.sin(a.ang) * a.r);
+          continue;
+        }
         if (a.behave === 'fly') {
           a.ang += a.dir * a.speed * dt;
           g.position.set(Math.cos(a.ang) * a.r, a.y + Math.sin(t * 0.7 + a.phase) * 0.4, Math.sin(a.ang) * a.r);
@@ -598,7 +617,9 @@
       g.fillStyle = col(0); g.fillRect(0, 0, 512, 512);
       // grain de fond
       for (let i = 0; i < 2600; i++) { g.fillStyle = col((rnd() - 0.5) * 0.12, 0.5); g.fillRect(rnd() * 512, rnd() * 512, 2 + rnd() * 4, 2 + rnd() * 4); }
-      if (k === 'forest' || k === 'grass') {
+      if (k === 'arena') { // mer de nuages sous l'arène
+        for (let i = 0; i < 150; i++) { const x = rnd() * 512, y = rnd() * 512, r = 18 + rnd() * 48, a = g.createRadialGradient(x, y, 1, x, y, r); a.addColorStop(0, rnd() < 0.7 ? 'rgba(235,242,252,0.6)' : 'rgba(150,178,220,0.6)'); a.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = a; g.fillRect(x - r, y - r, r * 2, r * 2); }
+      } else if (k === 'forest' || k === 'grass') {
         for (let i = 0; i < 1800; i++) { const x = rnd() * 512, y = rnd() * 512; g.strokeStyle = col(0.04 + rnd() * 0.12, 0.8); g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 4, y - 5 - rnd() * 6); g.stroke(); }
         if (k === 'grass') for (let i = 0; i < 60; i++) { g.fillStyle = ['#f6f2d0', '#f3d34a', '#e98fb0', '#ffffff'][i % 4]; g.beginPath(); g.arc(rnd() * 512, rnd() * 512, 2.2, 0, 7); g.fill(); }
         if (k === 'forest') for (let i = 0; i < 90; i++) { g.fillStyle = ['#6b4a26', '#8a6a2a', '#4d3a1f'][i % 3]; g.save(); g.translate(rnd() * 512, rnd() * 512); g.rotate(rnd() * 6); g.beginPath(); g.ellipse(0, 0, 5, 2.5, 0, 0, 7); g.fill(); g.restore(); }
@@ -637,7 +658,10 @@
         g.lineTo(2048, 512); g.fill();
       };
       const ground = new T.Color(terrain.ground), shade = (dl, h = 0) => hex(ground.clone().offsetHSL(h, 0, dl).lerp(sky, 0.35 - dl));
-      if (k === 'rock') { ridge('#8d939a', 360, 180, 0.006, 1.3); ridge('#6c7277', 410, 120, 0.011, 2.1); ridge(shade(0), 460, 50, 0.02, 0.4); }
+      if (k === 'arena') { // horizon de nuages et rochers flottants au loin
+        for (let i = 0; i < 26; i++) { const x = rnd() * 2048, y = 90 + rnd() * 170, s = 16 + rnd() * 34; g.fillStyle = '#7f8db0'; g.beginPath(); g.moveTo(x - s, y); g.lineTo(x + s, y); g.lineTo(x + s * 0.3, y + s * 1.2); g.lineTo(x - s * 0.4, y + s * 0.8); g.fill(); g.fillStyle = '#dfe7f4'; g.fillRect(x - s, y - 3, s * 2, 4); }
+        for (let i = 0; i < 70; i++) { const x = rnd() * 2048, y = 370 + rnd() * 130, r = 30 + rnd() * 70; g.fillStyle = i % 3 ? 'rgba(255,255,255,0.82)' : 'rgba(205,222,245,0.8)'; g.beginPath(); g.ellipse(x, y, r * 1.8, r * 0.6, 0, 0, 7); g.fill(); }
+      } else if (k === 'rock') { ridge('#8d939a', 360, 180, 0.006, 1.3); ridge('#6c7277', 410, 120, 0.011, 2.1); ridge(shade(0), 460, 50, 0.02, 0.4); }
       else if (k === 'desert') { ridge('#c99a63', 400, 60, 0.004, 0.2); ridge('#b98a52', 440, 45, 0.008, 1.7); g.fillStyle = '#9a6f45'; g.fillRect(300, 330, 160, 80); g.fillRect(1500, 345, 120, 70); ridge(shade(0.05), 470, 30, 0.012, 0.9); }
       else if (k === 'beach') {
         g.fillStyle = '#1aa3c4'; g.fillRect(0, 380, 2048, 132); g.fillStyle = 'rgba(255,255,255,0.5)'; for (let i = 0; i < 40; i++) g.fillRect(rnd() * 2048, 390 + rnd() * 100, 30 + rnd() * 40, 2);
@@ -721,7 +745,9 @@
       for (let i = 0; i < points.length; i++) {
         // devant et derrière le plateau, le décor est reculé pour ne pas cacher les pièces (le sol est au ras du plateau)
         const x = points[i][0], z = points[i][1] * (Math.abs(points[i][1]) > 5 ? 1.35 : 1), jitter = (i % 3) * 0.16;
-        if (terrain.kind === 'beach') {
+        if (terrain.kind === 'arena') {
+          // rien sur la mer de nuages : les dalles et bornes sont posées plus bas
+        } else if (terrain.kind === 'beach') {
           add(moundGeo, sand, x, -0.32, z, 1.7, 0.3, 1);
           if (i % 4 === 0) palm(x, z, (i % 8 === 0 ? 1 : -1) * 0.12);
           else if (i % 4 === 2) { const pool = add(disk, tide, x, -0.512, z, 1.3, 1, 0.8, false); pool.rotation.x = -Math.PI / 2; }
@@ -758,6 +784,21 @@
             add(stemGeo, green, x, -0.03, z, 0.45, 0.48, 0.45);
             add(stemGeo, paleGreen, x + 0.16, -0.05, z + 0.12, 0.38, 0.43, 0.38);
           }
+        }
+      }
+      if (terrain.kind === 'arena') {
+        // Arène de pierre posée sur les nuages : dalle octogonale à gradins, bornes aux angles, nuages tout autour
+        const slab = mat(0x7d7895), rim = mat(0x5d5978), cloud = mat(0xdfe8f8, { roughness: 1 }), glowStone = mat(0x4cc3ff, { emissive: 0x2a8fd8, emissiveIntensity: 0.9 });
+        const top = add(new T.CylinderGeometry(7.4, 7.7, 0.18, 8), slab, 0, -0.59, 0, 1, 1, 1, false); top.rotation.y = Math.PI / 8;
+        const step = add(new T.CylinderGeometry(8.2, 8.6, 0.3, 8), rim, 0, -0.665, 0, 1, 1, 1, false); step.rotation.y = Math.PI / 8;
+        const pillar = new T.CylinderGeometry(0.2, 0.28, 1.5, 8), gem = new T.OctahedronGeometry(0.2, 0);
+        for (let i = 0; i < 8; i++) {
+          const a = i / 8 * Math.PI * 2, x = Math.cos(a) * 7.05, z = Math.sin(a) * 7.05;
+          add(pillar, rim, x, 0.3, z); add(gem, glowStone, x, 1.25, z, 1, 1.4, 1, false);
+        }
+        for (let i = 0; i < 26; i++) {
+          const a = i / 26 * Math.PI * 2, r = 9 + (i * 7 % 5) * 0.55;
+          add(moundGeo, cloud, Math.cos(a) * r, -0.5, Math.sin(a) * r, 3.4 + i % 3, 1 + (i % 2) * 0.5, 2.4 + i % 2, false);
         }
       }
       if (terrain.id === 'dojo') {

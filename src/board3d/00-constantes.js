@@ -16,6 +16,7 @@
     mud: { name: 'Terrain boueux', sky: 0x9ca19a, ground: 0x514b3d, wood: 0x49352b, frame: ['#786451', '#514237', '#342b27'], squares: ['#c7b79d', '#796451'], kind: 'mud' },
     rock: { name: 'Terrain rocheux', sky: 0xa9afb4, ground: 0x62686b, wood: 0x55483c, frame: ['#8a8175', '#5b544d', '#393735'], squares: ['#d0d0c9', '#777c7e'], kind: 'rock' },
     water: { name: 'Terrain avec flaques', sky: 0x9bbbc1, ground: 0x526f66, wood: 0x59432f, frame: ['#806b50', '#5a4734', '#3d3027'], squares: ['#d0dfd8', '#63827a'], kind: 'water' },
+    arena: { name: 'Arène du Ciel', sky: 0x6fa8e6, ground: 0xb4c6e4, wood: 0x6a6684, frame: ['#a7a3b8', '#7a7690', '#4e4b62'], squares: ['#d8d2e4', '#6d6596'], kind: 'arena' },
     beach: { name: 'Plage tropicale', sky: 0x6cc5e8, ground: 0xa88a54, wood: 0x8a6a42, frame: ['#b98d57', '#8a6238', '#5f4226'], squares: ['#ead6a0', '#b98a4c'], kind: 'beach' },
   };
   // overcast : part de gris dans le ciel ; wind : force du vent (pluie penchée, rafales) ; snow : flocons
@@ -70,8 +71,11 @@
     // Antiquité : traînée de feu des machines et volée de pierres ; moderne : rafale traçante et obus qui explosent
     ancient: { w: { jet: 0xffa726, foam: 0xfff3c4, bub: 0x9e9e9e, charge: 0xffcc80, boom: [0xfff1a8, 0xff8a2a, 0xffc34d], debris: [0x8d6e63, 0x9e9e9e], burst: [0xfff1a8, 0xffb74d, 0xd7ccc8], bits: [0x8d6e63, 0xbdbdbd] },
                b: { jet: 0x6d2a12, foam: 0x3e2723, bub: 0x5d4037, charge: 0x8d6e63, boom: [0xff8a65, 0x4e342e, 0x6d4c41], debris: [0x3e2723, 0x757575], burst: [0xff8a65, 0x5d4037, 0x6d4c41], bits: [0x3e2723, 0x757575] } },
+    auras: { w: { jet: 0x4cc3ff, foam: 0xffffff, bub: 0x9fe3ff, charge: 0xbfeaff, boom: [0xffffff, 0x4cc3ff, 0xbfeaff], debris: [0x8d94a6, 0xbfeaff], burst: [0xffffff, 0x4cc3ff, 0xbfeaff], bits: [0xbfeaff, 0xffffff] },
+             b: { jet: 0xc04bff, foam: 0xff3d6e, bub: 0x7a2bff, charge: 0xe58bff, boom: [0xff3d6e, 0xc04bff, 0x2a1636], debris: [0x2a1636, 0xc04bff], burst: [0xe58bff, 0xc04bff, 0xff3d6e], bits: [0xc04bff, 0xff3d6e] } },
     modern: { w: { jet: 0xffd54f, foam: 0xffffff, bub: 0x8d8d7a, charge: 0xfff59d, boom: [0xfff1a8, 0xff6d00, 0xffc34d], debris: [0x5d5d5d, 0xffb74d], burst: [0xfff1a8, 0xff9100, 0xbdbdbd], bits: [0x616161, 0xffcc80] },
               b: { jet: 0x37474f, foam: 0xb0bec5, bub: 0x37474f, charge: 0x78909c, boom: [0xffab40, 0x263238, 0x546e7a], debris: [0x263238, 0xff6d00], burst: [0xffab40, 0x37474f, 0x546e7a], bits: [0x263238, 0xff9100] } },
   }; // à distance : la cible tire d'abord sa propre technique sur l'attaquant
+const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 

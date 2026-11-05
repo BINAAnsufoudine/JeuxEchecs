@@ -133,6 +133,7 @@
           const ux = (b.x - a.x) / len, uz = (b.z - a.z) / len;
           const die = (o) => { if (v) { v.holder.position.set(b.x, 0, b.z); this.dying.push(Object.assign({ c: v, dx: ux, dz: uz, from: a, base: v.parts.root.scale.x }, o)); } };
           const theme = root.themeOf(white ? 'K' : 'k'), themeFx = THEME_FX[theme], ocean = !!themeFx;
+          if (theme === 'auras') this.createCrater(b, this.lastT || 0, true); // la dalle garde un cratère fumant
           if (ocean && far && m.flag !== 'ep') {
             // Thèmes de créatures : jet (tour, dame) ou salve (cavalier, fou), aux couleurs du thème :
             // eau et encre (océan), liane et épines (plantes), sable et cailloux (animaux), plumes (oiseaux)
@@ -368,6 +369,8 @@
         }
       }
       this.dying = [];
+      (this.auraPuffs || []).forEach((p) => { this.scene.remove(p.m); p.m.material.dispose(); });
+      this.auraPuffs = [];
       for (const scar of this.captureScars) {
         this.scene.remove(scar.object);
         scar.object.traverse((x) => { if (x.geometry) x.geometry.dispose(); if (x.material) x.material.dispose(); });
