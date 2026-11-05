@@ -105,8 +105,9 @@
     const e2 = e.slice(); e2[46] = null; e2[25] = 'B';
     b.update({ ...base, board: e2, check: 4, last: { from: 46, to: 25, piece: 'B' }, animate: true, ply: 1, mateUltimate: { id: 'marc', piece: 'B', attackerTo: 25, to: 4 }, outcome: '1-0' });
     step(10);
-    const pawn = b.chars.get(13);
+    const pawn = b.chars.get(3);
     assert(pawn && !pawn.holder.visible, 'pion noir non emporté par l\'Arc géant');
+    assert(b.chars.get(13).holder.visible, 'pion noir hors du chemin emporté par l\'Arc géant');
     b.update({ ...base, board: e, last: null, animate: false, ply: 0 }); step(1);
     const back = b.chars.get(3), p = b.sqToPos(3);
     assert(back.holder.visible && Math.abs(back.holder.position.x - p.x) < 0.01 && Math.abs(back.holder.position.z - p.z) < 0.01, 'pion emporté pas revenu sur sa case');
