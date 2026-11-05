@@ -1,7 +1,8 @@
 // Tests automatiques lancés par GitHub Actions à chaque envoi :
 // 1. tests.html (moteur d'échecs, analyse, stress de l'échiquier 3D) ;
 // 2. tests3d.html (plateau 3D dans les 9 thèmes : pièces fantômes, restes d'animation, caméra, mats) ;
-// 3. démarrage de l'appli (index.html) sans aucune erreur JavaScript.
+// 3. démarrage de l'appli (index.html) sans aucune erreur JavaScript ;
+// 4. rechargement de la page en pleine partie : le thème choisi s'applique sans repasser par l'accueil.
 import { chromium } from 'playwright';
 
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8765/';
@@ -51,6 +52,23 @@ async function boot() {
   await page.close();
 }
 
-try { await suite(); await suite3d(); await boot(); } catch (e) { console.log('✗', e.message); console.log(`::error title=Tests::${e.message}`); failed = true; }
+async function reloadTheme() {
+  const page = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  await page.goto(BASE + 'index.html');
+  await page.evaluate(() => {
+    localStorage.setItem('cavalier.natureCollection', JSON.stringify('sabres'));
+    localStorage.setItem('cavalier.game', JSON.stringify({ cfg: { mode: 'local', playerColor: 'w', level: 1 }, moves: ['e2e4', 'e7e5'], result: null, flipped: false }));
+    localStorage.setItem('cavalier.lastScreen', JSON.stringify('game'));
+  });
+  await page.reload();
+  await page.waitForTimeout(3000);
+  const r = await page.evaluate(() => ({ screen: document.body.dataset.screen, theme: window.PieceTheme }));
+  const ok = r.screen === 'game' && r.theme === 'sabres';
+  console.log(`${ok ? '✓' : '✗'} rechargement en pleine partie (écran « ${r.screen} », thème « ${r.theme} »)`);
+  if (!ok) { failed = true; console.log(`::error title=Rechargement::thème « ${r.theme} » sur l'écran « ${r.screen} » au lieu de « sabres » sur « game »`); }
+  await page.close();
+}
+
+try { await suite(); await suite3d(); await boot(); await reloadTheme(); } catch (e) { console.log('✗', e.message); console.log(`::error title=Tests::${e.message}`); failed = true; }
 await browser.close();
 process.exit(failed ? 1 : 0);

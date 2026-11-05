@@ -468,6 +468,14 @@
   }
   const owns = (id) => { const it = id.startsWith('theme:') ? THEMES[id.slice(6)] : null; return (it && !it.price) || walletState().owned.includes(id); };
   const titleName = (k) => { const it = shopTitleItems().find((x) => x.key === k); return it ? it.name : ''; };
+  // Personnages 3D : créatures et guerriers de la collection, ninjas sinon. Appelée aussi au démarrage de l'appli :
+  // une partie reprise après un rechargement de la page s'ouvre sans passer par l'accueil.
+  function applyPieceTheme(collection = NATURE_COLLECTIONS.find((item) => item.id === activeNatureCollection) || NATURE_COLLECTIONS[0]) {
+    const pieceTheme = window.ThemeModels && window.ThemeModels[collection.id] ? collection.id : 'ninja';
+    if (window.PieceTheme === pieceTheme) return;
+    window.PieceTheme = pieceTheme;
+    if (b3d && b3d.rebuildPieces) { b3d.rebuildPieces(); if (game) render(); }
+  }
   function renderHomeRewards() {
     const w = walletState(), lv = levelOf(w.xp), q = questState();
     if (syncWorldTitleOwnership(w, 0, w.xp).length) store.set('wallet', w);
@@ -479,6 +487,7 @@
     const activeCollection = NATURE_COLLECTIONS.find((item) => item.id === activeNatureCollection) || NATURE_COLLECTIONS[0];
     if (grade < activeCollection.unlockGrade) activeNatureCollection = 'plants';
     const collection = NATURE_COLLECTIONS.find((item) => item.id === activeNatureCollection) || NATURE_COLLECTIONS[0];
+    applyPieceTheme(collection);
     $('home-garden-grade').textContent = L(`Grade ${grade} sur 10 · ${gradeInfo.name}`, `Rank ${grade} of 10 · ${gradeInfo.name}`);
     $('home-currency-name').textContent = balance.currency.name;
     $('home-currency-icon').textContent = balance.currency.icon;
@@ -486,12 +495,6 @@
     $('home-garden-title').textContent = L(`Ta collection ${collection.name}`, `Your ${collection.name} collection`);
     // les icônes des boutons et des menus suivent le thème (plus d'icônes ninja dans les autres thèmes)
     if (window.setIconTheme) window.setIconTheme(collection.id);
-    // personnages 3D : créatures et guerriers du thème (océan, plantes, animaux, oiseaux, Antiquité, moderne), ninjas sinon
-    const pieceTheme = window.ThemeModels && window.ThemeModels[collection.id] ? collection.id : 'ninja';
-    if (window.PieceTheme !== pieceTheme) {
-      window.PieceTheme = pieceTheme;
-      if (b3d && b3d.rebuildPieces) { b3d.rebuildPieces(); if (game) render(); }
-    }
     // l'en-tête et l'accueil suivent le thème choisi
     $('home-theme-heading').textContent = L(`Thème ${collection.name} ${collection.icon}`, `${collection.name} theme ${collection.icon}`);
     const card = $('home-theme-heading').closest('.home-section-heading') && document.querySelector('.home-garden-card');

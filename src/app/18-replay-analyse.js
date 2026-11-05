@@ -740,6 +740,7 @@
   $('puzzle-view-switch').addEventListener('click', selectBoardView);
   applyBoardView(false);
   applyAnimSpeed();
+  applyPieceTheme();
   applyBlackTheme();
   // Bouton « Passer » pendant une longue animation (prise spéciale, mat) : les pièces se posent tout de suite
   setInterval(() => {
