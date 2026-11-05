@@ -337,7 +337,7 @@
         u.camera.widePosition.set(Math.sin(yaw) * 14.5, 4.4, Math.cos(yaw) * 14.5); u.camera.wideTarget.set(0, 3, 0);
         s.nightMat = new T.MeshBasicMaterial({ color: 0x0e090e, transparent: true, opacity: 0, side: T.BackSide, fog: false, depthWrite: false, toneMapped: false });
         if (this.weatherGroup) { s.weatherShown = this.weatherGroup.visible; this.weatherGroup.visible = false; } // le soleil couchant s'efface devant la lune rouge
-        s.night = new T.Mesh(new T.SphereGeometry(32, 24, 12), s.nightMat); g.add(s.night);
+        s.night = new T.Mesh(new T.SphereGeometry(32, 24, 12), s.nightMat); s.night.renderOrder = -10; g.add(s.night);
         const lunar = new T.MeshBasicMaterial({ color: 0xc41e2e, transparent: true, opacity: 0, fog: false, toneMapped: false }), halo = new T.MeshBasicMaterial({ color: 0x8a1020, transparent: true, opacity: 0, fog: false, depthWrite: false, side: T.BackSide, toneMapped: false });
         s.moon.add(new T.Mesh(new T.SphereGeometry(3, 28, 18), lunar), new T.Mesh(new T.SphereGeometry(3.9, 24, 16), halo)); g.add(s.moon); s.moonMats = [lunar, halo];
         s.ink = [];

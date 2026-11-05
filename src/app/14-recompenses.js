@@ -15,6 +15,7 @@
     ocean: [['Moussaillon', 'Cabin boy'], ['Poisson-clown', 'Clownfish'], ['Tortue marine', 'Sea turtle'], ['Dauphin', 'Dolphin'], ['Requin', 'Shark'], ['Baleine', 'Whale'], ['Légende des mers', 'Legend of the seas']],
     ancient: [['Recrue', 'Recruit'], ['Légionnaire', 'Legionary'], ['Centurion', 'Centurion'], ['Tribun', 'Tribune'], ['Général', 'General'], ['Consul', 'Consul'], ['Empereur', 'Emperor']],
     modern: [['Recrue', 'Recruit'], ['Soldat', 'Soldier'], ['Sergent', 'Sergeant'], ['Lieutenant', 'Lieutenant'], ['Capitaine', 'Captain'], ['Colonel', 'Colonel'], ['Général', 'General']],
+    dinos: [['Petit Pousse', 'Little Sprout'], ['Raptor', 'Raptor'], ['Ptéranodon', 'Pteranodon'], ['Tricératops', 'Triceratops'], ['Spinosaure', 'Spinosaurus'], ['Tyrannosaure', 'Tyrannosaurus'], ['Roi des Géants', 'King of Giants']],
     baobabs: [['Écuyer', 'Squire'], ['Guerrier', 'Warrior'], ['Griot', 'Griot'], ['Chef de lions', 'Lion chief'], ['Général', 'General'], ['Conseiller', 'Counselor'], ['Mansa', 'Mansa']],
     sabres: [['Ashigaru', 'Ashigaru'], ['Samouraï', 'Samurai'], ['Bretteur', 'Swordsman'], ['Cavalier', 'Horseman'], ['Capitaine', 'Captain'], ['Daimyō', 'Daimyo'], ['Shōgun', 'Shogun']],
     auras: [['Novice', 'Novice'], ['Disciple', 'Disciple'], ['Combattant', 'Fighter'], ['Éveillé', 'Awakened'], ['Maître', 'Master'], ['Grand maître', 'Grand master'], ['Légende céleste', 'Celestial legend']],
@@ -141,6 +142,9 @@
     modern: [
       ['Recrue', 'Recruit', '🪖'], ['Soldat', 'Soldier', '🎒'], ['Caporal', 'Corporal', '🎖️'], ['Sergent', 'Sergeant', '📡'], ['Pilote de drone', 'Drone pilot', '🛸'], ['Tankiste', 'Tank commander', '🛡️'], ['Pilote d’hélicoptère', 'Helicopter pilot', '🚁'], ['Pilote de chasse', 'Fighter pilot', '✈️'], ['Colonel', 'Colonel', '⭐'], ['Général', 'General', '👑'],
     ],
+    dinos: [
+      ['Œuf', 'Egg', '🥚'], ['Petit Pousse', 'Little Sprout', '🐣'], ['Raptor', 'Raptor', '🦖'], ['Ptéranodon', 'Pteranodon', '🪽'], ['Tricératops', 'Triceratops', '🦕'], ['Spinosaure', 'Spinosaurus', '🌿'], ['Gardien du volcan', 'Volcano guardian', '🌋'], ['Tyrannosaure', 'Tyrannosaurus', '🦖'], ['Reine des Fougères', 'Fern queen', '🌱'], ['Roi des Géants', 'King of Giants', '👑'],
+    ],
     baobabs: [
       ['Enfant du village', 'Village child', '🌱'], ['Porteur de sagaie', 'Spear bearer', '🛡️'], ['Guerrier', 'Warrior', '⚔️'], ['Griot', 'Griot', '🥁'], ['Chef de lions', 'Lion chief', '🦁'], ['Dresseur d’éléphants', 'Elephant master', '🐘'], ['Conseiller du roi', 'King’s counselor', '📜'], ['Gardien du baobab', 'Baobab keeper', '🌳'], ['Reine-mère', 'Queen mother', '👑'], ['Mansa', 'Mansa', '☀️'],
     ],
@@ -169,7 +173,7 @@
     { name: L('Palmier tropical', 'Tropical palm'), icon: '🌴' }, { name: L('Grand baobab', 'Great baobab'), icon: '🌳' },
   ];
   const NATURE_PREVIEW_ALL_UNLOCKED = true;
-  const HOME_BACKGROUNDS = ['ninjas', 'ocean', 'plants', 'land', 'birds', 'ancient', 'modern', 'auras', 'sabres', 'baobabs', 'kingdom', 'wood']; // images dans fond_ecran/
+  const HOME_BACKGROUNDS = ['ninjas', 'ocean', 'plants', 'land', 'birds', 'ancient', 'modern', 'auras', 'sabres', 'baobabs', 'dinos', 'kingdom', 'wood']; // images dans fond_ecran/
   const HOME_BACKGROUND_IMAGES = { kingdom: 'fond_ecran/kingdom.png', wood: 'fond_ecran/wood.png' };
   const NATURE_COLLECTIONS = [
     { id: 'plants', name: L('Plantes', 'Plants'), icon: '🌱', unlockGrade: 1, items: GARDEN_PLANTS },
@@ -197,6 +201,9 @@
     { id: 'baobabs', name: L('L’Empire des Baobabs', 'Empire of the Baobabs'), icon: '🌳', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 9, items: [
       ['Cour de Zalimba', 'Zalimba court', '🏰'], ['Sagaie', 'Assegai', '🛡️'], ['Djembé', 'Djembe', '🥁'], ['Lion royal', 'Royal lion', '🦁'], ['Éléphant de guerre', 'War elephant', '🐘'], ['Masque sacré', 'Sacred mask', '🎭'], ['Grand baobab', 'Great baobab', '🌳'], ['Harmattan', 'Harmattan', '🌪️'], ['Royaume de Kôrodu', 'Kôrodu kingdom', '🌙'], ['Royaume de Zalimba', 'Zalimba kingdom', '☀️'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
+    { id: 'dinos', name: L('L’Âge des Géants', 'Age of Giants'), icon: '🦖', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 9, items: [
+      ['Clairière du Volcan', 'Volcano clearing', '🌋'], ['Œuf', 'Egg', '🥚'], ['Fougère géante', 'Giant fern', '🌿'], ['Raptor', 'Raptor', '🦖'], ['Ptéranodon', 'Pteranodon', '🪽'], ['Tricératops', 'Triceratops', '🦕'], ['Spinosaure', 'Spinosaurus', '🌱'], ['Météorite', 'Meteorite', '☄️'], ['Volcan Noir', 'Black Volcano', '🔥'], ['Vallée des Fougères', 'Fern Valley', '🍃'],
+    ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
     { id: 'ninjas', name: L('Ninjas', 'Ninjas'), icon: '🥷', unlockGrade: 1, items: [
       ['Étudiant de l’Académie', 'Academy student', '📜'], ['Genin', 'Genin', '🥷'], ['Genin confirmé', 'Senior Genin', '🌀'], ['Chûnin', 'Chunin', '🎯'], ['Chûnin d’élite', 'Elite Chunin', '⚔️'], ['Jônin', 'Jonin', '🛡️'], ['Jônin spécial', 'Special Jonin', '🥷'], ['ANBU', 'ANBU', '🎭'], ['Kage', 'Kage', '🏯'], ['Hokage', 'Hokage', '👑'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
@@ -209,13 +216,13 @@
   ];
   // Progression visuelle : du déplacement le plus sobre aux animations de combat les plus spectaculaires.
   // Le monde Ninjas reste sélectionné par défaut, même s’il arrive en dernier dans ce parcours.
-  const NATURE_COLLECTION_ORDER = ['wood', 'kingdom', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern', 'auras', 'sabres', 'baobabs', 'ninjas'];
+  const NATURE_COLLECTION_ORDER = ['wood', 'kingdom', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern', 'auras', 'sabres', 'baobabs', 'dinos', 'ninjas'];
   NATURE_COLLECTIONS.sort((a, b) => NATURE_COLLECTION_ORDER.indexOf(a.id) - NATURE_COLLECTION_ORDER.indexOf(b.id));
   // Saison mensuelle : chaque mois, un thème est à l'honneur (récompenses ×1,5 quand on joue avec lui)
   const SEASON_BONUS = 1.5;
   const seasonTheme = (d = new Date()) => NATURE_COLLECTION_ORDER[(d.getFullYear() * 12 + d.getMonth()) % NATURE_COLLECTION_ORDER.length];
   const seasonMonth = (d = new Date()) => d.toLocaleDateString(LOCALE, { month: 'long' });
-  const BUILT_NATURE_COLLECTION_IDS = new Set(['plants', 'land', 'birds', 'ocean', 'ninjas', 'ancient', 'modern', 'auras', 'sabres', 'baobabs', 'kingdom', 'wood']);
+  const BUILT_NATURE_COLLECTION_IDS = new Set(['plants', 'land', 'birds', 'ocean', 'ninjas', 'ancient', 'modern', 'auras', 'sabres', 'baobabs', 'dinos', 'kingdom', 'wood']);
   const AVAILABLE_NATURE_COLLECTIONS = NATURE_COLLECTIONS.filter((item) => BUILT_NATURE_COLLECTION_IDS.has(item.id));
   if (!store.get('natureNinjaDefaultMigrated', false)) {
     const previousCollection = store.get('natureCollection', null);
@@ -240,6 +247,7 @@
     auras: Array(10).fill('arena'),
     sabres: Array(10).fill('castle'),
     baobabs: Array(10).fill('banco'),
+    dinos: Array(10).fill('volcano'),
   };
   const NATURE_WEATHER_PATH = ['sun', 'sunwind', 'cloudy', 'sun', 'drizzle', 'sunwind', 'cloudy', 'sunset', 'sunwind', 'sun'];
   function natureTerrainForGrade() {
@@ -248,7 +256,7 @@
     return path[Math.max(0, Math.min(path.length - 1, rank - 1))];
   }
   function natureWeatherForGrade() {
-    if (activeNatureCollection === 'sabres' || activeNatureCollection === 'baobabs') return 'sunset'; // ces cours sont toujours au couchant
+    if (['sabres', 'baobabs', 'dinos'].includes(activeNatureCollection)) return 'sunset'; // ces arènes sont toujours au couchant
     const rank = adventureGrade(levelOf(walletState().xp).level);
     return NATURE_WEATHER_PATH[Math.max(0, Math.min(NATURE_WEATHER_PATH.length - 1, rank - 1))];
   }
@@ -260,6 +268,7 @@
     if (activeNatureCollection === 'ninjas') return { key: 'wheat', icon: '🪙', name: L('Pièces d’or', 'Gold coins'), unit: L('pièces d’or', 'gold coins') };
     if (activeNatureCollection === 'ancient') return { key: 'wheat', icon: '🏺', name: L('Sesterces', 'Sesterces'), unit: L('sesterces', 'sesterces') };
     if (activeNatureCollection === 'modern') return { key: 'wheat', icon: '🎖️', name: L('Médailles', 'Medals'), unit: L('médailles', 'medals') };
+    if (activeNatureCollection === 'dinos') return { key: 'wheat', icon: '🦴', name: L('Fossiles', 'Fossils'), unit: L('fossiles', 'fossils') };
     if (activeNatureCollection === 'baobabs') return { key: 'wheat', icon: '🐚', name: L('Cauris', 'Cowries'), unit: L('cauris', 'cowries') };
     if (activeNatureCollection === 'sabres') return { key: 'wheat', icon: '🪙', name: L('Koku de riz', 'Koku of rice'), unit: L('koku de riz', 'koku of rice') };
     if (activeNatureCollection === 'auras') return { key: 'wheat', icon: '💠', name: L('Éclats d’aura', 'Aura shards'), unit: L('éclats d’aura', 'aura shards') };
@@ -396,6 +405,7 @@
     ocean: [['ocean-1', L('Explorateur du rivage', 'Shore explorer')], ['ocean-2', L('Gardien du récif', 'Reef guardian')], ['ocean-3', L('Protecteur du lagon', 'Lagoon protector')], ['ocean-4', L('Maître des mers', 'Master of the seas')], ['ocean-5', L('Gardien de la baleine', 'Whale guardian')]],
     ancient: [['ancient-1', L('Légionnaire', 'Legionary')], ['ancient-2', L('Centurion', 'Centurion')], ['ancient-3', L('Maître des machines', 'Siege master')], ['ancient-4', L('Général', 'General')], ['ancient-5', L('Empereur', 'Emperor')]],
     modern: [['modern-1', L('Soldat', 'Soldier')], ['modern-2', L('Sergent', 'Sergeant')], ['modern-3', L('Tankiste', 'Tank commander')], ['modern-4', L('Pilote de chasse', 'Fighter pilot')], ['modern-5', L('Général', 'General')]],
+    dinos: [['dinos-1', L('Raptor', 'Raptor')], ['dinos-2', L('Tricératops', 'Triceratops')], ['dinos-3', L('Spinosaure', 'Spinosaurus')], ['dinos-4', L('Tyrannosaure', 'Tyrannosaurus')], ['dinos-5', L('Roi des Géants', 'King of Giants')]],
     baobabs: [['baobabs-1', L('Guerrier', 'Warrior')], ['baobabs-2', L('Griot', 'Griot')], ['baobabs-3', L('Chef de lions', 'Lion chief')], ['baobabs-4', L('Reine-mère', 'Queen mother')], ['baobabs-5', L('Mansa', 'Mansa')]],
     sabres: [['sabres-1', L('Samouraï', 'Samurai')], ['sabres-2', L('Bretteur', 'Swordsman')], ['sabres-3', L('Capitaine', 'Captain')], ['sabres-4', L('Daimyō', 'Daimyo')], ['sabres-5', L('Shōgun', 'Shogun')]],
     auras: [['auras-1', L('Disciple', 'Disciple')], ['auras-2', L('Combattant du ciel', 'Sky fighter')], ['auras-3', L('Éveillé', 'Awakened')], ['auras-4', L('Maître des auras', 'Aura master')], ['auras-5', L('Légende céleste', 'Celestial legend')]],
@@ -414,6 +424,7 @@
     auras: ['🥋', '☁️', '🔥', '💫', '🌌'],
     sabres: ['🗡️', '⚔️', '🛡️', '🌙', '🏯'],
     baobabs: ['🛡️', '🥁', '🦁', '👑', '☀️'],
+    dinos: ['🥚', '🦖', '🦕', '🌋', '👑'],
     kingdom: ['🐥', '🐒', '🦒', '🐘', '🦁'],
     wood: ['♟️', '♙', '♝', '♜', '👑'],
   };
@@ -520,6 +531,7 @@
       ocean: [L('Ton lagon s’éveille', 'Your lagoon awakens'), L('Prêt à plonger dans l’océan Indien ?', 'Ready to dive into the Indian Ocean?')],
       ancient: [L('Ta légion se rassemble', 'Your legion gathers'), L('Prêt à conquérir l’Antiquité ?', 'Ready to conquer the ancient world?')],
       modern: [L('Ton bataillon se prépare', 'Your battalion gets ready'), L('Prêt pour la mission ?', 'Ready for the mission?')],
+      dinos: [L('La terre tremble', 'The ground is shaking'), L('Prêt à régner sur l’Âge des Géants ?', 'Ready to rule the Age of Giants?')],
       baobabs: [L('Les tambours t’appellent', 'The drums are calling you'), L('Prêt à régner sur l’Empire des Baobabs ?', 'Ready to rule the Empire of the Baobabs?')],
       sabres: [L('Ton clan se rassemble', 'Your clan gathers'), L('Prêt à défendre le château de Hakuro ?', 'Ready to defend Hakuro castle?')],
       auras: [L('Ton aura s’éveille', 'Your aura awakens'), L('Prêt à monter dans l’Arène du Ciel ?', 'Ready to enter the Sky Arena?')],

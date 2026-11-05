@@ -19,6 +19,7 @@
     arena: { name: 'Arène du Ciel', sky: 0x4f8fdc, ground: 0x8ea3cc, wood: 0x6a6684, frame: ['#a7a3b8', '#7a7690', '#4e4b62'], squares: ['#c9c2da', '#5a5284'], kind: 'arena' },
     castle: { name: 'Cour du château de Hakuro', sky: 0x6a4a6e, ground: 0x6b5f58, wood: 0x4a3324, frame: ['#7a5234', '#553622', '#38241a'], squares: ['#d9b98a', '#5c3a24'], kind: 'castle' },
     banco: { name: 'Cour royale de Zalimba', sky: 0xb0522e, ground: 0xa87a5a, wood: 0x5a2e14, frame: ['#b8683a', '#7a3a1e', '#4a2412'], squares: ['#e2b07a', '#7a3a1e'], kind: 'banco' },
+    volcano: { name: 'Clairière du Volcan', sky: 0x8a4a3a, ground: 0x6f7350, wood: 0x3a3228, frame: ['#6a6256', '#4a443c', '#2e2a26'], squares: ['#c9c4b4', '#55504a'], kind: 'volcano' },
     beach: { name: 'Plage tropicale', sky: 0x6cc5e8, ground: 0xa88a54, wood: 0x8a6a42, frame: ['#b98d57', '#8a6238', '#5f4226'], squares: ['#ead6a0', '#b98a4c'], kind: 'beach' },
   };
   // overcast : part de gris dans le ciel ; wind : force du vent (pluie penchée, rafales) ; snow : flocons
@@ -52,6 +53,7 @@
     auras: { w: 'constellation', b: 'nova' },
     sabres: { w: 'sakura', b: 'lunepourpre' },
     baobabs: { w: 'ancetres', b: 'harmattan' },
+    dinos: { w: 'meteores', b: 'couleelave' },
   };
   // Couleurs de la mise en scène des mats de thème : [lumière, trace au sol]
   const THEME_MATE_COLORS = {
@@ -61,7 +63,7 @@
     constellation: [0x9fe3ff, 0x16306e], nova: [0xff3d3d, 0x1a0712],
     temple: [0xffffff, 0x16306e], nilocomet: [0x4cc3ff, 0x16306e], dawncross: [0xffd27a, 0x5a4210], fortress: [0x7fd8ff, 0x343a4e], cloudbreath: [0xdff4ff, 0x4a6a9e],
     shadeswarm: [0xc04bff, 0x1a0a2e], bounty: [0xff3d6e, 0x2d2219], lasernet: [0x9ef7ff, 0x2a1636], eruption: [0xff7a1a, 0x2b2326], crystalcomet: [0xc04bff, 0x14101f],
-    ancetres: [0xffc247, 0x5a2e14], harmattan: [0xd9b25a, 0x3a2414],
+    ancetres: [0xffc247, 0x5a2e14], harmattan: [0xd9b25a, 0x3a2414], meteores: [0xff8a2a, 0x2a1a14], couleelave: [0xff5a1a, 0x1a0e0a],
     sakura: [0xf9d2dc, 0x4a3324], lunepourpre: [0xff3b3b, 0x050305], dragonw: [0xffe066, 0x3a2410], dragonb: [0xb45cff, 0x1a0a2e],
     fracasw: [0xff8a26, 0x1a100a], fracasb: [0xb45cff, 0x120a1c], arcw: [0xffd27a, 0x3a2410], arcb: [0xc98cff, 0x1a0a2e],
     ridew: [0xff8a26, 0x3a2410], rideb: [0xb45cff, 0x1a0a2e], lamew: [0xff8a26, 0x3a2410], lameb: [0xb45cff, 0x1a0a2e],
@@ -86,6 +88,8 @@
                b: { jet: 0x6d2a12, foam: 0x3e2723, bub: 0x5d4037, charge: 0x8d6e63, boom: [0xff8a65, 0x4e342e, 0x6d4c41], debris: [0x3e2723, 0x757575], burst: [0xff8a65, 0x5d4037, 0x6d4c41], bits: [0x3e2723, 0x757575] } },
     auras: { w: { jet: 0x4cc3ff, foam: 0xffffff, bub: 0x9fe3ff, charge: 0xbfeaff, boom: [0xffffff, 0x4cc3ff, 0xbfeaff], debris: [0x8d94a6, 0xbfeaff], burst: [0xffffff, 0x4cc3ff, 0xbfeaff], bits: [0xbfeaff, 0xffffff] },
              b: { jet: 0xc04bff, foam: 0xff3d6e, bub: 0x7a2bff, charge: 0xe58bff, boom: [0xff3d6e, 0xc04bff, 0x2a1636], debris: [0x2a1636, 0xc04bff], burst: [0xe58bff, 0xc04bff, 0xff3d6e], bits: [0xc04bff, 0xff3d6e] } },
+    dinos: { w: { jet: 0xa8e05a, foam: 0xf0e68c, bub: 0x3f8f4a, charge: 0xf0e68c, boom: [0xf0e68c, 0xa8e05a, 0x2e6b3f], debris: [0x55504a, 0xc9c4b4], burst: [0xf0e68c, 0xa8e05a, 0x2e6b3f], bits: [0x55504a, 0xa8e05a] },
+             b: { jet: 0xff6a1a, foam: 0xffd24d, bub: 0x7a1a10, charge: 0xffd24d, boom: [0xffd24d, 0xff6a1a, 0x7a1a10], debris: [0x2a2226, 0xff6a1a], burst: [0xffd24d, 0xff6a1a, 0x7a1a10], bits: [0x2a2226, 0xff6a1a] } },
     baobabs: { w: { jet: 0xffc247, foam: 0xfff1a8, bub: 0xe3aa2c, charge: 0xfff1a8, boom: [0xfff1a8, 0xffc247, 0xb8322a], debris: [0x7a3a1e, 0xe2b07a], burst: [0xfff1a8, 0xffc247, 0xb8322a], bits: [0x7a3a1e, 0xffc247] },
                b: { jet: 0xb5793a, foam: 0xe6d7b4, bub: 0x2b3a7a, charge: 0xe6d7b4, boom: [0xe6d7b4, 0xb5793a, 0x2b3a7a], debris: [0x3a2414, 0xb5793a], burst: [0xe6d7b4, 0xb5793a, 0x2b3a7a], bits: [0x3a2414, 0xb5793a] } },
     // L'Âge des Sabres : le feu orange et or des Blancs, le feu violet des Noirs (pour les ripostes dans les mélanges de thèmes)
@@ -105,6 +109,7 @@ const SABRE_MATE_TIME = { sakura: [3, 5.2], lunepourpre: [3, 5.4], dragonw: [4.6
 // Thèmes à fiches (12d-kit-attaques.js) : couleurs [principale, seconde, sombre, cœur] et une fiche d'attaque par pièce
 const KIT_PAL = {
   baobabs: { w: [0xffc247, 0xfff1a8, 0xb8322a, 0xffffff], b: [0xb5793a, 0xe6d7b4, 0x2b3a7a, 0xffffff] },
+  dinos: { w: [0xa8e05a, 0xf0e68c, 0x2e6b3f, 0xffffff], b: [0xff6a1a, 0xffd24d, 0x7a1a10, 0xffe9a8] },
 };
 const KIT_ATTACKS = {
   baobabs: {
@@ -120,8 +125,21 @@ const KIT_ATTACKS = {
     n: { gap: 0.72, leap: 0.9, wind: 0.45, end: 'crush', impact: 'slash', recover: 0.8 },
     P: { gap: 0.62, wind: 0.55, end: 'fall', recover: 0.7 }, p: { gap: 0.62, wind: 0.55, end: 'fall', recover: 0.7 },
   },
+  dinos: {
+    K: { gap: 0.8, wind: 0.6, end: 'fall', impact: 'slash', big: 1.1, recover: 0.8 },
+    k: { shot: 'flame', wind: 0.6, fly: [0.15, 0], burn: true, end: 'fall', recover: 0.85, big: 1.1 },
+    Q: { gap: 0.82, wind: 0.6, spin: true, end: 'fling', recover: 0.9 },
+    q: { shot: 'embers', wind: 0.55, fly: [0.25, 0.06], burn: true, end: 'fall', recover: 0.85 },
+    R: { gap: 0.75, wind: 0.4, end: 'skyward', big: 1.2, shake: 0.16, recover: 0.8 },
+    r: { gap: 0.8, wind: 0.45, end: 'bounce', impact: 'quake', big: 1.2, recover: 0.8 },
+    B: { gap: 0.05, leap: 1.6, wind: 0.08, end: 'skyward', recover: 0.5 },
+    b: { gap: 0.05, leap: 1.6, wind: 0.08, burn: true, end: 'skyward', during: 'fire', recover: 0.5 },
+    N: { gap: 0.72, leap: 1.1, wind: 0.4, end: 'fall', impact: 'slash', recover: 0.75 },
+    n: { gap: 0.72, leap: 1.1, wind: 0.4, burn: true, end: 'fall', impact: 'claws', during: 'fire', recover: 0.8 },
+    P: { gap: 0.6, leap: 0.55, wind: 0.32, end: 'bounce', recover: 0.7 }, p: { gap: 0.6, leap: 0.55, wind: 0.32, end: 'bounce', recover: 0.7 },
+  },
 };
-const KIT_STYLES = new Set(['ancetres', 'harmattan']);
+const KIT_STYLES = new Set(['ancetres', 'harmattan', 'meteores', 'couleelave']);
 const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
@@ -533,6 +551,30 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (night > 0) { this.sun.intensity *= 1 - 0.7 * night; this.hemi.intensity *= 1 - 0.45 * night; }
     }
 
+    // Clairière du Volcan : volcan fumant toujours à l'arrière-plan, fougères géantes, rochers
+    buildVolcanoClearing(add, mat, moundGeo) {
+      const T = this.THREE, rock = mat(0x241a18, { flatShading: true }), rockLight = mat(0x4a403c, { flatShading: true }), lava = new T.MeshBasicMaterial({ color: 0xff6a1a, toneMapped: false }), smoke = new T.MeshBasicMaterial({ color: 0x3a3030, transparent: true, opacity: 0.6, depthWrite: false });
+      const fern = mat(0x2e6b3a, { flatShading: true }), fernLight = mat(0x4a8f4a, { flatShading: true }), trunkMat = mat(0x4a3a2a);
+      const pivot = new T.Group(), volcano = new T.Group(); pivot.add(volcano); volcano.position.set(0, -0.3, -10.8); volcano.scale.setScalar(0.82); this.terrainGroup.add(pivot);
+      const part = (...o) => { const m = add(...o); volcano.add(m); return m; };
+      part(new T.CylinderGeometry(0.9, 6.4, 5.4, 12), rock, 0, 2.7, 0);
+      part(new T.CylinderGeometry(0.95, 0.75, 0.1, 12), lava, 0, 5.42, 0, 1, 1, 1, false);
+      for (const [x, z, h, r] of [[-0.4, 3, 3.6, 0.12], [0.8, 2.6, 2.6, 0.1], [-1.5, 2.2, 1.8, 0.09]]) { const l = part(new T.BoxGeometry(r * 2, h, 0.05), lava, x * 0.55, 3.6 - h * 0.34, z * 0.9, 1, 1, 1, false); l.rotation.x = 0.82; }
+      for (let i = 0; i < 6; i++) part(moundGeo, smoke, Math.sin(i) * 0.5, 6 + i * 0.9, 0, 2 + i * 0.7, 1.5 + i * 0.4, 2 + i * 0.7, false);
+      this.castleKeep = pivot;
+      // fougères géantes : une touffe de frondes, parfois sur un tronc
+      this.volcanoFerns = [];
+      const frond = new T.ConeGeometry(0.2, 1.8, 4);
+      const clump = (x, z, s, h) => {
+        const g = new T.Group(); g.position.set(x, h - 0.5, z); this.terrainGroup.add(g);
+        if (h) { const t = add(new T.CylinderGeometry(0.11 * s, 0.17 * s, h + 0.5, 7), trunkMat, x, h / 2 - 0.5, z); t.castShadow = true; }
+        for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2, m = add(frond, i % 2 ? fern : fernLight, 0, 0, 0, s, s, s * 0.45); g.add(m); m.position.set(Math.cos(a) * 0.62 * s, 0.56 * s, Math.sin(a) * 0.62 * s); m.rotation.set(Math.sin(a) * 1.05, -a + Math.PI / 2, -Math.cos(a) * 1.05); m.rotation.order = 'YXZ'; }
+        this.volcanoFerns.push(g); return g;
+      };
+      for (const [x, z, s, h] of [[-6.2, -5.6, 1.1, 0], [6.3, -5.2, 1.2, 0], [-6.6, 0.4, 1, 0], [6.7, 1, 1.05, 0], [-6.2, 5.6, 1.15, 0], [6.3, 5.8, 1.1, 0], [-8.8, -5.6, 1.5, 2.2], [9, -4.4, 1.6, 2.6], [-9.4, 3, 1.4, 1.8], [9.4, 4.6, 1.5, 2.2], [-3.6, -6.6, 0.9, 0], [3.8, -6.8, 0.9, 0]]) clump(x, z, s, h);
+      for (let i = 0; i < 10; i++) { const a = i * 2.4, r = 7.6 + (i % 3) * 1.6; const m = add(new T.DodecahedronGeometry(0.5 + (i % 3) * 0.25, 0), i % 2 ? rock : rockLight, Math.cos(a) * r, -0.2, Math.sin(a) * r, 1, 0.7, 1); m.rotation.y = i; }
+    }
+
     // Cour royale de Zalimba : palais en banco hérissé de poutres (toujours à l'arrière-plan), cases rondes, baobabs
     buildRoyalCourt(add, mat, moundGeo) {
       const T = this.THREE, banco = mat(0xb8683a), bancoDark = mat(0xa35a30), beam = mat(0x4a2412), thatch = mat(0xc9a24a, { flatShading: true }), bark = mat(0x5a4030), leaf = mat(0x3c5a2e, { flatShading: true }), door = mat(0x2e160a);
@@ -631,6 +673,17 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
     }
 
+    // Clairière du Volcan : ptérosaures qui tournent très haut au-dessus du plateau
+    buildPterosaurs() {
+      const T = this.THREE, skin = new T.MeshStandardMaterial({ color: 0x4a3a34, roughness: 0.9, side: T.DoubleSide }), wingGeo = new T.BoxGeometry(0.8, 0.02, 0.3), body = new T.ConeGeometry(0.07, 0.45, 6);
+      for (let i = 0; i < 4; i++) {
+        const g = new T.Group(), b = new T.Mesh(body, skin); b.rotation.x = Math.PI / 2; g.add(b); const wings = [];
+        for (const s of [-1, 1]) { const w = new T.Group(), m = new T.Mesh(wingGeo, skin); m.position.x = s * 0.4; w.add(m); g.add(w); wings.push(w); }
+        this.animalGroup.add(g);
+        this.animals.push({ g, behave: 'fly', wings, ang: i * 1.6, r: 14 + i * 1.5, y: 5 + i * 0.7, speed: 0.14 + i * 0.03, dir: i % 2 ? 1 : -1, phase: i * 1.7 });
+      }
+    }
+
     buildAnimals(terrain) {
       const T = this.THREE;
       if (!this.animalGroup) { this.animalGroup = new T.Group(); this.animalGroup.position.y = GROUND + 0.535; this.scene.add(this.animalGroup); }
@@ -639,6 +692,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       this.animals = [];
       if (terrain.kind === 'castle') { this.buildPetals(); return; } // pétales de cerisier dans le vent du soir
       if (terrain.kind === 'banco') { this.buildPetals([0xe2b07a, 0xb8683a, 0xf3d9a0]); return; } // poussière de terre dans le vent
+      if (terrain.kind === 'volcano') { this.buildPetals([0xff8a2a, 0x6d6478, 0x8d8590]); this.buildPterosaurs(); return; } // braises, cendres et ptérosaures
       if (terrain.kind === 'arena') { this.buildSkyRocks(); return; } // pas d'animaux dans le ciel : des rochers flottants
       const mat = (color) => new T.MeshStandardMaterial({ color, roughness: 0.85 });
       const mesh = (geo, m, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => { const o = new T.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.castShadow = true; return o; };
@@ -842,7 +896,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       g.fillStyle = col(0); g.fillRect(0, 0, 512, 512);
       // grain de fond
       for (let i = 0; i < 2600; i++) { g.fillStyle = col((rnd() - 0.5) * 0.12, 0.5); g.fillRect(rnd() * 512, rnd() * 512, 2 + rnd() * 4, 2 + rnd() * 4); }
-      if (k === 'banco') { // terre rouge battue, craquelée, traces de pas
+      if (k === 'volcano') { // herbe rase, terre et cendre
+        for (let i = 0; i < 3000; i++) { g.fillStyle = col((rnd() - 0.5) * 0.18, 0.7); g.fillRect(rnd() * 512, rnd() * 512, 1 + rnd() * 3, 1 + rnd() * 3); }
+        for (let i = 0; i < 16; i++) { const x = rnd() * 512, y = rnd() * 512, r = 30 + rnd() * 50, a = g.createRadialGradient(x, y, 2, x, y, r); a.addColorStop(0, 'rgba(50,44,40,0.5)'); a.addColorStop(1, 'rgba(50,44,40,0)'); g.fillStyle = a; g.fillRect(x - r, y - r, r * 2, r * 2); }
+      } else if (k === 'banco') { // terre rouge battue, craquelée, traces de pas
         for (let i = 0; i < 2600; i++) { g.fillStyle = col((rnd() - 0.5) * 0.14, 0.7); g.fillRect(rnd() * 512, rnd() * 512, 1 + rnd() * 3, 1 + rnd() * 3); }
         g.strokeStyle = 'rgba(60,24,10,0.25)'; g.lineWidth = 1.2; for (let i = 0; i < 90; i++) { let x = rnd() * 512, y = rnd() * 512; g.beginPath(); g.moveTo(x, y); for (let j = 0; j < 4; j++) { x += (rnd() - 0.5) * 34; y += (rnd() - 0.5) * 34; g.lineTo(x, y); } g.stroke(); }
       } else if (k === 'castle') { // cour de terre battue, gravier ratissé et dalles de pierre
@@ -890,7 +947,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         g.lineTo(2048, 512); g.fill();
       };
       const ground = new T.Color(terrain.ground), shade = (dl, h = 0) => hex(ground.clone().offsetHSL(h, 0, dl).lerp(sky, 0.35 - dl));
-      if (k === 'banco') { // savane au soleil couchant, acacias lointains
+      if (k === 'volcano') { // chaînes de volcans lointains, jungle sombre
+        ridge('#6a3a34', 340, 120, 0.005, 0.7); ridge('#4a2c2c', 400, 80, 0.009, 2.1);
+        for (let x = 0; x < 2048; x += 28) { const h = 40 + (x * 17 % 40), y = 450; g.fillStyle = '#26382a'; g.beginPath(); g.ellipse(x, y - h / 2, 34, h / 2, 0, 0, 7); g.fill(); }
+      } else if (k === 'banco') { // savane au soleil couchant, acacias lointains
         ridge('#c9713a', 400, 40, 0.004, 0.7); ridge('#a85a30', 440, 30, 0.008, 2.1);
         for (let x = 30; x < 2048; x += 150) { const y = 432 - Math.sin(x * 0.01) * 10, h = 40 + (x * 13 % 22); g.fillStyle = '#3a2418'; g.fillRect(x - 3, y - h, 6, h); g.beginPath(); g.ellipse(x, y - h, 50, 12, 0, 0, 7); g.fill(); }
       } else if (k === 'castle') { // collines au crépuscule, pins sombres et murailles lointaines
@@ -931,7 +991,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => oldMat.add(m));
       });
       this.terrainGroup.clear();
-      this.castleKeep = null;
+      this.castleKeep = null; this.volcanoFerns = null;
       oldGeo.forEach((g) => g.dispose()); oldMat.forEach((m) => m.dispose());
 
       const mat = (color, extra = {}) => new T.MeshStandardMaterial({ color, roughness: 0.94, ...extra });
@@ -985,7 +1045,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       for (let i = 0; i < points.length; i++) {
         // devant et derrière le plateau, le décor est reculé pour ne pas cacher les pièces (le sol est au ras du plateau)
         const x = points[i][0], z = points[i][1] * (Math.abs(points[i][1]) > 5 ? 1.35 : 1), jitter = (i % 3) * 0.16;
-        if (terrain.kind === 'arena' || terrain.kind === 'castle' || terrain.kind === 'banco') {
+        if (terrain.kind === 'arena' || terrain.kind === 'castle' || terrain.kind === 'banco' || terrain.kind === 'volcano') {
           // rien sur la mer de nuages ; la cour du château est bâtie plus bas : les dalles et bornes sont posées plus bas
         } else if (terrain.kind === 'beach') {
           add(moundGeo, sand, x, -0.32, z, 1.7, 0.3, 1);
@@ -1043,6 +1103,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       }
       if (terrain.kind === 'castle') this.buildCastleCourt(add, mat, moundGeo);
       if (terrain.kind === 'banco') this.buildRoyalCourt(add, mat, moundGeo);
+      if (terrain.kind === 'volcano') this.buildVolcanoClearing(add, mat, moundGeo);
       if (terrain.id === 'dojo') {
         const vermilion = mat(0x9e352c), darkWood = mat(0x38251f);
         const post = new T.BoxGeometry(0.2, 1.45, 0.2), crossbar = new T.BoxGeometry(3.1, 0.2, 0.3), lintel = new T.BoxGeometry(3.45, 0.22, 0.38);
@@ -2969,6 +3030,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         else if (style === 'jaws') { c.holder.visible = after < 0.15; }
         else if (style === 'boulder' || style === 'crystalcomet' || style === 'nilocomet') { root.scale.y = u.kingBase.scale.y * Math.max(0.2, 1 - after * 4); }
         else if (style === 'ancetres') { const L = u.kitMate.pull; if (L) c.holder.position.copy(L); c.holder.visible = after < 1.9; } // emporté vers le soleil couchant
+        else if (style === 'meteores') { root.scale.y = u.kingBase.scale.y * Math.max(0.15, 1 - after * 4); }
+        else if (style === 'couleelave') { root.position.y = -Math.min(0.7, after * 0.9); c.holder.visible = after < 0.9; } // englouti par la lave
         else if (style === 'harmattan') { root.position.y = Math.min(3, after * 1.8); root.rotation.y = after * 11; c.holder.visible = after < 0.9; } // happé par le tourbillon
         else if (style === 'cloudbreath') { root.position.y = Math.min(4, after * 2.6); root.rotation.y = after * 9; c.holder.visible = after < 1.6; } // soulevé par le vent
         else if (style === 'eruption' || style === 'fortress' || style === 'shadeswarm') { c.holder.visible = after < 0.25; } // englouti
@@ -6564,7 +6627,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         u.camera.widePosition.set(Math.sin(yaw) * 14.5, 4.4, Math.cos(yaw) * 14.5); u.camera.wideTarget.set(0, 3, 0);
         s.nightMat = new T.MeshBasicMaterial({ color: 0x0e090e, transparent: true, opacity: 0, side: T.BackSide, fog: false, depthWrite: false, toneMapped: false });
         if (this.weatherGroup) { s.weatherShown = this.weatherGroup.visible; this.weatherGroup.visible = false; } // le soleil couchant s'efface devant la lune rouge
-        s.night = new T.Mesh(new T.SphereGeometry(32, 24, 12), s.nightMat); g.add(s.night);
+        s.night = new T.Mesh(new T.SphereGeometry(32, 24, 12), s.nightMat); s.night.renderOrder = -10; g.add(s.night);
         const lunar = new T.MeshBasicMaterial({ color: 0xc41e2e, transparent: true, opacity: 0, fog: false, toneMapped: false }), halo = new T.MeshBasicMaterial({ color: 0x8a1020, transparent: true, opacity: 0, fog: false, depthWrite: false, side: T.BackSide, toneMapped: false });
         s.moon.add(new T.Mesh(new T.SphereGeometry(3, 28, 18), lunar), new T.Mesh(new T.SphereGeometry(3.9, 24, 16), halo)); g.add(s.moon); s.moonMats = [lunar, halo];
         s.ink = [];
@@ -7087,6 +7150,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
 
     /* ---------- Mats à fiche : un par camp ---------- */
+    // Ciel du mat : dessiné avant tous les effets transparents, sinon il les recouvre
+    kitSky(mat) { const m = new this.THREE.Mesh(new this.THREE.SphereGeometry(30, 20, 10), mat); m.renderOrder = -10; return m; }
     makeKitMate(u, at, keep, basic, std) {
       const T = this.THREE, P = u.target, g = u.fx, style = u.themed, A = this.sqToPos(u.attackerTo), yaw = this.viewYaw();
       const s = u.kitMate = { A, dir: new T.Vector3(P.x - A.x, 0, P.z - A.z), yaw }; s.len = Math.max(0.01, s.dir.length()); s.dir.normalize();
@@ -7103,12 +7168,40 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           for (const k of [-1, 1]) { const arm = new T.Mesh(new T.CylinderGeometry(0.04, 0.05, 0.6, 6), gold); arm.position.set(k * 0.2, 1.0, 0.08); arm.rotation.z = -k * 0.5; arm.rotation.x = -0.8; f.add(arm); }
           f.userData.a = a; g.add(f); s.anc.push(f);
         }
+      } else if (style === 'meteores') {
+        // le ciel s'embrase, une météorite tombe sur le roi, l'onde de choc couche les fougères
+        u.camera.widePosition.set(Math.sin(yaw) * 15, 5, Math.cos(yaw) * 15); u.camera.wideTarget.set(0, 2.8, 0);
+        if (this.weatherGroup) { s.weatherShown = this.weatherGroup.visible; this.weatherGroup.visible = false; }
+        s.skyMat = new T.MeshBasicMaterial({ color: 0xb8351a, transparent: true, opacity: 0, side: T.BackSide, fog: false, depthWrite: false, toneMapped: false });
+        g.add(this.kitSky(s.skyMat));
+        s.rock = new T.Group();
+        const core = new T.Mesh(new T.DodecahedronGeometry(0.75, 0), std(0x2a1a14, { flatShading: true, emissive: 0xff5a1a, emissiveIntensity: 0.5 })); s.rock.add(core);
+        const flames = this.sabreFlames([0xffb13b, 0xfff1a8, 0xff5a1a], 0.75, 3.4, 16); flames.position.y = 0.2; s.rock.add(flames); s.fire = flames; g.add(s.rock);
+        s.rocks = [];
+        for (let i = 0; i < 9; i++) { const m = new T.Group(); m.add(new T.Mesh(new T.SphereGeometry(0.11, 8, 6), this.sabreFire(0xffd24d, 1))); const tail = new T.Mesh(new T.ConeGeometry(0.1, 1.5, 7), this.sabreFire(0xff6a1a, 0.8)); tail.position.y = 0.75; m.add(tail); m.userData = { x: (i * 37 % 13) - 6, z: (i * 53 % 11) - 5, d: 0.5 + i * 0.26 }; g.add(m); s.rocks.push(m); }
+      } else if (style === 'couleelave') {
+        // le volcan explose, une rivière de lave descend jusqu'au roi et l'engloutit sous la cendre
+        u.camera.widePosition.set(Math.sin(yaw) * 14.5, 5, Math.cos(yaw) * 14.5); u.camera.wideTarget.set(0, 2.6, -Math.cos(yaw) * 1.6);
+        if (this.weatherGroup) { s.weatherShown = this.weatherGroup.visible; this.weatherGroup.visible = false; }
+        s.skyMat = new T.MeshBasicMaterial({ color: 0x1a0e0e, transparent: true, opacity: 0, side: T.BackSide, fog: false, depthWrite: false, toneMapped: false });
+        g.add(this.kitSky(s.skyMat));
+        s.top = new T.Vector3(-Math.sin(yaw) * 10.8, 4.2, -Math.cos(yaw) * 10.8);
+        s.bursts = [];
+        const hot = this.sabreFire(0xff6a1a, 1), yellow = this.sabreFire(0xffd24d, 1), bomb = new T.SphereGeometry(0.2, 8, 6);
+        for (let i = 0; i < 26; i++) { const a = i * 2.4, m = new T.Mesh(bomb, i % 3 ? hot : yellow); m.userData = { vx: Math.cos(a) * (1 + (i % 4) * 0.7), vz: Math.sin(a) * (1 + (i % 4) * 0.7), vy: 7 + (i % 5) * 1.3, d: (i % 6) * 0.18 }; g.add(m); s.bursts.push(m); }
+        const foot = new T.Vector3(-Math.sin(yaw) * 6.2, 0.06, -Math.cos(yaw) * 6.2), d = new T.Vector3(P.x - foot.x, 0, P.z - foot.z), L = d.length();
+        s.river = new T.Group(); s.river.position.copy(foot); s.river.rotation.y = Math.atan2(d.x, d.z); g.add(s.river); s.riverLen = L;
+        const flow = new T.Mesh(new T.BoxGeometry(1.5, 0.08, 1), this.sabreFire(0xff5a1a, 1)), crust = new T.Mesh(new T.BoxGeometry(0.7, 0.1, 1), this.sabreFire(0xffd24d, 1)); s.river.add(flow, crust); s.flow = [flow, crust];
+        s.pool = at(new T.Mesh(new T.CylinderGeometry(1, 1, 0.1, 24), this.sabreFire(0xff5a1a, 1)), 0, 0.07, 0);
+        s.ash = [];
+        const ash = basic(0x8d8590, 0.9), bit = new T.BoxGeometry(0.05, 0.05, 0.05);
+        for (let i = 0; i < 90; i++) { const m = new T.Mesh(bit, ash); m.userData = { x: (Math.random() - 0.5) * 12, z: (Math.random() - 0.5) * 12, y: Math.random() * 7, sp: 0.5 + Math.random() * 0.8 }; m.visible = false; g.add(m); s.ash.push(m); }
       } else if (style === 'harmattan') {
         // ciel jaune, tempête de sable, yeux de léopard dans la poussière
         u.camera.widePosition.set(Math.sin(yaw) * 14.5, 4.4, Math.cos(yaw) * 14.5); u.camera.wideTarget.set(0, 2.6, 0); // la caméra descend pour montrer le ciel
         if (this.weatherGroup) { s.weatherShown = this.weatherGroup.visible; this.weatherGroup.visible = false; }
         s.skyMat = new T.MeshBasicMaterial({ color: 0xc9992f, transparent: true, opacity: 0, side: T.BackSide, fog: false, depthWrite: false, toneMapped: false });
-        g.add(new T.Mesh(new T.SphereGeometry(30, 20, 10), s.skyMat));
+        g.add(this.kitSky(s.skyMat));
         s.sand = [];
         const sand = this.sabreFire(0xd9b25a, 0.7), sandDark = this.sabreFire(0xa8772e, 0.7), grain = new T.SphereGeometry(0.16, 8, 6);
         for (let i = 0; i < 90; i++) { const m = new T.Mesh(grain, i % 3 ? sand : sandDark); m.userData = { a: i * 0.7, h: (i % 13) / 13, r: 0.5 + (i % 7) * 0.3, sp: 3 + (i % 4) }; m.scale.y = 0.6; g.add(m); s.sand.push(m); }
@@ -7119,6 +7212,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     }
     endKitMate(u) {
       if (this.checkGroup) this.checkGroup.visible = true;
+      for (const f of this.volcanoFerns || []) f.rotation.set(0, 0, 0);
       if (u.kitMate.weatherShown != null && this.weatherGroup) this.weatherGroup.visible = u.kitMate.weatherShown;
     }
     tickKitMate(u, t, e, clamp, smooth, hit, after) {
@@ -7133,6 +7227,28 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           m.rotation.y = Math.atan2(P.x - m.position.x, P.z - m.position.z); m.visible = e > 1.1 && after < 1.9;
         }
         s.pull = after > 0 ? new T.Vector3(P.x - Math.sin(s.yaw) * after * after * 3.6, after * after * 2.4, P.z - Math.cos(s.yaw) * after * after * 3.6) : null;
+      } else if (style === 'meteores') {
+        s.skyMat.opacity = smooth((e - 0.2) / 1);
+        const k = clamp((e - 0.7) / (hit - 0.7)), f = new T.Vector3(-Math.sin(s.yaw) * 13 + 6, 16, -Math.cos(s.yaw) * 13);
+        s.rock.position.set(P.x + (f.x - P.x) * (1 - k * k), 0.4 + (f.y - 0.4) * (1 - k * k), P.z + (f.z - P.z) * (1 - k * k));
+        s.rock.visible = e > 0.7 && after < 0.05; s.rock.rotation.y = t * 3; this.sabreFlicker(s.fire, t, 1);
+        for (const m of s.rocks) { const d = m.userData, q = clamp((e - d.d) / 0.7); m.visible = q > 0 && q < 1; m.position.set(d.x + 3 * (1 - q), 13 * (1 - q), d.z - 2 * (1 - q)); }
+        if (after > 0 && !s.boom) { s.boom = true; this.sabreBurst(P, t, [0xff8a2a, 0xffd24d, 0x2a1a14], 30, 2.2); this.shakeUntil = t + 0.9; this.shakeAmp = 0.3; }
+        // l'onde de choc couche les fougères, en s'éloignant du point d'impact
+        for (const f2 of this.volcanoFerns || []) {
+          const dx = f2.position.x - P.x, dz = f2.position.z - P.z, dist = Math.hypot(dx, dz), w = smooth((after * 7 - dist) / 2.5) * (1 - smooth((after - 1.1) / 0.9) * 0.55);
+          f2.rotation.set(dz / dist * w * 1.15, 0, -dx / dist * w * 1.15);
+        }
+      } else if (style === 'couleelave') {
+        s.skyMat.opacity = smooth((e - 0.2) / 0.9);
+        const q0 = 0.8;
+        for (const m of s.bursts) { const d = m.userData, a = e - q0 - d.d, q = a % 1.7; m.visible = a > 0 && after < 1.2; m.position.set(s.top.x + d.vx * q, s.top.y + d.vy * q - 4.9 * q * q, s.top.z + d.vz * q); }
+        if (e > q0 && !s.boom) { s.boom = true; this.shakeUntil = t + 2.1; this.shakeAmp = 0.1; }
+        const k = smooth((e - 1) / (hit - 1)) * s.riverLen, wide = 1 + Math.sin(t * 7) * 0.06;
+        for (const [i, m] of s.flow.entries()) { m.scale.z = Math.max(0.01, k); m.position.z = k / 2; m.position.y = i * 0.02; m.scale.x = wide * (i ? 0.9 + Math.sin(t * 5) * 0.2 : 1); }
+        s.river.visible = e > 1;
+        s.pool.visible = after > 0; s.pool.scale.setScalar(Math.min(1.3, 0.2 + after * 2.2));
+        for (const m of s.ash) { const d = m.userData; m.visible = e > 1.2; m.position.set(d.x, ((d.y - e * d.sp) % 7 + 7) % 7, d.z); m.rotation.set(t * 2, t, 0); }
       } else if (style === 'harmattan') {
         s.skyMat.opacity = smooth((e - 0.2) / 1);
         const k = smooth((e - 0.5) / 2.2);

@@ -221,6 +221,22 @@ Deux royaumes d'Afrique inventés. Blancs : Zalimba, le Soleil d'or (or, crème,
 - **Mats** (`THEME_MATE`) : Blancs, *Chant des Ancêtres* : tambours, ancêtres dorés qui sortent de terre et emportent le roi vers le soleil couchant. Noirs, *Tempête d'Harmattan* : ciel jaune, tempête de sable, yeux de léopard, le roi disparaît dans le tourbillon.
 - **Code** : modèles dans `baobabs3d.js`, fiches d'attaque dans `KIT_ATTACKS` (`00-constantes.js`), moteur des fiches et mats dans `src/board3d/12d-kit-attaques.js`, décor dans `buildRoyalCourt` (`01-scene-terrain.js`).
 
+## L'Âge des Géants
+
+Dinosaures, sans humains. Blancs : la Vallée des Fougères (peau verte, ventre crème, rayures vert foncé, yeux dorés, feuilles et fleurs). Noirs : le Volcan Noir (peau charbon, ventre rouge brique, rayures de lave lumineuses, yeux rouges). Plateau : la clairière du Volcan (terrain `volcano`, météo `sunset` imposée), dalles de pierre claire et sombre, fougères géantes, ptérosaures dans le ciel, volcan fumant qui reste à l'arrière-plan. Sans sons propres.
+
+| Pièce | Blancs | Noirs | Attaque (de près comme de loin, sans riposte) |
+|---|---|---|---|
+| Pion | Petit Pousse, bébé dans son œuf, feuille sur la tête | Petit Tison, crête de lave | il bondit hors de la coquille, coup de tête |
+| Cavalier | vélociraptor | vélociraptor de lave | bond en L, griffe / double griffe enflammée |
+| Fou | ptéranodon aux ailes vertes | ptéranodon aux ailes rouge sombre | piqué qui emporte la cible / piqué enflammé |
+| Tour | tricératops à collerette tachetée | tricératops de basalte | charge cornue qui soulève la cible / charge sismique, le sol se fend sur la ligne |
+| Dame | Reine Voilière, spinosaure à voile verte fleurie | Reine Brasevoile, voile rouge à nervures de lave | coup de queue tournoyant / la voile projette des braises |
+| Roi | Roi Fougerex, tyrannosaure à couronne de feuilles | Roi Cendrax, couronne d'obsidienne | morsure / souffle brûlant |
+
+- **Mats** (`THEME_MATE`) : Blancs, *Pluie de météorites* : le ciel s'embrase, une météorite frappe le roi, l'onde de choc couche les fougères. Noirs, *Éruption* : le volcan explose, une rivière de lave engloutit le roi sous la cendre.
+- **Code** : modèles dans `dinos3d.js`, fiches dans `KIT_ATTACKS.dinos`, décor dans `buildVolcanoClearing` (`01-scene-terrain.js`), mats dans `12d-kit-attaques.js`.
+
 ---
 
 ## Ajouter ou modifier un thème

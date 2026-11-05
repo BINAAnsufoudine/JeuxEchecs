@@ -6,7 +6,7 @@
    - chaque attaque de mat doit se terminer proprement et rendre les rois debout. */
 (function () {
   'use strict';
-  const THEMES = ['ninja', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern', 'auras', 'sabres', 'baobabs'];
+  const THEMES = ['ninja', 'plants', 'land', 'birds', 'ocean', 'ancient', 'modern', 'auras', 'sabres', 'baobabs', 'dinos'];
   const results = [];
   window.__tests3d = { done: false, ok: false, results };
   const b = new window.Board3D(document.getElementById('stage'), () => {});
@@ -171,6 +171,10 @@
   for (const pc of 'KQRBNPkqrbnp') test(`3D baobabs : prise par la pièce ${pc}`, () => kitCapture('baobabs', pc));
   test('3D baobabs : mat des Blancs dans la cour royale', () => mate('baobabs', true));
   test('3D baobabs : mat des Noirs dans la cour royale', () => mate('baobabs', false));
+  b.setTerrain('volcano');
+  for (const pc of 'KQRBNPkqrbnp') test(`3D dinos : prise par la pièce ${pc}`, () => kitCapture('dinos', pc));
+  test('3D dinos : mat des Blancs dans la clairière', () => mate('dinos', true));
+  test('3D dinos : mat des Noirs dans la clairière', () => mate('dinos', false));
   b.setTerrain('steppe');
   window.PieceThemeBlack = 'sabres';
   test('3D mélange ninja / sabres : partie pleine de prises', () => play('ninja', 41, 40, 0.3));

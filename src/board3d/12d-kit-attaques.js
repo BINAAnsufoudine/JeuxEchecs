@@ -193,6 +193,8 @@
     }
 
     /* ---------- Mats à fiche : un par camp ---------- */
+    // Ciel du mat : dessiné avant tous les effets transparents, sinon il les recouvre
+    kitSky(mat) { const m = new this.THREE.Mesh(new this.THREE.SphereGeometry(30, 20, 10), mat); m.renderOrder = -10; return m; }
     makeKitMate(u, at, keep, basic, std) {
       const T = this.THREE, P = u.target, g = u.fx, style = u.themed, A = this.sqToPos(u.attackerTo), yaw = this.viewYaw();
       const s = u.kitMate = { A, dir: new T.Vector3(P.x - A.x, 0, P.z - A.z), yaw }; s.len = Math.max(0.01, s.dir.length()); s.dir.normalize();
@@ -209,12 +211,40 @@
           for (const k of [-1, 1]) { const arm = new T.Mesh(new T.CylinderGeometry(0.04, 0.05, 0.6, 6), gold); arm.position.set(k * 0.2, 1.0, 0.08); arm.rotation.z = -k * 0.5; arm.rotation.x = -0.8; f.add(arm); }
           f.userData.a = a; g.add(f); s.anc.push(f);
         }
+      } else if (style === 'meteores') {
+        // le ciel s'embrase, une météorite tombe sur le roi, l'onde de choc couche les fougères
+        u.camera.widePosition.set(Math.sin(yaw) * 15, 5, Math.cos(yaw) * 15); u.camera.wideTarget.set(0, 2.8, 0);
+        if (this.weatherGroup) { s.weatherShown = this.weatherGroup.visible; this.weatherGroup.visible = false; }
+        s.skyMat = new T.MeshBasicMaterial({ color: 0xb8351a, transparent: true, opacity: 0, side: T.BackSide, fog: false, depthWrite: false, toneMapped: false });
+        g.add(this.kitSky(s.skyMat));
+        s.rock = new T.Group();
+        const core = new T.Mesh(new T.DodecahedronGeometry(0.75, 0), std(0x2a1a14, { flatShading: true, emissive: 0xff5a1a, emissiveIntensity: 0.5 })); s.rock.add(core);
+        const flames = this.sabreFlames([0xffb13b, 0xfff1a8, 0xff5a1a], 0.75, 3.4, 16); flames.position.y = 0.2; s.rock.add(flames); s.fire = flames; g.add(s.rock);
+        s.rocks = [];
+        for (let i = 0; i < 9; i++) { const m = new T.Group(); m.add(new T.Mesh(new T.SphereGeometry(0.11, 8, 6), this.sabreFire(0xffd24d, 1))); const tail = new T.Mesh(new T.ConeGeometry(0.1, 1.5, 7), this.sabreFire(0xff6a1a, 0.8)); tail.position.y = 0.75; m.add(tail); m.userData = { x: (i * 37 % 13) - 6, z: (i * 53 % 11) - 5, d: 0.5 + i * 0.26 }; g.add(m); s.rocks.push(m); }
+      } else if (style === 'couleelave') {
+        // le volcan explose, une rivière de lave descend jusqu'au roi et l'engloutit sous la cendre
+        u.camera.widePosition.set(Math.sin(yaw) * 14.5, 5, Math.cos(yaw) * 14.5); u.camera.wideTarget.set(0, 2.6, -Math.cos(yaw) * 1.6);
+        if (this.weatherGroup) { s.weatherShown = this.weatherGroup.visible; this.weatherGroup.visible = false; }
+        s.skyMat = new T.MeshBasicMaterial({ color: 0x1a0e0e, transparent: true, opacity: 0, side: T.BackSide, fog: false, depthWrite: false, toneMapped: false });
+        g.add(this.kitSky(s.skyMat));
+        s.top = new T.Vector3(-Math.sin(yaw) * 10.8, 4.2, -Math.cos(yaw) * 10.8);
+        s.bursts = [];
+        const hot = this.sabreFire(0xff6a1a, 1), yellow = this.sabreFire(0xffd24d, 1), bomb = new T.SphereGeometry(0.2, 8, 6);
+        for (let i = 0; i < 26; i++) { const a = i * 2.4, m = new T.Mesh(bomb, i % 3 ? hot : yellow); m.userData = { vx: Math.cos(a) * (1 + (i % 4) * 0.7), vz: Math.sin(a) * (1 + (i % 4) * 0.7), vy: 7 + (i % 5) * 1.3, d: (i % 6) * 0.18 }; g.add(m); s.bursts.push(m); }
+        const foot = new T.Vector3(-Math.sin(yaw) * 6.2, 0.06, -Math.cos(yaw) * 6.2), d = new T.Vector3(P.x - foot.x, 0, P.z - foot.z), L = d.length();
+        s.river = new T.Group(); s.river.position.copy(foot); s.river.rotation.y = Math.atan2(d.x, d.z); g.add(s.river); s.riverLen = L;
+        const flow = new T.Mesh(new T.BoxGeometry(1.5, 0.08, 1), this.sabreFire(0xff5a1a, 1)), crust = new T.Mesh(new T.BoxGeometry(0.7, 0.1, 1), this.sabreFire(0xffd24d, 1)); s.river.add(flow, crust); s.flow = [flow, crust];
+        s.pool = at(new T.Mesh(new T.CylinderGeometry(1, 1, 0.1, 24), this.sabreFire(0xff5a1a, 1)), 0, 0.07, 0);
+        s.ash = [];
+        const ash = basic(0x8d8590, 0.9), bit = new T.BoxGeometry(0.05, 0.05, 0.05);
+        for (let i = 0; i < 90; i++) { const m = new T.Mesh(bit, ash); m.userData = { x: (Math.random() - 0.5) * 12, z: (Math.random() - 0.5) * 12, y: Math.random() * 7, sp: 0.5 + Math.random() * 0.8 }; m.visible = false; g.add(m); s.ash.push(m); }
       } else if (style === 'harmattan') {
         // ciel jaune, tempête de sable, yeux de léopard dans la poussière
         u.camera.widePosition.set(Math.sin(yaw) * 14.5, 4.4, Math.cos(yaw) * 14.5); u.camera.wideTarget.set(0, 2.6, 0); // la caméra descend pour montrer le ciel
         if (this.weatherGroup) { s.weatherShown = this.weatherGroup.visible; this.weatherGroup.visible = false; }
         s.skyMat = new T.MeshBasicMaterial({ color: 0xc9992f, transparent: true, opacity: 0, side: T.BackSide, fog: false, depthWrite: false, toneMapped: false });
-        g.add(new T.Mesh(new T.SphereGeometry(30, 20, 10), s.skyMat));
+        g.add(this.kitSky(s.skyMat));
         s.sand = [];
         const sand = this.sabreFire(0xd9b25a, 0.7), sandDark = this.sabreFire(0xa8772e, 0.7), grain = new T.SphereGeometry(0.16, 8, 6);
         for (let i = 0; i < 90; i++) { const m = new T.Mesh(grain, i % 3 ? sand : sandDark); m.userData = { a: i * 0.7, h: (i % 13) / 13, r: 0.5 + (i % 7) * 0.3, sp: 3 + (i % 4) }; m.scale.y = 0.6; g.add(m); s.sand.push(m); }
@@ -225,6 +255,7 @@
     }
     endKitMate(u) {
       if (this.checkGroup) this.checkGroup.visible = true;
+      for (const f of this.volcanoFerns || []) f.rotation.set(0, 0, 0);
       if (u.kitMate.weatherShown != null && this.weatherGroup) this.weatherGroup.visible = u.kitMate.weatherShown;
     }
     tickKitMate(u, t, e, clamp, smooth, hit, after) {
@@ -239,6 +270,28 @@
           m.rotation.y = Math.atan2(P.x - m.position.x, P.z - m.position.z); m.visible = e > 1.1 && after < 1.9;
         }
         s.pull = after > 0 ? new T.Vector3(P.x - Math.sin(s.yaw) * after * after * 3.6, after * after * 2.4, P.z - Math.cos(s.yaw) * after * after * 3.6) : null;
+      } else if (style === 'meteores') {
+        s.skyMat.opacity = smooth((e - 0.2) / 1);
+        const k = clamp((e - 0.7) / (hit - 0.7)), f = new T.Vector3(-Math.sin(s.yaw) * 13 + 6, 16, -Math.cos(s.yaw) * 13);
+        s.rock.position.set(P.x + (f.x - P.x) * (1 - k * k), 0.4 + (f.y - 0.4) * (1 - k * k), P.z + (f.z - P.z) * (1 - k * k));
+        s.rock.visible = e > 0.7 && after < 0.05; s.rock.rotation.y = t * 3; this.sabreFlicker(s.fire, t, 1);
+        for (const m of s.rocks) { const d = m.userData, q = clamp((e - d.d) / 0.7); m.visible = q > 0 && q < 1; m.position.set(d.x + 3 * (1 - q), 13 * (1 - q), d.z - 2 * (1 - q)); }
+        if (after > 0 && !s.boom) { s.boom = true; this.sabreBurst(P, t, [0xff8a2a, 0xffd24d, 0x2a1a14], 30, 2.2); this.shakeUntil = t + 0.9; this.shakeAmp = 0.3; }
+        // l'onde de choc couche les fougères, en s'éloignant du point d'impact
+        for (const f2 of this.volcanoFerns || []) {
+          const dx = f2.position.x - P.x, dz = f2.position.z - P.z, dist = Math.hypot(dx, dz), w = smooth((after * 7 - dist) / 2.5) * (1 - smooth((after - 1.1) / 0.9) * 0.55);
+          f2.rotation.set(dz / dist * w * 1.15, 0, -dx / dist * w * 1.15);
+        }
+      } else if (style === 'couleelave') {
+        s.skyMat.opacity = smooth((e - 0.2) / 0.9);
+        const q0 = 0.8;
+        for (const m of s.bursts) { const d = m.userData, a = e - q0 - d.d, q = a % 1.7; m.visible = a > 0 && after < 1.2; m.position.set(s.top.x + d.vx * q, s.top.y + d.vy * q - 4.9 * q * q, s.top.z + d.vz * q); }
+        if (e > q0 && !s.boom) { s.boom = true; this.shakeUntil = t + 2.1; this.shakeAmp = 0.1; }
+        const k = smooth((e - 1) / (hit - 1)) * s.riverLen, wide = 1 + Math.sin(t * 7) * 0.06;
+        for (const [i, m] of s.flow.entries()) { m.scale.z = Math.max(0.01, k); m.position.z = k / 2; m.position.y = i * 0.02; m.scale.x = wide * (i ? 0.9 + Math.sin(t * 5) * 0.2 : 1); }
+        s.river.visible = e > 1;
+        s.pool.visible = after > 0; s.pool.scale.setScalar(Math.min(1.3, 0.2 + after * 2.2));
+        for (const m of s.ash) { const d = m.userData; m.visible = e > 1.2; m.position.set(d.x, ((d.y - e * d.sp) % 7 + 7) % 7, d.z); m.rotation.set(t * 2, t, 0); }
       } else if (style === 'harmattan') {
         s.skyMat.opacity = smooth((e - 0.2) / 1);
         const k = smooth((e - 0.5) / 2.2);

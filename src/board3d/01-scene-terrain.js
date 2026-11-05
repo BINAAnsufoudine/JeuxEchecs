@@ -406,6 +406,30 @@
       if (night > 0) { this.sun.intensity *= 1 - 0.7 * night; this.hemi.intensity *= 1 - 0.45 * night; }
     }
 
+    // Clairière du Volcan : volcan fumant toujours à l'arrière-plan, fougères géantes, rochers
+    buildVolcanoClearing(add, mat, moundGeo) {
+      const T = this.THREE, rock = mat(0x241a18, { flatShading: true }), rockLight = mat(0x4a403c, { flatShading: true }), lava = new T.MeshBasicMaterial({ color: 0xff6a1a, toneMapped: false }), smoke = new T.MeshBasicMaterial({ color: 0x3a3030, transparent: true, opacity: 0.6, depthWrite: false });
+      const fern = mat(0x2e6b3a, { flatShading: true }), fernLight = mat(0x4a8f4a, { flatShading: true }), trunkMat = mat(0x4a3a2a);
+      const pivot = new T.Group(), volcano = new T.Group(); pivot.add(volcano); volcano.position.set(0, -0.3, -10.8); volcano.scale.setScalar(0.82); this.terrainGroup.add(pivot);
+      const part = (...o) => { const m = add(...o); volcano.add(m); return m; };
+      part(new T.CylinderGeometry(0.9, 6.4, 5.4, 12), rock, 0, 2.7, 0);
+      part(new T.CylinderGeometry(0.95, 0.75, 0.1, 12), lava, 0, 5.42, 0, 1, 1, 1, false);
+      for (const [x, z, h, r] of [[-0.4, 3, 3.6, 0.12], [0.8, 2.6, 2.6, 0.1], [-1.5, 2.2, 1.8, 0.09]]) { const l = part(new T.BoxGeometry(r * 2, h, 0.05), lava, x * 0.55, 3.6 - h * 0.34, z * 0.9, 1, 1, 1, false); l.rotation.x = 0.82; }
+      for (let i = 0; i < 6; i++) part(moundGeo, smoke, Math.sin(i) * 0.5, 6 + i * 0.9, 0, 2 + i * 0.7, 1.5 + i * 0.4, 2 + i * 0.7, false);
+      this.castleKeep = pivot;
+      // fougères géantes : une touffe de frondes, parfois sur un tronc
+      this.volcanoFerns = [];
+      const frond = new T.ConeGeometry(0.2, 1.8, 4);
+      const clump = (x, z, s, h) => {
+        const g = new T.Group(); g.position.set(x, h - 0.5, z); this.terrainGroup.add(g);
+        if (h) { const t = add(new T.CylinderGeometry(0.11 * s, 0.17 * s, h + 0.5, 7), trunkMat, x, h / 2 - 0.5, z); t.castShadow = true; }
+        for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2, m = add(frond, i % 2 ? fern : fernLight, 0, 0, 0, s, s, s * 0.45); g.add(m); m.position.set(Math.cos(a) * 0.62 * s, 0.56 * s, Math.sin(a) * 0.62 * s); m.rotation.set(Math.sin(a) * 1.05, -a + Math.PI / 2, -Math.cos(a) * 1.05); m.rotation.order = 'YXZ'; }
+        this.volcanoFerns.push(g); return g;
+      };
+      for (const [x, z, s, h] of [[-6.2, -5.6, 1.1, 0], [6.3, -5.2, 1.2, 0], [-6.6, 0.4, 1, 0], [6.7, 1, 1.05, 0], [-6.2, 5.6, 1.15, 0], [6.3, 5.8, 1.1, 0], [-8.8, -5.6, 1.5, 2.2], [9, -4.4, 1.6, 2.6], [-9.4, 3, 1.4, 1.8], [9.4, 4.6, 1.5, 2.2], [-3.6, -6.6, 0.9, 0], [3.8, -6.8, 0.9, 0]]) clump(x, z, s, h);
+      for (let i = 0; i < 10; i++) { const a = i * 2.4, r = 7.6 + (i % 3) * 1.6; const m = add(new T.DodecahedronGeometry(0.5 + (i % 3) * 0.25, 0), i % 2 ? rock : rockLight, Math.cos(a) * r, -0.2, Math.sin(a) * r, 1, 0.7, 1); m.rotation.y = i; }
+    }
+
     // Cour royale de Zalimba : palais en banco hérissé de poutres (toujours à l'arrière-plan), cases rondes, baobabs
     buildRoyalCourt(add, mat, moundGeo) {
       const T = this.THREE, banco = mat(0xb8683a), bancoDark = mat(0xa35a30), beam = mat(0x4a2412), thatch = mat(0xc9a24a, { flatShading: true }), bark = mat(0x5a4030), leaf = mat(0x3c5a2e, { flatShading: true }), door = mat(0x2e160a);
@@ -504,6 +528,17 @@
       }
     }
 
+    // Clairière du Volcan : ptérosaures qui tournent très haut au-dessus du plateau
+    buildPterosaurs() {
+      const T = this.THREE, skin = new T.MeshStandardMaterial({ color: 0x4a3a34, roughness: 0.9, side: T.DoubleSide }), wingGeo = new T.BoxGeometry(0.8, 0.02, 0.3), body = new T.ConeGeometry(0.07, 0.45, 6);
+      for (let i = 0; i < 4; i++) {
+        const g = new T.Group(), b = new T.Mesh(body, skin); b.rotation.x = Math.PI / 2; g.add(b); const wings = [];
+        for (const s of [-1, 1]) { const w = new T.Group(), m = new T.Mesh(wingGeo, skin); m.position.x = s * 0.4; w.add(m); g.add(w); wings.push(w); }
+        this.animalGroup.add(g);
+        this.animals.push({ g, behave: 'fly', wings, ang: i * 1.6, r: 14 + i * 1.5, y: 5 + i * 0.7, speed: 0.14 + i * 0.03, dir: i % 2 ? 1 : -1, phase: i * 1.7 });
+      }
+    }
+
     buildAnimals(terrain) {
       const T = this.THREE;
       if (!this.animalGroup) { this.animalGroup = new T.Group(); this.animalGroup.position.y = GROUND + 0.535; this.scene.add(this.animalGroup); }
@@ -512,6 +547,7 @@
       this.animals = [];
       if (terrain.kind === 'castle') { this.buildPetals(); return; } // pétales de cerisier dans le vent du soir
       if (terrain.kind === 'banco') { this.buildPetals([0xe2b07a, 0xb8683a, 0xf3d9a0]); return; } // poussière de terre dans le vent
+      if (terrain.kind === 'volcano') { this.buildPetals([0xff8a2a, 0x6d6478, 0x8d8590]); this.buildPterosaurs(); return; } // braises, cendres et ptérosaures
       if (terrain.kind === 'arena') { this.buildSkyRocks(); return; } // pas d'animaux dans le ciel : des rochers flottants
       const mat = (color) => new T.MeshStandardMaterial({ color, roughness: 0.85 });
       const mesh = (geo, m, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1) => { const o = new T.Mesh(geo, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.castShadow = true; return o; };
@@ -715,7 +751,10 @@
       g.fillStyle = col(0); g.fillRect(0, 0, 512, 512);
       // grain de fond
       for (let i = 0; i < 2600; i++) { g.fillStyle = col((rnd() - 0.5) * 0.12, 0.5); g.fillRect(rnd() * 512, rnd() * 512, 2 + rnd() * 4, 2 + rnd() * 4); }
-      if (k === 'banco') { // terre rouge battue, craquelée, traces de pas
+      if (k === 'volcano') { // herbe rase, terre et cendre
+        for (let i = 0; i < 3000; i++) { g.fillStyle = col((rnd() - 0.5) * 0.18, 0.7); g.fillRect(rnd() * 512, rnd() * 512, 1 + rnd() * 3, 1 + rnd() * 3); }
+        for (let i = 0; i < 16; i++) { const x = rnd() * 512, y = rnd() * 512, r = 30 + rnd() * 50, a = g.createRadialGradient(x, y, 2, x, y, r); a.addColorStop(0, 'rgba(50,44,40,0.5)'); a.addColorStop(1, 'rgba(50,44,40,0)'); g.fillStyle = a; g.fillRect(x - r, y - r, r * 2, r * 2); }
+      } else if (k === 'banco') { // terre rouge battue, craquelée, traces de pas
         for (let i = 0; i < 2600; i++) { g.fillStyle = col((rnd() - 0.5) * 0.14, 0.7); g.fillRect(rnd() * 512, rnd() * 512, 1 + rnd() * 3, 1 + rnd() * 3); }
         g.strokeStyle = 'rgba(60,24,10,0.25)'; g.lineWidth = 1.2; for (let i = 0; i < 90; i++) { let x = rnd() * 512, y = rnd() * 512; g.beginPath(); g.moveTo(x, y); for (let j = 0; j < 4; j++) { x += (rnd() - 0.5) * 34; y += (rnd() - 0.5) * 34; g.lineTo(x, y); } g.stroke(); }
       } else if (k === 'castle') { // cour de terre battue, gravier ratissé et dalles de pierre
@@ -763,7 +802,10 @@
         g.lineTo(2048, 512); g.fill();
       };
       const ground = new T.Color(terrain.ground), shade = (dl, h = 0) => hex(ground.clone().offsetHSL(h, 0, dl).lerp(sky, 0.35 - dl));
-      if (k === 'banco') { // savane au soleil couchant, acacias lointains
+      if (k === 'volcano') { // chaînes de volcans lointains, jungle sombre
+        ridge('#6a3a34', 340, 120, 0.005, 0.7); ridge('#4a2c2c', 400, 80, 0.009, 2.1);
+        for (let x = 0; x < 2048; x += 28) { const h = 40 + (x * 17 % 40), y = 450; g.fillStyle = '#26382a'; g.beginPath(); g.ellipse(x, y - h / 2, 34, h / 2, 0, 0, 7); g.fill(); }
+      } else if (k === 'banco') { // savane au soleil couchant, acacias lointains
         ridge('#c9713a', 400, 40, 0.004, 0.7); ridge('#a85a30', 440, 30, 0.008, 2.1);
         for (let x = 30; x < 2048; x += 150) { const y = 432 - Math.sin(x * 0.01) * 10, h = 40 + (x * 13 % 22); g.fillStyle = '#3a2418'; g.fillRect(x - 3, y - h, 6, h); g.beginPath(); g.ellipse(x, y - h, 50, 12, 0, 0, 7); g.fill(); }
       } else if (k === 'castle') { // collines au crépuscule, pins sombres et murailles lointaines
@@ -804,7 +846,7 @@
         if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => oldMat.add(m));
       });
       this.terrainGroup.clear();
-      this.castleKeep = null;
+      this.castleKeep = null; this.volcanoFerns = null;
       oldGeo.forEach((g) => g.dispose()); oldMat.forEach((m) => m.dispose());
 
       const mat = (color, extra = {}) => new T.MeshStandardMaterial({ color, roughness: 0.94, ...extra });
@@ -858,7 +900,7 @@
       for (let i = 0; i < points.length; i++) {
         // devant et derrière le plateau, le décor est reculé pour ne pas cacher les pièces (le sol est au ras du plateau)
         const x = points[i][0], z = points[i][1] * (Math.abs(points[i][1]) > 5 ? 1.35 : 1), jitter = (i % 3) * 0.16;
-        if (terrain.kind === 'arena' || terrain.kind === 'castle' || terrain.kind === 'banco') {
+        if (terrain.kind === 'arena' || terrain.kind === 'castle' || terrain.kind === 'banco' || terrain.kind === 'volcano') {
           // rien sur la mer de nuages ; la cour du château est bâtie plus bas : les dalles et bornes sont posées plus bas
         } else if (terrain.kind === 'beach') {
           add(moundGeo, sand, x, -0.32, z, 1.7, 0.3, 1);
@@ -916,6 +958,7 @@
       }
       if (terrain.kind === 'castle') this.buildCastleCourt(add, mat, moundGeo);
       if (terrain.kind === 'banco') this.buildRoyalCourt(add, mat, moundGeo);
+      if (terrain.kind === 'volcano') this.buildVolcanoClearing(add, mat, moundGeo);
       if (terrain.id === 'dojo') {
         const vermilion = mat(0x9e352c), darkWood = mat(0x38251f);
         const post = new T.BoxGeometry(0.2, 1.45, 0.2), crossbar = new T.BoxGeometry(3.1, 0.2, 0.3), lintel = new T.BoxGeometry(3.45, 0.22, 0.38);

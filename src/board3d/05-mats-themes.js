@@ -166,6 +166,8 @@
         else if (style === 'jaws') { c.holder.visible = after < 0.15; }
         else if (style === 'boulder' || style === 'crystalcomet' || style === 'nilocomet') { root.scale.y = u.kingBase.scale.y * Math.max(0.2, 1 - after * 4); }
         else if (style === 'ancetres') { const L = u.kitMate.pull; if (L) c.holder.position.copy(L); c.holder.visible = after < 1.9; } // emporté vers le soleil couchant
+        else if (style === 'meteores') { root.scale.y = u.kingBase.scale.y * Math.max(0.15, 1 - after * 4); }
+        else if (style === 'couleelave') { root.position.y = -Math.min(0.7, after * 0.9); c.holder.visible = after < 0.9; } // englouti par la lave
         else if (style === 'harmattan') { root.position.y = Math.min(3, after * 1.8); root.rotation.y = after * 11; c.holder.visible = after < 0.9; } // happé par le tourbillon
         else if (style === 'cloudbreath') { root.position.y = Math.min(4, after * 2.6); root.rotation.y = after * 9; c.holder.visible = after < 1.6; } // soulevé par le vent
         else if (style === 'eruption' || style === 'fortress' || style === 'shadeswarm') { c.holder.visible = after < 0.25; } // englouti
