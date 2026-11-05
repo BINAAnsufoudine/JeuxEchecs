@@ -75,16 +75,17 @@
     const cam = homeDistance();
     assert(cam < 0.05, `caméra restée décalée de ${cam.toFixed(2)} après les animations`);
   }
-  function mate(theme, white) {
+  function mate(theme, white, pc = white ? 'Q' : 'q') {
     window.PieceTheme = theme; b.rebuildPieces();
     const e = Array(64).fill(null);
-    if (white) { e[60] = 'K'; e[4] = 'k'; e[20] = 'Q'; } else { e[4] = 'k'; e[60] = 'K'; e[44] = 'q'; }
+    e[60] = 'K'; e[4] = 'k'; if (white) e[20] = pc; else e[44] = pc;
+    if (pc === 'K') e[60] = null; if (pc === 'k') e[4] = null; // le roi joue lui-même le coup de mat
     setClock(); b.update({ ...base, board: e, last: null, animate: false, ply: 0 }); step(0.5);
     const before = snapshot();
     const e2 = e.slice();
-    if (white) { e2[12] = 'Q'; e2[20] = null; } else { e2[52] = 'q'; e2[44] = null; }
-    b.update({ ...base, board: e2, check: white ? 4 : 60, last: white ? { from: 20, to: 12, piece: 'Q' } : { from: 44, to: 52, piece: 'q' }, animate: true, ply: 1,
-      mateUltimate: { id: `m${theme}${white}`, piece: white ? 'Q' : 'q', attackerTo: white ? 12 : 52, to: white ? 4 : 60 }, outcome: white ? '1-0' : '0-1' });
+    if (white) { e2[12] = pc; e2[20] = null; } else { e2[52] = pc; e2[44] = null; }
+    b.update({ ...base, board: e2, check: white ? 4 : 60, last: white ? { from: 20, to: 12, piece: pc } : { from: 44, to: 52, piece: pc }, animate: true, ply: 1,
+      mateUltimate: { id: `m${theme}${white}`, piece: pc, attackerTo: white ? 12 : 52, to: white ? 4 : 60 }, outcome: white ? '1-0' : '0-1' });
     step(12);
     // nouvelle partie : tout doit disparaître et les rois revenir debout
     b.update({ ...base, board: e, last: null, animate: false, ply: 0 }); step(1);
@@ -124,6 +125,8 @@
     test(`3D ${theme} : mat des Noirs`, () => mate(theme, false));
     test(`3D ${theme} : bouton « Passer » pendant une attaque`, () => skip(theme));
   }
+  // Saga des Auras : chaque pièce a son mat
+  for (const pc of 'PNBRKpnbrk') test(`3D auras : mat de la pièce ${pc}`, () => mate('auras', pc === pc.toUpperCase(), pc));
   // Mélange de thèmes : les Noirs avec les pièces d'un autre thème
   for (const [w, k] of [['ninja', 'modern'], ['ocean', 'ancient'], ['birds', 'plants']]) {
     window.PieceThemeBlack = k;

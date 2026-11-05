@@ -89,14 +89,21 @@
         });
         for (let i = 0; i < 26; i++) { const s = new T.Mesh(new T.CylinderGeometry(0.05, 0.02, 1.1, 6), new T.MeshBasicMaterial({ color: i % 3 ? 0x7fd8ff : 0xffffff, transparent: true, opacity: 0.95, depthWrite: false })); g.add(s); keep(s, { x: (Math.random() - 0.5) * 3.4, z: (Math.random() - 0.5) * 1.6, tx: (Math.random() - 0.5) * 1.1, tz: (Math.random() - 0.5) * 1.1, delay: 2.2 + Math.random() * 0.8 }); }
       } else if (style === 'nova') {
-        // Vorax lève son sceptre : ses éclats se rassemblent en une boule rouge qui grossit, puis descend sur le roi blanc
-        const k = [...this.chars.values()].find((c) => c.piece === 'k'), src = k ? k.holder.position.clone() : new T.Vector3(u.fromPos.x, 0, u.fromPos.z);
+        // Mélyx concentre la lumière de ses miroirs en une boule rouge qui grossit, puis descend sur le roi blanc
+        const src = this.sqToPos(u.attackerTo);
         u.novaFrom = new T.Vector3(src.x, 3, src.z);
+        for (const s of [-1, 1]) {
+          const mirror = new T.Mesh(new T.CircleGeometry(0.42, 24), std(0xdfe8ff, { metalness: 0.9, roughness: 0.08, side: T.DoubleSide })); mirror.position.set(src.x + s * 1.7, 1.5, src.z); g.add(mirror);
+          const ray = new T.Mesh(new T.CylinderGeometry(0.035, 0.035, 2.3, 6), basic(0xff3d6e, 0.9)); ray.position.set(src.x + s * 0.85, 2.25, src.z); ray.rotation.z = s * Math.atan2(1.7, 1.5); g.add(ray);
+          (u.novaRays = u.novaRays || []).push(mirror, ray);
+        }
         u.nova = new T.Mesh(new T.SphereGeometry(1, 28, 18), new T.MeshBasicMaterial({ color: 0xff3d3d, transparent: true, opacity: 0.92 })); g.add(u.nova);
         u.novaCore = new T.Mesh(new T.SphereGeometry(0.72, 20, 14), new T.MeshBasicMaterial({ color: 0xffd0a0 })); u.nova.add(u.novaCore);
         u.novaHalo = new T.Mesh(new T.SphereGeometry(1.25, 24, 16), new T.MeshBasicMaterial({ color: 0xff3d6e, transparent: true, opacity: 0.35, depthWrite: false, side: T.BackSide })); u.nova.add(u.novaHalo);
         for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, s = new T.Mesh(new T.OctahedronGeometry(0.1, 0), new T.MeshBasicMaterial({ color: 0xc04bff })); g.add(s); keep(s, { shard: true, a, r: 2.2 + (i % 3) * 0.6 }); }
         for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2 + Math.random() * 0.3, crack = at(new T.Mesh(new T.BoxGeometry(0.06, 0.02, 1.4 + Math.random() * 1.4), basic(0xff3d6e, 0.95)), Math.cos(a) * 1, 0.02, Math.sin(a) * 1); crack.rotation.y = -a + Math.PI / 2; keep(crack, { crack: true }); }
+      } else if (Object.values(AURA_MATE).includes(style) && style !== 'constellation' && style !== 'nova') {
+        this.makeAuraMate(u, at, keep, basic, std);
       } else if (style === 'orbital') {
         u.target3 = at(new T.Mesh(new T.RingGeometry(0.5, 0.62, 32), basic(0xff1744, 0.9)), 0, 0.04, 0); u.target3.rotation.x = -Math.PI / 2;
         u.beam = at(new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 30, 20, 1, true), new T.MeshBasicMaterial({ color: 0xff1744, transparent: true, opacity: 0.8, blending: T.AdditiveBlending, depthWrite: false })), 0, 15, 0);
@@ -112,6 +119,7 @@
       // et laisse une trace sur la case du roi.
       const tint = THEME_MATE_COLORS[style] || [0xffffff, 0x888888];
       u.tint = tint;
+      if (Object.values(AURA_MATE).includes(style) && style !== 'constellation') u.flash.material.color.setHex(tint[0]);
       const A = this.sqToPos(u.attackerTo);
       u.pillar = new T.Mesh(new T.CylinderGeometry(0.42, 0.55, 6, 24, 1, true), new T.MeshBasicMaterial({ color: tint[0], transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
       u.pillar.position.set(A.x, 3, A.z); g.add(u.pillar);
@@ -151,7 +159,9 @@
         else if (style === 'whirlpool') { root.position.y = -smooth(after / 1.2) * 0.9; root.rotation.y = after * 8; c.holder.visible = after < 1.3; }
         else if (style === 'crows') { root.position.y = Math.min(4, after * 2.2); root.rotation.y = after * 10; c.holder.visible = after < 1.5; }
         else if (style === 'jaws') { c.holder.visible = after < 0.15; }
-        else if (style === 'boulder') { root.scale.y = u.kingBase.scale.y * Math.max(0.2, 1 - after * 4); }
+        else if (style === 'boulder' || style === 'crystalcomet' || style === 'nilocomet') { root.scale.y = u.kingBase.scale.y * Math.max(0.2, 1 - after * 4); }
+        else if (style === 'cloudbreath') { root.position.y = Math.min(4, after * 2.6); root.rotation.y = after * 9; c.holder.visible = after < 1.6; } // soulevé par le vent
+        else if (style === 'eruption' || style === 'fortress' || style === 'shadeswarm') { c.holder.visible = after < 0.25; } // englouti
         else { root.rotation.z = Math.PI / 2 * smooth(after / 0.4); root.position.y = 0.05; } // tombe sur le côté
         return true;
       }
@@ -243,12 +253,15 @@
         u.nova.scale.setScalar(size * (1 + burst * 1.6));
         u.nova.material.opacity = 0.92 * (1 - burst); u.novaCore.material.transparent = true; u.novaCore.material.opacity = 1 - burst; u.novaHalo.material.opacity = 0.35 * (1 - burst);
         u.nova.visible = after < 0.5;
+        for (const m of u.novaRays) m.visible = e > 0.4 && e < 2.2;
         this.skyDim = Math.max(this.skyDim || 0, smooth(e / 2.4) * 0.8 * (after > 0 ? Math.max(0, 1 - after / 1.5) : 1)); // le plateau s'éteint
         for (const p of u.mateParts) {
           if (p.userData.crack) { p.scale.z = Math.max(0.01, smooth(after / 0.4)); p.visible = after > 0; continue; }
           const d = p.userData, k = smooth(e / 1.6), a = d.a + t * 2;
           p.visible = e < 1.7; p.position.set(u.novaFrom.x + Math.cos(a) * d.r * (1 - k), 3 + Math.sin(a * 2) * 0.5 * (1 - k), u.novaFrom.z + Math.sin(a) * d.r * (1 - k));
         }
+      } else if (Object.values(AURA_MATE).includes(style) && style !== 'constellation' && style !== 'nova') {
+        this.tickAuraMate(u, t, e, clamp, smooth, hit, after);
       } else if (style === 'orbital') {
         const lock = smooth((e - 0.4) / 1.2);
         u.target3.scale.setScalar(2.5 - lock * 1.5); u.target3.rotation.z = t * 3; u.target3.visible = after < 0.6;

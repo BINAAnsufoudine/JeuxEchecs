@@ -313,7 +313,8 @@
         } : null;
         if (this.mateUltimate && THEME_MATE[root.themeOf(o.mateUltimate.piece)]) {
           const white = o.mateUltimate.piece === o.mateUltimate.piece.toUpperCase();
-          this.mateUltimate.themed = THEME_MATE[root.themeOf(o.mateUltimate.piece)][white ? 'w' : 'b'];
+          const mateTheme = root.themeOf(o.mateUltimate.piece);
+          this.mateUltimate.themed = mateTheme === 'auras' ? AURA_MATE[o.mateUltimate.piece] : THEME_MATE[mateTheme][white ? 'w' : 'b'];
           this.mateUltimate.duration = 4.8;
         }
         if (this.mateUltimate) {

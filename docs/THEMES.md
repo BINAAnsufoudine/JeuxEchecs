@@ -151,8 +151,17 @@ Arts martiaux cosmiques (création originale). Blancs : l'Ordre du Ciel Azur (iv
 - **Déplacement** : vol au ras du plateau avec traînée de lumière ; le cavalier passe par-dessus les autres.
 - **Aura** : la pièce sélectionnée s'entoure de son aura, bleue ou pourpre.
 - **Cratères** : une prise laisse un cratère fumant pendant 6 demi-coups (`AURA_CRATER_PLIES`).
-- **Mats** : Blancs, *Constellation d'Azur* ; Noirs, *Nova Noire*.
-- **Code** : modèles dans `auras3d.js`, armes et pouvoirs dans `src/board3d/12b-auras.js`. Les pouvoirs sont des effets visuels courts, sans effet sur les règles.
+- **Mats** : un mat par pièce (`AURA_MATE`), celui de la pièce qui donne le mat ; sur un mat double, la plus forte. Un roi ne donne jamais échec : son mat se joue quand il vient lui-même de jouer le coup de mat (découverte, roque).
+
+| Pièce | Blancs | Noirs |
+|---|---|---|
+| Pion | *Cercle du Temple* : les apprentis encerclent le roi, éclair aveuglant | *Nuée d'Ombre* : les feux follets l'engloutissent dans une flamme violette |
+| Cavalier | *Comète de Nilo* : plongeon en vrille, onde de choc | *La Prime* : grappin, liens, filet |
+| Fou | *Aube Tranchante* : un éclair sur la diagonale, un silence, une croix de lumière | *Le Réseau* : les drones resserrent une toile de lasers |
+| Tour | *La Forteresse* : les boucliers se referment en cage de pierre | *L'Éruption* : colonne de magma, puis tout se refroidit en roche |
+| Dame | *Constellation d'Azur* : les étoiles reliées s'abattent sur le roi | *Nova Noire* : la lumière des miroirs forme une boule rouge qui descend |
+| Roi | *Souffle des Nuages* : une colonne de vent soulève le roi adverse | *Chute de Comète* : une comète de cristal tombe du ciel |
+- **Code** : modèles dans `auras3d.js`, armes, pouvoirs et mats dans `src/board3d/12b-auras.js` (Constellation et Nova dans `05-mats-themes.js`). Les pouvoirs sont des effets visuels courts, sans effet sur les règles.
 - **Échiquier 2D** : il garde les ninjas, comme pour tous les thèmes.
 
 ---

@@ -1002,10 +1002,16 @@
       if (kingSq >= 0) {
         // C'est la pièce qui donne échec (celle qui mate) qui fait l'attaque de mat, même sur un échec à la découverte
         const checkers = window.Chess.pseudoMoves({ ...s, turn: s.turn === 'w' ? 'b' : 'w', ep: -1, castling: '' }).filter((m) => m.to === kingSq).map((m) => m.from);
-        const mater = last && checkers.includes(last.to) ? last.to : checkers[0];
+        let mater = last && checkers.includes(last.to) ? last.to : checkers[0];
+        // Saga des Auras : un mat par pièce. Mat double : la pièce la plus forte. Le roi ne donne jamais échec lui-même :
+        // son mat se joue quand c'est lui qui vient de jouer (mat à la découverte, roque).
+        const aurasMate = window.themeOf && window.themeOf(s.turn === 'w' ? 'k' : 'K') === 'auras';
+        const aurasKing = aurasMate && last && s.board[last.to] && s.board[last.to].toLowerCase() === 'k';
+        if (aurasMate && checkers.length > 1) mater = [...checkers].sort((a, b) => 'pnbrq'.indexOf(s.board[b].toLowerCase()) - 'pnbrq'.indexOf(s.board[a].toLowerCase()))[0];
+        if (aurasKing) mater = last.to;
         // Un Roi ne peut pas attaquer directement le Roi adverse dans une position légale.
         // Ne pas lancer l'animation spectaculaire de mat si une position invalide le désigne comme attaquant.
-        if (last && mater != null && s.board[mater] && s.board[mater].toLowerCase() !== 'k') {
+        if (last && mater != null && s.board[mater] && (aurasKing || s.board[mater].toLowerCase() !== 'k')) {
           const movedPiece = s.board[mater];
           const ultimatePiece = movedPiece;
           const attackerTo = mater;

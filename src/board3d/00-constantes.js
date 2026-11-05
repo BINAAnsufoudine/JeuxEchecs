@@ -55,6 +55,8 @@
     stampede: [0xffcc80, 0x6d4c41], quake: [0xff7043, 0x3e2723], eagle: [0xfff8e1, 0x8d6e63], crows: [0x9575cd, 0x212121],
     firearrows: [0xffa726, 0x3e2723], boulder: [0xbcaaa4, 0x4e342e], airstrike: [0xffab40, 0x263238], orbital: [0xff1744, 0x1a0000],
     constellation: [0x9fe3ff, 0x16306e], nova: [0xff3d3d, 0x1a0712],
+    temple: [0xffffff, 0x16306e], nilocomet: [0x4cc3ff, 0x16306e], dawncross: [0xffd27a, 0x5a4210], fortress: [0x7fd8ff, 0x343a4e], cloudbreath: [0xdff4ff, 0x4a6a9e],
+    shadeswarm: [0xc04bff, 0x1a0a2e], bounty: [0xff3d6e, 0x2d2219], lasernet: [0x9ef7ff, 0x2a1636], eruption: [0xff7a1a, 0x2b2326], crystalcomet: [0xc04bff, 0x14101f],
   };
   // Armes propres aux thèmes guerriers, par pièce (w = Blancs, b = Noirs) ; sinon jet ou salve aux couleurs du thème
   const WAR_PROJ = {
@@ -79,6 +81,8 @@
     modern: { w: { jet: 0xffd54f, foam: 0xffffff, bub: 0x8d8d7a, charge: 0xfff59d, boom: [0xfff1a8, 0xff6d00, 0xffc34d], debris: [0x5d5d5d, 0xffb74d], burst: [0xfff1a8, 0xff9100, 0xbdbdbd], bits: [0x616161, 0xffcc80] },
               b: { jet: 0x37474f, foam: 0xb0bec5, bub: 0x37474f, charge: 0x78909c, boom: [0xffab40, 0x263238, 0x546e7a], debris: [0x263238, 0xff6d00], burst: [0xffab40, 0x37474f, 0x546e7a], bits: [0x263238, 0xff9100] } },
   }; // à distance : la cible tire d'abord sa propre technique sur l'attaquant
+// Saga des Auras : un mat par pièce (celle qui donne le mat)
+const AURA_MATE = { P: 'temple', N: 'nilocomet', B: 'dawncross', R: 'fortress', Q: 'constellation', K: 'cloudbreath', p: 'shadeswarm', n: 'bounty', b: 'lasernet', r: 'eruption', q: 'nova', k: 'crystalcomet' };
 const AURA_PROJ = new Set(['disc', 'darkfire', 'burst', 'hook', 'slash', 'crosslaser', 'shield', 'magma', 'wave', 'mirror', 'breath', 'gravity']);
 const AURA_BEAMS = { wave: { r: 0.08, off: [0] }, mirror: { r: 0.03, off: [-0.5, 0.5] }, crosslaser: { r: 0.018, off: [-0.16, 0.16] } }; // off : écart de chaque rayon au départ
 const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
