@@ -197,7 +197,7 @@ Feu orange et or côté blanc, violet côté noir. Mats : un par pièce (`SABRE_
 | Cavalier | *Cavalier de feu* : saut sur le roi accroché à la lance, le cheval cabré le frappe de ses sabots |
 | Fou | *L'Arc géant* : haut comme deux tours, feu sur les cases traversées, il emporte le roi et les pièces adverses de son couloir |
 | Tour | *Fracas de fer* : trois coups de boule enflammée, puis le dernier écrase le roi et brise tout le plateau |
-| Dame | *Dragon de feu* (jaune ou violet) : une aura lumineuse entoure la dame, le dragon apparaît derrière elle et la prend dans sa tête ; il fond sur le roi, le garde dans sa gueule, fait un tour du plateau et disparaît dans le ciel ; la dame retombe sur sa case |
+| Dame | *Dragon de feu* (jaune ou violet) : la dame lance sa naginata, qui devient un dragon de feu à mi-chemin ; il percute le roi et l'emporte en le dévorant, fait un tour du plateau et disparaît dans le ciel ; la naginata retombe dans la main que la dame lève vers le ciel |
 | Roi blanc | *Pluie de Sakura* : trait blanc, tempête de pétales, le cimier du roi noir se brise |
 | Roi noir | *Lune Pourpre* : nuit noire, lune rouge, vague d'encre, cendres, le croissant du roi blanc se fend |
 
