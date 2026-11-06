@@ -185,7 +185,7 @@ Samouraïs des temps anciens (création originale, noms et blasons inventés). B
 | Cavalier | charge à la lance : la cible reste accrochée une seconde, puis tombe |
 | Fou | deux arcs d'énergie croisés en X, qui l'emportent hors du plateau |
 | Tour | boule de fer lancée, enflammée en vol ; la cible brûle et part loin dans le décor ; la chaîne ramène la boule |
-| Dame | naginata lancée, tourbillon de feu horizontal ; la cible brûle et part loin dans le décor ; la naginata revient |
+| Dame | naginata lancée, enveloppée d'une vrille de feu en pointe ; la cible est éjectée hors du plateau ; la lance reste plantée debout sur la case, où la dame vient la reprendre |
 | Roi blanc | iaï éclair : un trait blanc, un instant de silence, la cible s'effondre |
 | Roi noir | le nodachi frappe le sol, la case tremble et se fend |
 
@@ -197,7 +197,8 @@ Feu orange et or côté blanc, violet côté noir. Mats : un par pièce (`SABRE_
 | Cavalier | *Cavalier de feu* : saut sur le roi accroché à la lance, le cheval cabré le frappe de ses sabots |
 | Fou | *L'Arc géant* : haut comme deux tours, feu sur les cases traversées, il emporte le roi et les pièces adverses de son couloir |
 | Tour | *Fracas de fer* : trois coups de boule enflammée, puis le dernier écrase le roi et brise tout le plateau |
-| Dame | *Dragon de feu* (jaune ou violet) : la dame lance sa naginata, qui devient un dragon de feu à mi-chemin ; il percute le roi et l'emporte en le dévorant, fait un tour du plateau et disparaît dans le ciel ; la naginata retombe dans la main que la dame lève vers le ciel |
+| Dame blanche | *Dragon de feu* : la dame lance sa naginata, qui devient un dragon jaune à mi-chemin ; il percute le roi et l'emporte en le dévorant, fait un tour du plateau et disparaît dans le ciel ; la naginata retombe dans la main que la dame lève vers le ciel |
+| Dame noire | *Tigre de feu noir* : en position de lancer, sa naginata devient un tigre de feu noir et violet, qu'elle lance à toute vitesse ; il emporte le roi dans le ciel en faisant un tour du plateau ; la naginata retombe dans sa main |
 | Roi blanc | *Pluie de Sakura* : trait blanc, tempête de pétales, le cimier du roi noir se brise |
 | Roi noir | *Lune Pourpre* : nuit noire, lune rouge, vague d'encre, cendres, le croissant du roi blanc se fend |
 

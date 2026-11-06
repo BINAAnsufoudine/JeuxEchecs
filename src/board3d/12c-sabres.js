@@ -79,7 +79,7 @@
       a.moveFrom = from;
       if (a.sabre === 'p') { const gap = Math.min(0.62, len); a.stop = near(gap); a.approach = 0.3 + Math.max(0, len - gap) * 0.09; a.clash = a.approach + 1.05; a.hit = a.clash + 0.25; a.moveAt = a.hit + 0.75; a.moveFrom = a.stop; }
       else if (a.sabre === 'n') { a.stop = near(Math.min(1, len)); a.approach = 0.75; a.hit = 0.75; a.moveAt = a.hit + 1.55; a.moveFrom = a.stop; }
-      else if (a.sabre === 'q') { a.wind = 0.5; a.fly = 0.35 + len * 0.08; a.hit = a.wind + a.fly; a.back = 0.35 + len * 0.06; a.moveAt = a.hit + a.back + 0.15; }
+      else if (a.sabre === 'q') { a.wind = 0.5; a.fly = 0.25 + len * 0.06; a.hit = a.wind + a.fly; a.moveAt = a.hit + 0.85; } // la lance reste plantée : elle va la chercher
       else if (a.sabre === 'r') { a.wind = 0.6; a.fly = 0.3 + len * 0.07; a.hit = a.wind + a.fly; a.back = 0.4 + len * 0.07; a.moveAt = a.hit + a.back + 0.15; }
       else if (a.sabre === 'b') { a.wind = 0.55; a.fly = 0.22 + len * 0.05; a.hit = a.wind + a.fly; a.moveAt = a.hit + 0.55; }
       else if (a.sabre === 'K') { a.wind = 0.5; a.hit = 0.62; a.stop = { x: target.x + dir.x * 0.72, z: target.z + dir.z * 0.72 }; a.moveAt = 1.6; a.moveFrom = a.stop; }
@@ -87,20 +87,29 @@
       a.duration = a.moveAt + 0.3 + Math.hypot(to.x - a.moveFrom.x, to.z - a.moveFrom.z) * 0.09;
       return a;
     }
-    // Boule enflammée ou naginata : le projectile, son feu et son lien avec la main
+    // Naginata lancée : pointe en avant, enveloppée d'une vrille de feu qui s'affine vers l'avant
+    sabreDrill(a) {
+      const T = this.THREE, g = new T.Group(), spin = new T.Group(), fire = new T.Group(), hex = [a.pal.hot, a.pal.mid, a.pal.deep], cone = new T.ConeGeometry(1, 1, 6);
+      spin.add(this.sabreProp(root.ThemeModels.sabres.naginata(T, a.white))); g.add(spin, fire); g.userData.spin = spin; g.userData.fire = fire;
+      for (let i = 0; i < 26; i++) {
+        const k = i / 26, r = 0.03 + k * 0.42, ang = i * 1.15, m = new T.Mesh(cone, this.sabreFire(hex[(i + 1) % 3], 0.9));
+        m.position.set(Math.cos(ang) * r, Math.sin(ang) * r, 1.05 - k * 1.8); m.rotation.x = Math.PI / 2; m.scale.set(0.05 + k * 0.08, 0.3 + k * 0.32, 0.05 + k * 0.08); fire.add(m);
+      }
+      for (let i = 0; i < 4; i++) { const k = 0.25 + i * 0.25, o = new T.Mesh(new T.TorusGeometry(0.03 + k * 0.42, 0.018, 6, 24), this.sabreFire(hex[(i + 1) % 3], 0.8)); o.position.z = 1.05 - k * 1.8; fire.add(o); }
+      return g;
+    }
+    // Boule enflammée : le projectile, son feu et son lien avec la main
     sabreProjectile(a) {
-      const T = this.THREE, g = new T.Group(), models = root.ThemeModels.sabres, rook = a.sabre === 'r';
-      if (rook) { const ball = this.sabreProp(models.ball(T, a.white)); g.add(ball); g.userData.spin = ball; }
-      else { const spin = new T.Group(), n = this.sabreProp(models.naginata(T, a.white)); n.rotation.x = Math.PI / 2; n.position.y = -0.14; spin.add(n); g.add(spin); g.userData.spin = spin; }
+      const T = this.THREE, g = new T.Group(), ball = this.sabreProp(root.ThemeModels.sabres.ball(T, a.white));
+      g.add(ball); g.userData.spin = ball;
       const fire = new T.Group(); g.add(fire); g.userData.fire = fire; fire.userData.parts = [];
-      // tourbillon de feu horizontal, ou traînée de la boule : cônes couchés tournant autour de l'axe de marche
+      // traînée de la boule : cônes couchés tournant autour de l'axe de marche
       const cone = new T.ConeGeometry(1, 1, 7), ring = [a.pal.hot, a.pal.mid, a.pal.deep];
-      for (let i = 0; i < (rook ? 10 : 16); i++) {
+      for (let i = 0; i < 10; i++) {
         const m = new T.Mesh(cone, this.sabreFire(ring[(i + 1) % 3], 0.88)), ang = i * 2.4;
-        m.userData = { ang, r: rook ? 0.1 : 0.14 + (i % 4) * 0.09, z: rook ? -0.05 - (i % 5) * 0.08 : 0.25 - i * 0.07, s: 0.1 + (i % 3) * 0.05, l: rook ? 0.45 + (i % 4) * 0.13 : 0.34 + (i % 3) * 0.1 };
+        m.userData = { ang, r: 0.1, z: -0.05 - (i % 5) * 0.08, s: 0.1 + (i % 3) * 0.05, l: 0.45 + (i % 4) * 0.13 };
         m.rotation.x = -Math.PI / 2; fire.add(m); fire.userData.parts.push(m);
       }
-      if (!rook) for (let i = 0; i < 3; i++) { const o = new T.Mesh(new T.TorusGeometry(0.3 + i * 0.12, 0.03, 6, 28), this.sabreFire(ring[(i + 1) % 3], 0.85)); o.position.z = 0.15 - i * 0.28; fire.add(o); }
       return g;
     }
     tickSabreProjectile(g, t, k) {
@@ -127,7 +136,29 @@
         c.holder.position.set(a.moveFrom.x + (a.to.x - a.moveFrom.x) * u, 0, a.moveFrom.z + (a.to.z - a.moveFrom.z) * u);
         M.animate(p, t, 'run'); p.root.position.y = 0;
       }
-      if (kind === 'q' || kind === 'r') {
+      if (kind === 'q') {
+        if (!going) {
+          c.holder.position.set(a.from.x, 0, a.from.z); this.sabreFace(c, a.target.x, a.target.z);
+          M.animate(p, t, 'idle');
+          const w = clamp(el / a.wind);
+          if (el < a.wind + 0.25) { p.armR.rotation.set(w < 1 ? -2.9 * w : -2.9 + (el - a.wind) * 7, 0, 0.25); p.torso.rotation.y = 0.5 * w * (1 - clamp((el - a.wind) * 4)); }
+          else p.armR.rotation.set(-1.3, 0, 0.3);
+        }
+        const back = el >= a.duration - 0.06; // elle récupère sa lance en arrivant sur la case
+        if (p.naginata) p.naginata.visible = el < a.wind || back;
+        if (el >= a.wind && !a.ended) {
+          if (!a.proj) { a.proj = this.fx(a, this.sabreDrill(a)); a.proj.rotation.y = Math.atan2(a.dir.x, a.dir.z); a.launch = hand(); }
+          const g = a.proj, end = new T.Vector3(a.target.x, 0.85, a.target.z);
+          if (el < a.hit) { const k = (el - a.wind) / a.fly; g.position.copy(a.launch).lerp(end, k); g.userData.spin.rotation.z = t * 30; g.userData.fire.rotation.z = -t * 22; g.userData.fire.scale.setScalar(0.7 + k * 0.4); }
+          else {
+            // plantée debout sur la case, elle vibre un instant
+            const shiver = Math.sin(el * 46) * 0.1 * Math.max(0, 1 - (el - a.hit) / 0.5);
+            g.userData.fire.visible = false; g.userData.spin.rotation.z = 0;
+            g.position.set(a.target.x, 0.9, a.target.z); g.rotation.set(Math.PI / 2 + shiver, 0, 0); g.visible = !back;
+            struck(a.fireHex, 1.15, 0.12);
+          }
+        }
+      } else if (kind === 'r') {
         if (!going) {
           c.holder.position.set(a.from.x, 0, a.from.z); this.sabreFace(c, a.target.x, a.target.z);
           M.animate(p, t, 'idle');
@@ -136,21 +167,21 @@
           else p.armR.rotation.set(-1.3, 0, 0.3);
         }
         const hold = el < a.wind || el >= a.hit + a.back;
-        if (p.naginata) p.naginata.visible = hold; if (p.ball) p.ball.visible = hold;
+        if (p.ball) p.ball.visible = hold;
         if (el >= a.wind && el < a.hit + a.back && !a.ended) {
           if (!a.proj) {
             a.proj = this.fx(a, this.sabreProjectile(a)); a.proj.rotation.y = Math.atan2(a.dir.x, a.dir.z);
             a.launch = hand();
             a.lineMat = new T.MeshStandardMaterial({ color: 0x9aa0a8, metalness: 0.8, roughness: 0.3 });
-            if (kind === 'r' || !a.white) a.line = this.fx(a, new T.Mesh(new T.CylinderGeometry(0.018, 0.018, 1, 6), a.lineMat));
+            a.line = this.fx(a, new T.Mesh(new T.CylinderGeometry(0.018, 0.018, 1, 6), a.lineMat));
           }
           const end = new T.Vector3(a.target.x, 0.85, a.target.z), now = hand();
           let k, pos;
-          if (el < a.hit) { k = (el - a.wind) / a.fly; pos = a.launch.clone().lerp(end, k); pos.y += Math.sin(k * Math.PI) * (kind === 'r' ? 0.55 : 0.12); }
+          if (el < a.hit) { k = (el - a.wind) / a.fly; pos = a.launch.clone().lerp(end, k); pos.y += Math.sin(k * Math.PI) * 0.55; }
           else { k = (el - a.hit) / a.back; pos = end.clone().lerp(now, k * k); pos.y += Math.sin(k * Math.PI) * 0.3; }
           a.proj.position.copy(pos);
-          a.proj.userData.spin.rotation[kind === 'r' ? 'x' : 'z'] = t * 22;
-          this.tickSabreProjectile(a.proj, t, el < a.hit ? (kind === 'r' ? 0.45 + clamp(k) * 0.75 : 0.6 + clamp(k * 3) * 0.6) : Math.max(0, 1 - (el - a.hit) / 0.25));
+          a.proj.userData.spin.rotation.x = t * 22;
+          this.tickSabreProjectile(a.proj, t, el < a.hit ? 0.45 + clamp(k) * 0.75 : Math.max(0, 1 - (el - a.hit) / 0.25));
           if (a.line) this.sabreLink(a.line, now, pos);
           if (el >= a.hit) struck(a.fireHex, 1.15, 0.12);
         } else if (a.proj) { a.proj.visible = false; if (a.line) a.line.visible = false; }
@@ -257,14 +288,13 @@
       }
       if (c.shadow) c.shadow.visible = false;
       if (kind === 'q' || kind === 'r') {
-        // enflammée et éjectée loin dans le décor
-        if (!a.victimFire) a.victimFire = this.fx(a, this.sabreFlames(a.white, 0.34, 1.1, 11));
+        // éjectée loin dans le décor, en flammes si c'est la boule de la tour
+        if (kind === 'r' && !a.victimFire) a.victimFire = this.fx(a, this.sabreFlames(a.white, 0.34, 1.1, 11));
         const u = clamp(after / 1.3), far = u * (2 - u) * 14;
         c.holder.position.set(B.x + dir.x * far, 0, B.z + dir.z * far);
         M.animate(p, t, 'ko'); r.position.y = Math.sin(u * Math.PI) * 3 + 0.05; r.rotation.set(u * 9, u * 3, u * 5);
         c.holder.visible = u < 1;
-        a.victimFire.position.set(c.holder.position.x, r.position.y + 0.1, c.holder.position.z);
-        this.sabreFlicker(a.victimFire, t, u < 1 ? 1 : 0);
+        if (a.victimFire) { a.victimFire.position.set(c.holder.position.x, r.position.y + 0.1, c.holder.position.z); this.sabreFlicker(a.victimFire, t, u < 1 ? 1 : 0); }
       } else if (kind === 'b') {
         // emportée par les deux arcs hors du plateau
         const at = a.arcAt || new this.THREE.Vector3(B.x, 0.85, B.z);
@@ -332,7 +362,9 @@
         const ashMat = basic(0x8d8590, 0.9), bit = new T.BoxGeometry(0.05, 0.05, 0.05);
         for (let i = 0; i < 80; i++) { const m = new T.Mesh(bit, ashMat); m.userData = { x: (Math.random() - 0.5) * 11, z: (Math.random() - 0.5) * 11, y: Math.random() * 7, sp: 0.4 + Math.random() * 0.8 }; m.visible = false; g.add(m); s.ash.push(m); }
         crestBits(0xc9a24a);
-      } else if (style === 'dragonw' || style === 'dragonb') {
+      } else if (style === 'tigreb') {
+        this.makeTigerMate(u, s, g, std);
+      } else if (style === 'dragonw') {
         // nuages sombres d'où descend le dragon
         const cloud = new T.SphereGeometry(1, 12, 8), cloudMat = new T.MeshBasicMaterial({ color: white ? 0x2a2433 : 0x161020, transparent: true, opacity: 0, depthWrite: false });
         s.cloudMat = cloudMat;
@@ -355,15 +387,8 @@
           for (let i = 0; i < 3; i++) { const fang = new T.Mesh(new T.ConeGeometry(0.04, 0.16, 4), new T.MeshBasicMaterial({ color: 0xffffff })); fang.rotation.x = Math.PI; fang.position.set(k * 0.17, -0.1, 0.5 + i * 0.17); head.add(fang); }
         }
         head.visible = false;
-        // la naginata lancée, qui devient le dragon à mi-chemin
-        s.spear = new T.Group(); s.spearSpin = new T.Group(); s.spear.add(s.spearSpin);
-        const thrown = this.sabreProp(root.ThemeModels.sabres.naginata(T, white)); thrown.rotation.x = Math.PI / 2; thrown.position.y = -0.14; s.spearSpin.add(thrown);
-        s.spear.visible = false; g.add(s.spear);
-        s.spearFire = this.sabreFlames(white, 0.26, 0.9, 10, 0.8); s.spear.add(s.spearFire);
-        // M : là où elle se transforme ; K : la tête quand la gueule arrive sur le roi
-        s.reach = Math.min(1.5, s.len * 0.45);
-        s.K = new T.Vector3(P.x - s.dir.x * s.reach, 0.95, P.z - s.dir.z * s.reach);
-        s.H = new T.Vector3((A.x + s.K.x) / 2, 1.25, (A.z + s.K.z) / 2); s.L1 = Math.max(0.5, s.H.distanceTo(s.K)); s.a0 = Math.atan2(P.z, P.x);
+        s.born = SABRE_DRAGON_BORN;
+        this.sabreThrown(u, s, g, Math.min(1.5, s.len * 0.45));
         s.embers = [];
         const spark = new T.SphereGeometry(0.05, 6, 4);
         for (let i = 0; i < 60; i++) { const m = new T.Mesh(spark, hot); m.visible = false; g.add(m); s.embers.push(m); }
@@ -422,6 +447,40 @@
         s.stop = { x: P.x - s.dir.x * dist, z: P.z - s.dir.z * dist };
       }
     }
+    // Le tigre de feu noir : corps noir, rayures violettes lumineuses ; +z = vers l'avant, la tête à l'origine
+    makeTigerMate(u, s, g, std) {
+      const T = this.THREE, A = s.A, cloud = new T.SphereGeometry(1, 12, 8), cloudMat = new T.MeshBasicMaterial({ color: 0x161020, transparent: true, opacity: 0, depthWrite: false });
+      s.cloudMat = cloudMat; s.born = 1.1;
+      for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, r = 12.5 + (i % 4) * 1.2, c = new T.Mesh(cloud, cloudMat); c.position.set(Math.cos(a) * r, 5.5 + (i % 3) * 0.8, Math.sin(a) * r); c.scale.set(3.4, 1, 2.6); c.rotation.y = -a; g.add(c); }
+      const hide = std(0x120a1a, { roughness: 0.5 }), glow = this.sabreFire(0xb45cff, 1), hot = this.sabreFire(0xffe14d, 1), part = (geo, mat, x, y, z, sx = 1, sy = 1, sz = 1) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); return m; };
+      const ball = new T.SphereGeometry(1, 14, 10), stick = new T.CylinderGeometry(0.16, 0.12, 1, 8), bar = new T.BoxGeometry(1, 1, 1);
+      const tiger = new T.Group(); s.tiger = tiger; s.head = tiger; g.add(tiger);
+      tiger.add(part(ball, hide, 0, 0, 0, 0.42, 0.38, 0.46), part(ball, hide, 0, -0.09, 0.42, 0.25, 0.18, 0.26), part(ball, hide, 0, -0.1, -0.5, 0.42, 0.44, 0.45), part(ball, hide, 0, -0.1, -1.25, 0.5, 0.52, 0.95));
+      s.jaw = part(ball, hide, 0, -0.28, 0.33, 0.22, 0.07, 0.3); tiger.add(s.jaw);
+      for (const k of [-1, 1]) {
+        tiger.add(part(ball, hide, k * 0.28, 0.34, -0.05, 0.13, 0.15, 0.06), part(ball, hot, k * 0.19, 0.1, 0.36, 0.07, 0.05, 0.05));
+        for (const z of [0.42, 0.52]) { const f = new T.Mesh(new T.ConeGeometry(0.035, 0.15, 4), new T.MeshBasicMaterial({ color: 0xf4f0f8 })); f.position.set(k * 0.1, -0.2, z); f.rotation.x = Math.PI; tiger.add(f); }
+      }
+      for (let i = 0; i < 9; i++) { const z = -0.45 - i * 0.2; for (const k of [-1, 1]) { const m = part(bar, glow, k * 0.34, 0.14 - (i % 2) * 0.1, z, 0.22, 0.07, 0.06); m.rotation.z = k * -0.5; tiger.add(m); } tiger.add(part(bar, glow, 0, 0.49, z, 0.06, 0.04, 0.12)); }
+      for (const [x, y] of [[-0.14, 0.2], [0.14, 0.2], [-0.05, 0.3], [0.05, 0.3]]) tiger.add(part(bar, glow, x, y, 0.3, 0.05, 0.04, 0.2));
+      s.tigerLegs = [];
+      for (const [x, z, ph] of [[-0.34, -0.55, 0], [0.34, -0.55, 3.14], [-0.34, -1.9, 2.1], [0.34, -1.9, 5.2]]) { const l = new T.Group(); l.position.set(x, -0.3, z); l.userData.ph = ph; l.add(part(stick, hide, 0, -0.42, 0, 1, 0.9, 1), part(ball, hide, 0, -0.86, 0.07, 0.15, 0.09, 0.2)); tiger.add(l); s.tigerLegs.push(l); }
+      s.tigerTail = new T.Group(); s.tigerTail.position.set(0, 0.1, -2.15); tiger.add(s.tigerTail);
+      for (let i = 0; i < 8; i++) s.tigerTail.add(part(ball, i % 2 ? glow : hide, 0, Math.sin(i * 0.5) * 0.4, -i * 0.2, 0.09 - i * 0.006, 0.09 - i * 0.006, 0.12));
+      s.tigerFire = this.sabreFlames([0x2a0a3a, 0xb45cff, 0x0c0410], 0.95, 1.9, 18, 0.72); g.add(s.tigerFire);
+      this.sabreThrown(u, s, g, Math.min(0.75, s.len * 0.45), new T.Vector3(A.x + s.dir.x * 0.5, 1.25, A.z + s.dir.z * 0.5));
+    }
+    // Naginata lancée ou qui retombe, et trajet de la bête : H, d'où elle part ; K, sa tête quand la gueule arrive sur le roi
+    sabreThrown(u, s, g, reach, from) {
+      const T = this.THREE, P = u.target, A = s.A;
+      s.spear = new T.Group(); s.spearSpin = new T.Group(); s.spear.add(s.spearSpin);
+      const thrown = this.sabreProp(root.ThemeModels.sabres.naginata(T, s.white)); thrown.rotation.x = Math.PI / 2; thrown.position.y = -0.14; s.spearSpin.add(thrown);
+      s.spear.visible = false; g.add(s.spear);
+      s.spearFire = this.sabreFlames(s.white, 0.26, 0.9, 10, 0.8); s.spear.add(s.spearFire);
+      s.reach = reach;
+      s.K = new T.Vector3(P.x - s.dir.x * reach, 0.95, P.z - s.dir.z * reach);
+      s.H = from || new T.Vector3((A.x + s.K.x) / 2, 1.25, (A.z + s.K.z) / 2); s.L1 = Math.max(0.5, s.H.distanceTo(s.K)); s.a0 = Math.atan2(P.z, P.x);
+    }
     // Trajet du dragon (q, en longueur) : il arrive derrière la Dame, file sur le roi, puis fait un tour du plateau en montant
     sabreDragonPos(s, q) {
       const T = this.THREE, ring = (k, y) => { const a = s.a0 + k * Math.PI * 2; return new T.Vector3(Math.cos(a) * 5.5, y, Math.sin(a) * 5.5); };
@@ -432,9 +491,9 @@
       const k = (r - 3) / 34;
       return ring(k, 3 + k * 11);
     }
-    // Où en est la tête du dragon à l'instant e : il naît au milieu du chemin (SABRE_DRAGON_BORN) et fonce sur le roi
+    // Où en est la tête de la bête à l'instant e : elle naît à s.born et fonce sur le roi
     sabreDragonAt(s, e, hit) {
-      const born = SABRE_DRAGON_BORN, q = e < born ? 0 : e < hit ? s.L1 * Math.pow((e - born) / (hit - born), 2) : s.L1 + (e - hit) * 14;
+      const born = s.born, q = e < born ? 0 : e < hit ? s.L1 * Math.pow((e - born) / (hit - born), 2) : s.L1 + (e - hit) * 14;
       s.q = q; s.headPos = this.sabreDragonPos(s, q); s.fwd = this.sabreDragonPos(s, q + 0.1).sub(s.headPos).normalize();
       s.mouth = s.headPos.clone().addScaledVector(s.fwd, s.reach);
     }
@@ -473,10 +532,28 @@
         }
         for (const m of s.ash) { const d = m.userData; m.visible = after > -0.2 && after < 2.2; m.position.set(d.x, ((d.y - after * d.sp) % 7 + 7) % 7, d.z); m.rotation.set(t * 2, t, 0); }
         breakCrest(); dropBits();
-      } else if (style === 'dragonw' || style === 'dragonb') {
+      } else if (style === 'tigreb') {
         this.skyDim = Math.max(this.skyDim || 0, smooth((e - 0.7) / 0.8) * 0.88 * fade(2.6));
         s.cloudMat.opacity = smooth((e - 0.7) / 0.8) * 0.9 * fade(3);
-        const born = SABRE_DRAGON_BORN, release = 0.6, end = hit + 2.65, back = hit + 2.7, caught = hit + 3.25, on = e > born && e < end, shrink = 1 - smooth((e - end + 0.6) / 0.6) * 0.92, size = s.reach / 1.5;
+        const change = 0.75, end = hit + 2.65, back = hit + 2.7, caught = hit + 3.25, on = e > change && e < end, shrink = 1 - smooth((e - end + 0.6) / 0.6) * 0.92;
+        if (e > change) { u.pillar.material.opacity *= 1 - smooth((e - change) / 0.3); u.aura.material.opacity *= 1 - smooth((e - change) / 0.3); }
+        if (e >= change && !s.changed) { s.changed = true; this.sabreBurst(s.hand || s.H, t, [0xb45cff, 0x2a0a3a, 0xead0ff], 18, 0.9, (s.hand || s.H).y); }
+        // la naginata devient le tigre dans la main de la Dame, puis il part à toute vitesse
+        s.tiger.visible = on;
+        if (on) {
+          const k = e < s.born ? 0.5 * smooth((e - change) / 0.3) : 0.5 + 0.5 * smooth((e - s.born) / 0.25), behind = s.headPos.clone().addScaledVector(s.fwd, -1.1 * k);
+          s.tiger.position.copy(s.headPos); s.tiger.lookAt(s.headPos.clone().add(s.fwd)); s.tiger.scale.setScalar(Math.max(0.01, k * shrink));
+          for (const l of s.tigerLegs) l.rotation.x = Math.sin(t * 24 + l.userData.ph) * 0.95;
+          s.tigerTail.rotation.y = Math.sin(t * 9) * 0.4; s.jaw.rotation.x = after > 0 ? 0.1 : 0.25 + Math.abs(Math.sin(t * 7)) * 0.3;
+          s.tigerFire.position.set(behind.x, behind.y - 0.8 * k, behind.z); this.sabreFlicker(s.tigerFire, t, k * shrink);
+        } else this.sabreFlicker(s.tigerFire, t, 0);
+        const falling = e >= back && e < caught; s.spear.visible = falling;
+        if (falling) { const k = (e - back) / (caught - back), to = s.hand || new T.Vector3(A.x, 1, A.z); s.spear.position.set(to.x, to.y + 9 * (1 - k * k), to.z); s.spearSpin.rotation.z = (1 - k) * 18; this.sabreFlicker(s.spearFire, t, 0); }
+        if (e >= caught && !s.landed) { s.landed = true; this.sabreBurst(A, t, [0xb45cff, 0xead0ff], 10, 0.5, s.hand ? s.hand.y : 1.2); }
+      } else if (style === 'dragonw') {
+        this.skyDim = Math.max(this.skyDim || 0, smooth((e - 0.7) / 0.8) * 0.88 * fade(2.6));
+        s.cloudMat.opacity = smooth((e - 0.7) / 0.8) * 0.9 * fade(3);
+        const born = s.born, release = 0.6, end = hit + 2.65, back = hit + 2.7, caught = hit + 3.25, on = e > born && e < end, shrink = 1 - smooth((e - end + 0.6) / 0.6) * 0.92, size = s.reach / 1.5;
         if (e > release) { u.pillar.material.opacity *= 1 - smooth((e - release) / 0.3); u.aura.material.opacity *= 1 - smooth((e - release) / 0.3); }
         // la naginata part de la main, tourne et s'enflamme, puis retombe du ciel à la fin
         const flying = e >= release && e < born, falling = e >= back && e < caught;
@@ -589,14 +666,15 @@
           if (e < hit - 0.55) { M.animate(p, t, 'idle'); const up = smooth(e / 1.5); p.armR.rotation.set(-2.9 * up - 0.9 * (1 - up), 0, -0.45); p.armL.rotation.set(-2.9 * up - 0.9 * (1 - up), 0, 0.45); }
           else if (e < hit) { M.animate(p, t, 'idle'); const k = smooth((e - hit + 0.55) / 0.2); p.armR.rotation.set(-2.9 + k * 2.2, 0, -0.45); p.armL.rotation.set(-2.9 + k * 2.2, 0, 0.45); p.torso.rotation.x = 0.4 * k; }
           else M.animate(p, t, 'victory', 1);
-        } else if (style === 'dragonw' || style === 'dragonb') {
-          // elle lance sa naginata ; à la fin, la main levée vers le ciel, elle la rattrape
+        } else if (style === 'dragonw' || style === 'tigreb') {
+          // elle lance sa naginata (dragon) ou le tigre qu'elle est devenue ; à la fin, la lance retombe dans sa main
           this.sabreDragonAt(s, e, hit);
-          const caught = hit + 3.25, up = smooth((e - caught - 0.1) / 0.45), wind = smooth(e / 0.5), cut = clamp((e - 0.6) / 0.25);
+          const tiger = style === 'tigreb', throwAt = tiger ? 1.0 : 0.6, gone = tiger ? 0.75 : 0.6;
+          const caught = hit + 3.25, up = smooth((e - caught - 0.1) / 0.45), wind = smooth(e / 0.5), cut = clamp((e - throwAt) / 0.25);
           face(); M.animate(p, t, 'idle', 1);
-          if (p.naginata) { p.naginata.visible = e < 0.6 || e >= caught; p.naginata.rotation.x = Math.PI / 2 * up; }
+          if (p.naginata) { p.naginata.visible = e < gone || e >= caught; p.naginata.rotation.x = Math.PI / 2 * up; }
           if (up > 0) { p.armR.rotation.set(0, 0, 0.3 + 2.45 * up); p.head.rotation.x = -0.55 * up; }
-          else if (e < 0.85) p.armR.rotation.set(-2.9 * wind + cut * 1.6, 0, 0.25);
+          else if (e < throwAt + 0.25) p.armR.rotation.set(-2.9 * wind + cut * 1.6, 0, 0.25);
           else p.armR.rotation.set(-1.3, 0, 0.3);
           if (p.muzzle) s.hand = p.muzzle.getWorldPosition(new T.Vector3());
         } else { face(); M.animate(p, t, e < hit ? 'cast' : 'victory', e < hit ? clamp(e / 0.6) : 1); }
@@ -605,10 +683,10 @@
       }
       // le roi
       c.anim = null; c.holder.position.set(P.x, 0, P.z);
-      if (style === 'dragonw' || style === 'dragonb') {
+      if (style === 'dragonw' || style === 'tigreb') {
         if (after < 0) { M.animate(p, t, 'panic', 1); return true; }
         M.animate(p, t, 'ko', 1);
-        if (s.head.visible && s.mouth) { c.holder.position.set(s.mouth.x, Math.max(0, s.mouth.y - 0.55), s.mouth.z); r.position.y = 0; r.rotation.set(1.1, after * 2, 0.4); r.scale.setScalar(u.kingBase.scale.x * Math.max(0.15, 1 - after * 0.42)); c.holder.visible = e < hit + 2.2; }
+        if (s.head.visible && s.mouth) { c.holder.position.set(s.mouth.x, Math.max(0, s.mouth.y - 0.55), s.mouth.z); r.position.y = 0; r.rotation.set(1.1, after * 2, 0.4); if (style === 'dragonw') r.scale.setScalar(u.kingBase.scale.x * Math.max(0.15, 1 - after * 0.42)); c.holder.visible = e < hit + 2.2; }
         else c.holder.visible = false;
         return true;
       }

@@ -64,7 +64,7 @@
     temple: [0xffffff, 0x16306e], nilocomet: [0x4cc3ff, 0x16306e], dawncross: [0xffd27a, 0x5a4210], fortress: [0x7fd8ff, 0x343a4e], cloudbreath: [0xdff4ff, 0x4a6a9e],
     shadeswarm: [0xc04bff, 0x1a0a2e], bounty: [0xff3d6e, 0x2d2219], lasernet: [0x9ef7ff, 0x2a1636], eruption: [0xff7a1a, 0x2b2326], crystalcomet: [0xc04bff, 0x14101f],
     ancetres: [0xffc247, 0x5a2e14], harmattan: [0xd9b25a, 0x3a2414], meteores: [0xff8a2a, 0x2a1a14], couleelave: [0xff5a1a, 0x1a0e0a],
-    sakura: [0xf9d2dc, 0x4a3324], lunepourpre: [0xff3b3b, 0x050305], dragonw: [0xffe066, 0x3a2410], dragonb: [0xb45cff, 0x1a0a2e],
+    sakura: [0xf9d2dc, 0x4a3324], lunepourpre: [0xff3b3b, 0x050305], dragonw: [0xffe066, 0x3a2410], tigreb: [0xb45cff, 0x120618],
     fracasw: [0xff8a26, 0x1a100a], fracasb: [0xb45cff, 0x120a1c], arcw: [0xffd27a, 0x3a2410], arcb: [0xc98cff, 0x1a0a2e],
     ridew: [0xff8a26, 0x3a2410], rideb: [0xb45cff, 0x1a0a2e], lamew: [0xff8a26, 0x3a2410], lameb: [0xb45cff, 0x1a0a2e],
   };
@@ -103,10 +103,10 @@ const AURA_MATE = { P: 'temple', N: 'nilocomet', B: 'dawncross', R: 'fortress', 
 const AURA_PROJ = new Set(['disc', 'darkfire', 'burst', 'hook', 'slash', 'crosslaser', 'shield', 'magma', 'wave', 'mirror', 'breath', 'gravity']);
 const AURA_BEAMS = { wave: { r: 0.08, off: [0] }, mirror: { r: 0.03, off: [-0.5, 0.5] }, crosslaser: { r: 0.018, off: [-0.16, 0.16] } }; // off : écart de chaque rayon au départ
 // L'Âge des Sabres : un mat par pièce (celle qui donne le mat) ; le roi a le mat de son camp. [instant du coup, durée]
-const SABRE_MATE = { P: 'lamew', N: 'ridew', B: 'arcw', R: 'fracasw', Q: 'dragonw', K: 'sakura', p: 'lameb', n: 'rideb', b: 'arcb', r: 'fracasb', q: 'dragonb', k: 'lunepourpre' };
+const SABRE_MATE = { P: 'lamew', N: 'ridew', B: 'arcw', R: 'fracasw', Q: 'dragonw', K: 'sakura', p: 'lameb', n: 'rideb', b: 'arcb', r: 'fracasb', q: 'tigreb', k: 'lunepourpre' };
 const SABRE_DRAGON_BORN = 1.15; // Dragon de feu : instant où la naginata lancée devient le dragon
 const SABRE_STYLES = new Set(Object.values(SABRE_MATE));
-const SABRE_MATE_TIME = { sakura: [3, 5.2], lunepourpre: [3, 5.4], dragonw: [1.75, 5.6], dragonb: [1.75, 5.6], fracasw: [4.2, 6.2], fracasb: [4.2, 6.2], arcw: [3, 5.6], arcb: [3, 5.6], ridew: [4.6, 6.6], rideb: [4.6, 6.6], lamew: [2.9, 5], lameb: [2.9, 5] };
+const SABRE_MATE_TIME = { sakura: [3, 5.2], lunepourpre: [3, 5.4], dragonw: [1.75, 5.6], tigreb: [1.6, 5.5], fracasw: [4.2, 6.2], fracasb: [4.2, 6.2], arcw: [3, 5.6], arcb: [3, 5.6], ridew: [4.6, 6.6], rideb: [4.6, 6.6], lamew: [2.9, 5], lameb: [2.9, 5] };
 // Thèmes à fiches (12d-kit-attaques.js) : couleurs [principale, seconde, sombre, cœur] et une fiche d'attaque par pièce
 const KIT_PAL = {
   baobabs: { w: [0xffc247, 0xfff1a8, 0xb8322a, 0xffffff], b: [0xb5793a, 0xe6d7b4, 0x2b3a7a, 0xffffff] },
