@@ -250,7 +250,7 @@
           this.pieces.remove(d.c.holder);
           return false;
         }
-        const u = (t - d.t0) / (d.impaled ? 2.4 : d.burn ? BURN_TIME : d.far || d.explode || d.swept ? 1.1 : 0.8);
+        const u = (t - d.t0) / (d.impaled ? 2.4 : d.lift ? d.lift * 1.5 : d.burn ? BURN_TIME : d.far || d.explode || d.swept ? 1.1 : 0.8);
         if (d.burn && t > (d.burnAt !== undefined ? d.burnAt : (d.start || d.t0) + X2 + 0.15)) this.burn(d, t);
         if (u < 0 && d.impaled && d.spikes.spikes && d.spikes.spikes[d.spikes.spikes.length - 1].scale.y > 0.02) {
           // la cible est soulevée au sommet de la dernière pique pendant qu'elle surgit
@@ -301,6 +301,10 @@
           r.scale.set(d.base * (1 - u * 0.3), d.base * Math.max(0.05, 1 - u), d.base * (1 - u * 0.3));
           d.c.shadow.visible = false;
           return true;
+        } else if (d.lift) {
+          // emportée dans les airs par le dragon de feu de la tour blanche
+          r.position.set(0, u * 11.25, 0);
+          r.rotation.set(1.2, u * 6, 0);
         } else if (d.explode) {
           // soufflé par l'explosion : projeté haut, tourne vite et rétrécit
           r.position.set(d.dx * u * 9, Math.sin(Math.PI * u) * 2.2, d.dz * u * 9);

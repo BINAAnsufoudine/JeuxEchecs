@@ -175,6 +175,7 @@
         const dir = end.clone().sub(s.start); dir.y = 0;
         const side = new T.Vector3(-dir.z, 0, dir.x).normalize();
         const pathAt = (u) => {
+          if (s.lift && u > 1) return end.clone().add(new T.Vector3(0, (u - 1) * 7.5, 0)).addScaledVector(side, Math.sin(u * 9) * 0.09); // il monte dans le ciel avec sa proie
           const p = s.start.clone().lerp(end, Math.min(1, u));
           p.y += Math.sin(Math.PI * Math.min(1, u)) * 1.1;
           return p.addScaledVector(side, Math.sin(u * 9) * 0.22 * (1 - Math.min(1, u) * 0.6));
@@ -182,12 +183,12 @@
         const head = (el - s.fire) / s.flight;
         s.dragon.children.forEach((m, i) => {
           const u = head - i * 0.04;
-          m.visible = u > 0 && u < 1.08;
+          m.visible = u > 0 && u < (s.lift ? 2.4 : 1.08);
           if (!m.visible) return;
           m.position.copy(pathAt(u));
           if (i === 0) m.lookAt(pathAt(u + 0.03));
         });
-        if (head - (N - 1) * 0.04 > 1.08) { this.scene.remove(s.dragon); s.dragon = null; s.splashDone = true; }
+        if (head - (N - 1) * 0.04 > (s.lift ? 2.4 : 1.08)) { this.scene.remove(s.dragon); s.dragon = null; s.splashDone = true; }
       }
       if (el >= s.impact && !s.boom && !s.splashed) {
         s.splashed = true;

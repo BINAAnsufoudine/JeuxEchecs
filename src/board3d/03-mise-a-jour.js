@@ -188,11 +188,12 @@
             // Roi noir : Main de l'Empereur (une main d'ombre géante sort du sol et écrase la cible).
             knightAttack = { style: white ? 'judgment' : 'emperorhand', white, start: now, from: a, target: b, duration: white ? 3.6 : 3.4, victim: v, dir: { x: ux, z: uz }, len, fx: [] };
             die({ t0: now + knightAttack.duration, knightAttack });
-          } else if (far && kind === 'r' && white) {
-            // Tour blanche : elle devient une boule de feu qui roule jusqu'à sa cible en laissant des flammes derrière elle
-            const run = 0.18 + len * 0.045;
-            knightAttack = { style: 'fireroll', start: now, from: a, target: b, run, duration: 0.5 + run + 1.7, victim: v, dir: { x: ux, z: uz }, len, fx: [] };
-            die({ t0: now + knightAttack.duration, knightAttack });
+          } else if (kind === 'r' && white) {
+            // Tour blanche : elle envoie un dragon de feu qui fonce sur sa cible et l'emporte dans les airs, de près comme de loin
+            shot = { tech: 'water', fireDragon: true, lift: true, victim: v, target: b, fire: 0.9, flight: 0.45 + len * 0.09 };
+            shot.impact = shot.fire + shot.flight;
+            shot.runStart = shot.impact + shot.flight * 1.5;
+            die({ t0: now + EXR + shot.impact, hit: true, lift: shot.flight, counter: { start: now, end: now + EXR, at: a } });
           } else if (far && kind === 'b' && white) {
             // Fou blanc : boule d'énergie blanche en main, il court frapper sa cible et la projette au loin
             const run = 0.2 + len * 0.06;

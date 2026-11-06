@@ -1514,11 +1514,12 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             // Roi noir : Main de l'Empereur (une main d'ombre géante sort du sol et écrase la cible).
             knightAttack = { style: white ? 'judgment' : 'emperorhand', white, start: now, from: a, target: b, duration: white ? 3.6 : 3.4, victim: v, dir: { x: ux, z: uz }, len, fx: [] };
             die({ t0: now + knightAttack.duration, knightAttack });
-          } else if (far && kind === 'r' && white) {
-            // Tour blanche : elle devient une boule de feu qui roule jusqu'à sa cible en laissant des flammes derrière elle
-            const run = 0.18 + len * 0.045;
-            knightAttack = { style: 'fireroll', start: now, from: a, target: b, run, duration: 0.5 + run + 1.7, victim: v, dir: { x: ux, z: uz }, len, fx: [] };
-            die({ t0: now + knightAttack.duration, knightAttack });
+          } else if (kind === 'r' && white) {
+            // Tour blanche : elle envoie un dragon de feu qui fonce sur sa cible et l'emporte dans les airs, de près comme de loin
+            shot = { tech: 'water', fireDragon: true, lift: true, victim: v, target: b, fire: 0.9, flight: 0.45 + len * 0.09 };
+            shot.impact = shot.fire + shot.flight;
+            shot.runStart = shot.impact + shot.flight * 1.5;
+            die({ t0: now + EXR + shot.impact, hit: true, lift: shot.flight, counter: { start: now, end: now + EXR, at: a } });
           } else if (far && kind === 'b' && white) {
             // Fou blanc : boule d'énergie blanche en main, il court frapper sa cible et la projette au loin
             const run = 0.2 + len * 0.06;
@@ -3995,7 +3996,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           this.pieces.remove(d.c.holder);
           return false;
         }
-        const u = (t - d.t0) / (d.impaled ? 2.4 : d.burn ? BURN_TIME : d.far || d.explode || d.swept ? 1.1 : 0.8);
+        const u = (t - d.t0) / (d.impaled ? 2.4 : d.lift ? d.lift * 1.5 : d.burn ? BURN_TIME : d.far || d.explode || d.swept ? 1.1 : 0.8);
         if (d.burn && t > (d.burnAt !== undefined ? d.burnAt : (d.start || d.t0) + X2 + 0.15)) this.burn(d, t);
         if (u < 0 && d.impaled && d.spikes.spikes && d.spikes.spikes[d.spikes.spikes.length - 1].scale.y > 0.02) {
           // la cible est soulevée au sommet de la dernière pique pendant qu'elle surgit
@@ -4046,6 +4047,10 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           r.scale.set(d.base * (1 - u * 0.3), d.base * Math.max(0.05, 1 - u), d.base * (1 - u * 0.3));
           d.c.shadow.visible = false;
           return true;
+        } else if (d.lift) {
+          // emportée dans les airs par le dragon de feu de la tour blanche
+          r.position.set(0, u * 11.25, 0);
+          r.rotation.set(1.2, u * 6, 0);
         } else if (d.explode) {
           // soufflé par l'explosion : projeté haut, tourne vite et rétrécit
           r.position.set(d.dx * u * 9, Math.sin(Math.PI * u) * 2.2, d.dz * u * 9);
@@ -5589,6 +5594,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         const dir = end.clone().sub(s.start); dir.y = 0;
         const side = new T.Vector3(-dir.z, 0, dir.x).normalize();
         const pathAt = (u) => {
+          if (s.lift && u > 1) return end.clone().add(new T.Vector3(0, (u - 1) * 7.5, 0)).addScaledVector(side, Math.sin(u * 9) * 0.09); // il monte dans le ciel avec sa proie
           const p = s.start.clone().lerp(end, Math.min(1, u));
           p.y += Math.sin(Math.PI * Math.min(1, u)) * 1.1;
           return p.addScaledVector(side, Math.sin(u * 9) * 0.22 * (1 - Math.min(1, u) * 0.6));
@@ -5596,12 +5602,12 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         const head = (el - s.fire) / s.flight;
         s.dragon.children.forEach((m, i) => {
           const u = head - i * 0.04;
-          m.visible = u > 0 && u < 1.08;
+          m.visible = u > 0 && u < (s.lift ? 2.4 : 1.08);
           if (!m.visible) return;
           m.position.copy(pathAt(u));
           if (i === 0) m.lookAt(pathAt(u + 0.03));
         });
-        if (head - (N - 1) * 0.04 > 1.08) { this.scene.remove(s.dragon); s.dragon = null; s.splashDone = true; }
+        if (head - (N - 1) * 0.04 > (s.lift ? 2.4 : 1.08)) { this.scene.remove(s.dragon); s.dragon = null; s.splashDone = true; }
       }
       if (el >= s.impact && !s.boom && !s.splashed) {
         s.splashed = true;

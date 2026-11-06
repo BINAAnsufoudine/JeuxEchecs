@@ -161,6 +161,7 @@
     test(`3D ${theme} : mat des Noirs`, () => mate(theme, false));
     test(`3D ${theme} : bouton « Passer » pendant une attaque`, () => skip(theme));
   }
+  test('3D ninja : la tour blanche emporte sa cible avec son dragon de feu', () => kitCapture('ninja', 'R'));
   // Saga des Auras : chaque pièce a son mat
   for (const pc of 'PNBRKpnbrk') test(`3D auras : mat de la pièce ${pc}`, () => mate('auras', pc === pc.toUpperCase(), pc));
   // L'Âge des Sabres : chaque pièce a son mat, joué aussi dans la cour du château

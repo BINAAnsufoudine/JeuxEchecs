@@ -28,6 +28,7 @@ Les constantes sont dans `src/board3d/00-constantes.js`, les mats dans `src/boar
 | Roi | chef du village au manteau à flammes | chef des guerriers, aura dorée et éclairs |
 
 - **Armes à distance** : techniques élémentaires (feu, vent, foudre, eau…) propres à chaque pièce.
+- **Tour blanche** : de près comme de loin, elle envoie un dragon de feu qui fonce sur la cible et l'emporte dans les airs.
 - **Défense** : substitution par une bûche et murs de terre (exclusifs à ce thème).
 - **Mats** : un mat dédié par pièce (invocations, tempête, apocalypse…), dans `04-mats-ninjas.js` et `06-mats-effets.js`.
 
