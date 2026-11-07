@@ -5890,11 +5890,11 @@
   }
   function startEndgame(e) {
     const examples = {
-      kqk: [['d1d4'], ['e1f2']],
+      kqk: [['d1d3'], ['e1f2']],
       krk: [['a1a5'], ['e1e2']],
       kbbk: [['c1e3'], ['e1d2']],
-      lucena: [['c1c4'], ['c1c8']],
-      philidor: [['a6e6'], ['a6a1']],
+      lucena: [['c1c4'], ['c1d1', 'd8e7', 'd1d4']],
+      philidor: [['a6h6'], ['a6a1']],
     };
     const steps = e.steps.map((text, i) => ({ text, fen: e.fen, demoMoves: (examples[e.id] || [])[i] }));
     steps.push({ text: e.goal === 'draw'
