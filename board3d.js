@@ -6146,7 +6146,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
     /* Saga des Auras : un mat par pièce (AURA_MATE). Sorën et Mélyx ont la Constellation et la Nova, dans 05-mats-themes.js.
        Blancs : Cercle du Temple, Comète de Nilo, Aube Tranchante, Forteresse, Souffle des Nuages.
-       Noirs : Nuée d'Ombre, Prime, Réseau, Éruption, Chute de Comète. */
+       Noirs : Nuée d'Ombre (les petits vilains embrasent le roi), Prime, Réseau (les Sentinelles en vol), Éruption, Chute de Comète. */
     makeAuraMate(u, at, keep, basic, std) {
       const T = this.THREE, P = u.target, style = u.themed, g = u.fx, A = this.sqToPos(u.attackerTo);
       const ball = (r, c, o = 0.9) => new T.Mesh(new T.SphereGeometry(r, 16, 12), basic(c, o));
@@ -6196,10 +6196,15 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         u.cooled = at(new T.Mesh(new T.DodecahedronGeometry(0.72, 0), std(0x3f3437, { flatShading: true, roughness: 1 })), 0, 0.55, 0); u.cooled.scale.setScalar(0.01);
       } else if (style === 'lasernet') {
         u.drones = [];
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 5; i++) { // Sentinelles en vol : casque à visière cyan, armure violet sombre, cape courte
           const d = new T.Group(); g.add(d);
-          const hull = new T.Mesh(new T.SphereGeometry(0.2, 12, 10), std(0x3a2354, { metalness: 0.5 })); hull.scale.y = 0.8; d.add(hull);
-          const eye = new T.Mesh(new T.SphereGeometry(0.08, 10, 8), new T.MeshBasicMaterial({ color: 0x9ef7ff })); eye.position.z = 0.17; d.add(eye);
+          const body = new T.Mesh(new T.CylinderGeometry(0.17, 0.11, 0.48, 12), std(0x4a4466, { metalness: 0.5 })); body.position.y = -0.12; d.add(body);
+          const helm = new T.Mesh(new T.SphereGeometry(0.15, 12, 10), std(0x4a4466, { metalness: 0.5 })); helm.position.y = 0.22; d.add(helm);
+          const visor = new T.Mesh(new T.BoxGeometry(0.2, 0.04, 0.05), new T.MeshBasicMaterial({ color: 0x9ef7ff })); visor.position.set(0, 0.23, 0.13); d.add(visor);
+          const chest = new T.Mesh(new T.SphereGeometry(0.045, 10, 8), new T.MeshBasicMaterial({ color: 0x9ef7ff })); chest.position.set(0, 0, 0.15); d.add(chest);
+          const back = new T.Mesh(new T.BoxGeometry(0.3, 0.46, 0.02), std(0x1a1626)); back.position.set(0, -0.14, -0.16); d.add(back);
+          for (const s of [-1, 1]) { const arm = new T.Mesh(new T.CylinderGeometry(0.045, 0.04, 0.36, 8), std(0x2c2842)); arm.rotation.x = Math.PI / 2; arm.position.set(s * 0.2, 0, 0.15); d.add(arm); const palm = new T.Mesh(new T.SphereGeometry(0.05, 8, 6), new T.MeshBasicMaterial({ color: 0x9ef7ff })); palm.position.set(s * 0.2, 0, 0.34); d.add(palm); }
+          const jet = new T.Mesh(new T.ConeGeometry(0.1, 0.34, 8), basic(0x9ef7ff, 0.55)); jet.rotation.x = Math.PI; jet.position.y = -0.52; d.add(jet);
           u.drones.push(d);
         }
         u.webs = [];
@@ -6210,7 +6215,15 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         for (let i = 0; i < 3; i++) { const r = at(new T.Mesh(new T.TorusGeometry(0.34, 0.03, 6, 22), std(0xb9bcc7, { metalness: 0.9 })), 0, 0.3 + i * 0.28, 0); r.rotation.x = Math.PI / 2; keep(r, { rope: i }); }
         u.net = at(new T.Mesh(new T.SphereGeometry(0.95, 14, 9, 0, Math.PI * 2, 0, Math.PI / 2), new T.MeshBasicMaterial({ color: 0xdfe2ea, wireframe: true, transparent: true })), 0, 8, 0);
       } else if (style === 'shadeswarm') {
-        for (let i = 0; i < 34; i++) { const f = new T.Mesh(new T.ConeGeometry(0.1, 0.34, 8), basic(i % 3 ? 0x7a2bff : 0xc04bff, 0.95)); g.add(f); keep(f, { a: i * 0.7, h: (i % 7) / 7, sp: 3 + i % 4 }); }
+        for (let i = 0; i < 10; i++) { // petits vilains à chevelure de flamme : ils encerclent le roi en lançant leurs flammes
+          const m = new T.Group(); g.add(m);
+          const body = new T.Mesh(new T.CylinderGeometry(0.09, 0.13, 0.42, 10), std(0x1a1028)); body.position.y = 0.21; m.add(body);
+          const head = new T.Mesh(new T.SphereGeometry(0.1, 10, 8), std(0x5a3a8a)); head.position.y = 0.5; m.add(head);
+          const mask = new T.Mesh(new T.CylinderGeometry(0.103, 0.103, 0.04, 12), std(0x120a1e)); mask.position.y = 0.51; m.add(mask);
+          const hair = new T.Mesh(new T.ConeGeometry(0.09, 0.3, 8), basic(i % 2 ? 0x7a2bff : 0xc04bff, 0.95)); hair.position.y = 0.72; m.add(hair);
+          keep(m, { walker: true, a: i / 10 * Math.PI * 2 });
+        }
+        for (let i = 0; i < 20; i++) { const f = new T.Mesh(new T.ConeGeometry(0.1, 0.34, 8), basic(i % 3 ? 0x7a2bff : 0xc04bff, 0.95)); g.add(f); keep(f, { a: i * 0.7, h: (i % 7) / 7, sp: 3 + i % 4 }); }
         u.engulf = at(ball(1, 0x7a2bff, 0.85), 0, 0.8, 0); u.engulf.scale.setScalar(0.01);
       }
     }
@@ -6267,7 +6280,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         u.net.position.y = 8 - smooth((e - 2) / 1) * 8;
       } else if (style === 'shadeswarm') {
         const k = smooth((e - 0.5) / 2.3);
-        for (const f of parts) { const d = f.userData, a = d.a + t * d.sp, r = 2.6 - k * 2.05; f.position.set(P.x + Math.cos(a) * r, 0.15 + d.h * 1.9, P.z + Math.sin(a) * r); f.visible = e > 0.4 && after < 0.2; }
+        for (const f of parts) {
+          const d = f.userData;
+          if (d.walker) { const a = d.a + t * 0.9, r = 3.2 - k * 1.8; f.position.set(P.x + Math.cos(a) * r, Math.abs(Math.sin(t * 9 + d.a)) * 0.06, P.z + Math.sin(a) * r); f.rotation.y = Math.atan2(P.x - f.position.x, P.z - f.position.z); f.visible = e > 0.3 && after < 1.2; continue; }
+          const a = d.a + t * d.sp, r = 1.5 - k * 0.95; f.position.set(P.x + Math.cos(a) * r, 0.15 + d.h * 1.9, P.z + Math.sin(a) * r); f.visible = e > 0.9 && after < 0.2;
+        }
         u.engulf.scale.setScalar(Math.max(0.01, after > 0 ? 0.75 + after * 0.5 : smooth((e - 2.5) / 0.5) * 0.75)); u.engulf.material.opacity = 0.85 * fade(1.6);
       }
     }

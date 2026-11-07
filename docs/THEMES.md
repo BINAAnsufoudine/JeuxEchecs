@@ -124,13 +124,13 @@ Les constantes sont dans `src/board3d/00-constantes.js`, les mats dans `src/boar
 
 ## Saga des Auras
 
-Arts martiaux cosmiques (création originale). Blancs : l'Ordre du Ciel Azur (ivoire, azur, argent). Noirs : l'Empire de l'Ombre (violet, noir cristal, rouge). Plateau : l'Arène du Ciel, dalles de pierre au-dessus des nuages et rochers flottants. Sans sons propres.
+Arts martiaux cosmiques (création originale). Blancs : l'Ordre du Ciel Azur, super-héros (ivoire, azur, argent). Noirs : l'Empire de l'Ombre, super-vilains (violet, noir cristal, rouge). Tous portent un costume : combinaison, cape, gants, bottes et un emblème dessiné pour le thème sur la poitrine. Plateau : l'Arène du Ciel, dalles de pierre au-dessus des nuages et rochers flottants. Sans sons propres.
 
 | Pièce | Blancs | Noirs |
 |---|---|---|
 | Pion | Apprentis du Temple Azur | Feux follets d'ombre |
 | Cavalier | Nilo, le jeune prodige | Krax, le chasseur de primes |
-| Fou | Zaïren, le duelliste de l'aube | les Sentinelles (drones) |
+| Fou | Zaïren, le duelliste de l'aube | les Sentinelles (cyborgs) |
 | Tour | Vaskar, le golem-gardien | Golmar, le titan de magma |
 | Dame | Sorën, l'Éveillée | Mélyx, la reine d'obsidienne |
 | Roi | Maître Oro, le sage des nuages | Vorax, le roi-comète |
@@ -157,9 +157,9 @@ Arts martiaux cosmiques (création originale). Blancs : l'Ordre du Ciel Azur (iv
 
 | Pièce | Blancs | Noirs |
 |---|---|---|
-| Pion | *Cercle du Temple* : les apprentis encerclent le roi, éclair aveuglant | *Nuée d'Ombre* : les feux follets l'engloutissent dans une flamme violette |
+| Pion | *Cercle du Temple* : les apprentis encerclent le roi, éclair aveuglant | *Nuée d'Ombre* : les petits vilains l'encerclent et l'embrasent d'une flamme violette |
 | Cavalier | *Comète de Nilo* : plongeon en vrille, onde de choc | *La Prime* : grappin, liens, filet |
-| Fou | *Aube Tranchante* : un éclair sur la diagonale, un silence, une croix de lumière | *Le Réseau* : les drones resserrent une toile de lasers |
+| Fou | *Aube Tranchante* : un éclair sur la diagonale, un silence, une croix de lumière | *Le Réseau* : les Sentinelles, en vol, resserrent une toile de lasers |
 | Tour | *La Forteresse* : les boucliers se referment en cage de pierre | *L'Éruption* : colonne de magma, puis tout se refroidit en roche |
 | Dame | *Constellation d'Azur* : les étoiles reliées s'abattent sur le roi | *Nova Noire* : la lumière des miroirs forme une boule rouge qui descend |
 | Roi | *Souffle des Nuages* : une colonne de vent soulève le roi adverse | *Chute de Comète* : une comète de cristal tombe du ciel |
