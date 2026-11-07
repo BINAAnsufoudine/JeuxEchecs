@@ -237,6 +237,12 @@
             knightFlight: knightLeap && !white,
             duel, toss, shot, knightAttack,
           });
+          // Saga des Auras, long déplacement sans prise (3 cases ou plus) : la tour et la dame volent, le fou file en laissant du feu sur les cases
+          const reach = Math.max(Math.abs((m.from & 7) - (m.to & 7)), Math.abs((m.from >> 3) - (m.to >> 3)));
+          if (reach >= 3 && !m.captured && m.flag !== 'castle' && 'rqb'.includes(kind) && root.themeOf(m.piece) === 'auras') {
+            mover.anim.flight = kind === 'b' ? 'fire' : 'fly'; mover.anim.reach = reach;
+            if (kind === 'b') mover.anim.dur *= 0.55;
+          }
           if (knightAttack) mover.anim.dur = knightAttack.duration;
           else if (knightLeap) mover.anim.dur = (white ? 0.38 : 0.68) + Math.hypot(mover.anim.to.x - mover.anim.from.x, mover.anim.to.z - mover.anim.from.z) * (white ? 0.045 : 0.07);
           if (duel) mover.anim.dur = duel.approach;

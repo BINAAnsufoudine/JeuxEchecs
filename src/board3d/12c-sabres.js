@@ -71,6 +71,32 @@
       }, end: () => this.disposeGroup(g) });
     }
 
+    /* ---------- Saga des Auras : longs déplacements ---------- */
+    tickFlight(c, a, u, t) {
+      const p = c.parts, r = p.root;
+      if (a.flight === 'fly') {
+        const lift = Math.min(1, Math.sin(Math.PI * u) * 2.4);
+        r.position.y = lift * 0.85; c.shadow.scale.setScalar(Math.max(0.4, 1 - lift * 0.5));
+        if (this.aimMode(p) === 'arm') { // à l'horizontale, bras tendus devant, jambes jointes
+          r.rotation.x = lift * 1.3; c.flyTilt = true;
+          p.armR.rotation.set(-2.9, 0, 0.1); p.armL.rotation.set(-2.9, 0, -0.1); p.legL.rotation.x = 0; p.legR.rotation.x = 0;
+          for (const l of [p.legL, p.legR]) if (l.userData.knee) l.userData.knee.rotation.x = 0;
+        }
+        return;
+      }
+      // fou : flammes sur chaque case traversée
+      const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2, n = a.reach, done = Math.floor(e * n + 1e-6);
+      for (a.fireDone = a.fireDone || 0; a.fireDone < done; a.fireDone++) {
+        const k = (a.fireDone + 1) / n;
+        this.fireOnSquare({ x: a.from.x + (a.to.x - a.from.x) * k, z: a.from.z + (a.to.z - a.from.z) * k }, c.piece, t);
+      }
+    }
+    fireOnSquare(at, piece, t) {
+      const dur = 1, colors = piece === piece.toUpperCase() ? [0x4cc3ff, 0xffd27a, 0x2f8fe0] : [0xc04bff, 0xff3d6e, 0x7a2bff]; // couleurs d'aura du camp
+      const g = this.sabreFlames(colors, 0.36, 0.8, 8); g.position.set(at.x, 0.02, at.z); this.scene.add(g);
+      this.addEffect({ start: t, dur, tick: (e, now) => this.sabreFlicker(g, now, Math.min(1, e / 0.12) * Math.max(0, 1 - Math.max(0, e - 0.55) / 0.45)), end: () => this.disposeGroup(g) });
+    }
+
     /* ---------- Préparation d'une attaque ---------- */
     sabreAttack(kind, white, from, target, to, victim, now, len, dir) {
       const a = { style: 'sabre', sabre: kind === 'k' && white ? 'K' : kind, white, start: now, from, target, to, victim, dir, len, fx: [], pal: this.sabrePal(white) };

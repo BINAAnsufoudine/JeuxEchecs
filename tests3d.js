@@ -133,6 +133,29 @@
     }
   }
 
+  // Saga des Auras, longs déplacements : la tour s'envole à l'horizontale puis se repose ; le fou laisse du feu qui s'éteint
+  function flight(theme) {
+    window.PieceTheme = theme; b.rebuildPieces();
+    const e = Array(64).fill(null); e[60] = 'K'; e[4] = 'k'; e[56] = 'R'; e[58] = 'B';
+    setClock(); b.update({ ...base, board: e, last: null, animate: false, ply: 0 }); step(0.5);
+    const before = snapshot();
+    const e2 = e.slice(); e2[56] = null; e2[32] = 'R';
+    b.update({ ...base, board: e2, last: { from: 56, to: 32, piece: 'R' }, animate: true, ply: 1 });
+    const rook = b.chars.get(32), dur = rook.anim.dur;
+    step(dur * 0.5);
+    assert(rook.parts.root.position.y > 0.5, `tour pas en vol (${rook.parts.root.position.y.toFixed(2)})`);
+    step(dur); assert(rook.parts.root.position.y < 0.1 && Math.abs(rook.parts.root.rotation.x) < 0.01, 'tour pas reposée');
+    const e3 = e2.slice(); e3[58] = null; e3[31] = 'B'; // c1-h6
+    const realFire = b.fireOnSquare; let fires = 0; b.fireOnSquare = function (...x) { fires++; return realFire.apply(this, x); };
+    b.update({ ...base, board: e3, last: { from: 58, to: 31, piece: 'B' }, animate: true, ply: 2 });
+    step(1);
+    delete b.fireOnSquare;
+    assert(fires === 5, `${fires} case(s) en feu au lieu de 5`);
+    step(2);
+    const left = leftovers(before);
+    assert(!left.length, `${left.length} reste(s) après les déplacements (${[...new Set(left)].join(', ')})`);
+  }
+
   // Alerte : la pièce visée ou qui vise tend son arme vers l'adversaire, et la ramène quand l'alerte disparaît
   function aimCheck() {
     window.PieceTheme = 'sabres'; b.rebuildPieces();
@@ -177,6 +200,8 @@
   }
   test('3D ninja : la tour blanche emporte sa cible avec son dragon de feu', () => kitCapture('ninja', 'R'));
   test('3D alerte : l\'arme se pointe vers l\'adversaire puis revient au repos', () => aimCheck());
+  test('3D auras : vol de la tour et feu du fou', () => flight('auras'));
+  test('3D ninja : les longs déplacements ne changent pas', () => { window.PieceTheme = 'ninja'; b.rebuildPieces(); const e = Array(64).fill(null); e[60] = 'K'; e[4] = 'k'; e[56] = 'R'; setClock(); b.update({ ...base, board: e, last: null, animate: false, ply: 0 }); step(0.5); const e2 = e.slice(); e2[56] = null; e2[24] = 'R'; b.update({ ...base, board: e2, last: { from: 56, to: 24, piece: 'R' }, animate: true, ply: 1 }); assert(!b.chars.get(24).anim.flight, 'vol hors de la Saga des Auras'); step(2); });
   // Saga des Auras : chaque pièce a son mat
   for (const pc of 'PNBRKpnbrk') test(`3D auras : mat de la pièce ${pc}`, () => mate('auras', pc === pc.toUpperCase(), pc));
   // L'Âge des Sabres : chaque pièce a son mat, joué aussi dans la cour du château

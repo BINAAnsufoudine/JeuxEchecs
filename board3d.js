@@ -1563,6 +1563,12 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             knightFlight: knightLeap && !white,
             duel, toss, shot, knightAttack,
           });
+          // Saga des Auras, long déplacement sans prise (3 cases ou plus) : la tour et la dame volent, le fou file en laissant du feu sur les cases
+          const reach = Math.max(Math.abs((m.from & 7) - (m.to & 7)), Math.abs((m.from >> 3) - (m.to >> 3)));
+          if (reach >= 3 && !m.captured && m.flag !== 'castle' && 'rqb'.includes(kind) && root.themeOf(m.piece) === 'auras') {
+            mover.anim.flight = kind === 'b' ? 'fire' : 'fly'; mover.anim.reach = reach;
+            if (kind === 'b') mover.anim.dur *= 0.55;
+          }
           if (knightAttack) mover.anim.dur = knightAttack.duration;
           else if (knightLeap) mover.anim.dur = (white ? 0.38 : 0.68) + Math.hypot(mover.anim.to.x - mover.anim.from.x, mover.anim.to.z - mover.anim.from.z) * (white ? 0.045 : 0.07);
           if (duel) mover.anim.dur = duel.approach;
@@ -3872,6 +3878,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         let state = 'idle', k = 0;
         this.trail(c, false, t);
         this.resetAim(c.parts);
+        if (c.flyTilt) { c.parts.root.rotation.x = 0; c.flyTilt = false; }
         const wantAim = c.foe && !c.anim && !c.selected && !c.inCheck && !this.outcome ? 1 : 0;
         if (!wantAim && c.parts.lance && c.aimK && !c.anim) c.parts.lance.rotation.x = 0;
         if (this.tickMateUltimate(c, t, M)) continue;
@@ -3889,7 +3896,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             const flyer = root.themeOf(c.piece) === 'auras';
             if (flyer && u > 0 && u < 1) this.auraTrail(c, t);
             // Sorën : pas instantané, elle disparaît et réapparaît sur la case visée
-            if (flyer && c.piece === 'Q' && dist > 1.2) {
+            if (flyer && c.piece === 'Q' && dist > 1.2 && !a.flight) {
               const gone = u > 0.2 && u < 0.8;
               if (gone !== !!c.auraGone) { c.auraGone = gone; c.parts.root.visible = !gone; this.auraBurst('blink', c.holder.position, t); }
             }
@@ -3959,6 +3966,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           if (!a.duel) {
             const u = Math.min(1, Math.max(0, el / a.dur));
             glide(a.from, a.to, u, a.leap);
+            if (a.flight) this.tickFlight(c, a, u, t);
             if (u >= 1) arrive();
           } else if (el < a.dur) {
             glide(a.from, a.duel.stop, Math.max(0, el / a.dur), a.leap);
@@ -6412,6 +6420,32 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         ball.scale.setScalar(1 + k * 1.5); ball.material.opacity = 0.85 * (1 - k);
         for (const m of bits) { const v = m.userData.v; m.position.set(v[0] * e, Math.max(0.05, y + v[1] * e - 4.9 * e * e), v[2] * e); m.rotation.set(e * 9, e * 6, 0); m.material.opacity = 1 - k; }
       }, end: () => this.disposeGroup(g) });
+    }
+
+    /* ---------- Saga des Auras : longs déplacements ---------- */
+    tickFlight(c, a, u, t) {
+      const p = c.parts, r = p.root;
+      if (a.flight === 'fly') {
+        const lift = Math.min(1, Math.sin(Math.PI * u) * 2.4);
+        r.position.y = lift * 0.85; c.shadow.scale.setScalar(Math.max(0.4, 1 - lift * 0.5));
+        if (this.aimMode(p) === 'arm') { // à l'horizontale, bras tendus devant, jambes jointes
+          r.rotation.x = lift * 1.3; c.flyTilt = true;
+          p.armR.rotation.set(-2.9, 0, 0.1); p.armL.rotation.set(-2.9, 0, -0.1); p.legL.rotation.x = 0; p.legR.rotation.x = 0;
+          for (const l of [p.legL, p.legR]) if (l.userData.knee) l.userData.knee.rotation.x = 0;
+        }
+        return;
+      }
+      // fou : flammes sur chaque case traversée
+      const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2, n = a.reach, done = Math.floor(e * n + 1e-6);
+      for (a.fireDone = a.fireDone || 0; a.fireDone < done; a.fireDone++) {
+        const k = (a.fireDone + 1) / n;
+        this.fireOnSquare({ x: a.from.x + (a.to.x - a.from.x) * k, z: a.from.z + (a.to.z - a.from.z) * k }, c.piece, t);
+      }
+    }
+    fireOnSquare(at, piece, t) {
+      const dur = 1, colors = piece === piece.toUpperCase() ? [0x4cc3ff, 0xffd27a, 0x2f8fe0] : [0xc04bff, 0xff3d6e, 0x7a2bff]; // couleurs d'aura du camp
+      const g = this.sabreFlames(colors, 0.36, 0.8, 8); g.position.set(at.x, 0.02, at.z); this.scene.add(g);
+      this.addEffect({ start: t, dur, tick: (e, now) => this.sabreFlicker(g, now, Math.min(1, e / 0.12) * Math.max(0, 1 - Math.max(0, e - 0.55) / 0.45)), end: () => this.disposeGroup(g) });
     }
 
     /* ---------- Préparation d'une attaque ---------- */

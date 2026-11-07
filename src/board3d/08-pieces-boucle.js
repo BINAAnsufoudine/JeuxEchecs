@@ -86,6 +86,7 @@
         let state = 'idle', k = 0;
         this.trail(c, false, t);
         this.resetAim(c.parts);
+        if (c.flyTilt) { c.parts.root.rotation.x = 0; c.flyTilt = false; }
         const wantAim = c.foe && !c.anim && !c.selected && !c.inCheck && !this.outcome ? 1 : 0;
         if (!wantAim && c.parts.lance && c.aimK && !c.anim) c.parts.lance.rotation.x = 0;
         if (this.tickMateUltimate(c, t, M)) continue;
@@ -103,7 +104,7 @@
             const flyer = root.themeOf(c.piece) === 'auras';
             if (flyer && u > 0 && u < 1) this.auraTrail(c, t);
             // Sorën : pas instantané, elle disparaît et réapparaît sur la case visée
-            if (flyer && c.piece === 'Q' && dist > 1.2) {
+            if (flyer && c.piece === 'Q' && dist > 1.2 && !a.flight) {
               const gone = u > 0.2 && u < 0.8;
               if (gone !== !!c.auraGone) { c.auraGone = gone; c.parts.root.visible = !gone; this.auraBurst('blink', c.holder.position, t); }
             }
@@ -173,6 +174,7 @@
           if (!a.duel) {
             const u = Math.min(1, Math.max(0, el / a.dur));
             glide(a.from, a.to, u, a.leap);
+            if (a.flight) this.tickFlight(c, a, u, t);
             if (u >= 1) arrive();
           } else if (el < a.dur) {
             glide(a.from, a.duel.stop, Math.max(0, el / a.dur), a.leap);
