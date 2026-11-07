@@ -102,7 +102,9 @@
             const dist = Math.hypot(p1.x - p0.x, p1.z - p0.z), bird = root.themeOf(c.piece) === 'birds' && dist > 1.2;
             // Saga des Auras : les pièces volent au ras du plateau en laissant une traînée de lumière
             const flyer = root.themeOf(c.piece) === 'auras';
-            if (flyer && u > 0 && u < 1) this.auraTrail(c, t);
+            const bareFlight = a.flight === 'fly' && c.piece.toLowerCase() === 'r'; // la tour vole sans aura ni traînée
+            if (bareFlight && c.auraFx) c.auraFx.visible = false;
+            if (flyer && !bareFlight && u > 0 && u < 1) this.auraTrail(c, t);
             // Sorën : pas instantané, elle disparaît et réapparaît sur la case visée
             if (flyer && c.piece === 'Q' && dist > 1.2 && !a.flight) {
               const gone = u > 0.2 && u < 0.8;

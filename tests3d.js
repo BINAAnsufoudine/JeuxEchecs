@@ -144,6 +144,7 @@
     const rook = b.chars.get(32), dur = rook.anim.dur;
     step(dur * 0.5);
     assert(rook.parts.root.position.y > 0.5, `tour pas en vol (${rook.parts.root.position.y.toFixed(2)})`);
+    assert(!(b.auraPuffs || []).length && !(rook.auraFx && rook.auraFx.visible), 'la tour vole avec une aura');
     step(dur); assert(rook.parts.root.position.y < 0.1 && Math.abs(rook.parts.root.rotation.x) < 0.01, 'tour pas reposée');
     const e3 = e2.slice(); e3[58] = null; e3[31] = 'B'; // c1-h6
     const realFire = b.fireOnSquare; let fires = 0; b.fireOnSquare = function (...x) { fires++; return realFire.apply(this, x); };

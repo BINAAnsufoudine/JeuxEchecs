@@ -151,7 +151,7 @@ Arts martiaux cosmiques (création originale). Blancs : l'Ordre du Ciel Azur, su
 | Vorax | coup de sceptre | éclats gravitationnels (riposte) | pesanteur autour de lui quand il est en échec |
 
 - **Déplacement** : vol au ras du plateau avec traînée de lumière ; le cavalier passe par-dessus les autres.
-- **Longs déplacements** (3 cases ou plus, sans prise) : la tour et la dame volent à l'horizontale ; le fou file à grande vitesse et laisse des flammes sur les cases traversées, bleu et or côté Blancs, violet côté Noirs (`tickFlight`).
+- **Longs déplacements** (3 cases ou plus, sans prise) : la tour (sans aura ni traînée) et la dame volent à l'horizontale ; le fou file à grande vitesse et laisse des flammes sur les cases traversées, bleu et or côté Blancs, violet côté Noirs (`tickFlight`).
 - **Aura** : la pièce sélectionnée s'entoure de son aura, bleue ou pourpre.
 - **Cratères** : une prise laisse un cratère fumant pendant 6 demi-coups (`AURA_CRATER_PLIES`).
 - **Mats** : un mat par pièce (`AURA_MATE`), celui de la pièce qui donne le mat ; sur un mat double, la plus forte. Un roi ne donne jamais échec : son mat se joue quand il vient lui-même de jouer le coup de mat (découverte, roque).
