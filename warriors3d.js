@@ -70,7 +70,7 @@
     kr.rotation.x = Math.max(0, p.legR.rotation.x) * 0.9;
   }
   // arme tenue dans la main droite (pointe vers l'avant quand le bras se lève)
-  function inHand(p, obj) { obj.position.y -= 0.18; p.armR.add(obj); return obj; }
+  function inHand(p, obj) { obj.position.y -= 0.18; p.armR.add(obj); (p.aimW = p.aimW || []).push({ o: obj, f: Math.PI / 2 }); return obj; }
   function spear(color, len = 0.42) { const g = new T.Group(); g.add(K.mesh(K.cyl(0.007, 0.007, len, 6), M('#6d4c41'))); g.add(K.mesh(K.cone(0.016, 0.05, 6), M(color, { metal: 0.7, rough: 0.3 }), 0, len / 2 + 0.02, 0)); g.position.y = 0.1; return g; }
   function sword(color, len = 0.18) { const g = new T.Group(); g.add(K.mesh(K.box(0.02, len, 0.006), M(color, { metal: 0.8, rough: 0.25 }), 0, len / 2 + 0.03, 0)); g.add(K.mesh(K.box(0.06, 0.012, 0.012), M('#c9a227', { metal: 0.6 }), 0, 0.03, 0)); g.rotation.x = Math.PI / 2; g.position.z = 0.02; return g; }
   function axe(head, len = 0.22) { const g = new T.Group(); g.add(K.mesh(K.cyl(0.008, 0.008, len, 6), M('#5d4037'))); g.add(K.mesh(K.box(0.07, 0.05, 0.01), M(head, { metal: 0.7, rough: 0.35 }), 0.03, len / 2 - 0.02, 0)); g.rotation.x = Math.PI / 2; g.position.z = 0.04; return g; }
@@ -255,12 +255,12 @@
   }
   function rifleman(p, t, state, k) {
     soldierPose(p, t, state, k);
-    const aim = state === 'punch' || state === 'cast' || state === 'guard' || state === 'throw';
+    const aim = state === 'punch' || state === 'cast' || state === 'guard' || state === 'throw' || (p.gunAim && state === 'idle');
     if (state === 'ko') { p.gun.visible = false; return; }
     p.gun.visible = true;
     if (aim) {
       // épaulé, canon horizontal vers l'avant ; recul et éclair à chaque tir
-      const fire = state === 'punch' || state === 'cast' ? Math.max(0, Math.sin(t * 22)) : 0;
+      const fire = state === 'punch' || state === 'cast' ? Math.max(0, Math.sin(t * 22)) : 0; // en alerte : il vise sans tirer
       p.gun.position.set(0.035, 0.125, 0.1 - fire * 0.025); p.gun.rotation.set(0, 0, 0);
       p.flash.visible = fire > 0.6; p.flash.scale.setScalar(0.8 + fire * 0.6);
       p.armR.rotation.set(-1.35, 0, -0.25); p.armL.rotation.set(-1.5, 0, 0.55);

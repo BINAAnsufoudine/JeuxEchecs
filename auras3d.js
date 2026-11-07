@@ -98,9 +98,10 @@
     K.ell(p.head, '#ffffff', 0.058, 0.095, 0.034, 0, -0.08, 0.048);       // longue barbe
     p.head.add(K.mesh(K.box(0.03, 0.01, 0.012), M('#ffffff'), -0.032, 0.036, 0.072), K.mesh(K.box(0.03, 0.01, 0.012), M('#ffffff'), 0.032, 0.036, 0.072)); // sourcils
     for (const [x, y, r] of [[-0.09, 0.15, 0.04], [-0.05, 0.17, 0.034], [0.05, 0.17, 0.034], [0.09, 0.15, 0.04], [0, 0.19, 0.03]]) p.torso.add(K.mesh(K.sphere(r, 10, 8), M('#ffffff'), x, y, 0)); // manteau de nuages
-    K.stick(p.armR, '#c8a46a', 0.011, 0.011, [0, -0.32, 0.03], [0, 0.2, 0.03]);
+    const staff = new T.Group(); staff.position.set(0, -0.18, 0.03); p.armR.add(staff); p.aimW = [{ o: staff, f: Math.PI / 2 }];
+    K.stick(staff, '#c8a46a', 0.011, 0.011, [0, -0.14, 0], [0, 0.38, 0]);
     p.armR.rotation.z = 0.1;
-    const pearl = K.mesh(K.sphere(0.03, 12, 10), glow('#fff4c2'), 0, 0.22, 0.03); p.armR.add(pearl); p.muzzle = pearl;
+    const pearl = K.mesh(K.sphere(0.03, 12, 10), glow('#fff4c2'), 0, 0.4, 0); staff.add(pearl); p.muzzle = pearl;
     p.scaleK = 1.04;
     return p;
   }
@@ -176,8 +177,9 @@
     for (let i = 0; i < 7; i++) { // couronne de pointes de cristal
       const a = (i / 7) * Math.PI * 2, tip = crystal('#7a2bff', 0.018); tip.position.set(Math.cos(a) * 0.068, 0.082 + (i % 2) * 0.015, Math.sin(a) * 0.068); p.head.add(tip);
     }
-    K.stick(p.armR, '#2c2042', 0.011, 0.011, [0, -0.3, 0.03], [0, 0.14, 0.03]);
-    const gem = crystal('#ff3d6e', 0.04); gem.position.set(0, 0.19, 0.03); p.armR.add(gem); p.muzzle = gem;
+    const staff = new T.Group(); staff.position.set(0, -0.18, 0.03); p.armR.add(staff); p.aimW = [{ o: staff, f: Math.PI / 2 }];
+    K.stick(staff, '#2c2042', 0.011, 0.011, [0, -0.12, 0], [0, 0.32, 0]);
+    const gem = crystal('#ff3d6e', 0.04); gem.position.set(0, 0.37, 0); staff.add(gem); p.muzzle = gem;
     for (let i = 0; i < 4; i++) orbiter(p, crystal('#c04bff', 0.022), { r: 0.22, y: 0.14, speed: 1.5 });
     p.scaleK = 1.06;
     return p;

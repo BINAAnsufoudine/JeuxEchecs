@@ -21,21 +21,61 @@
       return out;
     }
 
+    // Pièces en alerte : pour chacune, l'adversaire le plus proche parmi ceux qu'elle peut prendre en un coup
+    // ou qui peuvent la prendre en un coup, à n'importe quelle distance.
     captureFoes(board) {
-      const foes = new Map(), chess = root.Chess;
+      const foes = new Map(), best = new Map(), chess = root.Chess;
       if (!chess || !chess.legalMoves) return foes;
+      const note = (sq, foe, d) => { if (!best.has(sq) || d < best.get(sq)) { best.set(sq, d); foes.set(sq, foe); } };
       for (const turn of ['w', 'b']) {
         const state = { board, turn, castling: '', ep: -1, half: 0, full: 1 };
         for (const move of chess.legalMoves(state)) {
           if (!move.captured) continue;
-          const dr = Math.abs((move.from >> 3) - (move.to >> 3));
-          const df = Math.abs((move.from & 7) - (move.to & 7));
-          if (Math.max(dr, df) !== 1) continue; // les animations restent limitées aux voisins
-          if (!foes.has(move.from)) foes.set(move.from, move.to);
-          if (!foes.has(move.to)) foes.set(move.to, move.from);
+          const dr = (move.from >> 3) - (move.to >> 3), df = (move.from & 7) - (move.to & 7), d = dr * dr + df * df;
+          note(move.from, move.to, d); note(move.to, move.from, d);
         }
       }
       return foes;
+    }
+
+    // L'arme pointée vers l'adversaire. Le corps lui fait déjà face (tick) : l'arme n'a qu'à se tendre vers l'avant.
+    // p.aimW liste les armes tenues : o, l'objet ; f, sa rotation autour de x qui la met pointe en avant ; arm, le bras qui la tient ('R', 'L' ou 'free').
+    aimMode(p) {
+      if (p.aimMode !== undefined) return p.aimMode;
+      const biped = !p.themed || (p.legL.userData.knee && !p.jaw), kit = p.blade && !p.aimW ? [{ o: p.blade, f: -Math.PI / 2 }] : p.aimW;
+      if (kit) for (const w of kit) w.rest = w.o.rotation.x;
+      p.aimList = kit || [];
+      p.aimBoth = p.aimBoth || p.weapon === 'element' || (!p.themed && p.weapon === 'brawl') || p.aimList.some((w) => w.arm === 'L');
+      p.aimMode = p.weapon === 'none' ? null : p.gun ? 'gun' : biped ? 'arm' : 'lean';
+      return p.aimMode;
+    }
+    resetAim(p) {
+      if (!p.aimOn) return;
+      p.aimOn = false;
+      for (const w of p.aimList) w.o.rotation.x = w.rest;
+    }
+    // k : 0 au repos, 1 arme tendue. À appeler après M.animate.
+    tickAim(p, k) {
+      const mode = this.aimMode(p);
+      if (!mode || k < 0.01) return;
+      const mix = (from, to) => from + (to - from) * k;
+      if (mode === 'arm') {
+        p.aimOn = true;
+        const arm = (a, z) => { a.rotation.set(mix(a.rotation.x, -1.5), mix(a.rotation.y, 0), mix(a.rotation.z, z)); };
+        arm(p.armR, 0.05); if (p.aimBoth) arm(p.armL, -0.05);
+        p.torso.rotation.y *= 1 - k; p.head.rotation.x *= 1 - k;
+        for (const w of p.aimList) {
+          const a = w.arm === 'free' ? null : w.arm === 'L' ? p.armL : p.armR;
+          w.o.rotation.x = mix(w.rest, w.f - (a ? -1.5 : 0));
+        }
+      } else if (mode === 'lean') {
+        // griffes, gueule, cornes, bec, branches : tout le corps se tend vers l'adversaire
+        p.torso.rotation.x += 0.2 * k; p.head.rotation.x += 0.28 * k;
+        if (p.jaw) p.jaw.rotation.x += 0.5 * k;
+        if (p.trunk) p.trunk.rotation.x = mix(p.trunk.rotation.x, 1.25);
+        if (p.lance) p.lance.rotation.x = -0.12 * k;
+        p.root.position.z += 0.05 * k;
+      }
     }
 
     // Identifie toutes les pièces qui attaquent effectivement le roi en échec.

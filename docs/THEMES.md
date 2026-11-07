@@ -4,6 +4,7 @@ Chaque collection débloquée dans l'accueil change les pièces 3D, leurs attaqu
 Le thème actif est `window.PieceTheme` (posé par `renderHomeRewards` dans `src/app`). Les règles communes à tous les thèmes :
 
 - **Déplacement** : chaque pièce marche, vole, nage ou roule jusqu'à sa case.
+- **Alerte** : une pièce qui peut prendre un adversaire en un coup, ou qu'un adversaire peut prendre en un coup, lui fait face et tend son arme vers lui ; s'il y en a plusieurs, vers le plus proche. Les créatures sans arme tendent le corps, la gueule ou les cornes. L'arme revient au repos quand l'alerte disparaît (`captureFoes`, `tickAim`).
 - **Prise au contact** : l'attaquant frappe, la victime tombe puis disparaît.
 - **Prise à distance** (fou, tour, dame, cavalier) : un tir propre au thème part de l'arme de la pièce (`THEME_FX`, `WAR_PROJ`).
 - **Riposte** : la cible tire d'abord sa propre arme sur l'attaquant. Seuls les ninjas l'esquivent par la *substitution* (bûche et fumée) et se protègent derrière des murs de terre ; dans les autres thèmes, la pièce encaisse le coup (pose blessée) puis riposte.

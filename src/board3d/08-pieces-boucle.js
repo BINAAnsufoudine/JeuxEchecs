@@ -85,6 +85,9 @@
       for (const c of this.chars.values()) {
         let state = 'idle', k = 0;
         this.trail(c, false, t);
+        this.resetAim(c.parts);
+        const wantAim = c.foe && !c.anim && !c.selected && !c.inCheck && !this.outcome ? 1 : 0;
+        if (!wantAim && c.parts.lance && c.aimK && !c.anim) c.parts.lance.rotation.x = 0;
         if (this.tickMateUltimate(c, t, M)) continue;
         if (c.anim) {
           const a = c.anim, el = t - a.t0;
@@ -203,17 +206,6 @@
           }
           continue;
         }
-        if (!this.outcome && c.foe && !c.selected) {
-          // ennemi voisin : ils se battent en continu, l'un attaque pendant que l'autre se protège
-          const white = c.piece === c.piece.toUpperCase();
-          const p = c.holder.position;
-          turn(c, Math.atan2(c.foe.x - p.x, c.foe.z - p.z));
-          const cyc = t * 0.7 + (white ? 0 : 0.5), ph = cyc % 1;
-          if (ph < 0.5) M.animate(c.parts, t, 'punch', Math.floor(cyc) + ph * 2);
-          else M.animate(c.parts, t, 'guard', Math.min(1, Math.sin((ph - 0.5) * 2 * Math.PI) * 2.5));
-          c.parts.root.position.x = 0;
-          continue;
-        }
         if (this.outcome && c.drawTo) { this.tickDrawFormation(c, t, M); continue; }
         if (this.outcome) {
           const winner = this.outcome === '1-0' ? 'w' : this.outcome === '0-1' ? 'b' : null;
@@ -228,10 +220,13 @@
         if (c.auraGone) { c.auraGone = false; c.parts.root.visible = true; }
         // Les personnages ne suivent plus la caméra : ils fixent l'adversaire le plus proche (ou le plus fort à égalité)
         const at = c.holder.position;
-        const look = c.faceTarget || c.watch;
+        const look = c.faceTarget || c.foe || c.watch;
         turn(c, (look ? Math.atan2(look.x - at.x, look.z - at.z) : restYaw) + (c.parts.yawOffset || 0));
         if (c.inCheck && !c.selected) { state = 'panic'; k = 0; } // le roi en échec agite les bras en l'air
+        c.aimK = (c.aimK || 0) + (wantAim - (c.aimK || 0)) * ease; // l'arme se tend, ou revient au repos quand l'alerte disparaît
+        c.parts.gunAim = c.aimK > 0.3;
         M.animate(c.parts, t, state, k);
+        this.tickAim(c.parts, c.aimK);
         if (c.inCheck) c.parts.root.position.x = Math.sin(t * 40) * 0.025; // le roi tremble en échec
         else c.parts.root.position.x = 0;
       }

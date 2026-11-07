@@ -218,7 +218,7 @@
   function takemori() {
     const c = CLANS.w, p = samurai({ c, side: 'w', crest: 'crescent', stance: 'takemori' });
     cape(p, c, 0.36); waistSwords(p, c);
-    const blade = sabre(c, 0.34); inHand(p.armR, blade); p.sword = blade; p.tip = blade.userData.tip;
+    const blade = sabre(c, 0.34); inHand(p.armR, blade); p.sword = blade; p.aimW = [{ o: blade, f: 0 }]; p.tip = blade.userData.tip;
     // éventail de guerre
     const fan = new T.Group(); fan.position.set(0, -0.2, 0.03); p.armL.add(fan);
     for (let i = 0; i < 7; i++) { const a = -0.95 + i * 0.32, rib = K.mesh(K.box(0.03, 0.002, 0.13), M(i % 2 ? c.lace : c.trim), Math.sin(a) * 0.065, 0, 0.018 + Math.cos(a) * 0.065); rib.rotation.y = a; fan.add(rib); }
@@ -228,7 +228,7 @@
   function gendai() {
     const c = CLANS.b, p = samurai({ c, side: 'b', crest: 'horns', mask: true, stance: 'gendai', strike: 'nodachi', pupil: '#c0392b' });
     cape(p, c, 0.36);
-    const blade = sabre(c, 0.55, 0.018); blade.position.set(-0.11, -0.2, 0.03); blade.rotation.y = 0.5; p.armR.add(blade);
+    const blade = sabre(c, 0.55, 0.018); blade.position.set(-0.11, -0.2, 0.03); blade.rotation.y = 0.5; p.armR.add(blade); p.aimW = [{ o: blade, f: 0 }]; p.aimBoth = true;
     p.sword = blade; p.tip = blade.userData.tip; p.muzzle = p.tip; p.scaleK = 1.06;
     return p;
   }
@@ -243,7 +243,7 @@
     for (let i = 0; i < 6; i++) hair.add(K.mesh(K.sphere(0.04 - i * 0.003, 8, 6), M(c.hair), 0, -0.02 - i * 0.05, -0.012 - i * 0.004));
     if (side === 'b') { const scar = K.mesh(K.box(0.03, 0.004, 0.004), M(c.lace), 0, -0.03, 0.068); p.head.add(scar); }
     waistSwords(p, c);
-    const n = naginata(c, side); inHand(p.armR, n); p.naginata = n; p.tip = n.userData.tip; p.muzzle = p.tip;
+    const n = naginata(c, side); inHand(p.armR, n); p.naginata = n; p.aimW = [{ o: n, f: 0 }]; p.tip = n.userData.tip; p.muzzle = p.tip;
     return p;
   }
   function colosse(side) {
@@ -256,6 +256,7 @@
     for (let i = 0; i < 9; i++) { const link = K.mesh(new T.TorusGeometry(0.011, 0.0035, 4, 8), M(c.steel, { metal: 0.85, rough: 0.3 }), 0.012 * Math.sin(i * 0.5), -0.018 - i * 0.026, -0.008 * i); link.rotation.y = i % 2 ? Math.PI / 2 : 0; end.add(link); }
     const ball = spikedBall(c, 0.075); ball.position.set(0.012, -0.3, -0.075); end.add(ball); p.ball = ball;
     p.chain = end;
+    p.aimW = [{ o: flail, f: 2, arm: 'free' }, { o: end, f: -2, arm: 'free' }]; // le fléau passe de l'épaule à l'avant, la boule reste pendue
     const hand = new T.Group(); hand.position.set(0, -0.19, 0); p.armR.add(hand); p.muzzle = hand;
     p.scaleK = 1.22;
     return p;
@@ -265,7 +266,7 @@
     waistSwords(p, c, 2);
     const long = sabre(c, 0.31), short = sabre(c, 0.2); inHand(p.armR, long); inHand(p.armL, short);
     if (side === 'b') for (const b of [long, short]) b.add(K.mesh(K.box(0.002, 0.018, 0.28), M(c.edge, { emissive: c.edge }), 0.004, 0.018, 0.16));
-    p.sword = long; p.swordL = short; p.tip = long.userData.tip; p.muzzle = p.tip;
+    p.sword = long; p.swordL = short; p.aimW = [{ o: long, f: 0 }, { o: short, f: 0, arm: 'L' }]; p.tip = long.userData.tip; p.muzzle = p.tip;
     return p;
   }
   function ashigaru(side) {
@@ -275,7 +276,7 @@
     p.head.add(K.mesh(K.cyl(0.145, 0.145, 0.006, 18), M(c.trim, { metal: 0.5 }), 0, 0.04, 0));
     p.head.add(K.mesh(K.sphere(0.012, 8, 6), M(c.lace), 0, 0.114, 0));
     waistSwords(p, c);
-    const k = sabre(c, 0.26); inHand(p.armR, k); p.sword = k; p.tip = k.userData.tip; p.muzzle = p.tip;
+    const k = sabre(c, 0.26); inHand(p.armR, k); p.sword = k; p.aimW = [{ o: k, f: 0 }]; p.tip = k.userData.tip; p.muzzle = p.tip;
     fanion(p.torso, c, side, 0.0, 0.1, -0.075, 0.33, 0.085);
     p.scaleK = 0.98;
     return p;

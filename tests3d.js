@@ -133,6 +133,20 @@
     }
   }
 
+  // Alerte : la pièce visée ou qui vise tend son arme vers l'adversaire, et la ramène quand l'alerte disparaît
+  function aimCheck() {
+    window.PieceTheme = 'sabres'; b.rebuildPieces();
+    const e = Array(64).fill(null); e[60] = 'K'; e[4] = 'k'; e[33] = 'Q'; e[39] = 'r'; // en a4, la dame viserait aussi le roi noir
+    setClock(); b.update({ ...base, board: e, last: null, animate: false, ply: 0 }); step(1);
+    const q = b.chars.get(33), nag = q.parts.naginata;
+    assert(q.aimK > 0.9, `dame en alerte : arme à ${q.aimK.toFixed(2)}`);
+    assert(Math.abs(nag.rotation.x - 1.5) < 0.1, `naginata pas pointée (${nag.rotation.x.toFixed(2)})`);
+    const e2 = e.slice(); e2[39] = null;
+    b.update({ ...base, board: e2, last: null, animate: false, ply: 0 }); step(1.5);
+    const q2 = b.chars.get(33);
+    assert(q2.aimK < 0.05 && Math.abs(q2.parts.naginata.rotation.x) < 0.01, 'naginata pas revenue au repos');
+  }
+
   // Bouton « Passer » : au milieu d'une attaque spéciale, tout se pose aussitôt, sans reste à l'écran
   function skip(theme) {
     window.PieceTheme = theme; b.rebuildPieces();
@@ -162,6 +176,7 @@
     test(`3D ${theme} : bouton « Passer » pendant une attaque`, () => skip(theme));
   }
   test('3D ninja : la tour blanche emporte sa cible avec son dragon de feu', () => kitCapture('ninja', 'R'));
+  test('3D alerte : l\'arme se pointe vers l\'adversaire puis revient au repos', () => aimCheck());
   // Saga des Auras : chaque pièce a son mat
   for (const pc of 'PNBRKpnbrk') test(`3D auras : mat de la pièce ${pc}`, () => mate('auras', pc === pc.toUpperCase(), pc));
   // L'Âge des Sabres : chaque pièce a son mat, joué aussi dans la cour du château

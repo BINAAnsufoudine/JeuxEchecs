@@ -151,7 +151,7 @@
     for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; p.head.add(K.mesh(K.cone(0.012, 0.04, 5), M(c.metal, METAL), Math.cos(a) * 0.052, 0.17, Math.sin(a) * 0.052)); }
     p.crown = p.head;
     const s = sceptre(c, (e) => { e.add(K.mesh(K.sphere(0.03, 12, 8), M(c.metal, Object.assign({ emissive: c.metal }, METAL)))); for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2, r = K.mesh(K.box(0.008, 0.03, 0.006), M(c.metal, METAL), Math.cos(a) * 0.046, Math.sin(a) * 0.046, 0); r.rotation.z = a - Math.PI / 2; e.add(r); } });
-    inHand(p.armR, s); p.tip = s.userData.tip; p.muzzle = p.tip; p.scaleK = 1.04;
+    inHand(p.armR, s); p.aimW = [{ o: s, f: 0 }]; p.tip = s.userData.tip; p.muzzle = p.tip; p.scaleK = 1.04;
     return p;
   }
   function obade() {
@@ -160,7 +160,7 @@
     p.head.add(K.mesh(K.cyl(0.068, 0.074, 0.05, 14), M(c.metal, METAL), 0, 0.055, 0));
     for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2, m = K.mesh(K.box(0.03, 0.05, 0.006), M(c.metal, METAL), Math.cos(a) * 0.066, 0.1, Math.sin(a) * 0.066); m.rotation.y = -a + Math.PI / 2; p.head.add(m); }
     const s = sceptre(c, (e) => { e.add(K.mesh(K.sphere(0.034, 12, 8), M(c.metal, METAL))); for (const k of [-1, 1]) { e.add(K.mesh(K.sphere(0.012, 6, 5), M(c.metal, METAL), k * 0.026, 0.03, -0.005)); e.add(K.mesh(K.sphere(0.006, 6, 5), M('#ffd27a', { emissive: '#ffd27a' }), k * 0.014, 0.008, 0.03)); } });
-    inHand(p.armR, s); p.tip = s.userData.tip; p.muzzle = p.tip; p.scaleK = 1.06;
+    inHand(p.armR, s); p.aimW = [{ o: s, f: 0 }]; p.tip = s.userData.tip; p.muzzle = p.tip; p.scaleK = 1.06;
     return p;
   }
   function reine(side) {
@@ -176,7 +176,7 @@
       const tail = new T.Group(); tail.position.set(0, 0.02, -0.07); tail.userData.wind = 'tail'; p.head.add(tail);
       tail.add(K.mesh(K.box(0.03, 0.15, 0.006), M(c.cloth), 0, -0.075, -0.008));
     }
-    const s = spear(c, 0.74); inHand(p.armR, s); p.spear = s; p.tip = s.userData.tip; p.muzzle = p.tip;
+    const s = spear(c, 0.74); inHand(p.armR, s); p.aimW = [{ o: s, f: 0 }]; p.spear = s; p.tip = s.userData.tip; p.muzzle = p.tip;
     shield(p.armL, c, 1.15);
     return p;
   }
@@ -226,7 +226,7 @@
     K.ell(p.head, c.top, 0.074, 0.045, 0.074, 0, 0.045, 0); p.head.add(K.mesh(K.sphere(0.012, 6, 5), M(c.pat2), 0, 0.09, 0));
     K.ell(p.head, '#e8e4dc', 0.04, 0.05, 0.02, 0, -0.06, 0.05);
     const s = sceptre(c, (e) => { const d = K.mesh(K.cyl(0.05, 0.05, 0.01, 16), M(c.metal, METAL)); d.rotation.x = Math.PI / 2; e.add(d); });
-    inHand(p.armR, s); p.tip = s.userData.tip; p.muzzle = p.tip;
+    inHand(p.armR, s); p.aimW = [{ o: s, f: 0 }]; p.tip = s.userData.tip; p.muzzle = p.tip;
     // djembé sur le flanc
     const drum = new T.Group(); drum.position.set(-0.09, -0.03, 0.09); p.torso.add(drum);
     drum.add(K.mesh(K.cyl(0.05, 0.03, 0.07, 12), M(c.wood), 0, 0.03, 0)); drum.add(K.mesh(K.cyl(0.03, 0.04, 0.05, 12), M(c.wood), 0, -0.03, 0));
@@ -242,7 +242,7 @@
     p.head.add(K.mesh(K.box(0.04, 0.01, 0.006), M('#111'), 0, -0.06, 0.09));
     for (let i = 0; i < 7; i++) { const a = -1.1 + i * 0.37, f = K.mesh(K.cone(0.013, 0.1, 5), M(c.pat2), Math.sin(a) * 0.075, 0.075 + Math.cos(a) * 0.05, 0.05); f.rotation.z = -a; p.head.add(f); }
     const s = sceptre(c, (e) => { for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; e.add(K.mesh(K.sphere(0.012, 6, 5), M('#f4ecd8'), Math.cos(a) * 0.03, Math.sin(a) * 0.03, 0)); } });
-    inHand(p.armR, s); p.tip = s.userData.tip; p.muzzle = p.tip;
+    inHand(p.armR, s); p.aimW = [{ o: s, f: 0 }]; p.tip = s.userData.tip; p.muzzle = p.tip;
     return p;
   }
 
@@ -296,7 +296,7 @@
     if (side === 'w') p.head.add(K.mesh(K.cyl(0.072, 0.072, 0.016, 16), M(c.pat2), 0, 0.02, 0));
     K.ell(p.head, c.dark, 0.068, 0.04, 0.068, 0, 0.042, -0.006);
     if (side === 'b') for (const a of [-0.5, 0, 0.5]) p.head.add(K.mesh(K.cone(0.009, 0.05, 4), M(c.pat2), Math.sin(a) * 0.05, 0.09, -0.02));
-    const s = spear(c, 0.56); inHand(p.armR, s); p.spear = s; p.tip = s.userData.tip; p.muzzle = p.tip;
+    const s = spear(c, 0.56); inHand(p.armR, s); p.aimW = [{ o: s, f: 0 }]; p.spear = s; p.tip = s.userData.tip; p.muzzle = p.tip;
     shield(p.armL, c, 1);
     p.scaleK = 0.98;
     return p;
