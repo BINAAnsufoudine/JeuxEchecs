@@ -2945,7 +2945,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         for (let i = 0; i < 6; i++) { const m = new T.Group(); const c = new T.Mesh(new T.CylinderGeometry(0.04, 0.04, 0.4, 6), std(0xeceff1)); m.add(c); const f = new T.Mesh(new T.SphereGeometry(0.06, 6, 4), new T.MeshBasicMaterial({ color: 0xff9100 })); f.position.y = 0.22; m.add(f); g.add(m); keep(m, { missile: true, x: (Math.random() - 0.5) * 1.2, z: (Math.random() - 0.5) * 1.2, delay: 1.5 + i * 0.18 }); }
       } else if (style === 'constellation') {
         // Sorën trace une constellation au-dessus du roi noir ; les étoiles se relient puis s'abattent sur lui
-        const pts = [[-1.7, 6.1], [-0.9, 6.9], [-0.1, 6.2], [0.7, 7.1], [1.6, 6.3], [0.5, 5.4], [-0.6, 5.3]];
+        const pts = [[-1.7, 4.8], [-0.9, 5.6], [-0.1, 4.9], [0.7, 5.8], [1.6, 5], [0.5, 4.1], [-0.6, 4]];
         const starMat = () => new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false });
         u.stars = pts.map(([x, y], i) => { const s = at(new T.Mesh(new T.OctahedronGeometry(0.3, 0), starMat()), x, y, 0); s.add(new T.Mesh(new T.SphereGeometry(0.34, 10, 8), this.glow(0x4cc3ff, 0.4))); s.userData.delay = 0.3 + i * 0.22; return s; });
         u.links = pts.map(([x, y], i) => {
@@ -2963,9 +2963,9 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           const ray = new T.Mesh(new T.CylinderGeometry(0.035, 0.035, 2.3, 6), basic(0xff3d6e, 0.9)); ray.position.set(src.x + s * 0.85, 2.25, src.z); ray.rotation.z = s * Math.atan2(1.7, 1.5); g.add(ray);
           (u.novaRays = u.novaRays || []).push(mirror, ray);
         }
-        u.nova = new T.Mesh(new T.SphereGeometry(1, 28, 18), new T.MeshBasicMaterial({ color: 0xff3d3d, transparent: true, opacity: 0.92 })); g.add(u.nova);
-        u.novaCore = new T.Mesh(new T.SphereGeometry(0.72, 20, 14), new T.MeshBasicMaterial({ color: 0xffd0a0 })); u.nova.add(u.novaCore);
-        u.novaHalo = new T.Mesh(new T.SphereGeometry(1.25, 24, 16), new T.MeshBasicMaterial({ color: 0xff3d6e, transparent: true, opacity: 0.35, depthWrite: false, side: T.BackSide })); u.nova.add(u.novaHalo);
+        u.nova = new T.Mesh(new T.SphereGeometry(1, 28, 18), new T.MeshBasicMaterial({ color: 0xff2030, transparent: true, opacity: 0.95, fog: false })); g.add(u.nova);
+        u.novaCore = new T.Mesh(new T.SphereGeometry(0.72, 20, 14), new T.MeshBasicMaterial({ color: 0xffb060, fog: false })); u.nova.add(u.novaCore);
+        u.novaHalo = new T.Mesh(new T.SphereGeometry(1.25, 24, 16), new T.MeshBasicMaterial({ color: 0xff3d6e, transparent: true, opacity: 0.35, depthWrite: false, side: T.BackSide, fog: false })); u.nova.add(u.novaHalo);
         for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, s = new T.Mesh(new T.OctahedronGeometry(0.1, 0), new T.MeshBasicMaterial({ color: 0xc04bff })); g.add(s); keep(s, { shard: true, a, r: 2.2 + (i % 3) * 0.6 }); }
         for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2 + Math.random() * 0.3, crack = at(new T.Mesh(new T.BoxGeometry(0.06, 0.02, 1.4 + Math.random() * 1.4), basic(0xff3d6e, 0.95)), Math.cos(a) * 1, 0.02, Math.sin(a) * 1); crack.rotation.y = -a + Math.PI / 2; keep(crack, { crack: true }); }
       } else if (Object.values(AURA_MATE).includes(style) && style !== 'constellation' && style !== 'nova') {
@@ -3121,7 +3121,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         this.skyDim = Math.max(this.skyDim || 0, smooth(e / 1.2) * 0.85 * (after > 0 ? Math.max(0, 1 - after / 1.5) : 1));
         for (const s of u.stars) { s.material.opacity = smooth((e - s.userData.delay) / 0.3) * (after > 0 ? Math.max(0, 1 - after) : 1); s.rotation.y = t * 2; s.children[0].material.opacity = s.material.opacity * 0.4; }
         for (const l of u.links) l.material.opacity = smooth((e - l.userData.delay) / 0.3) * 0.8 * (after > 0 ? Math.max(0, 1 - after) : 1);
-        for (const s of u.mateParts) { const d = s.userData, k = clamp((e - d.delay) / 0.5); s.visible = k > 0 && k < 1; s.position.set(P.x + d.x + (d.tx - d.x) * k, 6.2 - k * 6.1, P.z + d.z + (d.tz - d.z) * k); s.rotation.set(0, 0, Math.atan2(d.tx - d.x, 6.1)); }
+        for (const s of u.mateParts) { const d = s.userData, k = clamp((e - d.delay) / 0.5); s.visible = k > 0 && k < 1; s.position.set(P.x + d.x + (d.tx - d.x) * k, 4.9 - k * 4.8, P.z + d.z + (d.tz - d.z) * k); s.rotation.set(0, 0, Math.atan2(d.tx - d.x, 4.8)); }
       } else if (style === 'nova') {
         const size = 0.12 + smooth((e - 0.5) / 1.9) * 1.7, down = smooth((e - 2.1) / 0.9), burst = after > 0 ? smooth(after / 0.5) : 0;
         u.nova.position.set(u.novaFrom.x + (P.x - u.novaFrom.x) * down, 3 + down * 0.6 - down * down * 3 + Math.sin(down * Math.PI) * 0.8, u.novaFrom.z + (P.z - u.novaFrom.z) * down);
@@ -3894,7 +3894,9 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             const dist = Math.hypot(p1.x - p0.x, p1.z - p0.z), bird = root.themeOf(c.piece) === 'birds' && dist > 1.2;
             // Saga des Auras : les pièces volent au ras du plateau en laissant une traînée de lumière
             const flyer = root.themeOf(c.piece) === 'auras';
-            if (flyer && u > 0 && u < 1) this.auraTrail(c, t);
+            const bareFlight = a.flight === 'fly' && c.piece.toLowerCase() === 'r'; // la tour vole sans aura ni traînée
+            if (bareFlight && c.auraFx) c.auraFx.visible = false;
+            if (flyer && !bareFlight && u > 0 && u < 1) this.auraTrail(c, t);
             // Sorën : pas instantané, elle disparaît et réapparaît sur la case visée
             if (flyer && c.piece === 'Q' && dist > 1.2 && !a.flight) {
               const gone = u > 0.2 && u < 0.8;
