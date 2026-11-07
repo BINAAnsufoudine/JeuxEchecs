@@ -1044,7 +1044,7 @@
     }
     const lessonStep = pz && pz.kind === 'lesson' ? pz.steps[pz.idx] : null;
     const tutorialStars = lessonStep && !pz.done && lessonStep.stars ? lessonStep.stars.map((square) => window.Chess.sqIndex(square)) : [];
-    const arrows = replay ? replayArrows() : (lessonStep && lessonStep.arrows ? lessonStep.arrows : (!pz && cfg && cfg.mode === 'coach' ? coachArrows : []));
+    const arrows = replay ? replayArrows() : (lessonStep && lessonStep.arrows ? lessonStep.arrows : pz ? personalMistakeArrows() : (cfg && cfg.mode === 'coach' ? coachArrows : []));
     // vue « 2D » seule : la 3D n'est pas mise à jour (et ne se dessine plus), le plateau 2D prend toute la place
     if (b3d && settings.boardView !== '2d') {
       const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
@@ -2710,6 +2710,11 @@
   }
 
   const personalItem = (m) => ({ personal: m, fen: m.fen, line: m.line, alts: m.alts, theme: m.theme, level: m.level || 1 });
+  // Problème tiré d'une de tes parties : tant que tu n'as pas joué, une flèche rouge montre le coup que le maître te rappelle
+  function personalMistakeArrows() {
+    const m = pz.item && pz.item.personal, uci = m && window.Chess.toFen(game.state) === m.fen && uciOf(m);
+    return uci ? [{ from: window.Chess.sqIndex(uci.slice(0, 2)), to: window.Chess.sqIndex(uci.slice(2, 4)), color: 'red' }] : [];
+  }
 
   /* L'entraîneur */
   const COACH = L('Maître Sissa', 'Master Sissa');
@@ -2901,7 +2906,7 @@
     }
     if (LANG === 'en') {
       const side = game.turn === 'w' ? 'White' : 'Black';
-      if (it.personal) return `Remember your game of ${fmtDate(it.personal.date)}. On move ${it.personal.move}, you played ${it.personal.played}. There was better: find it.`;
+      if (it.personal) return `Remember your game of ${fmtDate(it.personal.date)}. On move ${it.personal.move}, you played ${it.personal.played} (red arrow). There was better: find it.`;
       if (it.theme === 'mat') return `You play ${side}. There is a mate in ${Math.ceil(it.line.length / 2)}. Start by looking at every check.`;
       if (it.theme === 'defense') return `You play ${side}. Your opponent threatens mate. Find the defense.`;
       if (it.theme === 'finale') return `You play ${side}. It's an endgame: find the winning move.`;
@@ -2909,7 +2914,7 @@
       return `You play ${side}. ${goal}`;
     }
     const side = game.turn === 'w' ? 'les Blancs' : 'les Noirs';
-    if (it.personal) return `Souviens-toi de ta partie du ${fmtDate(it.personal.date)}. Au coup ${it.personal.move}, tu as joué ${it.personal.played}. Il y avait mieux : trouve-le.`;
+    if (it.personal) return `Souviens-toi de ta partie du ${fmtDate(it.personal.date)}. Au coup ${it.personal.move}, tu as joué ${it.personal.played} (flèche rouge). Il y avait mieux : trouve-le.`;
     if (it.theme === 'mat') return `Tu joues ${side}. Il y a un mat en ${Math.ceil(it.line.length / 2)}. Commence par regarder tous les échecs.`;
     if (it.theme === 'defense') return `Tu joues ${side}. L'adversaire menace de mater. Trouve la parade.`;
     if (it.theme === 'finale') return `Tu joues ${side}. C'est une finale : trouve le coup gagnant.`;
@@ -3208,7 +3213,7 @@
     if (st.line && st.line.length || st.demoMoves && st.demoMoves.length) st.annotateRelations = true;
     const it = { id: st.id, personal: st.personal, rating: st.rating, theme: st.theme || pz.lesson.theme, level: st.level || 1, fen: st.fen, line: st.line, alts: st.alts };
     Object.assign(pz, { item: it, step: 0, failed: false, done: !st.line && !st.demoMoves?.length, locked: !!st.demoMoves?.length, demoIndex: 0 });
-    if (st.fen) setPosition(st.fen);
+    if (st.fen) { setPosition(st.fen); if (st.side) flipped = st.side === 'b'; }
     else if (!game) setPosition('4k3/8/8/8/8/8/8/4K3 w - - 0 1');
     selected = -1; hint = null;
     marks = st.marks ? st.marks.map((s) => window.Chess.sqIndex(s)) : null;
@@ -5889,14 +5894,7 @@
     startTrainer({ title: m.name, theme: 'mat', resume: `mate:${m.id}` }, steps, () => { lessonReward(`mate:${m.id}`); markTrain(`mate:${m.id}`); leavePuzzle(); });
   }
   function startEndgame(e) {
-    const examples = {
-      kqk: [['d1d3'], ['e1f2']],
-      krk: [['a1a5'], ['e1e2']],
-      kbbk: [['c1e3'], ['e1d2']],
-      lucena: [['c1c4'], ['c1d1', 'd8e7', 'd1d4']],
-      philidor: [['a6h6'], ['a6a1']],
-    };
-    const steps = e.steps.map((text, i) => ({ text, fen: e.fen, demoMoves: (examples[e.id] || [])[i] }));
+    const steps = e.steps.map((st) => ({ text: st.text, fen: st.fen || e.fen, side: e.color, marks: st.marks, demoMoves: st.demo, demoDoneText: st.done }));
     steps.push({ text: e.goal === 'draw'
       ? L(`À toi : tu joues les ${sideName(e.color)} contre l'ordinateur au plus haut niveau. Obtiens la nulle. Appuie sur « Terminer » pour commencer.`, `Your turn: you play ${sideName(e.color)} against the computer at its highest level. Get the draw. Press "Finish" to start.`)
       : L(`À toi : tu joues les ${sideName(e.color)} contre l'ordinateur au plus haut niveau. Donne le mat. Appuie sur « Terminer » pour commencer.`, `Your turn: you play ${sideName(e.color)} against the computer at its highest level. Deliver mate. Press "Finish" to start.`), fen: e.fen });

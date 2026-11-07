@@ -375,7 +375,7 @@
     }
     const lessonStep = pz && pz.kind === 'lesson' ? pz.steps[pz.idx] : null;
     const tutorialStars = lessonStep && !pz.done && lessonStep.stars ? lessonStep.stars.map((square) => window.Chess.sqIndex(square)) : [];
-    const arrows = replay ? replayArrows() : (lessonStep && lessonStep.arrows ? lessonStep.arrows : (!pz && cfg && cfg.mode === 'coach' ? coachArrows : []));
+    const arrows = replay ? replayArrows() : (lessonStep && lessonStep.arrows ? lessonStep.arrows : pz ? personalMistakeArrows() : (cfg && cfg.mode === 'coach' ? coachArrows : []));
     // vue « 2D » seule : la 3D n'est pas mise à jour (et ne se dessine plus), le plateau 2D prend toute la place
     if (b3d && settings.boardView !== '2d') {
       const th = (owns(`theme:${settings.theme}`) && THEMES[settings.theme]) || THEMES.foret;
