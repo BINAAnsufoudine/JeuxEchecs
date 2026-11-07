@@ -162,7 +162,7 @@ Arts martiaux cosmiques (création originale). Blancs : l'Ordre du Ciel Azur, su
 | Cavalier | *Comète de Nilo* : plongeon en vrille, onde de choc | *La Prime* : grappin, liens, filet |
 | Fou | *Aube Tranchante* : un éclair sur la diagonale, un silence, une croix de lumière | *Le Réseau* : les Sentinelles, en vol, resserrent une toile de lasers |
 | Tour | *La Forteresse* : les boucliers se referment en cage de pierre | *L'Éruption* : colonne de magma, puis tout se refroidit en roche |
-| Dame | *Constellation d'Azur* : les étoiles reliées s'abattent sur le roi | *Nova Noire* : la lumière des miroirs forme une boule rouge qui descend |
+| Dame | *Constellation d'Azur* : les étoiles reliées s'abattent sur le roi | *Nova Noire* : la lumière des miroirs forme une boule rouge gigantesque qui s'abat sur le camp blanc ; toutes les pièces blanches volent en éclats et un énorme cratère reste à la place |
 | Roi | *Souffle des Nuages* : une colonne de vent soulève le roi adverse | *Chute de Comète* : une comète de cristal tombe du ciel |
 - **Code** : modèles dans `auras3d.js`, armes, pouvoirs et mats dans `src/board3d/12b-auras.js` (Constellation et Nova dans `05-mats-themes.js`). Les pouvoirs sont des effets visuels courts, sans effet sur les règles.
 - **Échiquier 2D** : il garde les ninjas, comme pour tous les thèmes.

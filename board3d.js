@@ -2955,7 +2955,8 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         });
         for (let i = 0; i < 26; i++) { const s = new T.Mesh(new T.CylinderGeometry(0.05, 0.02, 1.1, 6), new T.MeshBasicMaterial({ color: i % 3 ? 0x7fd8ff : 0xffffff, transparent: true, opacity: 0.95, depthWrite: false })); g.add(s); keep(s, { x: (Math.random() - 0.5) * 3.4, z: (Math.random() - 0.5) * 1.6, tx: (Math.random() - 0.5) * 1.1, tz: (Math.random() - 0.5) * 1.1, delay: 2.2 + Math.random() * 0.8 }); }
       } else if (style === 'nova') {
-        // Mélyx concentre la lumière de ses miroirs en une boule rouge qui grossit, puis descend sur le roi blanc
+        // Mélyx concentre la lumière de ses miroirs en une boule rouge gigantesque qui s'abat sur le camp blanc :
+        // toutes les pièces blanches volent en éclats, et un énorme cratère reste là où elle est tombée
         const src = this.sqToPos(u.attackerTo);
         u.novaFrom = new T.Vector3(src.x, 3, src.z);
         for (const s of [-1, 1]) {
@@ -2967,6 +2968,16 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         u.novaCore = new T.Mesh(new T.SphereGeometry(0.72, 20, 14), new T.MeshBasicMaterial({ color: 0xffb060, fog: false })); u.nova.add(u.novaCore);
         u.novaHalo = new T.Mesh(new T.SphereGeometry(1.25, 24, 16), new T.MeshBasicMaterial({ color: 0xff3d6e, transparent: true, opacity: 0.35, depthWrite: false, side: T.BackSide, fog: false })); u.nova.add(u.novaHalo);
         for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, s = new T.Mesh(new T.OctahedronGeometry(0.1, 0), new T.MeshBasicMaterial({ color: 0xc04bff })); g.add(s); keep(s, { shard: true, a, r: 2.2 + (i % 3) * 0.6 }); }
+        // point de chute : le centre du camp blanc (là où se trouvent ses pièces), le roi blanc compris
+        const whites = [...this.chars.values()].filter((c) => c.piece === c.piece.toUpperCase());
+        const L = whites.reduce((s, c) => s.add(c.holder.position), new T.Vector3()).multiplyScalar(1 / Math.max(1, whites.length));
+        u.novaLand = new T.Vector3((L.x + P.x) / 2, 0, (L.z + P.z) / 2);
+        const crater = new T.Group(); crater.position.set(u.novaLand.x, 0, u.novaLand.z); crater.visible = false; g.add(crater); u.novaCrater = crater;
+        const hole = new T.Mesh(new T.CircleGeometry(2.7, 48), new T.MeshBasicMaterial({ color: 0x07030a })); hole.rotation.x = -Math.PI / 2; hole.position.y = 0.04; crater.add(hole);
+        const depth = new T.Mesh(new T.CircleGeometry(1.9, 40), new T.MeshBasicMaterial({ color: 0x2a0710 })); depth.rotation.x = -Math.PI / 2; depth.position.y = 0.045; crater.add(depth);
+        const lava = new T.Mesh(new T.TorusGeometry(2.25, 0.07, 6, 56), new T.MeshBasicMaterial({ color: 0xff3d3d })); lava.rotation.x = Math.PI / 2; lava.position.y = 0.06; crater.add(lava); u.novaLava = lava;
+        for (let i = 0; i < 30; i++) { const a = i / 30 * Math.PI * 2, r = 2.7 + (i % 3) * 0.12, rock = new T.Mesh(new T.DodecahedronGeometry(0.16 + (i % 4) * 0.06, 0), std(0x3a2a33, { flatShading: true, roughness: 1 })); rock.position.set(Math.cos(a) * r, 0.1, Math.sin(a) * r); rock.scale.y = 0.6; crater.add(rock); }
+        u.novaBits = [];
         for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2 + Math.random() * 0.3, crack = at(new T.Mesh(new T.BoxGeometry(0.06, 0.02, 1.4 + Math.random() * 1.4), basic(0xff3d6e, 0.95)), Math.cos(a) * 1, 0.02, Math.sin(a) * 1); crack.rotation.y = -a + Math.PI / 2; keep(crack, { crack: true }); }
       } else if (Object.values(AURA_MATE).includes(style) && style !== 'constellation' && style !== 'nova') {
         this.makeAuraMate(u, at, keep, basic, std);
@@ -3030,6 +3041,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         else if (style === 'whirlpool') { root.position.y = -smooth(after / 1.2) * 0.9; root.rotation.y = after * 8; c.holder.visible = after < 1.3; }
         else if (style === 'crows') { root.position.y = Math.min(4, after * 2.2); root.rotation.y = after * 10; c.holder.visible = after < 1.5; }
         else if (style === 'jaws') { c.holder.visible = after < 0.15; }
+        else if (style === 'nova') { c.holder.visible = after < 0.05; } // le roi blanc disparaît dans l'explosion
         else if (style === 'boulder' || style === 'crystalcomet' || style === 'nilocomet') { root.scale.y = u.kingBase.scale.y * Math.max(0.2, 1 - after * 4); }
         else if (style === 'ancetres') { const L = u.kitMate.pull; if (L) c.holder.position.copy(L); c.holder.visible = after < 1.9; } // emporté vers le soleil couchant
         else if (style === 'meteores') { root.scale.y = u.kingBase.scale.y * Math.max(0.15, 1 - after * 4); }
@@ -3123,11 +3135,30 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         for (const l of u.links) l.material.opacity = smooth((e - l.userData.delay) / 0.3) * 0.8 * (after > 0 ? Math.max(0, 1 - after) : 1);
         for (const s of u.mateParts) { const d = s.userData, k = clamp((e - d.delay) / 0.5); s.visible = k > 0 && k < 1; s.position.set(P.x + d.x + (d.tx - d.x) * k, 4.9 - k * 4.8, P.z + d.z + (d.tz - d.z) * k); s.rotation.set(0, 0, Math.atan2(d.tx - d.x, 4.8)); }
       } else if (style === 'nova') {
-        const size = 0.12 + smooth((e - 0.5) / 1.9) * 1.7, down = smooth((e - 2.1) / 0.9), burst = after > 0 ? smooth(after / 0.5) : 0;
-        u.nova.position.set(u.novaFrom.x + (P.x - u.novaFrom.x) * down, 3 + down * 0.6 - down * down * 3 + Math.sin(down * Math.PI) * 0.8, u.novaFrom.z + (P.z - u.novaFrom.z) * down);
-        u.nova.scale.setScalar(size * (1 + burst * 1.6));
-        u.nova.material.opacity = 0.92 * (1 - burst); u.novaCore.material.transparent = true; u.novaCore.material.opacity = 1 - burst; u.novaHalo.material.opacity = 0.35 * (1 - burst);
-        u.nova.visible = after < 0.5;
+        // la boule grossit au-dessus de Mélyx jusqu'à couvrir le ciel, puis s'abat sur le camp blanc
+        const size = 0.12 + smooth((e - 0.4) / 2) * 3.4, down = smooth((e - 2.1) / 0.9), burst = after > 0 ? smooth(after / 0.6) : 0, Ld = u.novaLand;
+        u.nova.position.set(u.novaFrom.x + (Ld.x - u.novaFrom.x) * down, 3 + size * 0.8 - down * (2.5 + size * 0.8), u.novaFrom.z + (Ld.z - u.novaFrom.z) * down);
+        u.nova.scale.setScalar(size * (1 + burst * 0.9));
+        u.nova.material.opacity = 0.95 * (1 - burst); u.novaCore.material.transparent = true; u.novaCore.material.opacity = 1 - burst; u.novaHalo.material.opacity = 0.35 * (1 - burst);
+        u.nova.visible = after < 0.6;
+        if (after > 0 && !u.novaHit) { // impact : le camp blanc vole en éclats
+          u.novaHit = true; this.shakeUntil = t + 1.4; this.shakeAmp = 0.32;
+          const T3 = this.THREE;
+          u.hiddenEnemies = u.hiddenEnemies || [];
+          for (const c of this.chars.values()) {
+            if (c.piece !== c.piece.toUpperCase() || c === u.king) continue;
+            u.hiddenEnemies.push([c, c.holder.visible]); c.holder.visible = false;
+            for (let i = 0; i < 7; i++) {
+              const bit = new T3.Mesh(new T3.TetrahedronGeometry(0.06 + Math.random() * 0.06, 0), new T3.MeshBasicMaterial({ color: i % 3 ? 0xdfe8f5 : 0x2f7fe0 }));
+              const a = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 3;
+              bit.position.set(c.holder.position.x, 0.4, c.holder.position.z); bit.userData = { x: bit.position.x, z: bit.position.z, vx: Math.cos(a) * sp, vz: Math.sin(a) * sp, vy: 3 + Math.random() * 4 };
+              u.fx.add(bit); u.novaBits.push(bit);
+            }
+          }
+        }
+        for (const bit of u.novaBits) { const k = after, d = bit.userData; bit.visible = k < 1.6; bit.position.set(d.x + d.vx * k, Math.max(0.05, 0.4 + d.vy * k - 4.9 * k * k), d.z + d.vz * k); bit.rotation.set(k * 9, k * 7, 0); }
+        u.novaCrater.visible = after > 0.15; u.novaCrater.scale.setScalar(Math.min(1, 0.4 + after * 1.6)); // le trou reste jusqu'à la partie suivante
+        u.novaLava.material.color.setHSL(0.99, 1, 0.45 + Math.sin(t * 4) * 0.1);
         for (const m of u.novaRays) m.visible = e > 0.4 && e < 2.2;
         this.skyDim = Math.max(this.skyDim || 0, smooth(e / 2.4) * 0.8 * (after > 0 ? Math.max(0, 1 - after / 1.5) : 1)); // le plateau s'éteint
         for (const p of u.mateParts) {
