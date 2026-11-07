@@ -192,7 +192,7 @@
     { id: 'modern', name: L('Guerriers modernes', 'Modern warriors'), icon: '🪖', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 8, items: [
       ['Camp d’entraînement', 'Training camp', '⛺'], ['Soldat', 'Soldier', '🪖'], ['Jeep', 'Jeep', '🚙'], ['Radar', 'Radar', '📡'], ['Drone', 'Drone', '🛸'], ['Char d’assaut', 'Tank', '🛡️'], ['Hélicoptère', 'Helicopter', '🚁'], ['Navire', 'Warship', '🚢'], ['Avion de chasse', 'Fighter jet', '✈️'], ['Quartier général', 'Headquarters', '⭐'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
-    { id: 'auras', name: L('Saga des Auras', 'Saga of Auras'), icon: '💫', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 9, items: [
+    { id: 'auras', name: L('Les Gardiens Célestes', 'Celestial Guardians'), icon: '💫', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 9, items: [
       ['Temple Azur', 'Azure Temple', '🛕'], ['Première aura', 'First aura', '✨'], ['Premier vol', 'First flight', '☁️'], ['Onde d’énergie', 'Energy wave', '🌊'], ['Rochers flottants', 'Floating rocks', '🪨'], ['Rayon chargé', 'Charged beam', '⚡'], ['Éveil', 'Awakening', '🔥'], ['Arène du Ciel', 'Sky Arena', '🏟️'], ['Empire de l’Ombre', 'Shadow Empire', '🌑'], ['Ordre du Ciel Azur', 'Azure Sky Order', '🌌'],
     ].map(([fr, en, icon]) => ({ name: L(fr, en), icon })) },
     { id: 'sabres', name: L('L’Âge des Sabres', 'Age of Sabres'), icon: '⚔️', unlockGrade: NATURE_PREVIEW_ALL_UNLOCKED ? 1 : 9, items: [

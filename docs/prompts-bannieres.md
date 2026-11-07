@@ -59,7 +59,7 @@ Vignette : petite image du carrousel (240 × 146 dans l'appli). Le sujet doit se
 
 Noms de fichiers à déposer dans `fond_ecran/` : `banniere_auras`, `vignette_auras`, `banniere_sabres`, `vignette_sabres`, `banniere_baobabs`, `vignette_baobabs`, `banniere_dinos`, `vignette_dinos` (PNG ou JPG).
 
-## Saga des Auras
+## Les Gardiens Célestes
 
 **Bannière FR** — Illustration panoramique très large au format 3:1 (1920 × 640), illustration numérique colorée et détaillée, style dessin animé d'action original. Une arène de pierre octogonale flottant au-dessus d'une mer de nuages, rochers flottants tout autour, ciel bleu lumineux. Au centre-droit, deux combattants en plein vol s'affrontent : une guerrière en blanc et azur entourée d'une aura bleue, face à une reine de cristal noir à quatre bras entourée d'une aura violette ; leurs énergies se heurtent dans un grand éclair. Le tiers gauche reste calme : ciel clair et nuages doux, peu de détails, pour y écrire du texte. Le quart droit reste simple. Aucun texte, aucun logo, aucun personnage connu.
 

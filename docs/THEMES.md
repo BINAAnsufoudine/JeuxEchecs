@@ -122,7 +122,7 @@ Les constantes sont dans `src/board3d/00-constantes.js`, les mats dans `src/boar
 - **Roque** : c'est le roi qui saute par-dessus la tour.
 - **Mats** : Blancs, *frappe aérienne* ; Noirs, *frappe orbitale*.
 
-## Saga des Auras
+## Les Gardiens Célestes (identifiant interne : auras)
 
 Arts martiaux cosmiques (création originale). Blancs : l'Ordre du Ciel Azur, super-héros (ivoire, azur, argent). Noirs : l'Empire de l'Ombre, super-vilains (violet, noir cristal, rouge). Tous portent un costume : combinaison, cape, gants, bottes et un emblème dessiné pour le thème sur la poitrine. Plateau : l'Arène du Ciel, dalles de pierre au-dessus des nuages et rochers flottants. Sans sons propres.
 
@@ -192,7 +192,7 @@ Samouraïs des temps anciens (création originale, noms et blasons inventés). B
 | Roi blanc | iaï éclair : un trait blanc, un instant de silence, la cible s'effondre |
 | Roi noir | le nodachi frappe le sol, la case tremble et se fend |
 
-Feu orange et or côté blanc, violet côté noir. Mats : un par pièce (`SABRE_MATE`), celui de la pièce qui donne le mat, comme pour la Saga des Auras (mat double : la plus forte ; mat joué par le roi : mat du camp). Ils durent plus longtemps que les 4,8 s habituelles (`SABRE_MATE_TIME`).
+Feu orange et or côté blanc, violet côté noir. Mats : un par pièce (`SABRE_MATE`), celui de la pièce qui donne le mat, comme pour les Gardiens Célestes (mat double : la plus forte ; mat joué par le roi : mat du camp). Ils durent plus longtemps que les 4,8 s habituelles (`SABRE_MATE_TIME`).
 
 | Pièce | Mat |
 |---|---|
