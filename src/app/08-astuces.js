@@ -509,6 +509,7 @@
   }
   function leavePuzzle() {
     hush();
+    drillAbandon();
     if (pz && pz.autoAdvanceTimer) clearTimeout(pz.autoAdvanceTimer);
     const back = pz && pz.lesson && pz.lesson.back ? pz.lesson.back : pz && pz.lesson && pz.lesson.champion ? 'champions' : 'problems';
     pz = null; marks = null; game = null;
@@ -559,6 +560,7 @@
     Object.assign(pz, { item: it, step: 0, failed: false, done: false, locked: false, hintLevel: 0 });
     marks = null;
     setPosition(it.fen);
+    if (pz.kind === 'drill') { drillHeader(it); setPzStatus('', puzzleTurnText()); renderBoard(); pzButtons(); return; }
     const row = themeRow(loadCoach(), it.theme);
     $('puzzle-title').textContent = pz.kind === 'themed' ? (pz.themeSession.mode === 'topic' ? trainingTopicName(pz.themeSession.currentTopic) : L('Parcours de problèmes', 'Puzzle path')) : PZ[it.theme].name;
     $('pz-count').textContent = pz.kind === 'themed'
@@ -575,7 +577,11 @@
     const task = pz.item && pz.item.line;
     $('pz-hint').disabled = !task || pz.done || pz.locked;
     $('pz-solution').disabled = !task || pz.done || pz.locked;
-    $('pz-next').innerHTML = `<span>→</span>${pz.kind === 'lesson' ? lessonNextLabel() : pz.kind === 'themed' ? L('Prochain défi', 'Next challenge') : L('Suivant', 'Next')}`;
+    $('pz-next').innerHTML = `<span>→</span>${pz.kind === 'lesson' ? lessonNextLabel() : pz.kind === 'themed' ? L('Prochain défi', 'Next challenge') : pz.kind === 'drill' ? L('Problème suivant', 'Next puzzle') : L('Suivant', 'Next')}`;
+    // Replay : revoir l'exemple animé d'une étape de leçon, une fois l'animation terminée
+    const demoStep = pz.kind === 'lesson' && pz.steps && pz.steps[pz.idx], rb = replayButton();
+    rb.hidden = !(demoStep && demoStep.demoMoves && demoStep.demoMoves.length);
+    rb.disabled = !!pz.locked;
     $('pz-next').disabled = !canSkipLessonStep() && !pz.done;
   }
   // Libellé du bouton du bas pendant un cours, et la phrase de l'entraîneur qui invite à l'utiliser
@@ -600,7 +606,7 @@
       const session = pz, lessonIndex = pz.idx, position = game;
       sounds.lose();
       setPzStatus('bad', L('Pas le bon coup, réessaie.', 'Not the right move, try again.'));
-      say(lessonStep && lessonStep.wrong ? lessonStep.wrong : L(`Pas tout à fait. ${PZ[it.theme].tip}`, `Not quite. ${PZ[it.theme].tip}`), 'sad');
+      say(it.wrong ? it.wrong : lessonStep && lessonStep.wrong ? lessonStep.wrong : L(`Pas tout à fait. ${PZ[it.theme].tip}`, `Not quite. ${PZ[it.theme].tip}`), 'sad');
       pzButtons();
       setTimeout(() => {
         if (pz !== session || pz.item !== it || pz.idx !== lessonIndex || game !== position) return;
@@ -655,6 +661,8 @@
       }
       if (st.mistake) touchMistake(st.mistake, clean);
       if (pz.lesson.resume && pz.lesson.resume.startsWith('tutorial:') && st.stars) renderBoard();
+    } else if (pz.kind === 'drill') {
+      drillSolved(clean);
     } else if (pz.kind === 'themed') {
       const session = pz.themeSession, saved = themeTrainingPrefs();
       recordPuzzle(pz.item, clean);
@@ -768,6 +776,7 @@
     if (!pz || (!pz.done && !canSkipLessonStep())) return;
     if (pz.kind === 'lesson') return nextLessonStep();
     if (pz.kind === 'themed') return nextThemedPuzzle();
+    if (pz.kind === 'drill') return nextDrill();
     nextActivity();
   };
   $('btn-puzzle-back').onclick = leavePuzzle;
@@ -844,12 +853,14 @@
     Object.assign(pz, { item: it, step: 0, failed: false, done: !st.line && !st.demoMoves?.length, locked: !!st.demoMoves?.length, demoIndex: 0 });
     if (st.fen) { setPosition(st.fen); if (st.side) flipped = st.side === 'b'; }
     else if (!game) setPosition('4k3/8/8/8/8/8/8/4K3 w - - 0 1');
+    pz.demoStartFen = window.Chess.toFen(game.state); // position de départ de l'exemple, pour le bouton Replay
     selected = -1; hint = null;
     marks = st.marks ? st.marks.map((s) => window.Chess.sqIndex(s)) : null;
     $('puzzle-title').textContent = pz.lesson.title;
     $('pz-count').textContent = L(`Étape ${pz.idx + 1} / ${pz.steps.length}`, `Step ${pz.idx + 1} / ${pz.steps.length}`);
     const tutorialArrival = pz.lesson.resume && pz.lesson.resume.startsWith('tutorial:') && pz.idx === 0;
-    const stepText = st.line && !(pz.lesson.champion) ? st.text : `${st.text} ${lessonCue()}`;
+    const hasDemo = !!(st.demoMoves && st.demoMoves.length);
+    const stepText = hasDemo ? `${st.text} ${L('Voici un exemple.', 'Here is an example.')}` : st.line && !(pz.lesson.champion) ? st.text : `${st.text} ${lessonCue()}`;
     const spokenText = tutorialArrival
       ? `${pz.lesson.title}. ${st.demoIntroText || stepText}`
       : st.demoIntroText;
@@ -857,7 +868,7 @@
     const syncOpeningDemo = st.syncDemoWithVoice && st.demoMoves && st.demoMoves.length;
     const openingMoveSpeech = syncOpeningDemo && (st.demoSpeech && st.demoSpeech[0] || openingMoveSpeechForStep(st));
     const syncedVoiceText = syncOpeningDemo
-      ? `${st.text} ${L('Regarde le coup :', 'Watch the move:')} ${openingMoveSpeech} ${lessonCue()}`
+      ? `${st.text} ${L('Voici un exemple :', 'Here is an example:')} ${openingMoveSpeech}`
       : spokenText;
     const openingCueIndex = syncOpeningDemo ? syncedVoiceText.indexOf(openingMoveSpeech) : -1;
     let narration = Promise.resolve();
@@ -933,6 +944,8 @@
         session.locked = false; session.done = true;
         setPzStatus('good', step.demoDoneText || L('Démonstration terminée. Observe la flèche pour trouver le meilleur coup.', 'Demonstration complete. Follow the arrow to find the best move.'));
         pzButtons();
+        // l'exemple est fini : c'est seulement maintenant qu'on invite à continuer (ou à revoir l'exemple)
+        { const cue = `${lessonCue()} ${L('Pour revoir l’exemple, appuie sur « Replay ».', 'To watch the example again, press “Replay”.')}`; say(`${step.text} ${cue}`, '', cue); }
         return;
       }
       const color = game.state.turn;

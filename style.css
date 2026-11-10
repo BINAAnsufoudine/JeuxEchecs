@@ -1517,3 +1517,9 @@ body:has(#game.game-fullscreen) .mobile-menu-toggle { display: none !important; 
 
 /* Accueil sur mobile : le « Bonjour » au-dessus du profil, sur toute la largeur */
 @media (max-width: 999px) { #home .hero-top > .home-topline { width: 100%; margin-bottom: 0; } }
+/* Entraînements (mats, finales, ouvertures) : réussite générale et bouton d’entraînement en haut de la rubrique */
+.drill-box { margin: 4px 0 10px; }
+.drill-total { display: flex; flex-direction: column; gap: 2px; margin: 6px 0 8px; }
+.drill-total strong { font-size: 1.05rem; }
+.drill-total span { font-size: 1.6rem; font-weight: 800; color: var(--accent, #f0c060); }
+.replay-item.drill-start strong { font-size: 1.1rem; }

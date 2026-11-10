@@ -385,7 +385,7 @@
     const done = trainDone(), sr = openingsSR(), d = dailyState(), now = Date.now();
     const item = (key, title, sub, extra = '') => `<button type="button" class="btn replay-item" data-train="${key}"><strong>${escHtml(title)}${extra}</strong><span>${escHtml(sub)}</span></button>`;
     const ok = ' ✓';
-    let html = `<p class="level-help">${TRAIN_HELP[section]}</p>`;
+    let html = `<p class="level-help">${TRAIN_HELP[section]}</p>${drillBox(section)}`;
     if (section === 'tutorial') html += `<div class="replay-items tutorial-items">${BEGINNER_PATH.map((topic) => item(`beginner:${topic.id}`, `${topic.number}. ${topic.title}`, topic.description)).join('')}</div>`;
     if (section === 'lesson') {
       const lesson = dailyLessonOfDay();
@@ -403,7 +403,7 @@
       html += `<div class="replay-items">${order.map((k) => item(`daily:${k}`, L(`Problème ${k + 1}`, `Puzzle ${k + 1}`) + (d.res[k] === 'retry' ? L(' · à refaire', ' · try again') : ''), d.res[k] ? label[d.res[k]] : L('à faire', 'to do'), d.res[k] === 'ok' ? ok : '')).join('')}</div>`;
       html += `<div id="daily-board-box"><p class="level-help">${L('Chargement du classement…', 'Loading the ranking…')}</p></div>`;
     }
-    if (section === 'mates') html += `<div class="replay-items">${TR.MATES.map((m) => item(`mate:${m.id}`, m.name, m.text.split('.')[0] + '.', done[`mate:${m.id}`] ? ok : '')).join('')}</div>`;
+    if (section === 'mates') html += `<div class="replay-items">${TR.MATES.map((m) => item(`mate:${m.id}`, m.name, `${drillMotifText('mate', m.id)} · ${m.text.split('.')[0]}.`, done[`mate:${m.id}`] ? ok : '')).join('')}</div>`;
     if (section === 'endgames') html += `<div class="replay-items">${TR.ENDGAMES.map((e) => item(`end:${e.id}`, e.name, e.goal === 'draw' ? L('Défends et obtiens la nulle contre l\'ordinateur', 'Defend and draw against the computer') : L('Donne le mat contre l\'ordinateur', 'Deliver mate against the computer'), done[`end:${e.id}`] ? ok : '')).join('')}</div>`;
     if (section === 'openings') html += `<div class="replay-items">${TR.OPENINGS.map((o) => {
       const r = sr[o.id], due = r && r.due <= now;
@@ -411,7 +411,7 @@
       const usage = stats && stats.usage != null ? `${stats.usage} %` : '—';
       const mastery = stats && stats.mastery != null ? `${stats.mastery} %` : '—';
       const sub = `${L('Avec les', 'With')} ${sideName(o.color)} · ${!r ? L('nouvelle', 'new') : due ? L('à réviser', 'to review') : L(`révision dans ${Math.max(1, Math.round((r.due - now) / DAY))} j`, `review in ${Math.max(1, Math.round((r.due - now) / DAY))} d`)} · ${L(`Utilisation ${usage} · Maîtrise ${mastery}`, `Used ${usage} · Mastery ${mastery}`)}`;
-      return item(`open:${o.id}`, o.name, sub, r && r.stage && !due ? ok : '');
+      return item(`open:${o.id}`, o.name, `${sub} · ${drillMotifText('open', o.id)}`, r && r.stage && !due ? ok : '');
     }).join('')}</div>`;
     if (section === 'famous') html += `<div class="replay-items">${TR.FAMOUS.map((f) => item(`famous:${f.id}`, f.name, `${f.players}${done[`famous:${f.id}`] != null ? L(` · record : ${done[`famous:${f.id}`]} coups trouvés`, ` · best: ${done[`famous:${f.id}`]} moves found`) : ''}`)).join('')}</div>`;
     $('train-body').innerHTML = html;
@@ -421,6 +421,7 @@
     const b = e.target.closest('[data-train]'); if (!b) return;
     const [kind, id] = b.dataset.train.split(':');
     if (kind === 'beginner') return openBeginnerTopic(id);
+    if (kind === 'drill') return startDrill(id, b.dataset.train.split(':')[2] || null);
     if (kind === 'lesson-day') return startDailyLesson();
     if (kind === 'tutorial') return startTutorial(TR.TUTORIALS.find((x) => x.id === id));
     if (kind === 'daily') return startDaily(Number(id) || 0);
