@@ -7543,8 +7543,13 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       // il se cabre (montée lente) puis abat ses pattes de devant (chute rapide), trois fois
       let lift = 0;
       for (const st of this.kitStompTimes(hit)) { const q = (e - st + 0.65) / 0.65; if (q > 0 && q < 1) lift = q < 0.78 ? smooth(q / 0.78) : 1 - smooth((q - 0.78) / 0.22); }
-      p.root.rotation.x = base.rotation.x - lift * 0.55; p.root.position.y = base.position.y + lift * 0.12;
-      p.armL.rotation.x = p.armR.rotation.x = -lift * 1.1;
+      // cabré droit sur les pattes arrière (l'inclinaison suit l'orientation de l'éléphant, sinon il se penche de côté),
+      // le corps relevé autour des pattes arrière, qui restent plantées au sol ; les deux pattes de devant se lèvent ensemble
+      const a = lift * 0.75;
+      p.root.rotation.order = 'YXZ';
+      p.root.rotation.x = base.rotation.x - a; p.root.position.y = base.position.y + Math.sin(a) * 0.2 * base.scale.z;
+      p.armL.rotation.x = p.armR.rotation.x = -lift * 1.3;
+      p.legL.rotation.x = p.legR.rotation.x = a;
       p.trunkUp = lift > 0.05 ? -0.9 * lift : null;
     }
     // Le roi s'écrase un peu plus à chaque coup de pattes
