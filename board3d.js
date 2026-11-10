@@ -63,7 +63,7 @@
     constellation: [0x9fe3ff, 0x16306e], nova: [0xff3d3d, 0x1a0712],
     temple: [0xffffff, 0x16306e], nilocomet: [0x4cc3ff, 0x16306e], dawncross: [0xffd27a, 0x5a4210], fortress: [0x7fd8ff, 0x343a4e], cloudbreath: [0xdff4ff, 0x4a6a9e],
     shadeswarm: [0xc04bff, 0x1a0a2e], bounty: [0xff3d6e, 0x2d2219], lasernet: [0x9ef7ff, 0x2a1636], eruption: [0xff7a1a, 0x2b2326], crystalcomet: [0xc04bff, 0x14101f],
-    ancetres: [0xffc247, 0x5a2e14], harmattan: [0xd9b25a, 0x3a2414], orage: [0xcfe6ff, 0x1c1a1e], meteores: [0xff8a2a, 0x2a1a14], couleelave: [0xff5a1a, 0x1a0e0a],
+    ancetres: [0xffc247, 0x5a2e14], harmattan: [0xd9b25a, 0x3a2414], orage: [0xcfe6ff, 0x1c1a1e], lions: [0xffc247, 0x5a2e14], meteores: [0xff8a2a, 0x2a1a14], couleelave: [0xff5a1a, 0x1a0e0a],
     sakura: [0xf9d2dc, 0x4a3324], lunepourpre: [0xff3b3b, 0x050305], dragonw: [0xffe066, 0x3a2410], tigreb: [0xb45cff, 0x120618],
     fracasw: [0xff8a26, 0x1a100a], fracasb: [0xb45cff, 0x120a1c], arcw: [0xffd27a, 0x3a2410], arcb: [0xc98cff, 0x1a0a2e],
     ridew: [0xff8a26, 0x3a2410], rideb: [0xb45cff, 0x1a0a2e], lamew: [0xff8a26, 0x3a2410], lameb: [0xb45cff, 0x1a0a2e],
@@ -140,10 +140,11 @@ const KIT_ATTACKS = {
     P: { gap: 0.6, leap: 0.55, wind: 0.32, end: 'bounce', recover: 0.7 }, p: { gap: 0.6, leap: 0.55, wind: 0.32, end: 'bounce', recover: 0.7 },
   },
 };
-const KIT_STYLES = new Set(['ancetres', 'harmattan', 'orage', 'meteores', 'couleelave']);
-// Empire des Baobabs : les reines ont leur propre mat, l'orage (danse, nuages noirs, pluie et vent, éclairs, cendres)
-const KIT_PIECE_MATE = { baobabs: { Q: 'orage', q: 'orage' } };
-const KIT_MATE_TIME = { orage: [4.2, 8] }; // [impact, durée]
+const KIT_STYLES = new Set(['ancetres', 'harmattan', 'orage', 'lions', 'meteores', 'couleelave']);
+// Empire des Baobabs : les reines ont leur propre mat, l'orage (danse, nuages noirs, pluie et vent, éclairs, cendres),
+// et les cavaliers le leur, la meute (trois lions entrent sur le plateau et attaquent le roi avec le cavalier)
+const KIT_PIECE_MATE = { baobabs: { Q: 'orage', q: 'orage', N: 'lions', n: 'lions' } };
+const KIT_MATE_TIME = { orage: [4.2, 8], lions: [3.4, 6] }; // [impact, durée]
 const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
@@ -3032,6 +3033,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         c.anim = null; c.holder.position.set(u.fromPos.x, 0, u.fromPos.z);
         M.animate(c.parts, t, e < hit ? 'cast' : 'victory', e < hit ? clamp(e / 0.6) : 1);
         if (style === 'orage') this.kitDance(u, c, e, smooth);
+        if (style === 'lions') { u.kitM = M; this.kitCharge(u, c, t, e, smooth, hit, M); }
         // une seule fois par image : l'effet est animé avec l'attaquant
         this.tickThemeMateFx(u, t, e, clamp, smooth, hit, after);
         return true;
@@ -7468,6 +7470,21 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           return { character, at: 0.45 + i * 0.12, position: character.parts.root.position.clone(), scale: character.parts.root.scale.clone(), visible: character.holder.visible,
             bolt: bolt(x, z, 0.03, 7), fire: flames(x, z, 0.9), ash: pile(x, z, 0.9), x, z };
         });
+      } else if (style === 'lions') {
+        // trois lions entrent par les bords du plateau, rugissent et bondissent sur le roi avec le cavalier
+        u.camera.widePosition.set(Math.sin(yaw) * 14.5, 6.2, Math.cos(yaw) * 14.5); u.camera.wideTarget.set(P.x * 0.4, 0.6, P.z * 0.4);
+        const from = Math.atan2(A.x - P.x, A.z - P.z);
+        s.lions = [0, 1, 2].map((i) => {
+          const a = from + (i + 1) * Math.PI / 2, parts = root.Models3D.build(T, u.piece);
+          if (parts.rider) parts.rider.visible = false; // des lions sans cavalier
+          parts.phase = i * 0.7;
+          const h = new T.Group(); h.add(parts.root); h.scale.setScalar(1.2); h.visible = false; g.add(h);
+          return { h, parts, a, delay: i * 0.22, from: new T.Vector3(P.x + Math.sin(a) * 8.5, 0, P.z + Math.cos(a) * 8.5), to: new T.Vector3(P.x + Math.sin(a) * 0.85, 0, P.z + Math.cos(a) * 0.85) };
+        });
+        s.roars = [0, 1, 2].map(() => { const r = new T.Mesh(new T.RingGeometry(0.4, 0.55, 40), this.sabreFire(0xffe08a, 0)); r.material.side = T.DoubleSide; r.rotation.x = -Math.PI / 2; r.position.set(P.x, 0.05, P.z); g.add(r); return r; });
+        s.dust = [];
+        const dust = this.sabreFire(0xd9b27a, 0.5), puff = new T.SphereGeometry(0.12, 8, 6);
+        for (let i = 0; i < 36; i++) { const m = new T.Mesh(puff, dust); m.userData = { lion: i % 3, off: (i / 3 | 0) / 12 }; m.visible = false; g.add(m); s.dust.push(m); }
       } else if (style === 'harmattan') {
         // ciel jaune, tempête de sable, yeux de léopard dans la poussière
         u.camera.widePosition.set(Math.sin(yaw) * 14.5, 4.4, Math.cos(yaw) * 14.5); u.camera.wideTarget.set(0, 2.6, 0); // la caméra descend pour montrer le ciel
@@ -7488,7 +7505,16 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       root.rotation.y = base.rotation.y + k * Math.PI * 4;
       root.position.y = base.position.y + (e < 2.2 ? Math.abs(Math.sin(e * 7)) * 0.14 : 0);
     }
+    // Le cavalier court avec la meute jusqu'au roi et bondit sur lui au moment de l'impact
+    kitCharge(u, c, t, e, smooth, hit, M) {
+      const P = u.target, F = u.fromPos, k = smooth((e - 0.6) / (hit - 1.05)), jump = Math.max(0, Math.min(1, (e - hit + 0.45) / 0.6));
+      const d = Math.hypot(P.x - F.x, P.z - F.z) || 1, stop = Math.max(0, 1 - 0.85 / d) * k + jump * 0.45 * (0.85 / d);
+      c.holder.position.set(F.x + (P.x - F.x) * stop, Math.sin(jump * Math.PI) * 0.55, F.z + (P.z - F.z) * stop);
+      c.parts.root.rotation.y = u.actorBase.rotation.y + Math.atan2(P.x - F.x, P.z - F.z) - c.holder.rotation.y;
+      M.animate(c.parts, t, k < 1 && e > 0.6 ? 'run' : jump > 0 && jump < 1 ? 'punch' : 'victory', 1);
+    }
     endKitMate(u) {
+      if (u.kitMate.lions) for (const l of u.kitMate.lions) u.fx.remove(l.h); // modèles partagés avec les pièces : on ne les libère pas
       if (this.checkGroup) this.checkGroup.visible = true;
       for (const f of this.volcanoFerns || []) f.rotation.set(0, 0, 0);
       if (u.kitMate.weatherShown != null && this.weatherGroup) this.weatherGroup.visible = u.kitMate.weatherShown;
@@ -7554,6 +7580,21 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           if (a > 0) { root.scale.set(v.scale.x * (1 - k * 0.96), v.scale.y * Math.max(0.02, 1 - k), v.scale.z * (1 - k * 0.96)); v.character.holder.visible = a < 1; }
           v.ash.visible = a > 0.6; v.ash.scale.setScalar(Math.max(0.01, smooth((a - 0.6) / 0.5)));
         }
+      } else if (style === 'lions') {
+        const M = u.kitM;
+        for (const l of s.lions) {
+          const go = e - 0.4 - l.delay, k = smooth(go / (hit - 0.85 - l.delay)), jump = clamp((after + 0.45) / 0.6);
+          const x = l.from.x + (l.to.x - l.from.x) * k, z = l.from.z + (l.to.z - l.from.z) * k, close = jump * 0.45;
+          l.h.visible = go > 0;
+          l.h.position.set(x + (P.x - x) * close, Math.sin(jump * Math.PI) * 0.55, z + (P.z - z) * close);
+          l.h.rotation.y = Math.atan2(P.x - x, P.z - z);
+          l.pos = l.h.position;
+          if (M) M.animate(l.parts, t, k < 1 && go > 0 ? 'run' : after > -0.45 && after < 0.6 ? 'punch' : 'victory', 1);
+        }
+        for (const m of s.dust) { const l = s.lions[m.userData.lion], q = (t * 1.6 + m.userData.off) % 1; m.visible = l.h.visible && after < -0.45 && !!l.pos; if (m.visible) { m.position.set(l.pos.x - Math.sin(l.h.rotation.y) * q * 0.9, 0.08 + q * 0.25, l.pos.z - Math.cos(l.h.rotation.y) * q * 0.9); m.scale.setScalar(0.6 + q * 1.6); m.material.opacity = 0.5 * (1 - q); } }
+        // rugissement de la meute juste avant de bondir, puis l'impact sur le roi
+        for (const [i, r] of s.roars.entries()) { const q = e - (hit - 1.1) - i * 0.2; r.visible = q > 0 && q < 0.8; r.scale.setScalar(1 + q * 7); r.material.opacity = 0.8 * Math.max(0, 1 - q / 0.8); }
+        if (after > 0 && !s.boom) { s.boom = true; this.sabreBurst(P, t, [0xffc247, 0xfff1a8, 0x7a3a1e], 24, 1.5); this.shakeUntil = t + 0.7; this.shakeAmp = 0.22; }
       } else if (style === 'harmattan') {
         s.skyMat.opacity = smooth((e - 0.2) / 1);
         const k = smooth((e - 0.5) / 2.2);

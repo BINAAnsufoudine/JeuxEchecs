@@ -162,6 +162,7 @@
         c.anim = null; c.holder.position.set(u.fromPos.x, 0, u.fromPos.z);
         M.animate(c.parts, t, e < hit ? 'cast' : 'victory', e < hit ? clamp(e / 0.6) : 1);
         if (style === 'orage') this.kitDance(u, c, e, smooth);
+        if (style === 'lions') { u.kitM = M; this.kitCharge(u, c, t, e, smooth, hit, M); }
         // une seule fois par image : l'effet est animé avec l'attaquant
         this.tickThemeMateFx(u, t, e, clamp, smooth, hit, after);
         return true;

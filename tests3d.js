@@ -230,6 +230,8 @@
   for (const pc of 'KQRBNPkqrbnp') test(`3D baobabs : prise par la pièce ${pc}`, () => kitCapture('baobabs', pc));
   test('3D baobabs : mat des Blancs dans la cour royale', () => mate('baobabs', true));
   test('3D baobabs : mat des Noirs dans la cour royale', () => mate('baobabs', false));
+  test('3D baobabs : mat du cavalier blanc (la meute de lions)', () => mate('baobabs', true, 'N'));
+  test('3D baobabs : mat du cavalier noir (la meute de lions)', () => mate('baobabs', false, 'n'));
   test('3D baobabs : l’orage de la reine réduit le camp adverse en cendres, qui revient à la partie suivante', () => stormMate());
   b.setTerrain('volcano');
   for (const pc of 'KQRBNPkqrbnp') test(`3D dinos : prise par la pièce ${pc}`, () => kitCapture('dinos', pc));
