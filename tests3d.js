@@ -97,6 +97,23 @@
     }
   }
 
+  // Orage de la reine (Empire des Baobabs) : les pièces du camp maté disparaissent, puis reviennent intactes
+  function stormMate() {
+    window.PieceTheme = 'baobabs'; b.rebuildPieces();
+    const e = Array(64).fill(null); e[60] = 'K'; e[4] = 'k'; e[20] = 'Q'; e[9] = 'p'; e[14] = 'p'; e[1] = 'n';
+    setClock(); b.update({ ...base, board: e, last: null, animate: false, ply: 0 }); step(0.5);
+    const scales = new Map([...b.chars.values()].map((c) => [c, c.parts.root.scale.y]));
+    const e2 = e.slice(); e2[12] = 'Q'; e2[20] = null;
+    b.update({ ...base, board: e2, check: 4, last: { from: 20, to: 12, piece: 'Q' }, animate: true, ply: 1, mateUltimate: { id: 'morage', piece: 'Q', attackerTo: 12, to: 4 }, outcome: '1-0' });
+    step(10);
+    assert(b.mateUltimate && b.mateUltimate.themed === 'orage', 'la reine blanche ne lance pas l’orage');
+    for (const sq of [9, 14, 1]) assert(!b.chars.get(sq).holder.visible, `la pièce noire ${sq} n'est pas partie en cendres`);
+    assert(b.chars.get(60).holder.visible, 'le roi blanc a été touché');
+    step(4);
+    b.update({ ...base, board: e, last: null, animate: false, ply: 0 }); step(1);
+    for (const sq of [9, 14, 1]) { const c = b.chars.get(sq); assert(c.holder.visible && Math.abs(c.parts.root.scale.y - (scales.get(c) || c.parts.root.scale.y)) < 1e-6, `la pièce ${sq} n'est pas revenue intacte`); }
+  }
+
   // Arc géant : le pion noir dans le couloir est balayé pendant le mat et retrouve sa case à la partie suivante ; celui qui est hors du chemin ne bouge pas
   function giantArc() {
     window.PieceTheme = 'sabres'; b.rebuildPieces();
@@ -213,6 +230,7 @@
   for (const pc of 'KQRBNPkqrbnp') test(`3D baobabs : prise par la pièce ${pc}`, () => kitCapture('baobabs', pc));
   test('3D baobabs : mat des Blancs dans la cour royale', () => mate('baobabs', true));
   test('3D baobabs : mat des Noirs dans la cour royale', () => mate('baobabs', false));
+  test('3D baobabs : l’orage de la reine réduit le camp adverse en cendres, qui revient à la partie suivante', () => stormMate());
   b.setTerrain('volcano');
   for (const pc of 'KQRBNPkqrbnp') test(`3D dinos : prise par la pièce ${pc}`, () => kitCapture('dinos', pc));
   test('3D dinos : mat des Blancs dans la clairière', () => mate('dinos', true));

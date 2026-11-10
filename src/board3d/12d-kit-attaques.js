@@ -239,6 +239,62 @@
         s.ash = [];
         const ash = basic(0x8d8590, 0.9), bit = new T.BoxGeometry(0.05, 0.05, 0.05);
         for (let i = 0; i < 90; i++) { const m = new T.Mesh(bit, ash); m.userData = { x: (Math.random() - 0.5) * 12, z: (Math.random() - 0.5) * 12, y: Math.random() * 7, sp: 0.5 + Math.random() * 0.8 }; m.visible = false; g.add(m); s.ash.push(m); }
+      } else if (style === 'orage') {
+        // La reine danse, le ciel se couvre de nuages noirs, la pluie tombe dans un grand vent ; un gros éclair
+        // frappe le roi, puis de petits éclairs frappent chaque pièce adverse : tout le camp part en cendres.
+        u.camera.widePosition.set(Math.sin(yaw) * 14.5, 5.4, Math.cos(yaw) * 14.5); u.camera.wideTarget.set(0, 2.2, 0);
+        if (this.weatherGroup) { s.weatherShown = this.weatherGroup.visible; this.weatherGroup.visible = false; }
+        s.skyMat = new T.MeshBasicMaterial({ color: 0x15171d, transparent: true, opacity: 0, side: T.BackSide, fog: false, depthWrite: false, toneMapped: false });
+        g.add(this.kitSky(s.skyMat));
+        s.clouds = [];
+        const puffGeo = new T.SphereGeometry(1, 12, 9);
+        for (let i = 0; i < 30; i++) {
+          const m = new T.Mesh(puffGeo, new T.MeshBasicMaterial({ color: i % 3 ? 0x1c1e25 : 0x2c2f38, transparent: true, opacity: 0, depthWrite: false, fog: false }));
+          const a = i * 2.399, r = 1 + (i % 6) * 1.2;
+          m.userData = { x: Math.cos(a) * r, z: Math.sin(a) * r, y: 6.2 + (i % 4) * 0.35, ph: i * 0.9 };
+          m.scale.set(1.5 + (i % 3) * 0.4, 0.55, 1.2 + (i % 2) * 0.4); g.add(m); s.clouds.push(m);
+        }
+        s.rain = [];
+        const drop = new T.BoxGeometry(0.014, 0.55, 0.014), water = this.sabreFire(0xa9c4dc, 0.55);
+        for (let i = 0; i < 240; i++) { const m = new T.Mesh(drop, water); m.userData = { x: (Math.random() - 0.5) * 13, z: (Math.random() - 0.5) * 13, y: Math.random() * 7, sp: 9 + Math.random() * 4 }; m.rotation.z = 0.38; m.visible = false; g.add(m); s.rain.push(m); }
+        s.gusts = [];
+        const leaf = new T.PlaneGeometry(0.12, 0.07);
+        for (let i = 0; i < 40; i++) { const m = new T.Mesh(leaf, new T.MeshBasicMaterial({ color: i % 2 ? 0x6b7a2a : 0x9a6a2c, side: T.DoubleSide })); m.userData = { z: (Math.random() - 0.5) * 11, y: 0.2 + Math.random() * 2.6, sp: 4 + Math.random() * 3, off: Math.random() * 14 }; m.visible = false; g.add(m); s.gusts.push(m); }
+        // éclair : ligne brisée du ciel jusqu'à la case
+        const bolt = (x, z, width, top) => {
+          const b = new T.Group(), core = this.sabreFire(0xffffff, 1), glow = this.sabreFire(0x9fd0ff, 0.5);
+          let p = new T.Vector3(x + (Math.random() - 0.5) * 1.5, top, z + (Math.random() - 0.5) * 1.5);
+          const n = 9;
+          for (let i = 1; i <= n; i++) {
+            const k = i / n, q = i === n ? new T.Vector3(x, 0.3, z) : new T.Vector3(x + (Math.random() - 0.5) * 0.9 * (1 - k), top - (top - 0.3) * k, z + (Math.random() - 0.5) * 0.9 * (1 - k));
+            const d = q.clone().sub(p), L = d.length(), mid = p.clone().add(q).multiplyScalar(0.5);
+            for (const [mat, w] of [[core, width], [glow, width * 3.2]]) {
+              const seg = new T.Mesh(new T.CylinderGeometry(w, w, L, 5), mat);
+              seg.position.copy(mid); seg.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.clone().normalize()); b.add(seg);
+            }
+            p = q;
+          }
+          b.visible = false; g.add(b); return b;
+        };
+        const ashMat = std(0x3a3634, { roughness: 1 }), emberMat = this.sabreFire(0xff7a2a, 0.9);
+        const pile = (x, z, big) => {
+          const a = new T.Group(); a.position.set(x, 0, z);
+          const heap = new T.Mesh(new T.ConeGeometry(0.3 * big, 0.2 * big, 10), ashMat); heap.position.y = 0.1 * big; a.add(heap);
+          for (let i = 0; i < 5; i++) { const e2 = new T.Mesh(new T.SphereGeometry(0.03, 6, 4), emberMat); e2.position.set(Math.cos(i * 1.3) * 0.18 * big, 0.05, Math.sin(i * 1.3) * 0.18 * big); a.add(e2); }
+          a.scale.setScalar(0.01); a.visible = false; g.add(a); return a;
+        };
+        const flames = (x, z, big) => { const f = this.sabreFlames([0xffb13b, 0xfff1a8, 0xff5a1a], 0.3 * big, 0.95 * big, 9); f.position.set(x, 0, z); f.visible = false; g.add(f); return f; };
+        s.bigBolt = bolt(P.x, P.z, 0.07, 9);
+        s.kingFire = flames(P.x, P.z, 1.3); s.kingAsh = pile(P.x, P.z, 1.3);
+        // les autres pièces du camp du roi, de la plus proche à la plus éloignée
+        const kingWhite = u.king && u.king.piece === u.king.piece.toUpperCase();
+        const foes = [...this.chars.values()].filter((c) => c !== u.king && c.holder.visible && (c.piece === c.piece.toUpperCase()) === kingWhite)
+          .sort((a, b) => a.holder.position.distanceTo(u.king.holder.position) - b.holder.position.distanceTo(u.king.holder.position));
+        u.flameVictims = foes.map((character, i) => {
+          const x = character.holder.position.x, z = character.holder.position.z;
+          return { character, at: 0.45 + i * 0.12, position: character.parts.root.position.clone(), scale: character.parts.root.scale.clone(), visible: character.holder.visible,
+            bolt: bolt(x, z, 0.03, 7), fire: flames(x, z, 0.9), ash: pile(x, z, 0.9), x, z };
+        });
       } else if (style === 'harmattan') {
         // ciel jaune, tempête de sable, yeux de léopard dans la poussière
         u.camera.widePosition.set(Math.sin(yaw) * 14.5, 4.4, Math.cos(yaw) * 14.5); u.camera.wideTarget.set(0, 2.6, 0); // la caméra descend pour montrer le ciel
@@ -252,6 +308,12 @@
         const eye = new T.MeshBasicMaterial({ color: 0xffe14d, toneMapped: false });
         for (let i = 0; i < 4; i++) { const pair = new T.Group(); for (const k of [-1, 1]) { const e = new T.Mesh(new T.SphereGeometry(0.11, 10, 8), eye); e.scale.y = 0.55; e.position.x = k * 0.28; pair.add(e); } pair.position.set(P.x + Math.sin(yaw + i * 1.6) * 2.2, 1.4 + (i % 2) * 1.1, P.z + Math.cos(yaw + i * 1.6) * 2.2); pair.rotation.y = yaw; g.add(pair); s.eyes.push(pair); }
       }
+    }
+    // Danse de la reine avant l'orage : elle tourne sur elle-même en sautillant, puis lève les bras vers le ciel
+    kitDance(u, c, e, smooth) {
+      const root = c.parts.root, base = u.actorBase, k = smooth(e / 2.2);
+      root.rotation.y = base.rotation.y + k * Math.PI * 4;
+      root.position.y = base.position.y + (e < 2.2 ? Math.abs(Math.sin(e * 7)) * 0.14 : 0);
     }
     endKitMate(u) {
       if (this.checkGroup) this.checkGroup.visible = true;
@@ -292,6 +354,33 @@
         s.river.visible = e > 1;
         s.pool.visible = after > 0; s.pool.scale.setScalar(Math.min(1.3, 0.2 + after * 2.2));
         for (const m of s.ash) { const d = m.userData; m.visible = e > 1.2; m.position.set(d.x, ((d.y - e * d.sp) % 7 + 7) % 7, d.z); m.rotation.set(t * 2, t, 0); }
+      } else if (style === 'orage') {
+        const storm = smooth((e - 0.9) / 1.4) * fade(3);
+        s.skyMat.opacity = storm * 0.92;
+        // éclairs lointains dans les nuages avant la frappe
+        const flicker = e > 2.4 && e < hit && Math.sin(e * 23) > 0.93;
+        s.skyMat.color.setHex(flicker || (after > 0 && after < 0.12) ? 0x58607a : 0x15171d);
+        this.skyDim = Math.max(this.skyDim || 0, storm * 0.95);
+        for (const m of s.clouds) { const d = m.userData, k = smooth((e - 0.8) / 1.6); m.position.set(d.x * (1.6 - k * 0.6) + Math.sin(t * 0.7 + d.ph) * 0.4, d.y + (1 - k) * 2, d.z * (1.6 - k * 0.6)); m.material.opacity = 0.95 * k * fade(3); m.visible = k > 0.01; }
+        const raining = e > 2 && after < 3.2;
+        for (const m of s.rain) { const d = m.userData, y = ((d.y - e * d.sp) % 7 + 7) % 7; m.visible = raining; m.position.set(d.x - y * 0.4, y, d.z); }
+        for (const m of s.gusts) { const d = m.userData, q = ((e * d.sp + d.off) % 14) - 7; m.visible = e > 1.8 && after < 3; m.position.set(q, d.y + Math.sin(t * 6 + d.off) * 0.25, d.z); m.rotation.set(t * 7 + d.off, t * 5, 0); }
+        // gros éclair sur le roi, qui brûle jusqu'aux cendres
+        s.bigBolt.visible = after > 0 && after < 0.4 && Math.sin(after * 70) > -0.4;
+        if (after > 0 && !s.boom) { s.boom = true; this.sabreBurst(P, t, [0xcfe6ff, 0xffffff, 0x5a7aa8], 26, 1.8); this.shakeUntil = t + 0.9; this.shakeAmp = 0.28; }
+        const kb = smooth((after - 0.1) / 0.3) * (1 - smooth((after - 1.1) / 0.5));
+        this.sabreFlicker(s.kingFire, t, kb);
+        s.kingAsh.visible = after > 0.7; s.kingAsh.scale.setScalar(Math.max(0.01, smooth((after - 0.7) / 0.6)));
+        // petits éclairs sur chaque pièce adverse, qui part en cendres à son tour
+        for (const v of u.flameVictims) {
+          const a = after - v.at, root = v.character.parts.root;
+          v.bolt.visible = a > 0 && a < 0.25 && Math.sin(a * 80) > -0.3;
+          if (a > 0 && !v.hit) { v.hit = true; this.sabreBurst({ x: v.x, z: v.z }, t, [0xcfe6ff, 0xffffff], 8, 0.7); }
+          this.sabreFlicker(v.fire, t, smooth((a - 0.05) / 0.25) * (1 - smooth((a - 0.9) / 0.4)));
+          const k = smooth((a - 0.1) / 0.9);
+          if (a > 0) { root.scale.set(v.scale.x * (1 - k * 0.96), v.scale.y * Math.max(0.02, 1 - k), v.scale.z * (1 - k * 0.96)); v.character.holder.visible = a < 1; }
+          v.ash.visible = a > 0.6; v.ash.scale.setScalar(Math.max(0.01, smooth((a - 0.6) / 0.5)));
+        }
       } else if (style === 'harmattan') {
         s.skyMat.opacity = smooth((e - 0.2) / 1);
         const k = smooth((e - 0.5) / 2.2);

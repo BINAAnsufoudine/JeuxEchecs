@@ -330,8 +330,9 @@
         if (this.mateUltimate && THEME_MATE[root.themeOf(o.mateUltimate.piece)]) {
           const white = o.mateUltimate.piece === o.mateUltimate.piece.toUpperCase();
           const mateTheme = root.themeOf(o.mateUltimate.piece);
-          this.mateUltimate.themed = mateTheme === 'auras' ? AURA_MATE[o.mateUltimate.piece] : mateTheme === 'sabres' ? SABRE_MATE[o.mateUltimate.piece] : THEME_MATE[mateTheme][white ? 'w' : 'b'];
+          this.mateUltimate.themed = mateTheme === 'auras' ? AURA_MATE[o.mateUltimate.piece] : mateTheme === 'sabres' ? SABRE_MATE[o.mateUltimate.piece] : (KIT_PIECE_MATE[mateTheme] || {})[o.mateUltimate.piece] || THEME_MATE[mateTheme][white ? 'w' : 'b'];
           this.mateUltimate.duration = 4.8;
+          if (KIT_MATE_TIME[this.mateUltimate.themed]) [this.mateUltimate.hitAt, this.mateUltimate.duration] = KIT_MATE_TIME[this.mateUltimate.themed];
           if (mateTheme === 'sabres') [this.mateUltimate.hitAt, this.mateUltimate.duration] = SABRE_MATE_TIME[this.mateUltimate.themed];
         }
         if (this.mateUltimate) {

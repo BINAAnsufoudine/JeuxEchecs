@@ -222,7 +222,8 @@ Deux royaumes d'Afrique inventés. Blancs : Zalimba, le Soleil d'or (or, crème,
 | Dame | Reine Nalé, gélé et collier d'or | Reine Sika, foulard indigo | volée de lances dorées / lance d'ombre qui traverse |
 | Roi | Mansa Kélo, haute couronne perlée | Roi Obadé, couronne de bronze | rayon d'or / trois griffures de bronze |
 
-- **Mats** (`THEME_MATE`) : Blancs, *Chant des Ancêtres* : tambours, ancêtres dorés qui sortent de terre et emportent le roi vers le soleil couchant. Noirs, *Tempête d'Harmattan* : ciel jaune, tempête de sable, yeux de léopard, le roi disparaît dans le tourbillon.
+- **Mat de la dame** (`KIT_PIECE_MATE`), dans les deux camps : *l'Orage*. La reine danse, le ciel se couvre de nuages noirs, la pluie tombe dans un grand vent, un gros éclair frappe le roi adverse puis de petits éclairs frappent chacune des autres pièces de son camp : toutes partent en cendres (les tas de cendres restent jusqu'à la partie suivante).
+- **Autres mats** (`THEME_MATE`) : Blancs, *Chant des Ancêtres* : tambours, ancêtres dorés qui sortent de terre et emportent le roi vers le soleil couchant. Noirs, *Tempête d'Harmattan* : ciel jaune, tempête de sable, yeux de léopard, le roi disparaît dans le tourbillon.
 - **Code** : modèles dans `baobabs3d.js`, fiches d'attaque dans `KIT_ATTACKS` (`00-constantes.js`), moteur des fiches et mats dans `src/board3d/12d-kit-attaques.js`, décor dans `buildRoyalCourt` (`01-scene-terrain.js`).
 
 ## L'Âge des Géants
