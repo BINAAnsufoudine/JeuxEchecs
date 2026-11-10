@@ -224,7 +224,7 @@ Deux royaumes d'Afrique inventés. Blancs : Zalimba, le Soleil d'or (or, crème,
 
 - **Mat de la dame** (`KIT_PIECE_MATE`), dans les deux camps : *l'Orage*. La reine danse, le ciel se couvre de nuages noirs, la pluie tombe dans un grand vent, un gros éclair frappe le roi adverse puis de petits éclairs frappent chacune des autres pièces de son camp : toutes partent en cendres (les tas de cendres restent jusqu'à la partie suivante).
 - **Mat du cavalier** (`KIT_PIECE_MATE`), dans les deux camps : *la Meute*. Trois lions entrent par les bords du plateau, courent jusqu'au roi adverse avec le cavalier, rugissent, puis bondissent tous ensemble sur lui.
-- **Mat de la tour** (`KIT_PIECE_MATE`), dans les deux camps : *le Piétinement*. L'éléphant marche jusqu'au roi adverse, se cabre et l'écrase trois fois de ses pattes de devant ; le roi s'aplatit un peu plus à chaque coup.
+- **Mat de la tour** (`KIT_PIECE_MATE`), dans les deux camps : *le Piétinement*. L'éléphant marche jusqu'au roi adverse, se cabre et l'écrase trois fois de ses pattes de devant ; le roi s'aplatit un peu plus à chaque coup, puis s'enfonce dans le sol. L'éléphant retourne sur sa case et laisse un trou à la place du roi, jusqu'à la partie suivante.
 - **Autres mats** (`THEME_MATE`) : Blancs, *Chant des Ancêtres* : tambours, ancêtres dorés qui sortent de terre et emportent le roi vers le soleil couchant. Noirs, *Tempête d'Harmattan* : ciel jaune, tempête de sable, yeux de léopard, le roi disparaît dans le tourbillon.
 - **Code** : modèles dans `baobabs3d.js`, fiches d'attaque dans `KIT_ATTACKS` (`00-constantes.js`), moteur des fiches et mats dans `src/board3d/12d-kit-attaques.js`, décor dans `buildRoyalCourt` (`01-scene-terrain.js`).
 

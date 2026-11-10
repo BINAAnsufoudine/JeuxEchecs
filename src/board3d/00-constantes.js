@@ -143,9 +143,10 @@ const KIT_ATTACKS = {
 const KIT_STYLES = new Set(['ancetres', 'harmattan', 'orage', 'lions', 'pietine', 'meteores', 'couleelave']);
 // Empire des Baobabs : les reines ont leur propre mat, l'orage (danse, nuages noirs, pluie et vent, éclairs, cendres),
 // les cavaliers le leur, la meute (trois lions entrent sur le plateau et attaquent le roi avec le cavalier),
-// et les tours le leur : l'éléphant se cabre et piétine trois fois le roi de ses pattes de devant
+// et les tours le leur : l'éléphant se cabre, piétine trois fois le roi de ses pattes de devant, puis retourne
+// sur sa case en laissant un trou à la place du roi
 const KIT_PIECE_MATE = { baobabs: { Q: 'orage', q: 'orage', N: 'lions', n: 'lions', R: 'pietine', r: 'pietine' } };
-const KIT_MATE_TIME = { orage: [4.2, 8], lions: [3.4, 6], pietine: [3.6, 5.6] }; // [impact, durée]
+const KIT_MATE_TIME = { orage: [4.2, 8], lions: [3.4, 6], pietine: [3.6, 6.4] }; // [impact, durée]
 const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 

@@ -316,6 +316,12 @@
         s.crack = at(new T.Mesh(new T.CircleGeometry(0.6, 28), new T.MeshBasicMaterial({ color: 0x2a1a10, transparent: true, opacity: 0, depthWrite: false })), 0, 0.03, 0);
         s.crack.rotation.x = -Math.PI / 2;
         s.stomped = [];
+        // le trou laissé à la place du roi, jusqu'à la partie suivante
+        s.hole = new T.Group(); s.hole.position.set(P.x, 0, P.z); s.hole.visible = false; g.add(s.hole);
+        const pit = new T.Mesh(new T.CircleGeometry(0.42, 32), new T.MeshBasicMaterial({ color: 0x0b0704 })); pit.rotation.x = -Math.PI / 2; pit.position.y = 0.035; s.hole.add(pit);
+        const inner = new T.Mesh(new T.CircleGeometry(0.3, 28), new T.MeshBasicMaterial({ color: 0x000000 })); inner.rotation.x = -Math.PI / 2; inner.position.y = 0.037; s.hole.add(inner);
+        const rim = new T.Mesh(new T.TorusGeometry(0.44, 0.05, 6, 32), std(0x6b4423, { roughness: 1 })); rim.rotation.x = Math.PI / 2; rim.position.y = 0.04; s.hole.add(rim);
+        for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, r = 0.5 + (i % 3) * 0.07, rock = new T.Mesh(new T.DodecahedronGeometry(0.04 + (i % 3) * 0.02, 0), std(0x8a5a2c, { flatShading: true, roughness: 1 })); rock.position.set(Math.cos(a) * r, 0.04, Math.sin(a) * r); s.hole.add(rock); }
       } else if (style === 'harmattan') {
         // ciel jaune, tempête de sable, yeux de léopard dans la poussière
         u.camera.widePosition.set(Math.sin(yaw) * 14.5, 4.4, Math.cos(yaw) * 14.5); u.camera.wideTarget.set(0, 2.6, 0); // la caméra descend pour montrer le ciel
@@ -347,10 +353,14 @@
     // Les trois coups de pattes de l'éléphant : le dernier est l'impact du mat
     kitStompTimes(hit) { return [hit - 1.6, hit - 0.8, hit]; }
     kitStomp(u, c, t, e, smooth, hit, M) {
-      const P = u.target, F = u.fromPos, d = Math.hypot(P.x - F.x, P.z - F.z) || 1, k = smooth((e - 0.3) / 1.1) * Math.max(0, 1 - 0.62 / d), p = c.parts, base = u.actorBase;
+      const P = u.target, F = u.fromPos, d = Math.hypot(P.x - F.x, P.z - F.z) || 1, p = c.parts, base = u.actorBase;
+      // aller jusqu'au roi, puis retour à reculons sur sa case une fois le roi écrasé, et il se remet dans son sens
+      const back = smooth((e - hit - 0.5) / 1.3), k = smooth((e - 0.3) / 1.1) * Math.max(0, 1 - 0.62 / d) * (1 - back);
       c.holder.position.set(F.x + (P.x - F.x) * k, 0, F.z + (P.z - F.z) * k);
-      p.root.rotation.y = Math.atan2(P.x - F.x, P.z - F.z) - c.holder.rotation.y;
-      M.animate(p, t, e > 0.3 && e < 1.4 ? 'run' : 'idle', 1);
+      const face = Math.atan2(P.x - F.x, P.z - F.z) - c.holder.rotation.y, turn = smooth((e - hit - 1.9) / 0.5);
+      const delta = Math.atan2(Math.sin(base.rotation.y - face), Math.cos(base.rotation.y - face));
+      p.root.rotation.y = face + delta * turn;
+      M.animate(p, t, (e > 0.3 && e < 1.4) || (back > 0 && back < 1) ? 'run' : 'idle', 1);
       // il se cabre (montée lente) puis abat ses pattes de devant (chute rapide), trois fois
       let lift = 0;
       for (const st of this.kitStompTimes(hit)) { const q = (e - st + 0.65) / 0.65; if (q > 0 && q < 1) lift = q < 0.78 ? smooth(q / 0.78) : 1 - smooth((q - 0.78) / 0.22); }
@@ -454,6 +464,7 @@
           const q = e - st, r = s.rings[i]; r.visible = q > 0 && q < 0.7; r.scale.setScalar(1 + q * (5 + i * 3)); r.material.opacity = 0.75 * Math.max(0, 1 - q / 0.7);
         }
         s.crack.material.opacity = 0.25 * s.stomped.filter(Boolean).length; s.crack.scale.setScalar(0.7 + 0.25 * s.stomped.filter(Boolean).length);
+        s.hole.visible = after > 0.1; s.hole.scale.setScalar(Math.max(0.01, smooth((after - 0.1) / 0.35)));
       } else if (style === 'harmattan') {
         s.skyMat.opacity = smooth((e - 0.2) / 1);
         const k = smooth((e - 0.5) / 2.2);
