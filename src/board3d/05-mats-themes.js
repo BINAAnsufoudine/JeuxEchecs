@@ -163,6 +163,7 @@
         M.animate(c.parts, t, e < hit ? 'cast' : 'victory', e < hit ? clamp(e / 0.6) : 1);
         if (style === 'orage') this.kitDance(u, c, e, smooth);
         if (style === 'lions') { u.kitM = M; this.kitCharge(u, c, t, e, smooth, hit, M); }
+        if (style === 'pietine') this.kitStomp(u, c, t, e, smooth, hit, M);
         // une seule fois par image : l'effet est animé avec l'attaquant
         this.tickThemeMateFx(u, t, e, clamp, smooth, hit, after);
         return true;
@@ -170,7 +171,7 @@
       if (c === u.king) {
         c.anim = null; c.holder.position.set(P.x, 0, P.z);
         const root = c.parts.root;
-        if (e < hit) { M.animate(c.parts, t, 'panic', 1); return true; }
+        if (e < hit) { M.animate(c.parts, t, 'panic', 1); if (style === 'pietine') this.kitStompKing(u, c, e, hit); return true; }
         M.animate(c.parts, t, 'ko', 1);
         // le roi est emporté, englouti ou renversé selon l'attaque
         if (style === 'eagle') { root.position.y = Math.min(6, after * after * 2.5); c.holder.visible = after < 1.6; }
@@ -182,6 +183,7 @@
         else if (style === 'ancetres') { const L = u.kitMate.pull; if (L) c.holder.position.copy(L); c.holder.visible = after < 1.9; } // emporté vers le soleil couchant
         else if (style === 'meteores') { root.scale.y = u.kingBase.scale.y * Math.max(0.15, 1 - after * 4); }
         else if (style === 'couleelave') { root.position.y = -Math.min(0.7, after * 0.9); c.holder.visible = after < 0.9; } // englouti par la lave
+        else if (style === 'pietine') { this.kitStompKing(u, c, e, hit); } // écrasé sous les pattes de l'éléphant
         else if (style === 'orage') { const k = smooth((after - 0.15) / 1.1); root.scale.set(u.kingBase.scale.x * (1 - k * 0.96), u.kingBase.scale.y * Math.max(0.02, 1 - k), u.kingBase.scale.z * (1 - k * 0.96)); c.holder.visible = after < 1.25; } // foudroyé, réduit en cendres
         else if (style === 'harmattan') { root.position.y = Math.min(3, after * 1.8); root.rotation.y = after * 11; c.holder.visible = after < 0.9; } // happé par le tourbillon
         else if (style === 'cloudbreath') { root.position.y = Math.min(4, after * 2.6); root.rotation.y = after * 9; c.holder.visible = after < 1.6; } // soulevé par le vent
