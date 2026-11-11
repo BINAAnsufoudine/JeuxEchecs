@@ -5022,6 +5022,12 @@
   const SEASON_BONUS = 1.5;
   const seasonTheme = (d = new Date()) => NATURE_COLLECTION_ORDER[(d.getFullYear() * 12 + d.getMonth()) % NATURE_COLLECTION_ORDER.length];
   const seasonMonth = (d = new Date()) => d.toLocaleDateString(LOCALE, { month: 'long' });
+  // Thèmes à gagner : chacun se débloque quand le total de points (l'expérience gagnée en jouant, en résolvant des
+  // problèmes, en suivant des leçons…) atteint son seuil. Ninjas et Échecs en bois sont offerts dès le départ.
+  const THEME_UNLOCK_POINTS = { ninjas: 0, wood: 0, kingdom: 200, plants: 500, land: 900, birds: 1400, ocean: 2000, ancient: 2800, modern: 3700, auras: 4800, sabres: 6000, baobabs: 7400, dinos: 9000 };
+  const themeCost = (id) => THEME_UNLOCK_POINTS[id] || 0;
+  const themeUnlocked = (id, points = Number(walletState().xp) || 0) => points >= themeCost(id);
+  const themeLockText = (item, points = Number(walletState().xp) || 0) => L(`${item.icon} ${item.name} se débloque à ${themeCost(item.id).toLocaleString(LOCALE)} points (encore ${Math.max(0, themeCost(item.id) - points).toLocaleString(LOCALE)}).`, `${item.icon} ${item.name} unlocks at ${themeCost(item.id).toLocaleString(LOCALE)} points (${Math.max(0, themeCost(item.id) - points).toLocaleString(LOCALE)} to go).`);
   const BUILT_NATURE_COLLECTION_IDS = new Set(['plants', 'land', 'birds', 'ocean', 'ninjas', 'ancient', 'modern', 'auras', 'sabres', 'baobabs', 'dinos', 'kingdom', 'wood']);
   const AVAILABLE_NATURE_COLLECTIONS = NATURE_COLLECTIONS.filter((item) => BUILT_NATURE_COLLECTION_IDS.has(item.id));
   if (!store.get('natureNinjaDefaultMigrated', false)) {
@@ -5033,7 +5039,7 @@
   if (!AVAILABLE_NATURE_COLLECTIONS.some((item) => item.id === activeNatureCollection)) {
     activeNatureCollection = 'ninjas';
     store.set('natureCollection', activeNatureCollection);
-  }
+  } else if (!themeUnlocked(activeNatureCollection)) activeNatureCollection = 'ninjas'; // choix gardé : il revient si les points du compte arrivent ensuite
   const NATURE_TERRAIN_PATHS = {
     plants: ['grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest'],
     land: ['grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'mud', 'mud', 'mud'],
@@ -5129,9 +5135,9 @@
       const collection = NATURE_COLLECTIONS.find((item) => item.id === activeNatureCollection) || NATURE_COLLECTIONS[0];
       const stage = collection.items[afterGrade - 1];
       setTimeout(() => rewardPop(L(`Grade ${afterGrade}/10 ! ${stage.icon} ${stage.name} rejoint ta collection.`, `Rank ${afterGrade}/10! ${stage.icon} ${stage.name} joins your collection.`), true), 800);
-      const newCollection = AVAILABLE_NATURE_COLLECTIONS.find((item) => item.unlockGrade === afterGrade && item.id !== 'plants');
-      if (newCollection) setTimeout(() => rewardPop(L(`Nouvelle collection débloquée : ${newCollection.icon} ${newCollection.name} !`, `New collection unlocked: ${newCollection.icon} ${newCollection.name}!`), true), 1900);
     }
+    AVAILABLE_NATURE_COLLECTIONS.filter((item) => themeCost(item.id) > beforePoints && themeCost(item.id) <= w.xp)
+      .forEach((item, index) => setTimeout(() => rewardPop(L(`Nouveau thème gagné : ${item.icon} ${item.name} ! Choisis-le dans tes thèmes.`, `New theme earned: ${item.icon} ${item.name}! Pick it from your themes.`), true), 1900 + index * 400));
     renderHomeRewards();
   }
   // Quêtes du jour : trois missions tirées chaque jour, qui font passer par les différents modes
@@ -5307,7 +5313,7 @@
     $('home-rewards').setAttribute('aria-label', L(`Grade nature, ${balance.currency.name} et quêtes du jour`, `Nature rank, ${balance.currency.name}, and daily quests`));
     $('home-rewards').innerHTML = `<span class="lvl-badge">${gradeInfo.icon} ${grade}/10</span><span class="xp-bar" title="${L('Progression du grade', 'Rank progress')}"><i style="width:${gradePct}%"></i></span><span>${natureCurrencyAmount(balance.currency, balance.amount, true)}</span><span>🎯 ${done}/3</span>`;
     const activeCollection = NATURE_COLLECTIONS.find((item) => item.id === activeNatureCollection) || NATURE_COLLECTIONS[0];
-    if (grade < activeCollection.unlockGrade) activeNatureCollection = 'plants';
+    if (!themeUnlocked(activeCollection.id, w.xp)) activeNatureCollection = 'ninjas';
     const collection = NATURE_COLLECTIONS.find((item) => item.id === activeNatureCollection) || NATURE_COLLECTIONS[0];
     applyPieceTheme(collection);
     $('home-garden-grade').textContent = L(`Grade ${grade} sur 10 · ${gradeInfo.name}`, `Rank ${grade} of 10 · ${gradeInfo.name}`);
@@ -5352,9 +5358,9 @@
         + (collection.id === season.id ? `<strong>${L('Bonus actif ✓', 'Bonus on ✓')}</strong>` : `<button type="button" class="btn" data-nature-collection="${season.id}">${L('Jouer ce thème', 'Play this theme')}</button>`);
     }
     $('home-collection-tabs').innerHTML = AVAILABLE_NATURE_COLLECTIONS.map((item) => {
-      const available = grade >= item.unlockGrade, selected = collection.id === item.id;
+      const available = themeUnlocked(item.id, w.xp), selected = collection.id === item.id, cost = themeCost(item.id).toLocaleString(LOCALE);
       const themeImage = HOME_BACKGROUND_IMAGES[item.id] || `fond_ecran/mini/${item.id}.webp?v=4`;
-      return `<button type="button" class="home-collection-tab${selected ? ' selected' : ''}${available ? '' : ' locked'}" data-nature-collection="${item.id}" ${available ? '' : `aria-label="${escHtml(L(`${item.name}, se débloque au grade ${item.unlockGrade}`, `${item.name}, unlocks at rank ${item.unlockGrade}`))}"`} aria-pressed="${selected}" title="${escHtml(available ? item.name : L(`Débloqué au grade ${item.unlockGrade}`, `Unlocks at rank ${item.unlockGrade}`))}"${HOME_BACKGROUNDS.includes(item.id) ? ` style="background-image:url('${themeImage}')"` : ''}><span>${item.id === seasonTheme() ? '🏆 ' : ''}${item.icon} ${escHtml(item.name)}${available ? '' : ` · 🔒 ${item.unlockGrade}`}</span></button>`;
+      return `<button type="button" class="home-collection-tab${selected ? ' selected' : ''}${available ? '' : ' locked'}" data-nature-collection="${item.id}" ${available ? '' : `aria-label="${escHtml(L(`${item.name}, se débloque à ${cost} points`, `${item.name}, unlocks at ${cost} points`))}"`} aria-pressed="${selected}" title="${escHtml(available ? item.name : themeLockText(item, w.xp))}"${HOME_BACKGROUNDS.includes(item.id) ? ` style="background-image:url('${themeImage}')"` : ''}><span>${item.id === seasonTheme() ? '🏆 ' : ''}${item.icon} ${escHtml(item.name)}${available ? '' : ` · 🔒 ${cost} pts`}</span></button>`;
     }).join('');
     // carrousel : le thème choisi reste visible au centre
     const pickedTab = $('home-collection-tabs').querySelector('.selected');
@@ -5365,8 +5371,9 @@
     }).join('');
     const nextPlant = collection.items[grade];
     const nextCollection = AVAILABLE_NATURE_COLLECTIONS.find((item) => grade < item.unlockGrade);
+    const nextTheme = AVAILABLE_NATURE_COLLECTIONS.filter((item) => !themeUnlocked(item.id, w.xp)).sort((a, b) => themeCost(a.id) - themeCost(b.id))[0];
     $('home-garden-next').textContent = NATURE_PREVIEW_ALL_UNLOCKED
-      ? L('Tous les thèmes et toutes les étapes sont disponibles à l’exploration.', 'All themes and stages are available to explore.')
+      ? (nextTheme ? L(`Prochain thème à gagner : ${themeLockText(nextTheme, w.xp)}`, `Next theme to earn: ${themeLockText(nextTheme, w.xp)}`) : L('Tu as gagné tous les thèmes !', 'You have earned every theme!'))
       : nextPlant
       ? L(`Prochaine découverte au grade ${grade + 1} : ${nextPlant.icon} ${nextPlant.name}`, `Next discovery at rank ${grade + 1}: ${nextPlant.icon} ${nextPlant.name}`)
       : collection.id === 'ocean'
@@ -5489,8 +5496,8 @@
     const button = event.target.closest('[data-nature-collection]');
     if (!button) return;
     const selected = AVAILABLE_NATURE_COLLECTIONS.find((item) => item.id === button.dataset.natureCollection);
-    const grade = adventureGrade(levelOf(walletState().xp).level);
-    if (!selected || grade < selected.unlockGrade) return;
+    if (!selected) return;
+    if (!themeUnlocked(selected.id)) { toast(themeLockText(selected)); return; }
     activeNatureCollection = selected.id;
     store.set('natureCollection', selected.id);
     renderHomeRewards();
@@ -5509,6 +5516,7 @@
     if (!button) return;
     const selected = AVAILABLE_NATURE_COLLECTIONS.find((item) => item.id === button.dataset.worldCollection);
     if (!selected) return;
+    if (!themeUnlocked(selected.id)) { toast(themeLockText(selected)); return; }
     activeNatureCollection = selected.id;
     store.set('natureCollection', selected.id);
     renderHomeRewards();
