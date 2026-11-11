@@ -1,5 +1,6 @@
   /* ---------- Navigation ---------- */
   function show(id) {
+    if (!premiumScreenOk(id)) return; // version complète (sans effet tant que le paiement n'est pas branché)
     const stableScreen = id === 'puzzle' || id === 'theme' ? 'problems' : id;
     const desktopShell = window.matchMedia('(min-width: 1000px)').matches;
     const mobileShell = window.matchMedia('(max-width: 999px)').matches && id !== 'home';

@@ -45,6 +45,7 @@
 
   /* ---------- Partie ---------- */
   function startGame(conf, uciMoves = [], res = null, flip, terrainId, weatherId) {
+    if ((conf.mode === 'coach' && !premiumOk('coach')) || (conf.mode === 'ai' && conf.aiClock && !premiumOk('clock'))) return;
     if (document.body.classList.contains('admin-mode')) { toast(L('Le compte administrateur ne peut pas jouer.', 'The administrator account cannot play.')); show('admin'); return; }
     if (localClockTimer) clearInterval(localClockTimer);
     localClockTimer = null; localClockState = null;

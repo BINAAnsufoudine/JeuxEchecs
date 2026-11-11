@@ -167,6 +167,9 @@ window.Online = (function () {
     const rows = (s) => s.docs.map((d) => ({ id: d.id, ...d.data() }));
     return { users: rows(u), games: rows(g), tournaments: rows(t) };
   }
+  // Version complète : marque posée par l'administrateur (ou par le paiement), jamais par le joueur (règles Firestore)
+  const isPremium = () => !!(profile && (profile.premium === true || (Number(profile.premiumUntil) || 0) > Date.now()));
+  async function adminSetPremium(uid, on) { const f = await load(); await f.updateDoc(f.doc(f.db, 'users', uid), { premium: !!on }); }
   async function adminSetBanned(uid, banned) { const f = await load(); await f.updateDoc(f.doc(f.db, 'users', uid), { banned: !!banned }); }
   async function adminDeleteUser(uid) {
     const f = await load();
@@ -702,7 +705,7 @@ window.Online = (function () {
     get user() { return user; }, get profile() { return profile; },
     signUp, signIn, signOut, resetPassword, changePseudo, changePassword, setElo, setPhoto, getPhotos, publishSummary, getProfile, myTournaments,
     presence, listPlayers, setMuted, sendChat, myGames, deleteAccount,
-    isAdmin, isAdminEmail, sendVerification, refreshVerification, adminData, adminSetBanned, adminDeleteUser, adminDeleteTournament, markAdmin, loadAdminEmail, setAdminEmail, getAdminEmail,
+    isAdmin, isAdminEmail, sendVerification, refreshVerification, adminData, adminSetBanned, isPremium, adminSetPremium, adminDeleteUser, adminDeleteTournament, markAdmin, loadAdminEmail, setAdminEmail, getAdminEmail,
     submitDaily, dailyBoard, seasonBoard, saveOtb, myOtbs, sharedOtbs, watchOtb, deleteOtb, createClub, myClubs, joinClub, leaveClub, removeFromClub, deleteClub,
     saveProgress, loadProgress, watchProgress, setGrade, requestTakeback, answerTakeback, offerDraw, answerDraw, findPlayer, invite, watchInvites, answerInvite, watchGames, watchGame, playMove, endGame, heartbeat,
     createTournament, findTournament, joinTournament, leaveTournament, createTeam, addTeammate, startTournament, reportResult, watchTournaments, watchTournament, participants,

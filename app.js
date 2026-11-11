@@ -115,6 +115,7 @@
 
   /* ---------- Navigation ---------- */
   function show(id) {
+    if (!premiumScreenOk(id)) return; // version complète (sans effet tant que le paiement n'est pas branché)
     const stableScreen = id === 'puzzle' || id === 'theme' ? 'problems' : id;
     const desktopShell = window.matchMedia('(min-width: 1000px)').matches;
     const mobileShell = window.matchMedia('(max-width: 999px)').matches && id !== 'home';
@@ -404,6 +405,44 @@
     input.focus();
   }
 
+  /* ---------- Version complète (payante) ---------- */
+  // Gratuit : Échecs en bois et Antiquité, la partie contre l'ordinateur sans pendule, le jeu en ligne, le tutoriel.
+  // Version complète : les autres thèmes, les entraînements, les problèmes, les analyses, la partie coachée,
+  // la partie contre l'ordinateur avec pendule et les tournois.
+  // L'interrupteur reste à false tant que le paiement n'est pas branché : rien n'est bloqué pour les joueurs.
+  const PAYWALL_ON = false;
+  const PAYMENT_URL = ''; // page de paiement, une fois le mode d'encaissement choisi
+  const PAID_SCREENS = new Set(['problems', 'theme', 'program', 'champions', 'tournaments', 'otb']);
+  // Accès complet : marque « premium » posée sur le compte par l'administrateur ou par le paiement (jamais par le joueur)
+  const hasPremium = () => !PAYWALL_ON || !!(typeof ON !== 'undefined' && ON && ((ON.isAdmin && ON.isAdmin()) || (ON.isPremium && ON.isPremium())));
+  const PREMIUM_FEATURES = {
+    themes: L('Ce thème', 'This theme'), training: L('Les entraînements', 'Training'), problems: L('Les problèmes', 'Puzzles'),
+    analysis: L('L’analyse des parties', 'Game analysis'), clock: L('La partie contre l’ordinateur avec pendule', 'Clock games against the computer'),
+    coach: L('La partie coachée', 'Coached games'), tournaments: L('Les tournois', 'Tournaments'),
+  };
+  function openUpgrade(feature) {
+    const what = PREMIUM_FEATURES[feature] || L('Cette fonction', 'This feature');
+    const actions = PAYMENT_URL
+      ? [{ label: L('Passer à la version complète', 'Get the full version'), primary: true, onClick: () => { window.open(PAYMENT_URL, '_blank', 'noopener'); } }]
+      : [];
+    actions.push({ label: L('Plus tard', 'Later'), ghost: true });
+    modal({
+      title: L('Version complète', 'Full version'),
+      text: L(`${what} fait partie de la version complète, avec tous les thèmes, les entraînements, les problèmes, les analyses de parties, la partie coachée, la pendule contre l’ordinateur et les tournois. Gratuit pour tous : Échecs en bois, Antiquité, la partie contre l’ordinateur sans pendule et le jeu en ligne.${PAYMENT_URL ? '' : ' Le paiement arrive bientôt.'}`,
+        `${what} is part of the full version, with every theme, training, puzzles, game analysis, coached games, clock games against the computer and tournaments. Free for everyone: Wooden chess, Ancient warriors, games against the computer without a clock, and online play.${PAYMENT_URL ? '' : ' Payment is coming soon.'}`),
+      actions,
+    });
+  }
+  // À appeler avant d'ouvrir une fonction payante : true si on peut continuer, sinon l'écran de la version complète s'ouvre
+  function premiumOk(feature) {
+    if (hasPremium()) return true;
+    openUpgrade(feature);
+    return false;
+  }
+  function premiumScreenOk(id) {
+    if (!PAID_SCREENS.has(id)) return true;
+    return premiumOk(id === 'tournaments' || id === 'otb' ? 'tournaments' : id === 'problems' || id === 'theme' ? 'problems' : 'training');
+  }
   /* ---------- Sons (synthétisés) ---------- */
   let audio = null;
   function tone(freqs, dur = 0.09, type = 'triangle', gain = 0.18) {
@@ -714,6 +753,7 @@
 
   /* ---------- Partie ---------- */
   function startGame(conf, uciMoves = [], res = null, flip, terrainId, weatherId) {
+    if ((conf.mode === 'coach' && !premiumOk('coach')) || (conf.mode === 'ai' && conf.aiClock && !premiumOk('clock'))) return;
     if (document.body.classList.contains('admin-mode')) { toast(L('Le compte administrateur ne peut pas jouer.', 'The administrator account cannot play.')); show('admin'); return; }
     if (localClockTimer) clearInterval(localClockTimer);
     localClockTimer = null; localClockState = null;
@@ -5028,8 +5068,10 @@
   const THEME_UNLOCK_POINTS = { wood: 0, ancient: 0, kingdom: 200, plants: 500, land: 900, birds: 1400, ocean: 2000, modern: 2800, auras: 3700, sabres: 4800, baobabs: 6000, dinos: 7400, ninjas: 9000 };
   const FREE_THEME = 'wood';
   const themeCost = (id) => THEME_UNLOCK_POINTS[id] || 0;
-  const themeUnlocked = (id, points = Number(walletState().xp) || 0) => points >= themeCost(id);
-  const themeLockText = (item, points = Number(walletState().xp) || 0) => L(`${item.icon} ${item.name} se débloque à ${themeCost(item.id).toLocaleString(LOCALE)} points (encore ${Math.max(0, themeCost(item.id) - points).toLocaleString(LOCALE)}).`, `${item.icon} ${item.name} unlocks at ${themeCost(item.id).toLocaleString(LOCALE)} points (${Math.max(0, themeCost(item.id) - points).toLocaleString(LOCALE)} to go).`);
+  // un thème non offert demande aussi la version complète (sans effet tant que le paiement n'est pas branché)
+  const themePaid = (id) => themeCost(id) > 0 && !hasPremium();
+  const themeUnlocked = (id, points = Number(walletState().xp) || 0) => points >= themeCost(id) && !themePaid(id);
+  const themeLockText = (item, points = Number(walletState().xp) || 0) => themePaid(item.id) ? L(`${item.icon} ${item.name} fait partie de la version complète.`, `${item.icon} ${item.name} is part of the full version.`) : L(`${item.icon} ${item.name} se débloque à ${themeCost(item.id).toLocaleString(LOCALE)} points (encore ${Math.max(0, themeCost(item.id) - points).toLocaleString(LOCALE)}).`, `${item.icon} ${item.name} unlocks at ${themeCost(item.id).toLocaleString(LOCALE)} points (${Math.max(0, themeCost(item.id) - points).toLocaleString(LOCALE)} to go).`);
   const BUILT_NATURE_COLLECTION_IDS = new Set(['plants', 'land', 'birds', 'ocean', 'ninjas', 'ancient', 'modern', 'auras', 'sabres', 'baobabs', 'dinos', 'kingdom', 'wood']);
   const AVAILABLE_NATURE_COLLECTIONS = NATURE_COLLECTIONS.filter((item) => BUILT_NATURE_COLLECTION_IDS.has(item.id));
   if (!store.get('natureNinjaDefaultMigrated', false)) {
@@ -5362,7 +5404,7 @@
     $('home-collection-tabs').innerHTML = AVAILABLE_NATURE_COLLECTIONS.map((item) => {
       const available = themeUnlocked(item.id, w.xp), selected = collection.id === item.id, cost = themeCost(item.id).toLocaleString(LOCALE);
       const themeImage = HOME_BACKGROUND_IMAGES[item.id] || `fond_ecran/mini/${item.id}.webp?v=4`;
-      return `<button type="button" class="home-collection-tab${selected ? ' selected' : ''}${available ? '' : ' locked'}" data-nature-collection="${item.id}" ${available ? '' : `aria-label="${escHtml(L(`${item.name}, se débloque à ${cost} points`, `${item.name}, unlocks at ${cost} points`))}"`} aria-pressed="${selected}" title="${escHtml(available ? item.name : themeLockText(item, w.xp))}"${HOME_BACKGROUNDS.includes(item.id) ? ` style="background-image:url('${themeImage}')"` : ''}><span>${item.id === seasonTheme() ? '🏆 ' : ''}${item.icon} ${escHtml(item.name)}${available ? '' : ` · 🔒 ${cost} pts`}</span></button>`;
+      return `<button type="button" class="home-collection-tab${selected ? ' selected' : ''}${available ? '' : ' locked'}" data-nature-collection="${item.id}" ${available ? '' : `aria-label="${escHtml(L(`${item.name}, se débloque à ${cost} points`, `${item.name}, unlocks at ${cost} points`))}"`} aria-pressed="${selected}" title="${escHtml(available ? item.name : themeLockText(item, w.xp))}"${HOME_BACKGROUNDS.includes(item.id) ? ` style="background-image:url('${themeImage}')"` : ''}><span>${item.id === seasonTheme() ? '🏆 ' : ''}${item.icon} ${escHtml(item.name)}${available ? '' : themePaid(item.id) ? ` · 🔒 ★ ${L('version complète', 'full version')}` : ` · 🔒 ${cost} pts`}</span></button>`;
     }).join('');
     // carrousel : le thème choisi reste visible au centre
     const pickedTab = $('home-collection-tabs').querySelector('.selected');
@@ -5499,6 +5541,7 @@
     if (!button) return;
     const selected = AVAILABLE_NATURE_COLLECTIONS.find((item) => item.id === button.dataset.natureCollection);
     if (!selected) return;
+    if (themePaid(selected.id)) { openUpgrade('themes'); return; }
     if (!themeUnlocked(selected.id)) { toast(themeLockText(selected)); return; }
     activeNatureCollection = selected.id;
     store.set('natureCollection', selected.id);
@@ -6296,7 +6339,7 @@
     $('train-submenu').hidden = !open;
     $('btn-train-menu').setAttribute('aria-expanded', String(open));
   };
-  document.querySelectorAll('[data-train-section]').forEach((b) => { b.onclick = () => { returnTo = 'home'; renderTrain(b.dataset.trainSection); show('train'); }; });
+  document.querySelectorAll('[data-train-section]').forEach((b) => { b.onclick = () => { if (b.dataset.trainSection !== 'tutorial' && !premiumOk('training')) return; returnTo = 'home'; renderTrain(b.dataset.trainSection); show('train'); }; });
 
   /* ---------- Entraînements : mats, finales et ouvertures ----------
      Problèmes au niveau du joueur (Elo estimé, puis ajusté par ses résultats). Un problème raté revient trois
@@ -6554,7 +6597,7 @@
       const idle = (x) => Math.floor((now - (x.lastSeen || x.createdAt || now)) / DAYMS);
       const list = players.filter((x) => !q || String(x.pseudo || '').toLowerCase().includes(q)).sort(adminSort === 'idle' ? (a, b) => idle(b) - idle(a) : (a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
       html += `<div class="players-tools"><input id="admin-search" class="profile-name-input" type="search" placeholder="${L('Chercher un pseudo', 'Search a nickname')}" value="${escHtml(adminQuery)}"></div><div class="ed-seg" style="margin-top:8px">${[['recent', L('Vus récemment', 'Recently seen')], ['idle', L('Plus inactifs d’abord', 'Most inactive first')]].map(([k, lab]) => `<button type="button" data-admin-sort="${k}" class="${adminSort === k ? 'on' : ''}">${lab}</button>`).join('')}</div><p id="admin-msg" class="ed-error" role="status"></p>
-        <table class="tour-table admin-table"><tr><th>${L('Pseudo', 'Nickname')}</th><th>Elo</th><th>${L('Créé', 'Created')}</th><th>${L('Vu', 'Seen')}</th><th>${L('Inactif', 'Idle')}</th><th>${L('Parties', 'Games')}</th><th></th></tr>${list.map((x) => `<tr class="${x.banned ? 'banned' : ''}${idle(x) >= 365 ? ' inactive' : ''}"><td><a href="#" data-profile="${x.id}">${escHtml(x.pseudo || '?')}</a>${x.banned ? ` <small>(${L('suspendu', 'suspended')})</small>` : ''}</td><td>${x.elo || 600}</td><td>${x.createdAt ? new Date(x.createdAt).toLocaleDateString(LOCALE) : '–'}</td><td>${x.lastSeen ? new Date(x.lastSeen).toLocaleDateString(LOCALE) : '–'}</td><td class="${idle(x) >= 365 ? 'loss' : ''}">${idle(x)} ${L('j', 'd')}</td><td>${games.filter((g) => (g.players || []).includes(x.id)).length}</td><td class="admin-actions"><button class="mini" data-admin-ban="${x.id}">${x.banned ? L('Réactiver', 'Reinstate') : L('Suspendre', 'Suspend')}</button><button class="mini danger" data-admin-del="${x.id}">${L('Supprimer', 'Delete')}</button></td></tr>`).join('')}</table>`;
+        <table class="tour-table admin-table"><tr><th>${L('Pseudo', 'Nickname')}</th><th>Elo</th><th>${L('Créé', 'Created')}</th><th>${L('Vu', 'Seen')}</th><th>${L('Inactif', 'Idle')}</th><th>${L('Parties', 'Games')}</th><th></th></tr>${list.map((x) => `<tr class="${x.banned ? 'banned' : ''}${idle(x) >= 365 ? ' inactive' : ''}"><td><a href="#" data-profile="${x.id}">${escHtml(x.pseudo || '?')}</a>${x.banned ? ` <small>(${L('suspendu', 'suspended')})</small>` : ''}</td><td>${x.elo || 600}</td><td>${x.createdAt ? new Date(x.createdAt).toLocaleDateString(LOCALE) : '–'}</td><td>${x.lastSeen ? new Date(x.lastSeen).toLocaleDateString(LOCALE) : '–'}</td><td class="${idle(x) >= 365 ? 'loss' : ''}">${idle(x)} ${L('j', 'd')}</td><td>${games.filter((g) => (g.players || []).includes(x.id)).length}</td><td class="admin-actions"><button class="mini" data-admin-premium="${x.id}" title="${escHtml(L('Version complète', 'Full version'))}">${x.premium ? L('★ Complète', '★ Full') : L('☆ Gratuite', '☆ Free')}</button><button class="mini" data-admin-ban="${x.id}">${x.banned ? L('Réactiver', 'Reinstate') : L('Suspendre', 'Suspend')}</button><button class="mini danger" data-admin-del="${x.id}">${L('Supprimer', 'Delete')}</button></td></tr>`).join('')}</table>`;
     }
     if (adminSection === 'email') {
       html += `<p class="level-help">${L(`L’administration est liée à <b>${escHtml(ON.getAdminEmail())}</b>. Tu peux la transmettre à une autre adresse, par exemple si tu crées un compte spécial pour l’administration. Ce compte-ci redeviendra alors un compte de joueur normal.`, `Administration is linked to <b>${escHtml(ON.getAdminEmail())}</b>. You can hand it over to another address, for example if you create a dedicated administration account. This account will then become a normal player account again.`)}</p>
@@ -6588,6 +6631,11 @@
     if (b.dataset.admin === 'verify') { try { await ON.sendVerification(); msg(L('E-mail envoyé : clique sur le lien qu’il contient, puis sur « J’ai cliqué sur le lien ».', 'E-mail sent: click its link, then “I clicked the link”.'), true); } catch (err) { msg(ON.explain(err)); } return; }
     if (b.dataset.admin === 'checked') { try { const ok = await ON.refreshVerification(); if (ok) { renderAdmin(); } else msg(L('Adresse pas encore vérifiée.', 'Address not verified yet.')); } catch (err) { msg(ON.explain(err)); } return; }
     const find = (id) => adminCache.users.find((x) => x.id === id);
+    if (b.dataset.adminPremium) {
+      const x = find(b.dataset.adminPremium);
+      try { await ON.adminSetPremium(x.id, !x.premium); x.premium = !x.premium; renderAdmin(); toast(x.premium ? L(`${x.pseudo} a la version complète.`, `${x.pseudo} has the full version.`) : L(`${x.pseudo} repasse à la version gratuite.`, `${x.pseudo} is back on the free version.`)); } catch (err) { msg(ON.explain(err)); }
+      return;
+    }
     if (b.dataset.adminBan) {
       const x = find(b.dataset.adminBan);
       try { await ON.adminSetBanned(x.id, !x.banned); x.banned = !x.banned; renderAdmin(); } catch (err) { msg(ON.explain(err)); }
@@ -7510,6 +7558,7 @@
   }
   $('rp-analyse').onclick = () => {
     if (!replay || reviewing) return;
+    if (!premiumOk('analysis')) return;
     if (replay.review) { replay.showReview = !replay.showReview; render(); return; }
     if (!replay.moves.length) return toast(L('Aucun coup à analyser.', 'No move to analyse.'));
     const mine = replay, btn = $('rp-analyse');

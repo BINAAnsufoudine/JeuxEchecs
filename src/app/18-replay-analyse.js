@@ -190,6 +190,7 @@
   }
   $('rp-analyse').onclick = () => {
     if (!replay || reviewing) return;
+    if (!premiumOk('analysis')) return;
     if (replay.review) { replay.showReview = !replay.showReview; render(); return; }
     if (!replay.moves.length) return toast(L('Aucun coup à analyser.', 'No move to analyse.'));
     const mine = replay, btn = $('rp-analyse');
