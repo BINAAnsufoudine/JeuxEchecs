@@ -351,9 +351,9 @@
       const d = Math.hypot(P.x - F.x, P.z - F.z) || 1, stop = Math.max(0, 1 - 0.85 / d) * k + jump * 0.45 * (0.85 / d);
       // une fois le roi dévoré, le cavalier rentre sur sa case et se remet dans son sens
       const back = smooth((e - hit - 1.8) / 0.8), s2 = stop * (1 - back);
-      c.holder.position.set(F.x + (P.x - F.x) * s2, Math.sin(jump * Math.PI) * 0.55, F.z + (P.z - F.z) * s2);
+      c.holder.position.set(F.x + (P.x - F.x) * s2, 0, F.z + (P.z - F.z) * s2); // il reste au sol, comme la meute
       c.parts.root.rotation.y = back >= 1 ? u.actorBase.rotation.y : Math.atan2(P.x - F.x, P.z - F.z) + (back > 0 ? Math.PI : 0) - c.holder.rotation.y; // l'avant du modèle est son axe +z
-      M.animate(c.parts, t, (k < 1 && e > 0.6) || (back > 0 && back < 1) ? 'run' : jump > 0 && jump < 1 ? 'punch' : 'victory', 1);
+      M.animate(c.parts, t, (k < 1 && e > 0.6) || (back > 0 && back < 1) || (jump > 0 && jump < 1) ? 'run' : 'idle', 1); // ni bond ni cabrage
     }
     // Les trois coups de pattes de l'éléphant : le dernier est l'impact du mat
     kitStompTimes(hit) { return [hit - 1.6, hit - 0.8, hit]; }
@@ -467,7 +467,7 @@
           l.h.position.set(ex + (l.from.x - ex) * leave, 0, ez + (l.from.z - ez) * leave); // ils restent au sol : élan jusqu'au roi, sans saut
           l.h.rotation.y = leave > 0 ? Math.atan2(l.from.x - ex, l.from.z - ez) : Math.atan2(P.x - x, P.z - z);
           l.pos = l.h.position;
-          if (M) M.animate(l.parts, t, (k < 1 && go > 0) || leave > 0 ? 'run' : eat ? (Math.sin(t * 12 + l.delay * 9) > 0 ? 'punch' : 'idle') : after > -0.45 && after < 0.6 ? 'punch' : 'victory', 1);
+          if (M) M.animate(l.parts, t, (k < 1 && go > 0) || leave > 0 || (jump > 0 && jump < 1) ? 'run' : 'idle', 1); // à quatre pattes : ni bond ni cabrage
           if (eat && l.parts.head) l.parts.head.rotation.x = 0.35 + Math.sin(t * 14 + l.delay * 9) * 0.3; // têtes qui mordent
         }
         for (const m of s.dust) { const l = s.lions[m.userData.lion], q = (t * 1.6 + m.userData.off) % 1; m.visible = l.h.visible && after < -0.45 && !!l.pos; if (m.visible) { m.position.set(l.pos.x - Math.sin(l.h.rotation.y) * q * 0.9, 0.08 + q * 0.25, l.pos.z - Math.cos(l.h.rotation.y) * q * 0.9); m.scale.setScalar(0.6 + q * 1.6); m.material.opacity = 0.5 * (1 - q); } }
