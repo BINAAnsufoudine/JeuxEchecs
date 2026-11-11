@@ -7477,7 +7477,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
             bolt: bolt(x, z, 0.03, 7), fire: flames(x, z, 0.9), ash: pile(x, z, 0.9), x, z };
         });
       } else if (style === 'lions') {
-        // trois lions entrent par les bords du plateau, rugissent et bondissent sur le roi avec le cavalier
+        // trois lions entrent par les bords du plateau, rugissent et se jettent sur le roi (sans sauter) avec le cavalier
         u.camera.widePosition.set(Math.sin(yaw) * 14.5, 6.2, Math.cos(yaw) * 14.5); u.camera.wideTarget.set(P.x * 0.4, 0.6, P.z * 0.4);
         const from = Math.atan2(A.x - P.x, A.z - P.z);
         s.lions = [0, 1, 2].map((i) => {
@@ -7645,7 +7645,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
           const eat = after > 0.15 && after < 1.6, leave = smooth((after - 1.6) / 1.4);
           const ex = x + (P.x - x) * close, ez = z + (P.z - z) * close;
           l.h.visible = go > 0 && leave < 1;
-          l.h.position.set(ex + (l.from.x - ex) * leave, Math.sin(jump * Math.PI) * 0.55, ez + (l.from.z - ez) * leave);
+          l.h.position.set(ex + (l.from.x - ex) * leave, 0, ez + (l.from.z - ez) * leave); // ils restent au sol : élan jusqu'au roi, sans saut
           l.h.rotation.y = leave > 0 ? Math.atan2(l.from.x - ex, l.from.z - ez) : Math.atan2(P.x - x, P.z - z);
           l.pos = l.h.position;
           if (M) M.animate(l.parts, t, (k < 1 && go > 0) || leave > 0 ? 'run' : eat ? (Math.sin(t * 12 + l.delay * 9) > 0 ? 'punch' : 'idle') : after > -0.45 && after < 0.6 ? 'punch' : 'victory', 1);
