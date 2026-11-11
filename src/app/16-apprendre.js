@@ -435,5 +435,5 @@
     $('train-submenu').hidden = !open;
     $('btn-train-menu').setAttribute('aria-expanded', String(open));
   };
-  document.querySelectorAll('[data-train-section]').forEach((b) => { b.onclick = () => { if (b.dataset.trainSection !== 'tutorial' && !premiumOk('training')) return; returnTo = 'home'; renderTrain(b.dataset.trainSection); show('train'); }; });
+  document.querySelectorAll('[data-train-section]').forEach((b) => { b.onclick = () => { returnTo = 'home'; renderTrain(b.dataset.trainSection); show('train'); }; });
 
