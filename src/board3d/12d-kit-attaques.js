@@ -354,13 +354,16 @@
     kitStompTimes(hit) { return [hit - 1.6, hit - 0.8, hit]; }
     kitStomp(u, c, t, e, smooth, hit, M) {
       const P = u.target, F = u.fromPos, d = Math.hypot(P.x - F.x, P.z - F.z) || 1, p = c.parts, base = u.actorBase;
-      // aller jusqu'au roi, puis retour à reculons sur sa case une fois le roi écrasé, et il se remet dans son sens
-      const back = smooth((e - hit - 0.5) / 1.3), k = smooth((e - 0.3) / 1.1) * Math.max(0, 1 - 0.62 / d) * (1 - back);
+      // il grandit jusqu'à doubler de taille, marche (vite) jusqu'au roi, puis revient à reculons sur sa case une fois
+      // le roi écrasé, se remet dans son sens et reprend sa taille
+      const g = 1 + smooth(e / 0.6) - smooth((e - hit - 1.4) / 0.5);
+      p.root.scale.copy(base.scale).multiplyScalar(g);
+      const back = smooth((e - hit - 0.5) / 0.65), k = smooth((e - 0.3) / 0.55) * Math.max(0, 1 - 0.62 * g / d) * (1 - back);
       c.holder.position.set(F.x + (P.x - F.x) * k, 0, F.z + (P.z - F.z) * k);
-      const face = Math.atan2(P.x - F.x, P.z - F.z) - c.holder.rotation.y, turn = smooth((e - hit - 1.9) / 0.5);
+      const face = Math.atan2(P.x - F.x, P.z - F.z) - c.holder.rotation.y, turn = smooth((e - hit - 1.2) / 0.5);
       const delta = Math.atan2(Math.sin(base.rotation.y - face), Math.cos(base.rotation.y - face));
       p.root.rotation.y = face + delta * turn;
-      M.animate(p, t, (e > 0.3 && e < 1.4) || (back > 0 && back < 1) ? 'run' : 'idle', 1);
+      M.animate(p, t, (e > 0.3 && e < 0.85) || (back > 0 && back < 1) ? 'run' : 'idle', 1);
       // il se cabre (montée lente) puis abat ses pattes de devant (chute rapide), trois fois
       let lift = 0;
       for (const st of this.kitStompTimes(hit)) { const q = (e - st + 0.65) / 0.65; if (q > 0 && q < 1) lift = q < 0.78 ? smooth(q / 0.78) : 1 - smooth((q - 0.78) / 0.22); }
@@ -368,9 +371,9 @@
       // le corps relevé autour des pattes arrière, qui restent plantées au sol ; les deux pattes de devant se lèvent ensemble
       const a = lift * 0.75;
       p.root.rotation.order = 'YXZ';
-      p.root.rotation.x = base.rotation.x - a; p.root.position.y = base.position.y + Math.sin(a) * 0.2 * base.scale.z;
-      p.armL.rotation.x = p.armR.rotation.x = -lift * 1.3;
-      p.legL.rotation.x = p.legR.rotation.x = a;
+      p.root.rotation.x = base.rotation.x - a; p.root.position.y = base.position.y + Math.sin(a) * 0.2 * base.scale.z * g;
+      // les pattes ne sont figées que pendant qu'il se cabre : le reste du temps, elles suivent la marche
+      if (lift > 0) { p.armL.rotation.x = p.armR.rotation.x = -lift * 1.3; p.legL.rotation.x = p.legR.rotation.x = a; }
       p.trunkUp = lift > 0.05 ? -0.9 * lift : null;
     }
     // Le roi s'écrase un peu plus à chaque coup de pattes
