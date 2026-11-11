@@ -142,11 +142,12 @@ const KIT_ATTACKS = {
 };
 const KIT_STYLES = new Set(['ancetres', 'harmattan', 'orage', 'lions', 'pietine', 'meteores', 'couleelave']);
 // Empire des Baobabs : les reines ont leur propre mat, l'orage (danse, nuages noirs, pluie et vent, éclairs, cendres),
-// les cavaliers le leur, la meute (trois lions entrent sur le plateau et attaquent le roi avec le cavalier),
+// les cavaliers le leur, la meute (trois lions entrent sur le plateau, attaquent le roi avec le cavalier, le dévorent
+// et repartent en laissant une case rouge),
 // et les tours le leur : l'éléphant se cabre, piétine trois fois le roi de ses pattes de devant, puis retourne
 // sur sa case en laissant un trou à la place du roi
 const KIT_PIECE_MATE = { baobabs: { Q: 'orage', q: 'orage', N: 'lions', n: 'lions', R: 'pietine', r: 'pietine' } };
-const KIT_MATE_TIME = { orage: [4.2, 8], lions: [3.4, 6], pietine: [3.6, 5.8] }; // [impact, durée]
+const KIT_MATE_TIME = { orage: [4.2, 8], lions: [3.4, 6.8], pietine: [3.6, 5.8] }; // [impact, durée]
 const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
@@ -3056,6 +3057,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         else if (style === 'ancetres') { const L = u.kitMate.pull; if (L) c.holder.position.copy(L); c.holder.visible = after < 1.9; } // emporté vers le soleil couchant
         else if (style === 'meteores') { root.scale.y = u.kingBase.scale.y * Math.max(0.15, 1 - after * 4); }
         else if (style === 'couleelave') { root.position.y = -Math.min(0.7, after * 0.9); c.holder.visible = after < 0.9; } // englouti par la lave
+        else if (style === 'lions') { const k = smooth((after - 0.2) / 1.2); root.scale.copy(u.kingBase.scale).multiplyScalar(Math.max(0.02, 1 - k)); root.position.y = k > 0 && k < 1 ? Math.sin(t * 40) * 0.03 : 0; c.holder.visible = after < 1.4; } // dévoré par la meute
         else if (style === 'pietine') { this.kitStompKing(u, c, e, hit); c.parts.root.position.y = -smooth(after / 0.4) * 0.5; c.holder.visible = after < 0.45; } // écrasé, puis enfoncé dans le sol
         else if (style === 'orage') { const k = smooth((after - 0.15) / 1.1); root.scale.set(u.kingBase.scale.x * (1 - k * 0.96), u.kingBase.scale.y * Math.max(0.02, 1 - k), u.kingBase.scale.z * (1 - k * 0.96)); c.holder.visible = after < 1.25; } // foudroyé, réduit en cendres
         else if (style === 'harmattan') { root.position.y = Math.min(3, after * 1.8); root.rotation.y = after * 11; c.holder.visible = after < 0.9; } // happé par le tourbillon
@@ -7489,6 +7491,9 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         s.dust = [];
         const dust = this.sabreFire(0xd9b27a, 0.5), puff = new T.SphereGeometry(0.12, 8, 6);
         for (let i = 0; i < 36; i++) { const m = new T.Mesh(puff, dust); m.userData = { lion: i % 3, off: (i / 3 | 0) / 12 }; m.visible = false; g.add(m); s.dust.push(m); }
+        // la case rouge laissée là où le roi a été dévoré, jusqu'à la partie suivante
+        s.red = at(new T.Mesh(new T.PlaneGeometry(0.98, 0.98), new T.MeshBasicMaterial({ color: 0x9b1111, transparent: true, opacity: 0, depthWrite: false })), 0, 0.028, 0);
+        s.red.rotation.x = -Math.PI / 2;
       } else if (style === 'pietine') {
         // l'éléphant marche sur le roi, se cabre et le piétine trois fois de ses pattes de devant
         s.rings = [0, 1, 2].map(() => { const r = new T.Mesh(new T.RingGeometry(0.35, 0.5, 36), this.sabreFire(0xd9b27a, 0)); r.material.side = T.DoubleSide; r.rotation.x = -Math.PI / 2; r.position.set(P.x, 0.05, P.z); g.add(r); return r; });
@@ -7525,9 +7530,11 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
     kitCharge(u, c, t, e, smooth, hit, M) {
       const P = u.target, F = u.fromPos, k = smooth((e - 0.6) / (hit - 1.05)), jump = Math.max(0, Math.min(1, (e - hit + 0.45) / 0.6));
       const d = Math.hypot(P.x - F.x, P.z - F.z) || 1, stop = Math.max(0, 1 - 0.85 / d) * k + jump * 0.45 * (0.85 / d);
-      c.holder.position.set(F.x + (P.x - F.x) * stop, Math.sin(jump * Math.PI) * 0.55, F.z + (P.z - F.z) * stop);
-      c.parts.root.rotation.y = Math.atan2(P.x - F.x, P.z - F.z) - c.holder.rotation.y; // l'avant du modèle est son axe +z
-      M.animate(c.parts, t, k < 1 && e > 0.6 ? 'run' : jump > 0 && jump < 1 ? 'punch' : 'victory', 1);
+      // une fois le roi dévoré, le cavalier rentre sur sa case et se remet dans son sens
+      const back = smooth((e - hit - 1.8) / 0.8), s2 = stop * (1 - back);
+      c.holder.position.set(F.x + (P.x - F.x) * s2, Math.sin(jump * Math.PI) * 0.55, F.z + (P.z - F.z) * s2);
+      c.parts.root.rotation.y = back >= 1 ? u.actorBase.rotation.y : Math.atan2(P.x - F.x, P.z - F.z) + (back > 0 ? Math.PI : 0) - c.holder.rotation.y; // l'avant du modèle est son axe +z
+      M.animate(c.parts, t, (k < 1 && e > 0.6) || (back > 0 && back < 1) ? 'run' : jump > 0 && jump < 1 ? 'punch' : 'victory', 1);
     }
     // Les trois coups de pattes de l'éléphant : le dernier est l'impact du mat
     kitStompTimes(hit) { return [hit - 1.6, hit - 0.8, hit]; }
@@ -7634,16 +7641,22 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         for (const l of s.lions) {
           const go = e - 0.4 - l.delay, k = smooth(go / (hit - 0.85 - l.delay)), jump = clamp((after + 0.45) / 0.6);
           const x = l.from.x + (l.to.x - l.from.x) * k, z = l.from.z + (l.to.z - l.from.z) * k, close = jump * 0.45;
-          l.h.visible = go > 0;
-          l.h.position.set(x + (P.x - x) * close, Math.sin(jump * Math.PI) * 0.55, z + (P.z - z) * close);
-          l.h.rotation.y = Math.atan2(P.x - x, P.z - z);
+          // après le bond, ils dévorent le roi, puis repartent en courant vers le bord d'où ils sont venus
+          const eat = after > 0.15 && after < 1.6, leave = smooth((after - 1.6) / 1.4);
+          const ex = x + (P.x - x) * close, ez = z + (P.z - z) * close;
+          l.h.visible = go > 0 && leave < 1;
+          l.h.position.set(ex + (l.from.x - ex) * leave, Math.sin(jump * Math.PI) * 0.55, ez + (l.from.z - ez) * leave);
+          l.h.rotation.y = leave > 0 ? Math.atan2(l.from.x - ex, l.from.z - ez) : Math.atan2(P.x - x, P.z - z);
           l.pos = l.h.position;
-          if (M) M.animate(l.parts, t, k < 1 && go > 0 ? 'run' : after > -0.45 && after < 0.6 ? 'punch' : 'victory', 1);
+          if (M) M.animate(l.parts, t, (k < 1 && go > 0) || leave > 0 ? 'run' : eat ? (Math.sin(t * 12 + l.delay * 9) > 0 ? 'punch' : 'idle') : after > -0.45 && after < 0.6 ? 'punch' : 'victory', 1);
+          if (eat && l.parts.head) l.parts.head.rotation.x = 0.35 + Math.sin(t * 14 + l.delay * 9) * 0.3; // têtes qui mordent
         }
         for (const m of s.dust) { const l = s.lions[m.userData.lion], q = (t * 1.6 + m.userData.off) % 1; m.visible = l.h.visible && after < -0.45 && !!l.pos; if (m.visible) { m.position.set(l.pos.x - Math.sin(l.h.rotation.y) * q * 0.9, 0.08 + q * 0.25, l.pos.z - Math.cos(l.h.rotation.y) * q * 0.9); m.scale.setScalar(0.6 + q * 1.6); m.material.opacity = 0.5 * (1 - q); } }
         // rugissement de la meute juste avant de bondir, puis l'impact sur le roi
         for (const [i, r] of s.roars.entries()) { const q = e - (hit - 1.1) - i * 0.2; r.visible = q > 0 && q < 0.8; r.scale.setScalar(1 + q * 7); r.material.opacity = 0.8 * Math.max(0, 1 - q / 0.8); }
         if (after > 0 && !s.boom) { s.boom = true; this.sabreBurst(P, t, [0xffc247, 0xfff1a8, 0x7a3a1e], 24, 1.5); this.shakeUntil = t + 0.7; this.shakeAmp = 0.22; }
+        if (after > 0.6 && !s.bite) { s.bite = true; this.sabreBurst(P, t, [0xb3121b, 0x6e0a0a], 10, 0.6, 0.3); }
+        s.red.material.opacity = 0.85 * smooth((after - 0.3) / 1);
       } else if (style === 'pietine') {
         const steps = this.kitStompTimes(hit);
         for (const [i, st] of steps.entries()) {
