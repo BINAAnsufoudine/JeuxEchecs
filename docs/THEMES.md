@@ -1,7 +1,7 @@
 # Ata Wawé — fiches des thèmes
 
 Chaque collection débloquée dans l'accueil change les pièces 3D, leurs attaques et leurs mats.
-Les thèmes se gagnent avec les points (l'expérience du Parcours des mondes) : Ninjas et Échecs en bois sont offerts, puis Royaume des animaux 200, Plantes 500, Animaux terrestres 900, Oiseaux 1 400, Océan 2 000, Antiquité 2 800, Guerriers modernes 3 700, Gardiens Célestes 4 800, Âge des Sabres 6 000, Empire des Baobabs 7 400, Âge des Géants 9 000 (`THEME_UNLOCK_POINTS`, `src/app/14-recompenses.js`).
+Les thèmes se gagnent avec les points (l'expérience du Parcours des mondes) : Échecs en bois et Guerriers de l'Antiquité sont offerts, puis Royaume des animaux 200, Plantes 500, Animaux terrestres 900, Oiseaux 1 400, Océan 2 000, Guerriers modernes 2 800, Gardiens Célestes 3 700, Âge des Sabres 4 800, Empire des Baobabs 6 000, Âge des Géants 7 400, Ninjas 9 000 (`THEME_UNLOCK_POINTS`, `src/app/14-recompenses.js`).
 Le thème actif est `window.PieceTheme` (posé par `renderHomeRewards` dans `src/app`). Les règles communes à tous les thèmes :
 
 - **Déplacement** : chaque pièce marche, vole, nage ou roule jusqu'à sa case.

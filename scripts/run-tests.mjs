@@ -57,7 +57,7 @@ async function reloadTheme() {
   await page.goto(BASE + 'index.html', { timeout: 120000 });
   await page.evaluate(() => {
     localStorage.setItem('cavalier.natureCollection', JSON.stringify('sabres'));
-    localStorage.setItem('cavalier.wallet', JSON.stringify({ xp: 6000 })); // l'Âge des Sabres se gagne à 6 000 points
+    localStorage.setItem('cavalier.wallet', JSON.stringify({ xp: 6000 })); // l'Âge des Sabres se gagne à 4 800 points
     localStorage.setItem('cavalier.game', JSON.stringify({ cfg: { mode: 'local', playerColor: 'w', level: 1 }, moves: ['e2e4', 'e7e5'], result: null, flipped: false }));
     localStorage.setItem('cavalier.lastScreen', JSON.stringify('game'));
   });

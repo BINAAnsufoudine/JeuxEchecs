@@ -223,8 +223,10 @@
   const seasonTheme = (d = new Date()) => NATURE_COLLECTION_ORDER[(d.getFullYear() * 12 + d.getMonth()) % NATURE_COLLECTION_ORDER.length];
   const seasonMonth = (d = new Date()) => d.toLocaleDateString(LOCALE, { month: 'long' });
   // Thèmes à gagner : chacun se débloque quand le total de points (l'expérience gagnée en jouant, en résolvant des
-  // problèmes, en suivant des leçons…) atteint son seuil. Ninjas et Échecs en bois sont offerts dès le départ.
-  const THEME_UNLOCK_POINTS = { ninjas: 0, wood: 0, kingdom: 200, plants: 500, land: 900, birds: 1400, ocean: 2000, ancient: 2800, modern: 3700, auras: 4800, sabres: 6000, baobabs: 7400, dinos: 9000 };
+  // problèmes, en suivant des leçons…) atteint son seuil. Échecs en bois et Guerriers de l'Antiquité sont offerts dès le
+  // départ ; Échecs en bois est le thème de repli tant qu'un thème choisi n'est pas encore gagné.
+  const THEME_UNLOCK_POINTS = { wood: 0, ancient: 0, kingdom: 200, plants: 500, land: 900, birds: 1400, ocean: 2000, modern: 2800, auras: 3700, sabres: 4800, baobabs: 6000, dinos: 7400, ninjas: 9000 };
+  const FREE_THEME = 'wood';
   const themeCost = (id) => THEME_UNLOCK_POINTS[id] || 0;
   const themeUnlocked = (id, points = Number(walletState().xp) || 0) => points >= themeCost(id);
   const themeLockText = (item, points = Number(walletState().xp) || 0) => L(`${item.icon} ${item.name} se débloque à ${themeCost(item.id).toLocaleString(LOCALE)} points (encore ${Math.max(0, themeCost(item.id) - points).toLocaleString(LOCALE)}).`, `${item.icon} ${item.name} unlocks at ${themeCost(item.id).toLocaleString(LOCALE)} points (${Math.max(0, themeCost(item.id) - points).toLocaleString(LOCALE)} to go).`);
@@ -232,14 +234,14 @@
   const AVAILABLE_NATURE_COLLECTIONS = NATURE_COLLECTIONS.filter((item) => BUILT_NATURE_COLLECTION_IDS.has(item.id));
   if (!store.get('natureNinjaDefaultMigrated', false)) {
     const previousCollection = store.get('natureCollection', null);
-    if (!previousCollection || previousCollection === 'plants') store.set('natureCollection', 'ninjas');
+    if (!previousCollection || previousCollection === 'plants') store.set('natureCollection', FREE_THEME);
     store.set('natureNinjaDefaultMigrated', true);
   }
-  let activeNatureCollection = store.get('natureCollection', 'ninjas');
+  let activeNatureCollection = store.get('natureCollection', FREE_THEME);
   if (!AVAILABLE_NATURE_COLLECTIONS.some((item) => item.id === activeNatureCollection)) {
-    activeNatureCollection = 'ninjas';
+    activeNatureCollection = FREE_THEME;
     store.set('natureCollection', activeNatureCollection);
-  } else if (!themeUnlocked(activeNatureCollection)) activeNatureCollection = 'ninjas'; // choix gardé : il revient si les points du compte arrivent ensuite
+  } else if (!themeUnlocked(activeNatureCollection)) activeNatureCollection = FREE_THEME; // choix gardé : il revient si les points du compte arrivent ensuite
   const NATURE_TERRAIN_PATHS = {
     plants: ['grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest', 'forest'],
     land: ['grass', 'grass', 'grass', 'forest', 'forest', 'forest', 'forest', 'mud', 'mud', 'mud'],
@@ -513,7 +515,7 @@
     $('home-rewards').setAttribute('aria-label', L(`Grade nature, ${balance.currency.name} et quêtes du jour`, `Nature rank, ${balance.currency.name}, and daily quests`));
     $('home-rewards').innerHTML = `<span class="lvl-badge">${gradeInfo.icon} ${grade}/10</span><span class="xp-bar" title="${L('Progression du grade', 'Rank progress')}"><i style="width:${gradePct}%"></i></span><span>${natureCurrencyAmount(balance.currency, balance.amount, true)}</span><span>🎯 ${done}/3</span>`;
     const activeCollection = NATURE_COLLECTIONS.find((item) => item.id === activeNatureCollection) || NATURE_COLLECTIONS[0];
-    if (!themeUnlocked(activeCollection.id, w.xp)) activeNatureCollection = 'ninjas';
+    if (!themeUnlocked(activeCollection.id, w.xp)) activeNatureCollection = FREE_THEME;
     const collection = NATURE_COLLECTIONS.find((item) => item.id === activeNatureCollection) || NATURE_COLLECTIONS[0];
     applyPieceTheme(collection);
     $('home-garden-grade').textContent = L(`Grade ${grade} sur 10 · ${gradeInfo.name}`, `Rank ${grade} of 10 · ${gradeInfo.name}`);
