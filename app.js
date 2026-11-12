@@ -5909,7 +5909,9 @@
     startTrainer({ title: m.name, theme: 'mat', resume: `mate:${m.id}` }, steps, () => { lessonReward(`mate:${m.id}`); markTrain(`mate:${m.id}`); leavePuzzle(); });
   }
   function startEndgame(e) {
-    const steps = e.steps.map((st) => ({ text: st.text, fen: st.fen || e.fen, side: e.color, marks: st.marks, demoMoves: st.demo, demoDoneText: st.done }));
+    // une étape avec « line » est un exercice : l'élève joue le coup (alts : autres bonnes réponses)
+    const steps = e.steps.map((st) => ({ text: st.text, fen: st.fen || e.fen, side: e.color, marks: st.marks, demoMoves: st.demo, demoDoneText: st.done,
+      line: st.line, alts: st.alts, hintText: st.hint, why: st.why, theme: st.line ? 'finale' : undefined }));
     steps.push({ text: e.goal === 'draw'
       ? L(`À toi : tu joues les ${sideName(e.color)} contre l'ordinateur au plus haut niveau. Obtiens la nulle. Appuie sur « Terminer » pour commencer.`, `Your turn: you play ${sideName(e.color)} against the computer at its highest level. Get the draw. Press "Finish" to start.`)
       : L(`À toi : tu joues les ${sideName(e.color)} contre l'ordinateur au plus haut niveau. Donne le mat. Appuie sur « Terminer » pour commencer.`, `Your turn: you play ${sideName(e.color)} against the computer at its highest level. Deliver mate. Press "Finish" to start.`), fen: e.fen });
