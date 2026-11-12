@@ -234,6 +234,8 @@
   test('3D baobabs : mat du cavalier noir (la meute de lions)', () => mate('baobabs', false, 'n'));
   test('3D baobabs : mat de la tour blanche (l’éléphant piétine le roi)', () => mate('baobabs', true, 'R'));
   test('3D baobabs : mat de la tour noire (l’éléphant piétine le roi)', () => mate('baobabs', false, 'r'));
+  test('3D baobabs : mat du pion blanc (lutte et coup de lance)', () => mate('baobabs', true, 'P'));
+  test('3D baobabs : mat du pion noir (lutte et coup de lance)', () => mate('baobabs', false, 'p'));
   test('3D baobabs : l’orage de la reine réduit le camp adverse en cendres, qui revient à la partie suivante', () => stormMate());
   b.setTerrain('volcano');
   for (const pc of 'KQRBNPkqrbnp') test(`3D dinos : prise par la pièce ${pc}`, () => kitCapture('dinos', pc));

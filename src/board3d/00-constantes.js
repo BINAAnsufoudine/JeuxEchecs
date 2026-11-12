@@ -63,7 +63,7 @@
     constellation: [0x9fe3ff, 0x16306e], nova: [0xff3d3d, 0x1a0712],
     temple: [0xffffff, 0x16306e], nilocomet: [0x4cc3ff, 0x16306e], dawncross: [0xffd27a, 0x5a4210], fortress: [0x7fd8ff, 0x343a4e], cloudbreath: [0xdff4ff, 0x4a6a9e],
     shadeswarm: [0xc04bff, 0x1a0a2e], bounty: [0xff3d6e, 0x2d2219], lasernet: [0x9ef7ff, 0x2a1636], eruption: [0xff7a1a, 0x2b2326], crystalcomet: [0xc04bff, 0x14101f],
-    ancetres: [0xffc247, 0x5a2e14], harmattan: [0xd9b25a, 0x3a2414], orage: [0xcfe6ff, 0x1c1a1e], lions: [0xffc247, 0x5a2e14], pietine: [0xd9b27a, 0x3a2414], meteores: [0xff8a2a, 0x2a1a14], couleelave: [0xff5a1a, 0x1a0e0a],
+    ancetres: [0xffc247, 0x5a2e14], harmattan: [0xd9b25a, 0x3a2414], orage: [0xcfe6ff, 0x1c1a1e], lions: [0xffc247, 0x5a2e14], pietine: [0xd9b27a, 0x3a2414], lance: [0xffc247, 0x6e0a0a], meteores: [0xff8a2a, 0x2a1a14], couleelave: [0xff5a1a, 0x1a0e0a],
     sakura: [0xf9d2dc, 0x4a3324], lunepourpre: [0xff3b3b, 0x050305], dragonw: [0xffe066, 0x3a2410], tigreb: [0xb45cff, 0x120618],
     fracasw: [0xff8a26, 0x1a100a], fracasb: [0xb45cff, 0x120a1c], arcw: [0xffd27a, 0x3a2410], arcb: [0xc98cff, 0x1a0a2e],
     ridew: [0xff8a26, 0x3a2410], rideb: [0xb45cff, 0x1a0a2e], lamew: [0xff8a26, 0x3a2410], lameb: [0xb45cff, 0x1a0a2e],
@@ -140,14 +140,14 @@ const KIT_ATTACKS = {
     P: { gap: 0.6, leap: 0.55, wind: 0.32, end: 'bounce', recover: 0.7 }, p: { gap: 0.6, leap: 0.55, wind: 0.32, end: 'bounce', recover: 0.7 },
   },
 };
-const KIT_STYLES = new Set(['ancetres', 'harmattan', 'orage', 'lions', 'pietine', 'meteores', 'couleelave']);
+const KIT_STYLES = new Set(['ancetres', 'harmattan', 'orage', 'lions', 'pietine', 'lance', 'meteores', 'couleelave']);
 // Empire des Baobabs : les reines ont leur propre mat, l'orage (danse, nuages noirs, pluie et vent, éclairs, cendres),
 // les cavaliers le leur, la meute (trois lions entrent sur le plateau, attaquent le roi avec le cavalier, le dévorent
 // et repartent en laissant une case rouge),
 // et les tours le leur : l'éléphant se cabre, piétine trois fois le roi de ses pattes de devant, puis retourne
-// sur sa case en laissant un trou à la place du roi
-const KIT_PIECE_MATE = { baobabs: { Q: 'orage', q: 'orage', N: 'lions', n: 'lions', R: 'pietine', r: 'pietine' } };
-const KIT_MATE_TIME = { orage: [4.2, 8], lions: [3.4, 6.8], pietine: [3.6, 5.8] }; // [impact, durée]
+// sur sa case en laissant un trou à la place du roi ; les pions : courte lutte, puis la lance transperce le roi
+const KIT_PIECE_MATE = { baobabs: { Q: 'orage', q: 'orage', N: 'lions', n: 'lions', R: 'pietine', r: 'pietine', P: 'lance', p: 'lance' } };
+const KIT_MATE_TIME = { orage: [4.2, 8], lions: [3.4, 6.8], pietine: [3.6, 5.8], lance: [3.1, 5.6] }; // [impact, durée]
 const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 

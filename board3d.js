@@ -63,7 +63,7 @@
     constellation: [0x9fe3ff, 0x16306e], nova: [0xff3d3d, 0x1a0712],
     temple: [0xffffff, 0x16306e], nilocomet: [0x4cc3ff, 0x16306e], dawncross: [0xffd27a, 0x5a4210], fortress: [0x7fd8ff, 0x343a4e], cloudbreath: [0xdff4ff, 0x4a6a9e],
     shadeswarm: [0xc04bff, 0x1a0a2e], bounty: [0xff3d6e, 0x2d2219], lasernet: [0x9ef7ff, 0x2a1636], eruption: [0xff7a1a, 0x2b2326], crystalcomet: [0xc04bff, 0x14101f],
-    ancetres: [0xffc247, 0x5a2e14], harmattan: [0xd9b25a, 0x3a2414], orage: [0xcfe6ff, 0x1c1a1e], lions: [0xffc247, 0x5a2e14], pietine: [0xd9b27a, 0x3a2414], meteores: [0xff8a2a, 0x2a1a14], couleelave: [0xff5a1a, 0x1a0e0a],
+    ancetres: [0xffc247, 0x5a2e14], harmattan: [0xd9b25a, 0x3a2414], orage: [0xcfe6ff, 0x1c1a1e], lions: [0xffc247, 0x5a2e14], pietine: [0xd9b27a, 0x3a2414], lance: [0xffc247, 0x6e0a0a], meteores: [0xff8a2a, 0x2a1a14], couleelave: [0xff5a1a, 0x1a0e0a],
     sakura: [0xf9d2dc, 0x4a3324], lunepourpre: [0xff3b3b, 0x050305], dragonw: [0xffe066, 0x3a2410], tigreb: [0xb45cff, 0x120618],
     fracasw: [0xff8a26, 0x1a100a], fracasb: [0xb45cff, 0x120a1c], arcw: [0xffd27a, 0x3a2410], arcb: [0xc98cff, 0x1a0a2e],
     ridew: [0xff8a26, 0x3a2410], rideb: [0xb45cff, 0x1a0a2e], lamew: [0xff8a26, 0x3a2410], lameb: [0xb45cff, 0x1a0a2e],
@@ -140,14 +140,14 @@ const KIT_ATTACKS = {
     P: { gap: 0.6, leap: 0.55, wind: 0.32, end: 'bounce', recover: 0.7 }, p: { gap: 0.6, leap: 0.55, wind: 0.32, end: 'bounce', recover: 0.7 },
   },
 };
-const KIT_STYLES = new Set(['ancetres', 'harmattan', 'orage', 'lions', 'pietine', 'meteores', 'couleelave']);
+const KIT_STYLES = new Set(['ancetres', 'harmattan', 'orage', 'lions', 'pietine', 'lance', 'meteores', 'couleelave']);
 // Empire des Baobabs : les reines ont leur propre mat, l'orage (danse, nuages noirs, pluie et vent, éclairs, cendres),
 // les cavaliers le leur, la meute (trois lions entrent sur le plateau, attaquent le roi avec le cavalier, le dévorent
 // et repartent en laissant une case rouge),
 // et les tours le leur : l'éléphant se cabre, piétine trois fois le roi de ses pattes de devant, puis retourne
-// sur sa case en laissant un trou à la place du roi
-const KIT_PIECE_MATE = { baobabs: { Q: 'orage', q: 'orage', N: 'lions', n: 'lions', R: 'pietine', r: 'pietine' } };
-const KIT_MATE_TIME = { orage: [4.2, 8], lions: [3.4, 6.8], pietine: [3.6, 5.8] }; // [impact, durée]
+// sur sa case en laissant un trou à la place du roi ; les pions : courte lutte, puis la lance transperce le roi
+const KIT_PIECE_MATE = { baobabs: { Q: 'orage', q: 'orage', N: 'lions', n: 'lions', R: 'pietine', r: 'pietine', P: 'lance', p: 'lance' } };
+const KIT_MATE_TIME = { orage: [4.2, 8], lions: [3.4, 6.8], pietine: [3.6, 5.8], lance: [3.1, 5.6] }; // [impact, durée]
 const AURA_CRATER_PLIES = 6; // Saga des Auras : durée d'un cratère, en demi-coups
 const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
 
@@ -3038,6 +3038,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         if (style === 'orage') this.kitDance(u, c, e, smooth);
         if (style === 'lions') { u.kitM = M; this.kitCharge(u, c, t, e, smooth, hit, M); }
         if (style === 'pietine') this.kitStomp(u, c, t, e, smooth, hit, M);
+        if (style === 'lance') this.kitLance(u, c, t, e, smooth, hit, M);
         // une seule fois par image : l'effet est animé avec l'attaquant
         this.tickThemeMateFx(u, t, e, clamp, smooth, hit, after);
         return true;
@@ -3045,7 +3046,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       if (c === u.king) {
         c.anim = null; c.holder.position.set(P.x, 0, P.z);
         const root = c.parts.root;
-        if (e < hit) { M.animate(c.parts, t, 'panic', 1); if (style === 'pietine') this.kitStompKing(u, c, e, hit); return true; }
+        if (e < hit) { M.animate(c.parts, t, style === 'lance' && e > 1 ? (Math.sin(t * 16 + 1.6) > 0 ? 'punch' : 'idle') : 'panic', 1); if (style === 'pietine') this.kitStompKing(u, c, e, hit); return true; } // le roi rend les coups pendant la lutte
         M.animate(c.parts, t, 'ko', 1);
         // le roi est emporté, englouti ou renversé selon l'attaque
         if (style === 'eagle') { root.position.y = Math.min(6, after * after * 2.5); c.holder.visible = after < 1.6; }
@@ -3058,6 +3059,7 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         else if (style === 'meteores') { root.scale.y = u.kingBase.scale.y * Math.max(0.15, 1 - after * 4); }
         else if (style === 'couleelave') { root.position.y = -Math.min(0.7, after * 0.9); c.holder.visible = after < 0.9; } // englouti par la lave
         else if (style === 'lions') { root.rotation.z = Math.PI / 2 * smooth(after / 0.4); root.position.y = 0.05; const k = smooth((after - 0.9) / 0.5); root.scale.copy(u.kingBase.scale).multiplyScalar(Math.max(0.02, 1 - k)); c.holder.visible = after < 1.4; } // renversé, puis dévoré par la meute
+        else if (style === 'lance') { root.position.y = Math.min(0.12, after * 0.6) * (1 - smooth((after - 0.5) / 0.3)); root.rotation.z = Math.PI / 2 * smooth((after - 0.55) / 0.35); } // transpercé, il se soulève puis tombe
         else if (style === 'pietine') { this.kitStompKing(u, c, e, hit); c.parts.root.position.y = -smooth(after / 0.4) * 0.5; c.holder.visible = after < 0.45; } // écrasé, puis enfoncé dans le sol
         else if (style === 'orage') { const k = smooth((after - 0.15) / 1.1); root.scale.set(u.kingBase.scale.x * (1 - k * 0.96), u.kingBase.scale.y * Math.max(0.02, 1 - k), u.kingBase.scale.z * (1 - k * 0.96)); c.holder.visible = after < 1.25; } // foudroyé, réduit en cendres
         else if (style === 'harmattan') { root.position.y = Math.min(3, after * 1.8); root.rotation.y = after * 11; c.holder.visible = after < 0.9; } // happé par le tourbillon
@@ -7494,6 +7496,13 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         // la case rouge laissée là où le roi a été dévoré, jusqu'à la partie suivante
         s.red = at(new T.Mesh(new T.PlaneGeometry(0.98, 0.98), new T.MeshBasicMaterial({ color: 0x9b1111, transparent: true, opacity: 0, depthWrite: false })), 0, 0.028, 0);
         s.red.rotation.x = -Math.PI / 2;
+      } else if (style === 'lance') {
+        // le guerrier court au roi, courte lutte (coups échangés, étincelles), recul, puis la lance transperce le roi
+        s.sparked = [];
+        s.spear = new T.Group(); s.spear.visible = false; g.add(s.spear);
+        const shaft = new T.Mesh(new T.CylinderGeometry(0.024, 0.024, 1.5, 8), std(0x6b4423, { roughness: 0.9 })); shaft.rotation.x = Math.PI / 2; s.spear.add(shaft);
+        const tip = new T.Mesh(new T.ConeGeometry(0.06, 0.22, 8), std(0xd9d9d9, { metalness: 0.8, roughness: 0.3 })); tip.rotation.x = Math.PI / 2; tip.position.z = 0.86; s.spear.add(tip);
+        s.spear.position.set(P.x + s.dir.x * 0.15, 0.55, P.z + s.dir.z * 0.15); s.spear.rotation.y = Math.atan2(s.dir.x, s.dir.z);
       } else if (style === 'pietine') {
         // l'éléphant marche sur le roi, se cabre et le piétine trois fois de ses pattes de devant
         s.rings = [0, 1, 2].map(() => { const r = new T.Mesh(new T.RingGeometry(0.35, 0.5, 36), this.sabreFire(0xd9b27a, 0)); r.material.side = T.DoubleSide; r.rotation.x = -Math.PI / 2; r.position.set(P.x, 0.05, P.z); g.add(r); return r; });
@@ -7535,6 +7544,17 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
       c.holder.position.set(F.x + (P.x - F.x) * s2, 0, F.z + (P.z - F.z) * s2); // il reste au sol, comme la meute
       c.parts.root.rotation.y = back >= 1 ? u.actorBase.rotation.y : Math.atan2(P.x - F.x, P.z - F.z) + (back > 0 ? Math.PI : 0) - c.holder.rotation.y; // l'avant du modèle est son axe +z
       M.animate(c.parts, t, (k < 1 && e > 0.6) || (back > 0 && back < 1) || (jump > 0 && jump < 1) ? 'run' : 'idle', 1); // ni bond ni cabrage
+    }
+    // Le guerrier : course jusqu'au roi, lutte au corps à corps, petit recul, coup de lance, puis retour sur sa case
+    kitLance(u, c, t, e, smooth, hit, M) {
+      const P = u.target, F = u.fromPos, p = c.parts, base = u.actorBase, d = Math.hypot(P.x - F.x, P.z - F.z) || 1, near = Math.max(0, 1 - 0.62 / d);
+      const fight = e > 1 && e < hit - 0.5, recoil = smooth((e - hit + 0.5) / 0.25) - smooth((e - hit + 0.2) / 0.2), home = smooth((e - hit - 1) / 0.8);
+      const f = (smooth((e - 0.3) / 0.7) * near + (fight ? Math.sin(e * 25) * 0.05 / d : 0) - recoil * 0.25 / d + smooth((e - hit + 0.2) / 0.2) * 0.12 / d * (1 - home)) * (1 - home);
+      c.holder.position.set(F.x + (P.x - F.x) * f, 0, F.z + (P.z - F.z) * f);
+      const face = Math.atan2(P.x - F.x, P.z - F.z) - c.holder.rotation.y, turn = smooth((e - hit - 1.8) / 0.4);
+      p.root.rotation.y = face + Math.atan2(Math.sin(base.rotation.y - face), Math.cos(base.rotation.y - face)) * turn;
+      const state = (e > 0.3 && e < 1) || (home > 0 && home < 1) ? 'run' : fight ? (Math.sin(t * 16) > 0 ? 'punch' : 'idle') : e > hit - 0.2 && e < hit + 0.5 ? 'punch' : 'idle';
+      M.animate(p, t, state, 1);
     }
     // Les trois coups de pattes de l'éléphant : le dernier est l'impact du mat
     kitStompTimes(hit) { return [hit - 1.6, hit - 0.8, hit]; }
@@ -7657,6 +7677,12 @@ const BURN_TIME = 1.8; // durée de la combustion jusqu'aux cendres
         if (after > 0 && !s.boom) { s.boom = true; this.sabreBurst(P, t, [0xffc247, 0xfff1a8, 0x7a3a1e], 24, 1.5); this.shakeUntil = t + 0.7; this.shakeAmp = 0.22; }
         if (after > 0.6 && !s.bite) { s.bite = true; this.sabreBurst(P, t, [0xb3121b, 0x6e0a0a], 10, 0.6, 0.3); }
         s.red.material.opacity = 0.85 * smooth((after - 0.3) / 1);
+      } else if (style === 'lance') {
+        // étincelles des coups échangés pendant la lutte
+        const mid = { x: P.x - s.dir.x * 0.32, z: P.z - s.dir.z * 0.32 };
+        for (const [i, at2] of [1.25, 1.55, 1.85, 2.15, 2.45].entries()) if (e >= at2 && !s.sparked[i]) { s.sparked[i] = true; this.sabreBurst(mid, t, [0xfff1a8, 0xffc247], 6, 0.35, 0.6); }
+        if (after > 0 && !s.boom) { s.boom = true; this.sabreBurst(P, t, [0xffc247, 0xb3121b, 0xfff1a8], 18, 1.1, 0.6); this.shakeUntil = t + 0.5; this.shakeAmp = 0.18; }
+        s.spear.visible = after > 0 && after < 0.6;
       } else if (style === 'pietine') {
         const steps = this.kitStompTimes(hit);
         for (const [i, st] of steps.entries()) {

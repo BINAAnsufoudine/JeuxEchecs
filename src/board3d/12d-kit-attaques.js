@@ -313,6 +313,13 @@
         // la case rouge laissée là où le roi a été dévoré, jusqu'à la partie suivante
         s.red = at(new T.Mesh(new T.PlaneGeometry(0.98, 0.98), new T.MeshBasicMaterial({ color: 0x9b1111, transparent: true, opacity: 0, depthWrite: false })), 0, 0.028, 0);
         s.red.rotation.x = -Math.PI / 2;
+      } else if (style === 'lance') {
+        // le guerrier court au roi, courte lutte (coups échangés, étincelles), recul, puis la lance transperce le roi
+        s.sparked = [];
+        s.spear = new T.Group(); s.spear.visible = false; g.add(s.spear);
+        const shaft = new T.Mesh(new T.CylinderGeometry(0.024, 0.024, 1.5, 8), std(0x6b4423, { roughness: 0.9 })); shaft.rotation.x = Math.PI / 2; s.spear.add(shaft);
+        const tip = new T.Mesh(new T.ConeGeometry(0.06, 0.22, 8), std(0xd9d9d9, { metalness: 0.8, roughness: 0.3 })); tip.rotation.x = Math.PI / 2; tip.position.z = 0.86; s.spear.add(tip);
+        s.spear.position.set(P.x + s.dir.x * 0.15, 0.55, P.z + s.dir.z * 0.15); s.spear.rotation.y = Math.atan2(s.dir.x, s.dir.z);
       } else if (style === 'pietine') {
         // l'éléphant marche sur le roi, se cabre et le piétine trois fois de ses pattes de devant
         s.rings = [0, 1, 2].map(() => { const r = new T.Mesh(new T.RingGeometry(0.35, 0.5, 36), this.sabreFire(0xd9b27a, 0)); r.material.side = T.DoubleSide; r.rotation.x = -Math.PI / 2; r.position.set(P.x, 0.05, P.z); g.add(r); return r; });
@@ -354,6 +361,17 @@
       c.holder.position.set(F.x + (P.x - F.x) * s2, 0, F.z + (P.z - F.z) * s2); // il reste au sol, comme la meute
       c.parts.root.rotation.y = back >= 1 ? u.actorBase.rotation.y : Math.atan2(P.x - F.x, P.z - F.z) + (back > 0 ? Math.PI : 0) - c.holder.rotation.y; // l'avant du modèle est son axe +z
       M.animate(c.parts, t, (k < 1 && e > 0.6) || (back > 0 && back < 1) || (jump > 0 && jump < 1) ? 'run' : 'idle', 1); // ni bond ni cabrage
+    }
+    // Le guerrier : course jusqu'au roi, lutte au corps à corps, petit recul, coup de lance, puis retour sur sa case
+    kitLance(u, c, t, e, smooth, hit, M) {
+      const P = u.target, F = u.fromPos, p = c.parts, base = u.actorBase, d = Math.hypot(P.x - F.x, P.z - F.z) || 1, near = Math.max(0, 1 - 0.62 / d);
+      const fight = e > 1 && e < hit - 0.5, recoil = smooth((e - hit + 0.5) / 0.25) - smooth((e - hit + 0.2) / 0.2), home = smooth((e - hit - 1) / 0.8);
+      const f = (smooth((e - 0.3) / 0.7) * near + (fight ? Math.sin(e * 25) * 0.05 / d : 0) - recoil * 0.25 / d + smooth((e - hit + 0.2) / 0.2) * 0.12 / d * (1 - home)) * (1 - home);
+      c.holder.position.set(F.x + (P.x - F.x) * f, 0, F.z + (P.z - F.z) * f);
+      const face = Math.atan2(P.x - F.x, P.z - F.z) - c.holder.rotation.y, turn = smooth((e - hit - 1.8) / 0.4);
+      p.root.rotation.y = face + Math.atan2(Math.sin(base.rotation.y - face), Math.cos(base.rotation.y - face)) * turn;
+      const state = (e > 0.3 && e < 1) || (home > 0 && home < 1) ? 'run' : fight ? (Math.sin(t * 16) > 0 ? 'punch' : 'idle') : e > hit - 0.2 && e < hit + 0.5 ? 'punch' : 'idle';
+      M.animate(p, t, state, 1);
     }
     // Les trois coups de pattes de l'éléphant : le dernier est l'impact du mat
     kitStompTimes(hit) { return [hit - 1.6, hit - 0.8, hit]; }
@@ -476,6 +494,12 @@
         if (after > 0 && !s.boom) { s.boom = true; this.sabreBurst(P, t, [0xffc247, 0xfff1a8, 0x7a3a1e], 24, 1.5); this.shakeUntil = t + 0.7; this.shakeAmp = 0.22; }
         if (after > 0.6 && !s.bite) { s.bite = true; this.sabreBurst(P, t, [0xb3121b, 0x6e0a0a], 10, 0.6, 0.3); }
         s.red.material.opacity = 0.85 * smooth((after - 0.3) / 1);
+      } else if (style === 'lance') {
+        // étincelles des coups échangés pendant la lutte
+        const mid = { x: P.x - s.dir.x * 0.32, z: P.z - s.dir.z * 0.32 };
+        for (const [i, at2] of [1.25, 1.55, 1.85, 2.15, 2.45].entries()) if (e >= at2 && !s.sparked[i]) { s.sparked[i] = true; this.sabreBurst(mid, t, [0xfff1a8, 0xffc247], 6, 0.35, 0.6); }
+        if (after > 0 && !s.boom) { s.boom = true; this.sabreBurst(P, t, [0xffc247, 0xb3121b, 0xfff1a8], 18, 1.1, 0.6); this.shakeUntil = t + 0.5; this.shakeAmp = 0.18; }
+        s.spear.visible = after > 0 && after < 0.6;
       } else if (style === 'pietine') {
         const steps = this.kitStompTimes(hit);
         for (const [i, st] of steps.entries()) {
