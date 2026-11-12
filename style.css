@@ -1523,3 +1523,19 @@ body:has(#game.game-fullscreen) .mobile-menu-toggle { display: none !important; 
 .drill-total strong { font-size: 1.05rem; }
 .drill-total span { font-size: 1.6rem; font-weight: 800; color: var(--accent, #f0c060); }
 .replay-item.drill-start strong { font-size: 1.1rem; }
+
+/* Leçons sur PC : le maître (portrait et nom) passe au-dessus de sa bulle, qui prend toute la largeur de la colonne
+   (avant, la bulle restait coincée à côté du portrait et le texte s'affichait presque un mot par ligne) */
+@media (min-width: 900px) {
+  #puzzle.guided-learning .coach { grid-template-columns: minmax(0, 1fr); }
+  #puzzle.guided-learning .coach-identity { flex-direction: row; align-items: center; gap: 10px; }
+  #puzzle.guided-learning .coach-portrait { flex-direction: row; align-items: center; gap: 8px; }
+  #puzzle.guided-learning .coach img { width: 44px; height: 66px; }
+  #puzzle.guided-learning .game-layout { grid-template-columns: minmax(300px, 1.3fr) minmax(300px, 0.9fr); }
+}
+
+/* Petits téléphones : la barre du haut de la partie tenait plus large que l'écran (le bouton ⚙ dépassait) ;
+   le nom du décor s'efface, il reste visible dès que l'écran est un peu plus large */
+@media (max-width: 400px) {
+  #game .bar .terrain-label { display: none; }
+}

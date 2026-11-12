@@ -428,7 +428,8 @@
     kingdom: ['🐥', '🐒', '🦒', '🐘', '🦁'],
     wood: ['♟️', '♙', '♝', '♜', '👑'],
   };
-  const WORLD_POINT_THRESHOLDS = [0, 200, 500, 900, 1400, 2000, 2800, 3700, 4800, 6000];
+  // un palier par monde (13) plus la fin du parcours : sans eux, les titres des trois derniers mondes ne se gagnaient jamais
+  const WORLD_POINT_THRESHOLDS = [0, 200, 500, 900, 1400, 2000, 2800, 3700, 4800, 6000, 7400, 9000, 10800, 12800];
   function worldTitleMilestones(points = 0) {
     return NATURE_COLLECTION_ORDER.map((collection, worldIndex) => {
       const from = WORLD_POINT_THRESHOLDS[worldIndex], to = WORLD_POINT_THRESHOLDS[worldIndex + 1];
@@ -456,6 +457,7 @@
     $('world-journey-score').textContent = L(`${points.toLocaleString(LOCALE)} points`, `${points.toLocaleString(LOCALE)} points`);
     const progress = $('world-journey-progress');
     progress.style.width = `${Math.min(100, (points / maxPoints) * 100)}%`;
+    progress.parentElement.setAttribute('aria-valuemax', String(maxPoints));
     progress.parentElement.setAttribute('aria-valuenow', String(Math.min(maxPoints, points)));
     $('world-journey-track').innerHTML = now.map((world) => {
       const collection = NATURE_COLLECTIONS.find((item) => item.id === world.collection) || { name: world.collection, icon: '♟️' };
