@@ -56,11 +56,30 @@
     const r = base + 150 - Math.min(500, avg * 300);
     return { value: Math.round(Math.max(100, Math.min(3000, r)) / 10) * 10, data: true };
   }
+  // Problèmes d'un thème : même calcul que pour l'Elo estimé (difficulté moyenne affrontée, corrigée par la réussite)
+  function puzzleSkills() {
+    const done = store.get('pzdone', {}), byTheme = {};
+    for (const p of BANK) {
+      const outcome = done[p.id];
+      if (!outcome || !p.theme) continue;
+      const t = byTheme[p.theme] || (byTheme[p.theme] = { n: 0, challenge: 0, score: 0 });
+      t.n++; t.challenge += 400 + Math.max(1, p.rating || p.level * 3 - 1) * 200; t.score += outcome === 's' ? 1 : 0;
+    }
+    const out = {};
+    for (const [k, t] of Object.entries(byTheme)) out[k] = { n: t.n, value: Math.round(Math.max(100, Math.min(3000, t.challenge / t.n + 250 * (t.score / t.n - 0.5))) / 10) * 10 };
+    return out;
+  }
   function skillRadar() {
     const c = loadCoach();
     const SHORT = L({ mat: 'Mat', defense: 'Défense', prise: 'Prises', fourchette: 'Fourchettes', clouage: 'Clouages', tactique: 'Combinaisons', finale: 'Finales' }, { mat: 'Mates', defense: 'Defense', prise: 'Captures', fourchette: 'Forks', clouage: 'Pins', tactique: 'Combinations', finale: 'Endgames' });
-    const base = gamePerformance();
-    const axes = PZ_KEYS.map((k) => ({ k, name: SHORT[k] || PZ[k].name, ...skillOf(themeRow(c, k), base) }));
+    const base = gamePerformance(), puzzles = puzzleSkills();
+    // chaque thème combine tes parties analysées et tes problèmes de ce thème (60 / 40 quand les deux existent)
+    const axes = PZ_KEYS.map((k) => {
+      const game = skillOf(themeRow(c, k), base), pz = puzzles[k];
+      const value = game.data && pz ? Math.round((game.value * 0.6 + pz.value * 0.4) / 10) * 10 : pz && !game.data ? pz.value : game.value;
+      return { k, name: SHORT[k] || PZ[k].name, value, data: game.data || !!pz, puzzles: pz ? pz.n : 0 };
+    });
+    const puzzleCount = Object.values(puzzles).reduce((sum, t) => sum + t.n, 0);
     const any = axes.some((a) => a.data);
     const W = 340, H = 300, cx = W / 2, cy = 158, R = 96, MIN = 0, MAX = 3000;
     const n = axes.length, ang = (i) => -Math.PI / 2 + (i * 2 * Math.PI) / n;
@@ -78,9 +97,13 @@
       g += `<text x="${x}" y="${y}" text-anchor="${anchor}" class="rd-label">${a.name}</text><text x="${x}" y="${y + 14}" text-anchor="${anchor}" class="rd-val">${a.data ? a.value : '—'}</text>`;
     });
     const best = axes.filter((a) => a.data).sort((a, b) => b.value - a.value);
-    const note = !any ? L("Joue des parties contre l'ordinateur : chaque thème recevra une note tirée de l'analyse de tes parties.", 'Play games against the computer: each theme will get a rating from the analysis of your games.')
-      : L(`Mesuré sur tes ${c.games} partie${c.games > 1 ? 's' : ''} analysée${c.games > 1 ? 's' : ''} (performance ${base}). Point fort : ${best[0].name} (${best[0].value}). À travailler : ${best[best.length - 1].name} (${best[best.length - 1].value}).`,
-        `Measured on your ${c.games} analysed game${c.games === 1 ? '' : 's'} (performance ${base}). Strength: ${best[0].name} (${best[0].value}). To work on: ${best[best.length - 1].name} (${best[best.length - 1].value}).`);
+    const sources = [
+      c.games ? L(`tes ${c.games} partie${c.games > 1 ? 's' : ''} analysée${c.games > 1 ? 's' : ''}${base !== null ? ` (performance ${base})` : ''}`, `your ${c.games} analysed game${c.games === 1 ? '' : 's'}${base !== null ? ` (performance ${base})` : ''}`) : '',
+      puzzleCount ? L(`tes ${puzzleCount} problème${puzzleCount > 1 ? 's' : ''}`, `your ${puzzleCount} puzzle${puzzleCount === 1 ? '' : 's'}`) : '',
+    ].filter(Boolean).join(L(' et ', ' and '));
+    const note = !any ? L("Joue des parties contre l'ordinateur ou résous des problèmes : chaque thème recevra une note.", 'Play games against the computer or solve puzzles: each theme will get a rating.')
+      : L(`Mesuré sur ${sources}. Point fort : ${best[0].name} (${best[0].value}). À travailler : ${best[best.length - 1].name} (${best[best.length - 1].value}).`,
+        `Measured on ${sources}. Strength: ${best[0].name} (${best[0].value}). To work on: ${best[best.length - 1].name} (${best[best.length - 1].value}).`);
     return `<h3 class="pz-section">${L('Mes compétences par thème', 'My skills by theme')}</h3><svg class="radar" viewBox="0 0 ${W} ${H}" role="img" aria-label="${L('Araignée des compétences par thème', 'Skills radar by theme')}">${g}</svg><p class="pz-cap">${note}</p>`;
   }
   // Tactiques : problèmes réussis ou ratés par thème (programme, parcours, thèmes) et entraînements (mats, finales, ouvertures)
