@@ -1936,11 +1936,24 @@
         `Measured on your ${c.games} analysed game${c.games === 1 ? '' : 's'} (performance ${base}). Strength: ${best[0].name} (${best[0].value}). To work on: ${best[best.length - 1].name} (${best[best.length - 1].value}).`);
     return `<h3 class="pz-section">${L('Mes compétences par thème', 'My skills by theme')}</h3><svg class="radar" viewBox="0 0 ${W} ${H}" role="img" aria-label="${L('Araignée des compétences par thème', 'Skills radar by theme')}">${g}</svg><p class="pz-cap">${note}</p>`;
   }
+  // Tactiques : problèmes réussis ou ratés par thème (programme, parcours, thèmes) et entraînements (mats, finales, ouvertures)
+  function tacticsStats() {
+    const c = loadCoach(), pct = (ok, n) => (n ? `${Math.round((100 * ok) / n)} %` : '—');
+    const rows = PZ_KEYS.map((k) => ({ k, row: c.themes[k] })).filter((x) => x.row && (x.row.solved || x.row.failed));
+    const drills = store.get('drills', {});
+    const kinds = [['mate', L('Mats', 'Checkmates')], ['end', L('Finales', 'Endgames')], ['open', L('Ouvertures', 'Openings')]].filter(([k]) => drills[k] && drills[k].tot);
+    const total = playerProfile().puzzles || 0;
+    if (!rows.length && !kinds.length) return `<h3 class="pz-section">${L('Tactiques', 'Tactics')}</h3><p class="empty">${L('Résous des problèmes ou fais un entraînement : tes résultats par thème apparaîtront ici.', 'Solve puzzles or do some training: your results by theme will appear here.')}</p>`;
+    let html = `<h3 class="pz-section">${L('Tactiques', 'Tactics')}</h3><p class="pz-cap">${L(`${total} problème${total > 1 ? 's' : ''} joué${total > 1 ? 's' : ''} au total.`, `${total} puzzle${total === 1 ? '' : 's'} played in all.`)}</p>`;
+    if (rows.length) html += `<table class="stats-table"><thead><tr><th>${L('Thème', 'Theme')}</th><th>${L('Réussis', 'Solved')}</th><th>${L('Ratés', 'Missed')}</th><th>%</th><th>${L('Niveau', 'Level')}</th></tr></thead><tbody>${rows.map(({ k, row }) => `<tr><td>${escHtml(PZ[k].name)}</td><td>${row.solved || 0}</td><td>${row.failed || 0}</td><td>${pct(row.solved || 0, (row.solved || 0) + (row.failed || 0))}</td><td>${row.level || 1}</td></tr>`).join('')}</tbody></table>`;
+    if (kinds.length) html += `<table class="stats-table"><thead><tr><th>${L('Entraînement', 'Training')}</th><th>${L('Réussis', 'Solved')}</th><th>${L('Joués', 'Played')}</th><th>%</th><th>${L('Niveau', 'Level')}</th></tr></thead><tbody>${kinds.map(([k, name]) => { const d = drills[k]; return `<tr><td>${name}</td><td>${d.ok || 0}</td><td>${d.tot}</td><td>${pct(d.ok || 0, d.tot)}</td><td>${Math.round(d.level || 1)}</td></tr>`; }).join('')}</tbody></table>`;
+    return html;
+  }
   function renderStats() {
     const stats = store.get('stats', {});
     const body = $('stats-body');
     const levels = Object.keys(stats).filter((l) => LEVEL_NAMES[l]).sort((a, b) => a - b);
-    const radar = skillRadar();
+    const radar = skillRadar() + tacticsStats();
     if (!levels.length) {
       body.innerHTML = radar + L('<p class="empty">Aucune partie terminée contre l\'ordinateur pour l\'instant.<br>Vos résultats apparaîtront ici.</p>', '<p class="empty">No finished game against the computer yet.<br>Your results will appear here.</p>');
       return;
