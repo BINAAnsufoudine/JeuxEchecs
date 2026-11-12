@@ -540,7 +540,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .level-row .tier { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
 .level-row.single button { grid-column: 2 / span 3; }
 .level-grid button { border: 0; border-radius: 10px; padding: 9px 4px; background: var(--surface); color: var(--text); font-weight: 600; font-size: 0.9rem; }
-.level-grid button.on { background: var(--accent); color: #fff; }
+.level-grid button.on { background: var(--accent); color: var(--accent-text); }
 .level-grid button.done::after { content: ' ✓'; color: #6ebe82; }
 .level-grid button.on.done::after { color: #fff; }
 .level-grid button:disabled { opacity: 0.4; }
@@ -1539,3 +1539,7 @@ body:has(#game.game-fullscreen) .mobile-menu-toggle { display: none !important; 
 @media (max-width: 400px) {
   #game .bar .terrain-label { display: none; }
 }
+
+/* Boutons jaunes : tout leur texte en noir (titres, sous-titres, petites lignes), sauf les pastilles de compte */
+.btn.primary :is(span, small, strong, b, em):not(.menu-badge):not(.menu-icon),
+.level-grid button.on :is(span, small, strong, b) { color: var(--accent-text); }
