@@ -37,20 +37,34 @@
           wrong: L(`Ce n'est pas le coup de la ${o.name}. Réessaie : pense au plan de cette ouverture.`, `That is not the ${o.name} move. Try again: think about the plan of this opening.`) });
       }
     }
+    // Mats en 1, 2, 3, 4 et plus : tous les problèmes de mat de la banque, en plus des motifs célèbres ;
+    // depth = nombre de coups du joueur jusqu'au mat
+    const seen = new Set(mate.map((it) => it.id.replace(/^dl:/, '')));
+    for (const p of BANK) if (p.theme === 'mat' && Array.isArray(p.line) && p.line.length && !seen.has(p.id)) {
+      const depth = Math.ceil(p.line.length / 2);
+      mate.push({ id: `dn:${p.id}`, fen: p.fen, line: p.line, motif: `depth${Math.min(4, depth)}`, rating: p.rating || Math.min(9, depth * 2), theme: 'mat' });
+    }
+    for (const it of mate) it.depth = Math.ceil(it.line.length / 2);
     return (drillPools = { mate, end, open });
   }
   const drillData = (kind) => Object.assign({ items: {}, motifs: {}, n: 0, ok: 0, tot: 0, level: 0 }, store.get('drills', {})[kind] || {});
   const drillLevel = (kind) => { const d = drillData(kind); return Math.max(1, Math.min(9, d.level || Math.round((estimatedElo() - 400) / 200))); };
   const drillPct = (ok, tot) => (tot ? Math.round((ok / tot) * 100) : null);
-  const drillMotifName = (kind, motif) => (kind === 'mate' ? (TR.MATES.find((m) => m.id === motif) || {}).name : kind === 'open' ? (TR.OPENINGS.find((o) => o.id === motif) || {}).name : (DRILL_END_CATS.find(([k]) => k === motif) || [])[1]) || motif;
+  // Mat visé selon le niveau : en 1 coup pour débuter, puis en 2, en 3, et en 4 coups ou plus pour les plus forts
+  const mateDepthFor = (level) => (level <= 2 ? 1 : level <= 4 ? 2 : level <= 6 ? 3 : 4);
+  const depthName = (n) => (n >= 4 ? L('Mat en 4 coups ou plus', 'Mate in 4 or more') : L(`Mat en ${n}`, `Mate in ${n}`));
+  const drillMotifName = (kind, motif) => (kind === 'mate' && /^depth\d$/.test(motif || '') ? depthName(+motif.slice(5)) : kind === 'mate' ? (TR.MATES.find((m) => m.id === motif) || {}).name : kind === 'open' ? (TR.OPENINGS.find((o) => o.id === motif) || {}).name : (DRILL_END_CATS.find(([k]) => k === motif) || [])[1]) || motif;
   function drillMotifText(kind, motif) {
     const m = drillData(kind).motifs[motif], pct = m ? drillPct(m.ok, m.tot) : null;
     return pct == null ? L('pas encore de problème', 'no puzzle yet') : L(`${pct} % de réussite (${m.ok}/${m.tot})`, `${pct}% success (${m.ok}/${m.tot})`);
   }
   function pickDrill(kind, motif) {
-    const pool = buildDrillPools()[kind].filter((it) => !motif || it.motif === motif);
+    const byDepth = kind === 'mate' && /^depth\d$/.test(motif || '') ? +motif.slice(5) : 0;
+    let pool = buildDrillPools()[kind].filter((it) => !motif || (byDepth ? Math.min(4, it.depth) === byDepth : it.motif === motif));
     if (!pool.length) return null;
     const d = drillData(kind);
+    // entraînement général aux mats : la longueur du mat suit le niveau du joueur
+    if (kind === 'mate' && !motif) { const want = mateDepthFor(Math.round(drillLevel(kind))), near = pool.filter((it) => Math.min(4, it.depth) === want); if (near.length) pool = near; }
     // d'abord les problèmes ratés dont le tour est revenu
     const due = pool.filter((it) => { const r = d.items[it.id]; return r && r.retryAt != null && r.retryAt <= d.n && it.id !== d.last; });
     if (due.length) return due.sort((a, b) => d.items[a.id].retryAt - d.items[b.id].retryAt)[0];
@@ -75,9 +89,12 @@
     const s = pz.drill, r = drillData(s.kind).items[it.id];
     $('puzzle-title').textContent = s.kind === 'open' ? `${DRILL_TITLES.open} · ${drillMotifName('open', it.motif)}` : DRILL_TITLES[s.kind];
     const again = r && r.fail ? L(` · raté ${r.fail} fois`, ` · missed ${r.fail} time${r.fail > 1 ? 's' : ''}`) : '';
-    $('pz-count').textContent = `${L('Problème', 'Puzzle')} ${s.index} · ${L('niveau', 'level')} ${it.rating}/9${again}`;
+    $('pz-count').textContent = `${L('Problème', 'Puzzle')} ${s.index} · ${s.kind === 'mate' && it.depth ? `${depthName(it.depth)} · ` : ''}${L('niveau', 'level')} ${it.rating}/9${again}`;
     const retry = r && r.fail ? L(`Tu avais raté ce problème ${r.fail} fois. Prends ton temps. `, `You missed this puzzle ${r.fail} time${r.fail > 1 ? 's' : ''}. Take your time. `) : '';
-    const ask = s.kind === 'mate' ? L('Trouve l’échec et mat. Le nom du motif te sera dit à la fin.', 'Find the checkmate. The name of the pattern will be revealed at the end.')
+    const n = it.depth || 1;
+    const ask = s.kind === 'mate' ? (n > 1
+      ? L(`Mat en ${n} : construis toi-même la position jusqu’au mat. Joue tes ${n} coups l’un après l’autre, les réponses adverses se jouent seules. Commence par regarder les échecs et les coups qui enferment le roi.`, `Mate in ${n}: build the position up to the mate yourself. Play your ${n} moves one after another; the replies are played for you. Start by looking at checks and moves that trap the king.`)
+      : L('Mat en 1 : trouve le coup qui donne échec et mat.', 'Mate in 1: find the move that gives checkmate.'))
       : s.kind === 'end' ? L('Trouve le meilleur coup dans cette finale. Le type de finale te sera dit à la fin.', 'Find the best move in this endgame. The type of endgame will be revealed at the end.')
         : L(`${drillMotifName('open', it.motif)} : joue le coup de la théorie${it.line.length > 1 ? ', puis continue la ligne' : ''}.`, `${drillMotifName('open', it.motif)}: play the book move${it.line.length > 1 ? ', then continue the line' : ''}.`);
     say(retry + ask);
@@ -90,7 +107,9 @@
     m.tot++;
     if (clean) { r.ok++; d.ok++; m.ok++; r.retryAt = null; d.level = Math.min(9, (d.level || drillLevel(kind)) + 0.34); }
     else { r.fail++; r.retryAt = d.n + 3; d.level = Math.max(1, (d.level || drillLevel(kind)) - 0.5); }
-    d.items[it.id] = r; d.motifs[it.motif] = m; all[kind] = d; store.set('drills', all);
+    d.items[it.id] = r; d.motifs[it.motif] = m;
+    if (kind === 'mate' && it.depth && it.motif !== `depth${Math.min(4, it.depth)}`) { const k = `depth${Math.min(4, it.depth)}`, dm = d.motifs[k] || { ok: 0, tot: 0 }; dm.tot++; if (clean) dm.ok++; d.motifs[k] = dm; }
+    all[kind] = d; store.set('drills', all);
     // récompenses : chaque réussite rapporte (plus si le problème avait été raté), et chaque série de 10 réussites un bonus
     countPuzzle();
     if (clean) {
@@ -123,6 +142,7 @@
       : L(`${pct} % (${d.ok} réussi${d.ok > 1 ? 's' : ''} sur ${d.tot}) · niveau ${Math.round(drillLevel(kind))}/9${toRedo ? ` · ${toRedo} à refaire` : ''}`, `${pct}% (${d.ok} solved out of ${d.tot}) · level ${Math.round(drillLevel(kind))}/9${toRedo ? ` · ${toRedo} to redo` : ''}`);
     let html = `<div class="drill-box"><p class="drill-total"><strong>${escHtml(DRILL_TOTAL_LABEL[kind])}</strong><span>${escHtml(line)}</span></p>`;
     html += `<div class="replay-items"><button type="button" class="btn primary replay-item drill-start" data-train="drill:${kind}"><strong>🎯 ${escHtml(L('Entraînement', 'Training'))}</strong><span>${escHtml(L('Des problèmes à ton niveau ; ceux que tu rates reviennent plus tard.', 'Puzzles at your level; the ones you miss come back later.'))}</span></button></div>`;
+    if (kind === 'mate') html += `<p class="level-help">${escHtml(L(`Ton niveau te propose des mats en ${mateDepthFor(Math.round(drillLevel(kind)))}${mateDepthFor(Math.round(drillLevel(kind))) >= 4 ? ' coups ou plus' : ''}. Ou choisis la longueur du mat :`, `Your level gives you mates in ${mateDepthFor(Math.round(drillLevel(kind)))}${mateDepthFor(Math.round(drillLevel(kind))) >= 4 ? ' or more' : ''}. Or choose the length of the mate:`))}</p><div class="replay-items">${[1, 2, 3, 4].map((n) => `<button type="button" class="btn replay-item" data-train="drill:mate:depth${n}"><strong>${escHtml(depthName(n))}</strong><span>${escHtml(drillMotifText('mate', `depth${n}`))}</span></button>`).join('')}</div><p class="level-help">${escHtml(L('Les leçons :', 'The lessons:'))}</p>`;
     if (kind === 'end') html += `<p class="level-help">${escHtml(L('Par type de finale (appuie pour t’entraîner sur un seul type) :', 'By type of endgame (tap to train on one type only):'))}</p><div class="replay-items">${DRILL_END_CATS.map(([k, n]) => `<button type="button" class="btn replay-item" data-train="drill:end:${k}"><strong>${escHtml(n)}</strong><span>${escHtml(drillMotifText('end', k))}</span></button>`).join('')}</div><p class="level-help">${escHtml(L('Les leçons :', 'The lessons:'))}</p>`;
     return html + '</div>';
   }
