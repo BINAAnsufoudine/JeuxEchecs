@@ -6393,8 +6393,15 @@
     let pool = buildDrillPools()[kind].filter((it) => !motif || (byDepth ? Math.min(4, it.depth) === byDepth : it.motif === motif));
     if (!pool.length) return null;
     const d = drillData(kind);
-    // entraînement général aux mats : la longueur du mat suit le niveau du joueur
-    if (kind === 'mate' && !motif) { const want = mateDepthFor(Math.round(drillLevel(kind))), near = pool.filter((it) => Math.min(4, it.depth) === want); if (near.length) pool = near; }
+    // entraînement général aux mats : il mélange les mats en 1, 2, 3 et 4 coups ou plus ; la longueur qui correspond
+    // au niveau revient le plus souvent (poids 4), les longueurs voisines un peu moins (2, puis 1, puis 0,5)
+    if (kind === 'mate' && !motif) {
+      const want = mateDepthFor(Math.round(drillLevel(kind))), weights = [1, 2, 3, 4].map((n) => [n, [4, 2, 1, 0.5][Math.abs(n - want)]]);
+      let roll = Math.random() * weights.reduce((sum, [, w]) => sum + w, 0), depth = want;
+      for (const [n, w] of weights) { if ((roll -= w) <= 0) { depth = n; break; } }
+      const pick = pool.filter((it) => Math.min(4, it.depth) === depth);
+      if (pick.length) pool = pick;
+    }
     // d'abord les problèmes ratés dont le tour est revenu
     const due = pool.filter((it) => { const r = d.items[it.id]; return r && r.retryAt != null && r.retryAt <= d.n && it.id !== d.last; });
     if (due.length) return due.sort((a, b) => d.items[a.id].retryAt - d.items[b.id].retryAt)[0];
@@ -6472,7 +6479,7 @@
       : L(`${pct} % (${d.ok} réussi${d.ok > 1 ? 's' : ''} sur ${d.tot}) · niveau ${Math.round(drillLevel(kind))}/9${toRedo ? ` · ${toRedo} à refaire` : ''}`, `${pct}% (${d.ok} solved out of ${d.tot}) · level ${Math.round(drillLevel(kind))}/9${toRedo ? ` · ${toRedo} to redo` : ''}`);
     let html = `<div class="drill-box"><p class="drill-total"><strong>${escHtml(DRILL_TOTAL_LABEL[kind])}</strong><span>${escHtml(line)}</span></p>`;
     html += `<div class="replay-items"><button type="button" class="btn primary replay-item drill-start" data-train="drill:${kind}"><strong>🎯 ${escHtml(L('Entraînement', 'Training'))}</strong><span>${escHtml(L('Des problèmes à ton niveau ; ceux que tu rates reviennent plus tard.', 'Puzzles at your level; the ones you miss come back later.'))}</span></button></div>`;
-    if (kind === 'mate') html += `<p class="level-help">${escHtml(L(`Ton niveau te propose des mats en ${mateDepthFor(Math.round(drillLevel(kind)))}${mateDepthFor(Math.round(drillLevel(kind))) >= 4 ? ' coups ou plus' : ''}. Ou choisis la longueur du mat :`, `Your level gives you mates in ${mateDepthFor(Math.round(drillLevel(kind)))}${mateDepthFor(Math.round(drillLevel(kind))) >= 4 ? ' or more' : ''}. Or choose the length of the mate:`))}</p><div class="replay-items">${[1, 2, 3, 4].map((n) => `<button type="button" class="btn replay-item" data-train="drill:mate:depth${n}"><strong>${escHtml(depthName(n))}</strong><span>${escHtml(drillMotifText('mate', `depth${n}`))}</span></button>`).join('')}</div><p class="level-help">${escHtml(L('Les leçons :', 'The lessons:'))}</p>`;
+    if (kind === 'mate') html += `<p class="level-help">${escHtml(L(`L’entraînement mélange les mats en 1, 2, 3 et 4 coups ou plus, surtout des mats en ${mateDepthFor(Math.round(drillLevel(kind)))}${mateDepthFor(Math.round(drillLevel(kind))) >= 4 ? ' coups ou plus' : ''} à ton niveau. Ou choisis une seule longueur :`, `Training mixes mates in 1, 2, 3 and 4 or more, mostly mates in ${mateDepthFor(Math.round(drillLevel(kind)))}${mateDepthFor(Math.round(drillLevel(kind))) >= 4 ? ' or more' : ''} at your level. Or choose a single length:`))}</p><div class="replay-items">${[1, 2, 3, 4].map((n) => `<button type="button" class="btn replay-item" data-train="drill:mate:depth${n}"><strong>${escHtml(depthName(n))}</strong><span>${escHtml(drillMotifText('mate', `depth${n}`))}</span></button>`).join('')}</div><p class="level-help">${escHtml(L('Les leçons :', 'The lessons:'))}</p>`;
     if (kind === 'end') html += `<p class="level-help">${escHtml(L('Par type de finale (appuie pour t’entraîner sur un seul type) :', 'By type of endgame (tap to train on one type only):'))}</p><div class="replay-items">${DRILL_END_CATS.map(([k, n]) => `<button type="button" class="btn replay-item" data-train="drill:end:${k}"><strong>${escHtml(n)}</strong><span>${escHtml(drillMotifText('end', k))}</span></button>`).join('')}</div><p class="level-help">${escHtml(L('Les leçons :', 'The lessons:'))}</p>`;
     return html + '</div>';
   }
